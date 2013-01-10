@@ -1,0 +1,44 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut", "Halibut\Halibut.csproj", "{9D8386A2-4F69-4F80-A21F-F646A9828E25}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{807A6FA5-EC26-42DF-BBC4-6F572781D94E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.SampleClient", "Halibut.SampleClient\Halibut.SampleClient.csproj", "{405BB295-343B-4EB3-BD7E-50CCE3A4ED60}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.SampleServer", "Halibut.SampleServer\Halibut.SampleServer.csproj", "{E6A0289F-2F5F-4FBC-8C84-C3D6E4A01C0B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.Tests", "Halibut.Tests\Halibut.Tests.csproj", "{65BD1243-FCB9-40C6-A926-8B47E10904AA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{405BB295-343B-4EB3-BD7E-50CCE3A4ED60}.Debug|x86.ActiveCfg = Debug|x86
+		{405BB295-343B-4EB3-BD7E-50CCE3A4ED60}.Debug|x86.Build.0 = Debug|x86
+		{405BB295-343B-4EB3-BD7E-50CCE3A4ED60}.Release|x86.ActiveCfg = Release|x86
+		{405BB295-343B-4EB3-BD7E-50CCE3A4ED60}.Release|x86.Build.0 = Release|x86
+		{65BD1243-FCB9-40C6-A926-8B47E10904AA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{65BD1243-FCB9-40C6-A926-8B47E10904AA}.Debug|x86.Build.0 = Debug|Any CPU
+		{65BD1243-FCB9-40C6-A926-8B47E10904AA}.Release|x86.ActiveCfg = Release|Any CPU
+		{65BD1243-FCB9-40C6-A926-8B47E10904AA}.Release|x86.Build.0 = Release|Any CPU
+		{9D8386A2-4F69-4F80-A21F-F646A9828E25}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9D8386A2-4F69-4F80-A21F-F646A9828E25}.Debug|x86.Build.0 = Debug|Any CPU
+		{9D8386A2-4F69-4F80-A21F-F646A9828E25}.Release|x86.ActiveCfg = Release|Any CPU
+		{9D8386A2-4F69-4F80-A21F-F646A9828E25}.Release|x86.Build.0 = Release|Any CPU
+		{E6A0289F-2F5F-4FBC-8C84-C3D6E4A01C0B}.Debug|x86.ActiveCfg = Debug|x86
+		{E6A0289F-2F5F-4FBC-8C84-C3D6E4A01C0B}.Debug|x86.Build.0 = Debug|x86
+		{E6A0289F-2F5F-4FBC-8C84-C3D6E4A01C0B}.Release|x86.ActiveCfg = Release|x86
+		{E6A0289F-2F5F-4FBC-8C84-C3D6E4A01C0B}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{405BB295-343B-4EB3-BD7E-50CCE3A4ED60} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
+		{E6A0289F-2F5F-4FBC-8C84-C3D6E4A01C0B} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Halibut.SampleClient\Halibut.SampleClient.csproj
+	EndGlobalSection
+EndGlobal
