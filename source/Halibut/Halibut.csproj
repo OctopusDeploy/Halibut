@@ -37,12 +37,41 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="MyClass.cs" />
-    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Client\IHalibutClient.cs" />
+    <Compile Include="Client\ServiceEndPoint.cs" />
+    <Compile Include="Client\HalibutClient.cs" />
+    <Compile Include="Client\HalibutProxy.cs" />
+    <Compile Include="Diagnostics\ILog.cs" />
+    <Compile Include="Diagnostics\Log.cs" />
+    <Compile Include="Diagnostics\Logs.cs" />
+    <Compile Include="Protocol\DefaultJsonSerializer.cs" />
+    <Compile Include="Protocol\JsonRpcError.cs" />
+    <Compile Include="Protocol\JsonRpcException.cs" />
+    <Compile Include="Protocol\JsonRpcRequest.cs" />
+    <Compile Include="Protocol\JsonRpcResponse.cs" />
+    <Compile Include="Server\Dispatch\ActivatorServiceFactory.cs" />
+    <Compile Include="Server\Dispatch\DelegateInvoker.cs" />
+    <Compile Include="Server\Dispatch\IRequestProcessor.cs" />
+    <Compile Include="Server\Dispatch\IRequestProcessorFactory.cs" />
+    <Compile Include="Server\Dispatch\IServiceInvoker.cs" />
+    <Compile Include="Server\Dispatch\IHalibutServerOptions.cs" />
+    <Compile Include="Server\Dispatch\RequestProcessor.cs" />
+    <Compile Include="Server\Dispatch\RequestProcessorFactory.cs" />
+    <Compile Include="Server\Dispatch\ServiceInvoker.cs" />
+    <Compile Include="Server\Dispatch\HalibutServerOptions.cs" />
+    <Compile Include="Server\Security\CertificateValidationCallback.cs" />
+    <Compile Include="Server\Security\CertificateValidationResult.cs" />
+    <Compile Include="Server\ServiceModel\IServiceCatalog.cs" />
+    <Compile Include="Server\ServiceModel\IServiceFactory.cs" />
+    <Compile Include="Server\ServiceModel\IServiceLease.cs" />
+    <Compile Include="Server\ServiceModel\ServiceCatalog.cs" />
+    <Compile Include="Server\HalibutServer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
+  <ItemGroup />
 </Project>
