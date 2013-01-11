@@ -92,18 +92,20 @@ namespace Halibut.Server
 
         void ExecuteRequest(TcpClient client)
         {
-            using (NetworkStream stream = client.GetStream())
+            var clientName = client.Client.RemoteEndPoint;
+            using (var stream = client.GetStream())
             using (var ssl = new SslStream(stream, false, ValidateCertificate))
             {
                 try
                 {
                     ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls, false);
 
-                    IRequestProcessor processor = options.RequestProcessorFactory.CreateProcessor(services, options);
+                    var processor = options.RequestProcessorFactory.CreateProcessor(services, options);
                     processor.Execute(ssl);
                 }
-                catch (AuthenticationException)
+                catch (AuthenticationException ex)
                 {
+                    Logs.Server.Warn("A client (" + clientName + ") failed authentication: " + ex);
                 }
                 catch (IOException)
                 {
