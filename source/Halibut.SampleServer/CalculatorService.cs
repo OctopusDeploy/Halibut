@@ -5,6 +5,8 @@ namespace Halibut.SampleServer
 {
     public class CalculatorService : ICalculatorService
     {
+        #region ICalculatorService Members
+
         public long Add(long a, long b)
         {
             return a + b;
@@ -14,5 +16,7 @@ namespace Halibut.SampleServer
         {
             return a - b;
         }
+
+        #endregion
     }
 }

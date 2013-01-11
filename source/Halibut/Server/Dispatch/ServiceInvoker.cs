@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using System.Reflection;
 using Halibut.Protocol;
 
@@ -19,27 +20,31 @@ namespace Halibut.Server.Dispatch
 {
     public class ServiceInvoker : IServiceInvoker
     {
+        #region IServiceInvoker Members
+
         public JsonRpcResponse Invoke(object service, JsonRpcRequest request)
         {
-            var serviceType = service.GetType();
-            var methodInfo = serviceType.GetMethod(request.Method);
-            var args = GetArguments(request, methodInfo);
+            Type serviceType = service.GetType();
+            MethodInfo methodInfo = serviceType.GetMethod(request.Method);
+            object[] args = GetArguments(request, methodInfo);
 
-            var invoker = DelegateInvoker.CreateInvoker(service, methodInfo);
-            var result = invoker.Call(args);
+            DelegateInvoker.IActionInvokerWrapper invoker = DelegateInvoker.CreateInvoker(service, methodInfo);
+            object result = invoker.Call(args);
 
             return new JsonRpcResponse {Id = request.Id, Result = result};
         }
 
+        #endregion
+
         static object[] GetArguments(JsonRpcRequest request, MethodInfo methodInfo)
         {
-            var methodParams = methodInfo.GetParameters();
+            ParameterInfo[] methodParams = methodInfo.GetParameters();
             var args = new object[methodParams.Length];
-            for (var i = 0; i < methodParams.Length; i++)
+            for (int i = 0; i < methodParams.Length; i++)
             {
                 if (i >= request.Params.Length) continue;
 
-                var jsonArg = request.Params[i];
+                object jsonArg = request.Params[i];
                 args[i] = jsonArg;
             }
 

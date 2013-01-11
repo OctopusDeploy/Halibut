@@ -20,6 +20,7 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 using Halibut.Server.Dispatch;
 using Halibut.Server.Security;
 using Halibut.Server.ServiceModel;
@@ -52,6 +53,15 @@ namespace Halibut.Server
             get { return services; }
         }
 
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            listener.Stop();
+        }
+
+        #endregion
+
         public void Start()
         {
             listener = new TcpListener(endPoint);
@@ -66,12 +76,14 @@ namespace Halibut.Server
                                               {
                                                   try
                                                   {
-                                                      var client = listener.EndAcceptTcpClient(r);
+                                                      Logs.Server.Info("Accepting TCP client");
+                                                      TcpClient client = listener.EndAcceptTcpClient(r);
                                                       var task = new Task(() => ExecuteRequest(client));
                                                       task.Start(options.Scheduler);
                                                   }
-                                                  catch (Exception)
+                                                  catch (Exception ex)
                                                   {
+                                                      Logs.Server.Warn("TCP client error: " + ex.ToString());
                                                   }
 
                                                   Accept();
@@ -80,14 +92,14 @@ namespace Halibut.Server
 
         void ExecuteRequest(TcpClient client)
         {
-            using (var stream = client.GetStream())
+            using (NetworkStream stream = client.GetStream())
             using (var ssl = new SslStream(stream, false, ValidateCertificate))
             {
                 try
                 {
                     ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls, false);
 
-                    var processor = options.RequestProcessorFactory.CreateProcessor(services, options);
+                    IRequestProcessor processor = options.RequestProcessorFactory.CreateProcessor(services, options);
                     processor.Execute(ssl);
                 }
                 catch (AuthenticationException)
@@ -115,11 +127,6 @@ namespace Halibut.Server
             {
                 throw new Exception("The X509 certificate provided does not have a private key, and so it cannot be used for listening.");
             }
-        }
-
-        public void Dispose()
-        {
-            listener.Stop();
         }
     }
 }

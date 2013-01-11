@@ -21,6 +21,8 @@ namespace Halibut.Server.ServiceModel
     {
         readonly Dictionary<string, Type> services = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
+        #region IServiceCatalog Members
+
         public void Register(Type contract, Type implementation)
         {
             services.Add(contract.Name, implementation);
@@ -41,5 +43,7 @@ namespace Halibut.Server.ServiceModel
 
             return result;
         }
+
+        #endregion
     }
 }

@@ -4,24 +4,24 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Halibut.CertificateGenerator
 {
-	class Program
-	{
-		static int Main(string[] args)
-		{
-			if (args.Length != 2) 
-			{
+    class Program
+    {
+        static int Main(string[] args)
+        {
+            if (args.Length != 2)
+            {
                 Console.WriteLine("Usage:  Halibut.CertificateGenerator.exe CN=<name> <output-file>");
-			    return -1;
-			}
+                return -1;
+            }
 
-		    var name = args[0];
-		    var file = args[1];
+            string name = args[0];
+            string file = args[1];
 
-		    var certificate = CertificateGenerator.Generate(name);
+            X509Certificate2 certificate = CertificateGenerator.Generate(name);
 
-            File.WriteAllBytes(file, certificate.Export(X509ContentType.Pkcs12, (string)null));
+            File.WriteAllBytes(file, certificate.Export(X509ContentType.Pkcs12, (string) null));
 
-		    return 0;
-		}
-	}
+            return 0;
+        }
+    }
 }

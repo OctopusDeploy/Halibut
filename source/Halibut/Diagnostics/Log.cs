@@ -26,10 +26,11 @@ namespace Halibut.Diagnostics
             this.trace = trace;
         }
 
+        #region ILog Members
+
         public IDisposable BeginActivity(string name, Guid id)
         {
-            var block = new ActivityBlock(id);
-            trace.TraceEvent(TraceEventType.Start, 0, name);
+            var block = new ActivityBlock(id, name, trace);
             return block;
         }
 
@@ -63,24 +64,34 @@ namespace Halibut.Diagnostics
             trace.TraceEvent(TraceEventType.Error, 0, messageFormat, args);
         }
 
+        #endregion
+
         #region Nested type: ActivityBlock
 
         class ActivityBlock : IDisposable
         {
-            readonly Guid id;
+            readonly string name;
             readonly Guid originalId;
+            readonly TraceSource traceSource;
 
-            public ActivityBlock(Guid id)
+            public ActivityBlock(Guid id, string name, TraceSource traceSource)
             {
-                this.id = id;
+                this.name = name;
+                this.traceSource = traceSource;
                 originalId = Trace.CorrelationManager.ActivityId;
                 Trace.CorrelationManager.ActivityId = id;
+                traceSource.TraceEvent(TraceEventType.Start, 0, name);
             }
+
+            #region IDisposable Members
 
             public void Dispose()
             {
+                traceSource.TraceEvent(TraceEventType.Stop, 0, name);
                 Trace.CorrelationManager.ActivityId = originalId;
             }
+
+            #endregion
         }
 
         #endregion

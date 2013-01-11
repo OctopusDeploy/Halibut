@@ -12,15 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using Halibut.Server.ServiceModel;
 
 namespace Halibut.Server.Dispatch
 {
     public class RequestProcessorFactory : IRequestProcessorFactory
     {
+        #region IRequestProcessorFactory Members
+
         public IRequestProcessor CreateProcessor(IServiceCatalog services, IHalibutServerOptions options)
         {
             return new RequestProcessor(options.Serializer, options.ServiceFactory, services, options.ServiceInvoker);
         }
+
+        #endregion
     }
 }

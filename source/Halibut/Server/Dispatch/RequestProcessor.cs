@@ -38,6 +38,8 @@ namespace Halibut.Server.Dispatch
             this.serviceInvoker = serviceInvoker;
         }
 
+        #region IRequestProcessor Members
+
         public void Execute(Stream client)
         {
             using (var reader = new BsonReader(client))
@@ -61,7 +63,7 @@ namespace Halibut.Server.Dispatch
 
                             Log.InfoFormat("Resolving service {0}", request.Service);
 
-                            var serviceType = services.GetService(request.Service);
+                            Type serviceType = services.GetService(request.Service);
                             if (serviceType == null)
                             {
                                 throw new ArgumentException(string.Format("The service type {0} is not implemented on this server", request.Service));
@@ -70,9 +72,9 @@ namespace Halibut.Server.Dispatch
                             Log.InfoFormat("Constructing service {0}", serviceType.FullName);
 
                             JsonRpcResponse response;
-                            using (var lease = serviceFactory.CreateService(serviceType))
+                            using (IServiceLease lease = serviceFactory.CreateService(serviceType))
                             {
-                                var service = lease.Service;
+                                object service = lease.Service;
 
                                 response = serviceInvoker.Invoke(service, request);
                             }
@@ -91,6 +93,8 @@ namespace Halibut.Server.Dispatch
                 }
             }
         }
+
+        #endregion
 
         void SendResponse(JsonWriter writer, JsonRpcResponse response)
         {
@@ -111,10 +115,10 @@ namespace Halibut.Server.Dispatch
             Log.Error(ex.ToString());
 
             return new JsonRpcResponse
-            {
-                Id = request == null ? null : request.Id,
-                Error = new JsonRpcError {Code = ex.GetType().Name, Message = ex.Message, Data = ex.ToString()}
-            };
+                       {
+                           Id = request == null ? null : request.Id,
+                           Error = new JsonRpcError {Code = ex.GetType().Name, Message = ex.Message, Data = ex.ToString()}
+                       };
         }
     }
 }

@@ -27,7 +27,7 @@ namespace Halibut.Protocol
             var settings = new JsonSerializerSettings();
             settings.Formatting = Formatting.None;
 
-            var serializer = JsonSerializer.Create(settings);
+            JsonSerializer serializer = JsonSerializer.Create(settings);
             serializer.TypeNameHandling = TypeNameHandling.All;
             serializer.TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple;
             return serializer;

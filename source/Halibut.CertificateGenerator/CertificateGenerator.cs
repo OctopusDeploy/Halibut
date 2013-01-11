@@ -11,6 +11,7 @@ using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Halibut.CertificateGenerator
 {
@@ -20,7 +21,7 @@ namespace Halibut.CertificateGenerator
 
         public static X509Certificate2 Generate(string fullName)
         {
-            for (var i = 0; i < 100; i++)
+            for (int i = 0; i < 100; i++)
             {
                 try
                 {
@@ -41,7 +42,7 @@ namespace Halibut.CertificateGenerator
 
             kpgen.Init(new KeyGenerationParameters(Random, 2048));
 
-            var cerKp = kpgen.GenerateKeyPair();
+            AsymmetricCipherKeyPair cerKp = kpgen.GenerateKeyPair();
 
             IDictionary attrs = new Hashtable();
             attrs[X509Name.E] = "";
@@ -69,9 +70,9 @@ namespace Halibut.CertificateGenerator
             certGen.SetSignatureAlgorithm("SHA1WithRSA");
             certGen.AddExtension(X509Extensions.BasicConstraints, true, new BasicConstraints(false));
             certGen.AddExtension(X509Extensions.AuthorityKeyIdentifier, true, new AuthorityKeyIdentifier(SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(cerKp.Public)));
-            var x509 = certGen.Generate(cerKp.Private);
+            X509Certificate x509 = certGen.Generate(cerKp.Private);
 
-            var x509Certificate = DotNetUtilities.ToX509Certificate(x509);
+            System.Security.Cryptography.X509Certificates.X509Certificate x509Certificate = DotNetUtilities.ToX509Certificate(x509);
             return new X509Certificate2(x509Certificate)
                        {
                            PrivateKey = AddPrivateKey(cerKp)
@@ -81,7 +82,7 @@ namespace Halibut.CertificateGenerator
 #if !__MonoCS__
         static RSACryptoServiceProvider AddPrivateKey(AsymmetricCipherKeyPair cerKp)
         {
-            var tempRcsp = (RSACryptoServiceProvider)DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters)cerKp.Private);
+            var tempRcsp = (RSACryptoServiceProvider) DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters) cerKp.Private);
             var rcsp = new RSACryptoServiceProvider(new CspParameters(1, "Microsoft Strong Cryptographic Provider",
                                                                       Guid.NewGuid().ToString(),
                                                                       new CryptoKeySecurity(), null));

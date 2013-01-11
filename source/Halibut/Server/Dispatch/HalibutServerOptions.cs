@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using System.Threading.Tasks;
 using Halibut.Protocol;
 using Halibut.Server.Security;
@@ -33,11 +34,15 @@ namespace Halibut.Server.Dispatch
             Serializer = DefaultJsonSerializer.Factory();
         }
 
+        #region IHalibutServerOptions Members
+
         public JsonSerializer Serializer { get; set; }
         public IServiceFactory ServiceFactory { get; set; }
         public IRequestProcessorFactory RequestProcessorFactory { get; set; }
         public IServiceInvoker ServiceInvoker { get; set; }
         public CertificateValidationCallback ClientCertificateValidator { get; set; }
         public TaskScheduler Scheduler { get; set; }
+
+        #endregion
     }
 }

@@ -19,11 +19,15 @@ namespace Halibut.Server.Dispatch
 {
     public class ActivatorServiceFactory : IServiceFactory
     {
+        #region IServiceFactory Members
+
         public IServiceLease CreateService(Type serviceType)
         {
-            var service = Activator.CreateInstance(serviceType);
+            object service = Activator.CreateInstance(serviceType);
             return new Lease(service);
         }
+
+        #endregion
 
         #region Nested type: Lease
 
@@ -35,6 +39,8 @@ namespace Halibut.Server.Dispatch
             {
                 this.service = service;
             }
+
+            #region IServiceLease Members
 
             public object Service
             {
@@ -48,6 +54,8 @@ namespace Halibut.Server.Dispatch
                     ((IDisposable) service).Dispose();
                 }
             }
+
+            #endregion
         }
 
         #endregion

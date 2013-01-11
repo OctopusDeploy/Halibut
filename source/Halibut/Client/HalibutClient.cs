@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -45,6 +46,8 @@ namespace Halibut.Client
         public int SendTimeout { get; set; }
         public int ReceiveTimeout { get; set; }
 
+        #region IHalibutClient Members
+
         public TService Create<TService>(ServiceEndPoint endPoint)
         {
             return (TService) new HalibutProxy(this, typeof (TService), endPoint).GetTransparentProxy();
@@ -61,7 +64,7 @@ namespace Halibut.Client
             {
                 try
                 {
-                    var uri = serviceEndpoint.BaseUri;
+                    Uri uri = serviceEndpoint.BaseUri;
 
                     Log.InfoFormat("Sending request: {0}.{1} to {2}", request.Service, request.Method, uri);
 
@@ -72,7 +75,7 @@ namespace Halibut.Client
 
                     var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
 
-                    using (var stream = client.GetStream())
+                    using (NetworkStream stream = client.GetStream())
                     {
                         Log.Info("TCP stream established");
 
@@ -108,6 +111,19 @@ namespace Halibut.Client
                         }
                     }
                 }
+                catch (IOException ioex)
+                {
+                    var inner = ioex.InnerException as SocketException;
+                    if (inner != null)
+                    {
+                        if (inner.ErrorCode == 10053)
+                        {
+                            throw new JsonRpcException("The remote host aborted the connection. This can happen when the remote server does not trust the certificate that we provided.", ioex);
+                        }
+                    }
+
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     Log.Error(ex.Message);
@@ -116,6 +132,8 @@ namespace Halibut.Client
                 }
             }
         }
+
+        #endregion
 
         X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
         {
@@ -135,7 +153,7 @@ namespace Halibut.Client
 
             public bool Validate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
             {
-                var provided = new X509Certificate2(certificate).Thumbprint;
+                string provided = new X509Certificate2(certificate).Thumbprint;
 
                 Log.InfoFormat("We expect the server to provide a certificate with thumbprint: {0}", expectedThumbprint);
                 Log.InfoFormat("The server actually provided a certificate with thumbprint: {0}", provided);

@@ -7,12 +7,12 @@ using Halibut.Server.Security;
 
 namespace Halibut.SampleServer
 {
-	class Program
-	{
-		public static void Main (string[] args)
-		{
-		    Console.Title = "Halibut Server";
-		    var certificate = new X509Certificate2("HalibutServer.pfx");
+    class Program
+    {
+        public static void Main(string[] args)
+        {
+            Console.Title = "Halibut Server";
+            var certificate = new X509Certificate2("HalibutServer.pfx");
 
             var endPoint = new IPEndPoint(IPAddress.Any, 8433);
 
@@ -25,7 +25,7 @@ namespace Halibut.SampleServer
 
             while (true)
             {
-                var line = Console.ReadLine();
+                string line = Console.ReadLine();
                 if (string.Equals("cls", line, StringComparison.OrdinalIgnoreCase))
                 {
                     Console.Clear();
@@ -40,11 +40,13 @@ namespace Halibut.SampleServer
 
                 Console.WriteLine("Unknown command. Enter 'q' to quit.");
             }
-		}
+        }
 
-	    static CertificateValidationResult ValidateClientCertificate(X509Certificate2 clientcertificate)
-	    {
-	        return CertificateValidationResult.Valid;
-	    }
-	}
+        static CertificateValidationResult ValidateClientCertificate(X509Certificate2 clientcertificate)
+        {
+            return clientcertificate.Thumbprint == "2074529C99D93D5955FEECA859AEAC6092741205999"
+                       ? CertificateValidationResult.Valid
+                       : CertificateValidationResult.Rejected;
+        }
+    }
 }

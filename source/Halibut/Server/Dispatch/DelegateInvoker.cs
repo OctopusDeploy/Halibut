@@ -31,74 +31,74 @@ namespace Halibut.Server.Dispatch
             parameterTypes.AddRange(method.GetParameters().Select(x => x.ParameterType));
             parameterTypes.Add(method.ReturnType);
 
-            var invokerType = _invokerTypes.SingleOrDefault(x => x.GetGenericArguments().Length == parameterTypes.Count);
+            Type invokerType = _invokerTypes.SingleOrDefault(x => x.GetGenericArguments().Length == parameterTypes.Count);
             if (invokerType == null)
                 throw new ArgumentException(string.Format("Could not create an invoker for the method '{0}'. This type of method is not supported.", method));
 
             invokerType = invokerType.MakeGenericType(parameterTypes.ToArray());
 
-            var invokerWrapperType = _invokerWrapperTypes.SingleOrDefault(x => x.GetGenericArguments().Length == parameterTypes.Count);
+            Type invokerWrapperType = _invokerWrapperTypes.SingleOrDefault(x => x.GetGenericArguments().Length == parameterTypes.Count);
             if (invokerWrapperType == null)
                 throw new ArgumentException(string.Format("Could not create an invoker for the method '{0}'. This type of method is not supported.", method));
 
             invokerWrapperType = invokerWrapperType.MakeGenericType(parameterTypes.ToArray());
 
-            var invoker = Delegate.CreateDelegate(invokerType, target, method);
-            var wrapper = Activator.CreateInstance(invokerWrapperType, invoker);
+            Delegate invoker = Delegate.CreateDelegate(invokerType, target, method);
+            object wrapper = Activator.CreateInstance(invokerWrapperType, invoker);
             return (IActionInvokerWrapper) wrapper;
         }
 
         #region Generated
 
         static readonly Type[] _invokerTypes = new[]
-        {
-            typeof (ActionInvoker<,,,,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,,>),
-            typeof (ActionInvoker<,,,,,,>),
-            typeof (ActionInvoker<,,,,,>),
-            typeof (ActionInvoker<,,,,>),
-            typeof (ActionInvoker<,,,>),
-            typeof (ActionInvoker<,,>),
-            typeof (ActionInvoker<,>),
-            typeof (ActionInvoker<>),
-        };
+                                                   {
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,,>),
+                                                       typeof (ActionInvoker<,,,,,>),
+                                                       typeof (ActionInvoker<,,,,>),
+                                                       typeof (ActionInvoker<,,,>),
+                                                       typeof (ActionInvoker<,,>),
+                                                       typeof (ActionInvoker<,>),
+                                                       typeof (ActionInvoker<>),
+                                                   };
 
         static readonly Type[] _invokerWrapperTypes = new[]
-        {
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,,>),
-            typeof (ActionInvokerWrapper<,,,,>),
-            typeof (ActionInvokerWrapper<,,,>),
-            typeof (ActionInvokerWrapper<,,>),
-            typeof (ActionInvokerWrapper<,>),
-            typeof (ActionInvokerWrapper<>),
-        };
+                                                          {
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,,>),
+                                                              typeof (ActionInvokerWrapper<,,,>),
+                                                              typeof (ActionInvokerWrapper<,,>),
+                                                              typeof (ActionInvokerWrapper<,>),
+                                                              typeof (ActionInvokerWrapper<>),
+                                                          };
 
         #region Nested type: ActionInvoker
 
@@ -160,6 +160,8 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
@@ -182,9 +184,11 @@ namespace Halibut.Server.Dispatch
                 var arg17 = (TArg17) args[17];
                 var arg18 = (TArg18) args[18];
                 var arg19 = (TArg19) args[19];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18, arg19);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TArg12, TArg13, TArg14, TArg15, TArg16, TArg17, TArg18, TReturn> : IActionInvokerWrapper
@@ -195,6 +199,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -217,9 +223,11 @@ namespace Halibut.Server.Dispatch
                 var arg16 = (TArg16) args[16];
                 var arg17 = (TArg17) args[17];
                 var arg18 = (TArg18) args[18];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17, arg18);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TArg12, TArg13, TArg14, TArg15, TArg16, TArg17, TReturn> : IActionInvokerWrapper
@@ -230,6 +238,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -251,9 +261,11 @@ namespace Halibut.Server.Dispatch
                 var arg15 = (TArg15) args[15];
                 var arg16 = (TArg16) args[16];
                 var arg17 = (TArg17) args[17];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16, arg17);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TArg12, TArg13, TArg14, TArg15, TArg16, TReturn> : IActionInvokerWrapper
@@ -264,6 +276,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -284,9 +298,11 @@ namespace Halibut.Server.Dispatch
                 var arg14 = (TArg14) args[14];
                 var arg15 = (TArg15) args[15];
                 var arg16 = (TArg16) args[16];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TArg12, TArg13, TArg14, TArg15, TReturn> : IActionInvokerWrapper
@@ -297,6 +313,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -316,9 +334,11 @@ namespace Halibut.Server.Dispatch
                 var arg13 = (TArg13) args[13];
                 var arg14 = (TArg14) args[14];
                 var arg15 = (TArg15) args[15];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TArg12, TArg13, TArg14, TReturn> : IActionInvokerWrapper
@@ -329,6 +349,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -347,9 +369,11 @@ namespace Halibut.Server.Dispatch
                 var arg12 = (TArg12) args[12];
                 var arg13 = (TArg13) args[13];
                 var arg14 = (TArg14) args[14];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TArg12, TArg13, TReturn> : IActionInvokerWrapper
@@ -360,6 +384,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -377,9 +403,11 @@ namespace Halibut.Server.Dispatch
                 var arg11 = (TArg11) args[11];
                 var arg12 = (TArg12) args[12];
                 var arg13 = (TArg13) args[13];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TArg12, TReturn> : IActionInvokerWrapper
@@ -390,6 +418,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -406,9 +436,11 @@ namespace Halibut.Server.Dispatch
                 var arg10 = (TArg10) args[10];
                 var arg11 = (TArg11) args[11];
                 var arg12 = (TArg12) args[12];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TArg11, TReturn> : IActionInvokerWrapper
@@ -419,6 +451,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -434,9 +468,11 @@ namespace Halibut.Server.Dispatch
                 var arg9 = (TArg9) args[9];
                 var arg10 = (TArg10) args[10];
                 var arg11 = (TArg11) args[11];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TArg10, TReturn> : IActionInvokerWrapper
@@ -447,6 +483,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -461,9 +499,11 @@ namespace Halibut.Server.Dispatch
                 var arg8 = (TArg8) args[8];
                 var arg9 = (TArg9) args[9];
                 var arg10 = (TArg10) args[10];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TArg9, TReturn> : IActionInvokerWrapper
@@ -474,6 +514,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -487,9 +529,11 @@ namespace Halibut.Server.Dispatch
                 var arg7 = (TArg7) args[7];
                 var arg8 = (TArg8) args[8];
                 var arg9 = (TArg9) args[9];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TArg8, TReturn> : IActionInvokerWrapper
@@ -500,6 +544,8 @@ namespace Halibut.Server.Dispatch
             {
                 _invoker = invoker;
             }
+
+            #region IActionInvokerWrapper Members
 
             public object Call(object[] args)
             {
@@ -512,9 +558,11 @@ namespace Halibut.Server.Dispatch
                 var arg6 = (TArg6) args[6];
                 var arg7 = (TArg7) args[7];
                 var arg8 = (TArg8) args[8];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TArg7, TReturn> : IActionInvokerWrapper
@@ -526,6 +574,8 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
@@ -536,9 +586,11 @@ namespace Halibut.Server.Dispatch
                 var arg5 = (TArg5) args[5];
                 var arg6 = (TArg6) args[6];
                 var arg7 = (TArg7) args[7];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TArg6, TReturn> : IActionInvokerWrapper
@@ -550,6 +602,8 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
@@ -559,9 +613,11 @@ namespace Halibut.Server.Dispatch
                 var arg4 = (TArg4) args[4];
                 var arg5 = (TArg5) args[5];
                 var arg6 = (TArg6) args[6];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5, arg6);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TArg5, TReturn> : IActionInvokerWrapper
@@ -573,6 +629,8 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
@@ -581,9 +639,11 @@ namespace Halibut.Server.Dispatch
                 var arg3 = (TArg3) args[3];
                 var arg4 = (TArg4) args[4];
                 var arg5 = (TArg5) args[5];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4, arg5);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TArg4, TReturn> : IActionInvokerWrapper
@@ -595,6 +655,8 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
@@ -602,9 +664,11 @@ namespace Halibut.Server.Dispatch
                 var arg2 = (TArg2) args[2];
                 var arg3 = (TArg3) args[3];
                 var arg4 = (TArg4) args[4];
-                var result = _invoker(arg0, arg1, arg2, arg3, arg4);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3, arg4);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TArg3, TReturn> : IActionInvokerWrapper
@@ -616,15 +680,19 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
                 var arg1 = (TArg1) args[1];
                 var arg2 = (TArg2) args[2];
                 var arg3 = (TArg3) args[3];
-                var result = _invoker(arg0, arg1, arg2, arg3);
+                TReturn result = _invoker(arg0, arg1, arg2, arg3);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TArg2, TReturn> : IActionInvokerWrapper
@@ -636,14 +704,18 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
                 var arg1 = (TArg1) args[1];
                 var arg2 = (TArg2) args[2];
-                var result = _invoker(arg0, arg1, arg2);
+                TReturn result = _invoker(arg0, arg1, arg2);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TArg1, TReturn> : IActionInvokerWrapper
@@ -655,13 +727,17 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
                 var arg1 = (TArg1) args[1];
-                var result = _invoker(arg0, arg1);
+                TReturn result = _invoker(arg0, arg1);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TArg0, TReturn> : IActionInvokerWrapper
@@ -673,12 +749,16 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
                 var arg0 = (TArg0) args[0];
-                var result = _invoker(arg0);
+                TReturn result = _invoker(arg0);
                 return result;
             }
+
+            #endregion
         }
 
         class ActionInvokerWrapper<TReturn> : IActionInvokerWrapper
@@ -690,11 +770,15 @@ namespace Halibut.Server.Dispatch
                 _invoker = invoker;
             }
 
+            #region IActionInvokerWrapper Members
+
             public object Call(object[] args)
             {
-                var result = _invoker();
+                TReturn result = _invoker();
                 return result;
             }
+
+            #endregion
         }
 
         #endregion
