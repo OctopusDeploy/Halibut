@@ -11,6 +11,7 @@ namespace Halibut.SampleServer
 	{
 		public static void Main (string[] args)
 		{
+		    Console.Title = "Halibut Server";
 		    var certificate = new X509Certificate2("HalibutServer.pfx");
 
             var endPoint = new IPEndPoint(IPAddress.Any, 8433);
@@ -21,7 +22,24 @@ namespace Halibut.SampleServer
             server.Start();
 
             Console.WriteLine("Server listening on port 8433...");
-		    Console.ReadLine();
+
+            while (true)
+            {
+                var line = Console.ReadLine();
+                if (string.Equals("cls", line, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.Clear();
+                    continue;
+                }
+
+                if (string.Equals("q", line, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                if (string.Equals("exit", line, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                Console.WriteLine("Unknown command. Enter 'q' to quit.");
+            }
 		}
 
 	    static CertificateValidationResult ValidateClientCertificate(X509Certificate2 clientcertificate)

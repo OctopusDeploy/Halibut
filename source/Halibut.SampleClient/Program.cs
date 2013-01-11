@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Client;
@@ -10,7 +9,9 @@ namespace Halibut.SampleClient
 	class Program
 	{
 		public static void Main(string[] args)
-		{
+        {
+            Console.Title = "Halibut Client";
+
 		    var hostName = args.FirstOrDefault() ?? "localhost";
 
             var certificate = new X509Certificate2("HalibutClient.pfx");
