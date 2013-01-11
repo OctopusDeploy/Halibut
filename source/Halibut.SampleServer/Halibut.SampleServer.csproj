@@ -39,15 +39,27 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Main.cs" />
+    <Compile Include="CalculatorService.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
+    <None Include="App.config" />
+    <None Include="HalibutServer.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <ItemGroup>
-    <Folder Include="Properties\" />
+    <ProjectReference Include="..\Halibut.SampleContracts\Halibut.SampleContracts.csproj">
+      <Project>{A1E9A35D-F2CB-4223-8640-CC0E21E31C66}</Project>
+      <Name>Halibut.SampleContracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Halibut\Halibut.csproj">
+      <Project>{9D8386A2-4F69-4F80-A21F-F646A9828E25}</Project>
+      <Name>Halibut</Name>
+    </ProjectReference>
   </ItemGroup>
 </Project>

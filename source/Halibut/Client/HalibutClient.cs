@@ -50,6 +50,11 @@ namespace Halibut.Client
             return (TService) new HalibutProxy(this, typeof (TService), endPoint).GetTransparentProxy();
         }
 
+        public TService Create<TService>(Uri endPoint, string expectedRemoteServerThumbprint)
+        {
+            return Create<TService>(new ServiceEndPoint(endPoint, expectedRemoteServerThumbprint));
+        }
+
         public JsonRpcResponse Post(ServiceEndPoint serviceEndpoint, JsonRpcRequest request)
         {
             using (Log.BeginActivity(request.Id, request.ActivityId))

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using Halibut.Protocol;
 
 namespace Halibut.Client
@@ -19,6 +20,8 @@ namespace Halibut.Client
     public interface IHalibutClient
     {
         TService Create<TService>(ServiceEndPoint endPoint);
+        TService Create<TService>(Uri endPoint, string expectedRemoteServerThumbprint);
+
         JsonRpcResponse Post(ServiceEndPoint serviceEndpoint, JsonRpcRequest request);
     }
 }

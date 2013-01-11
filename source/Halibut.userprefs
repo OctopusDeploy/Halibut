@@ -1,17 +1,16 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Halibut\Server\HalibutServer.cs">
-    <Files>
-      <File FileName="Halibut.SampleClient\Main.cs" Line="13" Column="1" />
-      <File FileName="Halibut\Server\HalibutServer.cs" Line="23" Column="31" />
-    </Files>
+  <MonoDevelop.Ide.Workbench>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Option id="ShowVersionControlOverlays" value="False" />
           <Node name=".nuget" expanded="True" />
           <Node name="Samples" expanded="True">
-            <Node name="Halibut.SampleClient" selected="True" />
+            <Node name="Halibut.CertificateGenerator" expanded="True" />
+            <Node name="Halibut.SampleClient" expanded="True">
+              <Node name="Main.cs" selected="True" />
+            </Node>
           </Node>
           <Node name="Halibut" expanded="True">
             <Node name="Server" expanded="True" />
