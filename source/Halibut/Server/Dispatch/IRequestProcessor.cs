@@ -19,6 +19,6 @@ namespace Halibut.Server.Dispatch
 {
     public interface IRequestProcessor
     {
-        void Execute(Stream client);
+        void Execute(ClientInformation client, Stream clientStream);
     }
 }

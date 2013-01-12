@@ -14,6 +14,7 @@
 
 using System;
 using System.IO;
+using System.Net.Sockets;
 using Halibut.Diagnostics;
 using Halibut.Protocol;
 using Halibut.Server.ServiceModel;
@@ -40,10 +41,10 @@ namespace Halibut.Server.Dispatch
 
         #region IRequestProcessor Members
 
-        public void Execute(Stream client)
+        public void Execute(ClientInformation client, Stream clientStream)
         {
-            using (var reader = new BsonReader(client))
-            using (var writer = new BsonWriter(client))
+            using (var reader = new BsonReader(clientStream))
+            using (var writer = new BsonWriter(clientStream))
             {
                 try
                 {
@@ -52,7 +53,8 @@ namespace Halibut.Server.Dispatch
                     var request = serializer.Deserialize<JsonRpcRequest>(reader);
                     if (request == null) throw new ArgumentException("No JSON-RPC request was sent");
 
-                    using (Log.BeginActivity(request.Id, request.ActivityId))
+                    var activityName = string.Format("{0} : {1}", client.RemoteAddress, request.Id);
+                    using (Log.BeginActivity(activityName, request.ActivityId))
                     {
                         try
                         {

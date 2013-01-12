@@ -73,21 +73,22 @@ namespace Halibut.Server
         void Accept()
         {
             listener.BeginAcceptTcpClient(r =>
-                                              {
-                                                  try
-                                                  {
-                                                      Logs.Server.Info("Accepting TCP client");
-                                                      TcpClient client = listener.EndAcceptTcpClient(r);
-                                                      var task = new Task(() => ExecuteRequest(client));
-                                                      task.Start(options.Scheduler);
-                                                  }
-                                                  catch (Exception ex)
-                                                  {
-                                                      Logs.Server.Warn("TCP client error: " + ex.ToString());
-                                                  }
+            {
+                try
+                {
+                    var client = listener.EndAcceptTcpClient(r);
+                    Logs.Server.Info("Accepted TCP client " + client.Client.RemoteEndPoint);
+                                                      
+                    var task = new Task(() => ExecuteRequest(client));
+                    task.Start(options.Scheduler);
+                }
+                catch (Exception ex)
+                {
+                    Logs.Server.Warn("TCP client error: " + ex.ToString());
+                }
 
-                                                  Accept();
-                                              }, null);
+                Accept();
+            }, null);
         }
 
         void ExecuteRequest(TcpClient client)
@@ -101,14 +102,15 @@ namespace Halibut.Server
                     ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls, false);
 
                     var processor = options.RequestProcessorFactory.CreateProcessor(services, options);
-                    processor.Execute(ssl);
+                    processor.Execute(new ClientInformation { RemoteAddress = clientName },  ssl);
                 }
                 catch (AuthenticationException ex)
                 {
-                    Logs.Server.Warn("A client (" + clientName + ") failed authentication: " + ex);
+                    Logs.Server.Warn("Client " + clientName + " failed authentication: " + ex);
                 }
-                catch (IOException)
+                catch (Exception ex)
                 {
+                    Logs.Server.ErrorFormat("Unhandled error when handling request from client {0}: {1}", clientName, ex);
                 }
             }
         }

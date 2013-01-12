@@ -44,7 +44,7 @@ namespace Halibut.SampleServer
 
         static CertificateValidationResult ValidateClientCertificate(X509Certificate2 clientcertificate)
         {
-            return clientcertificate.Thumbprint == "2074529C99D93D5955FEECA859AEAC6092741205999"
+            return clientcertificate.Thumbprint == "2074529C99D93D5955FEECA859AEAC6092741205"
                        ? CertificateValidationResult.Valid
                        : CertificateValidationResult.Rejected;
         }
