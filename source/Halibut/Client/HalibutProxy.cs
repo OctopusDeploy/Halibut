@@ -51,6 +51,12 @@ namespace Halibut.Client
 
                 var result = response.Result;
 
+                var returnType = ((MethodInfo) methodCall.MethodBase).ReturnType;
+                if (result != null && returnType != typeof(void) && !returnType.IsAssignableFrom(result.GetType()))
+                {
+                    result = Convert.ChangeType(result, returnType);
+                }
+
                 return new ReturnMessage(result, null, 0, null, methodCall);
             }
             catch (Exception ex)

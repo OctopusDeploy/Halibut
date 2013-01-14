@@ -52,7 +52,6 @@
     <Compile Include="Protocol\JsonRpcResponse.cs" />
     <Compile Include="Server\Dispatch\ActivatorServiceFactory.cs" />
     <Compile Include="Server\Dispatch\ClientInformation.cs" />
-    <Compile Include="Server\Dispatch\DelegateInvoker.cs" />
     <Compile Include="Server\Dispatch\IRequestProcessor.cs" />
     <Compile Include="Server\Dispatch\IRequestProcessorFactory.cs" />
     <Compile Include="Server\Dispatch\IServiceInvoker.cs" />

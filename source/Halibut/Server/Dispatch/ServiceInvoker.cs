@@ -29,16 +29,21 @@ namespace Halibut.Server.Dispatch
         {
             Type serviceType = service.GetType();
             var methods = serviceType.GetMethods().Where(m => string.Equals(m.Name, request.Method, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (methods.Count == 0)
+            {
+                throw new MissingMethodException(serviceType.FullName, request.Method);
+            }
+
             var method = SelectMethod(methods, request);
 
-            object[] args = GetArguments(request, method);
+            var args = GetArguments(request, method);
 
             var result = method.Invoke(service, args);
 
             return new JsonRpcResponse {Id = request.Id, Result = result};
         }
 
-        MethodInfo SelectMethod(IEnumerable<MethodInfo> methods, JsonRpcRequest request)
+        MethodInfo SelectMethod(IList<MethodInfo> methods, JsonRpcRequest request)
         {
             var argumentTypes = request.Params.Select(s => s == null ? null : s.GetType()).ToList();
 
@@ -79,10 +84,24 @@ namespace Halibut.Server.Dispatch
             if (matches.Count == 1)
                 return matches[0];
 
-            var message = new StringBuilder("More than one match for the service method was found. Candidates were:").AppendLine();
-            foreach (var match in matches)
+            var message = new StringBuilder();
+            if (matches.Count > 1)
             {
-                message.AppendLine(" - " + match);
+                message.AppendLine("More than one possible match for the requested service method was found given the argument types. The matches were:");
+
+                foreach (var match in matches)
+                {
+                    message.AppendLine(" - " + match);
+                }
+            } 
+            else
+            {
+                message.AppendLine("Could not decide which candidate to call out of the following methods:");
+
+                foreach (var match in methods)
+                {
+                    message.AppendLine(" - " + match);
+                }
             }
 
             message.AppendLine("The request arguments were:");

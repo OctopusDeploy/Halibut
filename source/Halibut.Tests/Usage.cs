@@ -11,11 +11,6 @@ namespace Halibut.Tests
     [TestFixture]
     public class Usage
     {
-        [SetUp]
-        public void SetUp()
-        {
-        }
-
         [Test]
         public void AliceCanSendMessagesToBob()
         {
@@ -110,6 +105,10 @@ namespace Halibut.Tests
                 Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j"), Is.EqualTo("Hello a b c d e f g h i j"));
                 Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"), Is.EqualTo("Hello a b c d e f g h i j k"));
 
+                Assert.That(echo.Add(1, 2), Is.EqualTo(3));
+                Assert.That(echo.Add(1.00, 2.00), Is.EqualTo(3.00));
+                Assert.That(echo.Add(1.10M, 2.10M), Is.EqualTo(3.20M));
+
                 Assert.That(echo.Ambiguous("a", "b"), Is.EqualTo("Hello string"));
                 Assert.That(echo.Ambiguous("a", new Tuple<string, string>("a", "b")), Is.EqualTo("Hello tuple"));
 
@@ -141,6 +140,11 @@ namespace Halibut.Tests
         public interface ISupportedServices
         {
             void MethodReturningVoid(long a, long b);
+
+            long Add(long a, long b);
+            double Add(double a, double b);
+            decimal Add(decimal a, decimal b);
+
             string Hello();
             string Hello(string a);
             string Hello(string a, string b);
@@ -162,6 +166,21 @@ namespace Halibut.Tests
         {
             public void MethodReturningVoid(long a, long b)
             {
+            }
+
+            public long Add(long a, long b)
+            {
+                return a + b;
+            }
+
+            public double Add(double a, double b)
+            {
+                return a + b;
+            }
+
+            public decimal Add(decimal a, decimal b)
+            {
+                return a + b;
             }
 
             public string Hello()
