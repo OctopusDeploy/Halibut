@@ -14,7 +14,6 @@
 
 using System;
 using System.IO;
-using System.Net.Sockets;
 using Halibut.Diagnostics;
 using Halibut.Protocol;
 using Halibut.Server.ServiceModel;

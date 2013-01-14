@@ -17,29 +17,14 @@ using System.Runtime.Serialization;
 
 namespace Halibut.Protocol
 {
-    [Serializable]
     public class JsonRpcException  : Exception
     {
-        public JsonRpcException()
-        {
-        }
-
-        public JsonRpcException (string message) : base(message)
-        {
-        }
-
         public JsonRpcException (string message, Exception inner) : base(message, inner)
         {
         }
 
         public JsonRpcException(string message, string serverException)
             : base(message + Environment.NewLine + Environment.NewLine + "Server exception: " + Environment.NewLine + serverException)
-        {
-        }
-
-        protected JsonRpcException(
-            SerializationInfo info,
-            StreamingContext context) : base(info, context)
         {
         }
     }
