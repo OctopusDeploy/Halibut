@@ -140,6 +140,8 @@ namespace Halibut.Client
             return clientCertificate;
         }
 
+        #region Nested type: ClientCertificateValidator
+
         class ClientCertificateValidator
         {
             readonly string expectedThumbprint;
@@ -166,5 +168,7 @@ namespace Halibut.Client
                 return false;
             }
         }
+
+        #endregion
     }
 }

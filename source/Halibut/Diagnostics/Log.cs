@@ -62,6 +62,8 @@ namespace Halibut.Diagnostics
             trace.TraceEvent(TraceEventType.Error, 0, messageFormat, args);
         }
 
+        #region Nested type: ActivityBlock
+
         class ActivityBlock : IDisposable
         {
             readonly string name;
@@ -83,5 +85,7 @@ namespace Halibut.Diagnostics
                 Trace.CorrelationManager.ActivityId = originalId;
             }
         }
+
+        #endregion
     }
 }

@@ -25,6 +25,8 @@ namespace Halibut.Server.Dispatch
             return new Lease(service);
         }
 
+        #region Nested type: Lease
+
         class Lease : IServiceLease
         {
             readonly object service;
@@ -47,5 +49,7 @@ namespace Halibut.Server.Dispatch
                 }
             }
         }
+
+        #endregion
     }
 }

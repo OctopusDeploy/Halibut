@@ -25,143 +25,6 @@ namespace Halibut.Tests
     [TestFixture]
     public class Usage
     {
-        public interface IEchoService
-        {
-            string SayHello(string name);
-
-            bool Crash();
-        }
-
-        public class EchoService : IEchoService
-        {
-            public string SayHello(string name)
-            {
-                return "Hello!";
-            }
-
-            public bool Crash()
-            {
-                throw new DivideByZeroException();
-            }
-        }
-
-        public interface ISupportedServices
-        {
-            void MethodReturningVoid(long a, long b);
-
-            long Add(long a, long b);
-            double Add(double a, double b);
-            decimal Add(decimal a, decimal b);
-
-            string Hello();
-            string Hello(string a);
-            string Hello(string a, string b);
-            string Hello(string a, string b, string c);
-            string Hello(string a, string b, string c, string d);
-            string Hello(string a, string b, string c, string d, string e);
-            string Hello(string a, string b, string c, string d, string e, string f);
-            string Hello(string a, string b, string c, string d, string e, string f, string g);
-            string Hello(string a, string b, string c, string d, string e, string f, string g, string h);
-            string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i);
-            string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j);
-            string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j, string k);
-
-            string Ambiguous(string a, string b);
-            string Ambiguous(string a, Tuple<string, string> b);
-        }
-
-        public class SupportedServices : ISupportedServices
-        {
-            public void MethodReturningVoid(long a, long b)
-            {
-            }
-
-            public long Add(long a, long b)
-            {
-                return a + b;
-            }
-
-            public double Add(double a, double b)
-            {
-                return a + b;
-            }
-
-            public decimal Add(decimal a, decimal b)
-            {
-                return a + b;
-            }
-
-            public string Hello()
-            {
-                return "Hello";
-            }
-
-            public string Hello(string a)
-            {
-                return "Hello " + a;
-            }
-
-            public string Hello(string a, string b)
-            {
-                return "Hello " + string.Join(" ", a, b);
-            }
-
-            public string Hello(string a, string b, string c)
-            {
-                return "Hello " + string.Join(" ", a, b, c);
-            }
-
-            public string Hello(string a, string b, string c, string d)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d);
-            }
-
-            public string Hello(string a, string b, string c, string d, string e)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d, e);
-            }
-
-            public string Hello(string a, string b, string c, string d, string e, string f)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d, e, f);
-            }
-
-            public string Hello(string a, string b, string c, string d, string e, string f, string g)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d, e, f, g);
-            }
-
-            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h);
-            }
-
-            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i);
-            }
-
-            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j);
-            }
-
-            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j, string k)
-            {
-                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j, k);
-            }
-
-            public string Ambiguous(string a, string b)
-            {
-                return "Hello string";
-            }
-
-            public string Ambiguous(string a, Tuple<string, string> b)
-            {
-                return "Hello tuple";
-            }
-        }
-
         [Test]
         public void AliceCanSendMessagesToBob()
         {
@@ -267,5 +130,158 @@ namespace Halibut.Tests
                 Assert.That(ex.Message, Is.StringContaining("Ambiguous"));
             }
         }
+
+        #region Nested type: EchoService
+
+        public class EchoService : IEchoService
+        {
+            public string SayHello(string name)
+            {
+                return "Hello!";
+            }
+
+            public bool Crash()
+            {
+                throw new DivideByZeroException();
+            }
+        }
+
+        #endregion
+
+        #region Nested type: IEchoService
+
+        public interface IEchoService
+        {
+            string SayHello(string name);
+
+            bool Crash();
+        }
+
+        #endregion
+
+        #region Nested type: ISupportedServices
+
+        public interface ISupportedServices
+        {
+            void MethodReturningVoid(long a, long b);
+
+            long Add(long a, long b);
+            double Add(double a, double b);
+            decimal Add(decimal a, decimal b);
+
+            string Hello();
+            string Hello(string a);
+            string Hello(string a, string b);
+            string Hello(string a, string b, string c);
+            string Hello(string a, string b, string c, string d);
+            string Hello(string a, string b, string c, string d, string e);
+            string Hello(string a, string b, string c, string d, string e, string f);
+            string Hello(string a, string b, string c, string d, string e, string f, string g);
+            string Hello(string a, string b, string c, string d, string e, string f, string g, string h);
+            string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i);
+            string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j);
+            string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j, string k);
+
+            string Ambiguous(string a, string b);
+            string Ambiguous(string a, Tuple<string, string> b);
+        }
+
+        #endregion
+
+        #region Nested type: SupportedServices
+
+        public class SupportedServices : ISupportedServices
+        {
+            public void MethodReturningVoid(long a, long b)
+            {
+            }
+
+            public long Add(long a, long b)
+            {
+                return a + b;
+            }
+
+            public double Add(double a, double b)
+            {
+                return a + b;
+            }
+
+            public decimal Add(decimal a, decimal b)
+            {
+                return a + b;
+            }
+
+            public string Hello()
+            {
+                return "Hello";
+            }
+
+            public string Hello(string a)
+            {
+                return "Hello " + a;
+            }
+
+            public string Hello(string a, string b)
+            {
+                return "Hello " + string.Join(" ", a, b);
+            }
+
+            public string Hello(string a, string b, string c)
+            {
+                return "Hello " + string.Join(" ", a, b, c);
+            }
+
+            public string Hello(string a, string b, string c, string d)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d);
+            }
+
+            public string Hello(string a, string b, string c, string d, string e)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d, e);
+            }
+
+            public string Hello(string a, string b, string c, string d, string e, string f)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d, e, f);
+            }
+
+            public string Hello(string a, string b, string c, string d, string e, string f, string g)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d, e, f, g);
+            }
+
+            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h);
+            }
+
+            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i);
+            }
+
+            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j);
+            }
+
+            public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j, string k)
+            {
+                return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j, k);
+            }
+
+            public string Ambiguous(string a, string b)
+            {
+                return "Hello string";
+            }
+
+            public string Ambiguous(string a, Tuple<string, string> b)
+            {
+                return "Hello tuple";
+            }
+        }
+
+        #endregion
     }
 }
