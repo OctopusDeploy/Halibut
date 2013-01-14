@@ -13,7 +13,10 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Text;
 using Halibut.Protocol;
 
 namespace Halibut.Server.Dispatch
@@ -25,13 +28,67 @@ namespace Halibut.Server.Dispatch
         public JsonRpcResponse Invoke(object service, JsonRpcRequest request)
         {
             Type serviceType = service.GetType();
-            MethodInfo methodInfo = serviceType.GetMethod(request.Method);
-            object[] args = GetArguments(request, methodInfo);
+            var methods = serviceType.GetMethods().Where(m => string.Equals(m.Name, request.Method, StringComparison.OrdinalIgnoreCase)).ToList();
+            var method = SelectMethod(methods, request);
 
-            DelegateInvoker.IActionInvokerWrapper invoker = DelegateInvoker.CreateInvoker(service, methodInfo);
-            object result = invoker.Call(args);
+            object[] args = GetArguments(request, method);
+
+            var result = method.Invoke(service, args);
 
             return new JsonRpcResponse {Id = request.Id, Result = result};
+        }
+
+        MethodInfo SelectMethod(IEnumerable<MethodInfo> methods, JsonRpcRequest request)
+        {
+            var argumentTypes = request.Params.Select(s => s == null ? null : s.GetType()).ToList();
+
+            var matches = new List<MethodInfo>();
+
+            foreach (var method in methods)
+            {
+                var parameters = method.GetParameters();
+                if (parameters.Length != argumentTypes.Count)
+                {
+                    continue;
+                }
+
+                var isMatch = true;
+                for (var i = 0; i < parameters.Length; i++)
+                {
+                    var paramType = parameters[i].ParameterType;
+                    var argType = argumentTypes[i];
+                    if (argType == null && paramType.IsValueType)
+                    {
+                        isMatch = false;
+                        break;
+                    }
+
+                    if (argType != null && !paramType.IsAssignableFrom(argType))
+                    {
+                        isMatch = false;
+                        break;
+                    } 
+                }
+
+                if (isMatch)
+                {
+                    matches.Add(method);
+                }
+            }
+
+            if (matches.Count == 1)
+                return matches[0];
+
+            var message = new StringBuilder("More than one match for the service method was found. Candidates were:").AppendLine();
+            foreach (var match in matches)
+            {
+                message.AppendLine(" - " + match);
+            }
+
+            message.AppendLine("The request arguments were:");
+            message.AppendLine(string.Join(", ", argumentTypes.Select(t => t == null ? "<null>" : t.Name)));
+
+            throw new AmbiguousMatchException(message.ToString());
         }
 
         #endregion

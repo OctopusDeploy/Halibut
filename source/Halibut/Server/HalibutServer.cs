@@ -13,7 +13,6 @@
 // limitations under the License.
 
 using System;
-using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -34,6 +33,7 @@ namespace Halibut.Server
         readonly X509Certificate2 serverCertificate;
         readonly IServiceCatalog services = new ServiceCatalog();
         TcpListener listener;
+        bool isStopped;
 
         public HalibutServer(IPEndPoint endPoint, X509Certificate2 serverCertificate)
         {
@@ -53,15 +53,6 @@ namespace Halibut.Server
             get { return services; }
         }
 
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-            listener.Stop();
-        }
-
-        #endregion
-
         public void Start()
         {
             listener = new TcpListener(endPoint);
@@ -70,13 +61,29 @@ namespace Halibut.Server
             Accept();
         }
 
+        #region IDisposable Members
+
+        public void Dispose()
+        {
+            isStopped = true;
+            listener.Stop();
+        }
+
+        #endregion
+
         void Accept()
         {
+            if (isStopped)
+                return;
+
             listener.BeginAcceptTcpClient(r =>
             {
                 try
                 {
                     var client = listener.EndAcceptTcpClient(r);
+                    if (isStopped)
+                        return;
+
                     Logs.Server.Info("Accepted TCP client " + client.Client.RemoteEndPoint);
                                                       
                     var task = new Task(() => ExecuteRequest(client));
@@ -113,6 +120,8 @@ namespace Halibut.Server
                     Logs.Server.ErrorFormat("Unhandled error when handling request from client {0}: {1}", clientName, ex);
                 }
             }
+
+            client.Close();
         }
 
         bool ValidateCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)

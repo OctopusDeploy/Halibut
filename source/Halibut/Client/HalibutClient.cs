@@ -116,13 +116,17 @@ namespace Halibut.Client
                     var inner = ioex.InnerException as SocketException;
                     if (inner != null)
                     {
-                        if (inner.ErrorCode == 10053)
+                        if (inner.ErrorCode == 10053 || inner.ErrorCode == 10054)
                         {
                             throw new JsonRpcException("The remote host aborted the connection. This can happen when the remote server does not trust the certificate that we provided.", ioex);
                         }
                     }
 
                     throw;
+                }
+                catch (AuthenticationException aex) 
+                {
+                    throw new JsonRpcException("We aborted the connection because the remote host was not authenticated. This happens whtn the remote host presents a different certificate to the one we expected.", aex);
                 }
                 catch (Exception ex)
                 {

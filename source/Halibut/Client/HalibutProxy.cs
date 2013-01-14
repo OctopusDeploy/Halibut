@@ -43,13 +43,13 @@ namespace Halibut.Client
 
             try
             {
-                JsonRpcRequest request = CreateRequest(methodCall);
+                var request = CreateRequest(methodCall);
 
-                JsonRpcResponse response = DispatchRequest(request);
+                var response = DispatchRequest(request);
 
                 EnsureNotError(response);
 
-                object result = response.Result;
+                var result = response.Result;
 
                 return new ReturnMessage(result, null, 0, null, methodCall);
             }
@@ -65,13 +65,13 @@ namespace Halibut.Client
 
             var method = ((MethodInfo) methodCall.MethodBase);
             var request = new JsonRpcRequest
-                              {
-                                  Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
-                                  ActivityId = activityId,
-                                  Service = contractType.Name,
-                                  Method = method.Name,
-                                  Params = methodCall.Args
-                              };
+            {
+                Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                ActivityId = activityId,
+                Service = contractType.Name,
+                Method = method.Name,
+                Params = methodCall.Args
+            };
             return request;
         }
 
@@ -85,7 +85,7 @@ namespace Halibut.Client
             if (response.Error == null)
                 return;
 
-            var realException = response.Error.Data as Exception;
+            var realException = response.Error.Data as string;
             throw new JsonRpcException(response.Error.Message, realException);
         }
     }

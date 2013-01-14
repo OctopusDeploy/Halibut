@@ -13,16 +13,33 @@
 // limitations under the License.
 
 using System;
+using System.Runtime.Serialization;
 
 namespace Halibut.Protocol
 {
-    public class JsonRpcException : Exception
+    [Serializable]
+    public class JsonRpcException  : Exception
     {
-        public JsonRpcException(string message) : base(message)
+        public JsonRpcException()
         {
         }
 
-        public JsonRpcException(string message, Exception innerException) : base(message, innerException)
+        public JsonRpcException (string message) : base(message)
+        {
+        }
+
+        public JsonRpcException (string message, Exception inner) : base(message, inner)
+        {
+        }
+
+        public JsonRpcException(string message, string serverException)
+            : base(message + Environment.NewLine + Environment.NewLine + "Server exception: " + Environment.NewLine + serverException)
+        {
+        }
+
+        protected JsonRpcException(
+            SerializationInfo info,
+            StreamingContext context) : base(info, context)
         {
         }
     }
