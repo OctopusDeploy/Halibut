@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 // 
-//    http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 // 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -32,8 +32,8 @@ namespace Halibut.Server
         readonly IHalibutServerOptions options = new HalibutServerOptions();
         readonly X509Certificate2 serverCertificate;
         readonly IServiceCatalog services = new ServiceCatalog();
-        TcpListener listener;
         bool isStopped;
+        TcpListener listener;
 
         public HalibutServer(IPEndPoint endPoint, X509Certificate2 serverCertificate)
         {
@@ -61,41 +61,31 @@ namespace Halibut.Server
             Accept();
         }
 
-        #region IDisposable Members
-
-        public void Dispose()
-        {
-            isStopped = true;
-            listener.Stop();
-        }
-
-        #endregion
-
         void Accept()
         {
             if (isStopped)
                 return;
 
             listener.BeginAcceptTcpClient(r =>
-            {
-                try
-                {
-                    var client = listener.EndAcceptTcpClient(r);
-                    if (isStopped)
-                        return;
+                                              {
+                                                  try
+                                                  {
+                                                      var client = listener.EndAcceptTcpClient(r);
+                                                      if (isStopped)
+                                                          return;
 
-                    Logs.Server.Info("Accepted TCP client " + client.Client.RemoteEndPoint);
-                                                      
-                    var task = new Task(() => ExecuteRequest(client));
-                    task.Start(options.Scheduler);
-                }
-                catch (Exception ex)
-                {
-                    Logs.Server.Warn("TCP client error: " + ex.ToString());
-                }
+                                                      Logs.Server.Info("Accepted TCP client " + client.Client.RemoteEndPoint);
 
-                Accept();
-            }, null);
+                                                      var task = new Task(() => ExecuteRequest(client));
+                                                      task.Start(options.Scheduler);
+                                                  }
+                                                  catch (Exception ex)
+                                                  {
+                                                      Logs.Server.Warn("TCP client error: " + ex.ToString());
+                                                  }
+
+                                                  Accept();
+                                              }, null);
         }
 
         void ExecuteRequest(TcpClient client)
@@ -109,7 +99,7 @@ namespace Halibut.Server
                     ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls, false);
 
                     var processor = options.RequestProcessorFactory.CreateProcessor(services, options);
-                    processor.Execute(new ClientInformation { RemoteAddress = clientName },  ssl);
+                    processor.Execute(new ClientInformation {RemoteAddress = clientName}, ssl);
                 }
                 catch (AuthenticationException ex)
                 {
@@ -140,6 +130,12 @@ namespace Halibut.Server
             {
                 throw new Exception("The X509 certificate provided does not have a private key, and so it cannot be used for listening.");
             }
+        }
+
+        public void Dispose()
+        {
+            isStopped = true;
+            listener.Stop();
         }
     }
 }

@@ -1,3 +1,17 @@
+// Copyright 2012-2013 Octopus Deploy Pty. Ltd.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//   http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 using System;
 using System.Collections;
 using System.Security.AccessControl;
@@ -11,7 +25,6 @@ using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
-using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Halibut.CertificateGenerator
 {
@@ -21,7 +34,7 @@ namespace Halibut.CertificateGenerator
 
         public static X509Certificate2 Generate(string fullName)
         {
-            for (int i = 0; i < 100; i++)
+            for (var i = 0; i < 100; i++)
             {
                 try
                 {
@@ -42,7 +55,7 @@ namespace Halibut.CertificateGenerator
 
             kpgen.Init(new KeyGenerationParameters(Random, 2048));
 
-            AsymmetricCipherKeyPair cerKp = kpgen.GenerateKeyPair();
+            var cerKp = kpgen.GenerateKeyPair();
 
             IDictionary attrs = new Hashtable();
             attrs[X509Name.E] = "";
@@ -70,13 +83,13 @@ namespace Halibut.CertificateGenerator
             certGen.SetSignatureAlgorithm("SHA1WithRSA");
             certGen.AddExtension(X509Extensions.BasicConstraints, true, new BasicConstraints(false));
             certGen.AddExtension(X509Extensions.AuthorityKeyIdentifier, true, new AuthorityKeyIdentifier(SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(cerKp.Public)));
-            X509Certificate x509 = certGen.Generate(cerKp.Private);
+            var x509 = certGen.Generate(cerKp.Private);
 
-            System.Security.Cryptography.X509Certificates.X509Certificate x509Certificate = DotNetUtilities.ToX509Certificate(x509);
+            var x509Certificate = DotNetUtilities.ToX509Certificate(x509);
             return new X509Certificate2(x509Certificate)
-                       {
-                           PrivateKey = AddPrivateKey(cerKp)
-                       };
+                   {
+                       PrivateKey = AddPrivateKey(cerKp)
+                   };
         }
 
 #if !__MonoCS__

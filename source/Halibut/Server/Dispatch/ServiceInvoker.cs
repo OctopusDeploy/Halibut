@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 // 
-//    http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 // 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,11 +23,9 @@ namespace Halibut.Server.Dispatch
 {
     public class ServiceInvoker : IServiceInvoker
     {
-        #region IServiceInvoker Members
-
         public JsonRpcResponse Invoke(object service, JsonRpcRequest request)
         {
-            Type serviceType = service.GetType();
+            var serviceType = service.GetType();
             var methods = serviceType.GetMethods().Where(m => string.Equals(m.Name, request.Method, StringComparison.OrdinalIgnoreCase)).ToList();
             if (methods.Count == 0)
             {
@@ -43,7 +41,7 @@ namespace Halibut.Server.Dispatch
             return new JsonRpcResponse {Id = request.Id, Result = result};
         }
 
-        MethodInfo SelectMethod(IList<MethodInfo> methods, JsonRpcRequest request)
+        static MethodInfo SelectMethod(IList<MethodInfo> methods, JsonRpcRequest request)
         {
             var argumentTypes = request.Params.Select(s => s == null ? null : s.GetType()).ToList();
 
@@ -72,7 +70,7 @@ namespace Halibut.Server.Dispatch
                     {
                         isMatch = false;
                         break;
-                    } 
+                    }
                 }
 
                 if (isMatch)
@@ -93,7 +91,7 @@ namespace Halibut.Server.Dispatch
                 {
                     message.AppendLine(" - " + match);
                 }
-            } 
+            }
             else
             {
                 message.AppendLine("Could not decide which candidate to call out of the following methods:");
@@ -110,17 +108,15 @@ namespace Halibut.Server.Dispatch
             throw new AmbiguousMatchException(message.ToString());
         }
 
-        #endregion
-
         static object[] GetArguments(JsonRpcRequest request, MethodInfo methodInfo)
         {
-            ParameterInfo[] methodParams = methodInfo.GetParameters();
+            var methodParams = methodInfo.GetParameters();
             var args = new object[methodParams.Length];
-            for (int i = 0; i < methodParams.Length; i++)
+            for (var i = 0; i < methodParams.Length; i++)
             {
                 if (i >= request.Params.Length) continue;
 
-                object jsonArg = request.Params[i];
+                var jsonArg = request.Params[i];
                 args[i] = jsonArg;
             }
 

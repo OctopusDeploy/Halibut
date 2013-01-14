@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 // 
-//    http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 // 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,7 +52,7 @@ namespace Halibut.Client
                 var result = response.Result;
 
                 var returnType = ((MethodInfo) methodCall.MethodBase).ReturnType;
-                if (result != null && returnType != typeof(void) && !returnType.IsAssignableFrom(result.GetType()))
+                if (result != null && returnType != typeof (void) && !returnType.IsAssignableFrom(result.GetType()))
                 {
                     result = Convert.ChangeType(result, returnType);
                 }
@@ -67,17 +67,17 @@ namespace Halibut.Client
 
         JsonRpcRequest CreateRequest(IMethodMessage methodCall)
         {
-            Guid activityId = Guid.NewGuid();
+            var activityId = Guid.NewGuid();
 
             var method = ((MethodInfo) methodCall.MethodBase);
             var request = new JsonRpcRequest
-            {
-                Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
-                ActivityId = activityId,
-                Service = contractType.Name,
-                Method = method.Name,
-                Params = methodCall.Args
-            };
+                          {
+                              Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                              ActivityId = activityId,
+                              Service = contractType.Name,
+                              Method = method.Name,
+                              Params = methodCall.Args
+                          };
             return request;
         }
 

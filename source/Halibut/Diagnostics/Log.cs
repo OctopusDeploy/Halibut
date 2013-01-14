@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 // 
-//    http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 // 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,8 +25,6 @@ namespace Halibut.Diagnostics
         {
             this.trace = trace;
         }
-
-        #region ILog Members
 
         public IDisposable BeginActivity(string name, Guid id)
         {
@@ -64,10 +62,6 @@ namespace Halibut.Diagnostics
             trace.TraceEvent(TraceEventType.Error, 0, messageFormat, args);
         }
 
-        #endregion
-
-        #region Nested type: ActivityBlock
-
         class ActivityBlock : IDisposable
         {
             readonly string name;
@@ -83,17 +77,11 @@ namespace Halibut.Diagnostics
                 traceSource.TraceEvent(TraceEventType.Start, 0, name);
             }
 
-            #region IDisposable Members
-
             public void Dispose()
             {
                 traceSource.TraceEvent(TraceEventType.Stop, 0, name);
                 Trace.CorrelationManager.ActivityId = originalId;
             }
-
-            #endregion
         }
-
-        #endregion
     }
 }

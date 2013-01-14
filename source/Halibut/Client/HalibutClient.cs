@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 // 
-//    http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 // 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -46,8 +46,6 @@ namespace Halibut.Client
         public int SendTimeout { get; set; }
         public int ReceiveTimeout { get; set; }
 
-        #region IHalibutClient Members
-
         public TService Create<TService>(ServiceEndPoint endPoint)
         {
             return (TService) new HalibutProxy(this, typeof (TService), endPoint).GetTransparentProxy();
@@ -64,7 +62,7 @@ namespace Halibut.Client
             {
                 try
                 {
-                    Uri uri = serviceEndpoint.BaseUri;
+                    var uri = serviceEndpoint.BaseUri;
 
                     Log.InfoFormat("Sending request: {0}.{1} to {2}", request.Service, request.Method, uri);
 
@@ -75,7 +73,7 @@ namespace Halibut.Client
 
                     var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
 
-                    using (NetworkStream stream = client.GetStream())
+                    using (var stream = client.GetStream())
                     {
                         Log.Info("TCP stream established");
 
@@ -124,7 +122,7 @@ namespace Halibut.Client
 
                     throw;
                 }
-                catch (AuthenticationException aex) 
+                catch (AuthenticationException aex)
                 {
                     throw new JsonRpcException("We aborted the connection because the remote host was not authenticated. This happens whtn the remote host presents a different certificate to the one we expected.", aex);
                 }
@@ -137,14 +135,10 @@ namespace Halibut.Client
             }
         }
 
-        #endregion
-
         X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
         {
             return clientCertificate;
         }
-
-        #region Nested type: ClientCertificateValidator
 
         class ClientCertificateValidator
         {
@@ -157,7 +151,7 @@ namespace Halibut.Client
 
             public bool Validate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
             {
-                string provided = new X509Certificate2(certificate).Thumbprint;
+                var provided = new X509Certificate2(certificate).Thumbprint;
 
                 Log.InfoFormat("We expect the server to provide a certificate with thumbprint: {0}", expectedThumbprint);
                 Log.InfoFormat("The server actually provided a certificate with thumbprint: {0}", provided);
@@ -172,7 +166,5 @@ namespace Halibut.Client
                 return false;
             }
         }
-
-        #endregion
     }
 }

@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 // 
-//    http://www.apache.org/licenses/LICENSE-2.0
+//   http://www.apache.org/licenses/LICENSE-2.0
 // 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,8 +38,6 @@ namespace Halibut.Server.Dispatch
             this.serviceInvoker = serviceInvoker;
         }
 
-        #region IRequestProcessor Members
-
         public void Execute(ClientInformation client, Stream clientStream)
         {
             using (var reader = new BsonReader(clientStream))
@@ -64,7 +62,7 @@ namespace Halibut.Server.Dispatch
 
                             Log.InfoFormat("Resolving service {0}", request.Service);
 
-                            Type serviceType = services.GetService(request.Service);
+                            var serviceType = services.GetService(request.Service);
                             if (serviceType == null)
                             {
                                 throw new ArgumentException(string.Format("The service type {0} is not implemented on this server", request.Service));
@@ -73,9 +71,9 @@ namespace Halibut.Server.Dispatch
                             Log.InfoFormat("Constructing service {0}", serviceType.FullName);
 
                             JsonRpcResponse response;
-                            using (IServiceLease lease = serviceFactory.CreateService(serviceType))
+                            using (var lease = serviceFactory.CreateService(serviceType))
                             {
-                                object service = lease.Service;
+                                var service = lease.Service;
 
                                 response = serviceInvoker.Invoke(service, request);
                             }
@@ -94,8 +92,6 @@ namespace Halibut.Server.Dispatch
                 }
             }
         }
-
-        #endregion
 
         void SendResponse(JsonWriter writer, JsonRpcResponse response)
         {
@@ -116,10 +112,10 @@ namespace Halibut.Server.Dispatch
             Log.Error(ex.ToString());
 
             return new JsonRpcResponse
-                       {
-                           Id = request == null ? null : request.Id,
-                           Error = new JsonRpcError {Code = ex.GetType().Name, Message = ex.Message, Data = ex.ToString()}
-                       };
+                   {
+                       Id = request == null ? null : request.Id,
+                       Error = new JsonRpcError {Code = ex.GetType().Name, Message = ex.Message, Data = ex.ToString()}
+                   };
         }
     }
 }
