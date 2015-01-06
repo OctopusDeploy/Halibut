@@ -13,12 +13,19 @@
 // limitations under the License.
 
 using System;
-using Halibut.Server.ServiceModel;
+using Newtonsoft.Json;
 
-namespace Halibut.Server.Dispatch
+namespace Halibut.Protocol
 {
-    public interface IRequestProcessorFactory
+    public class ResponseMessage
     {
-        IRequestProcessor CreateProcessor(IServiceCatalog services, IHalibutServerOptions options);
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("error")]
+        public JsonRpcError Error { get; set; }
+
+        [JsonProperty("result")]
+        public object Result { get; set; }
     }
 }

@@ -36,5 +36,10 @@ namespace Halibut.Client
         {
             get { return remoteThumbprint; }
         }
+
+        public override string ToString()
+        {
+            return baseUri.ToString();
+        }
     }
 }

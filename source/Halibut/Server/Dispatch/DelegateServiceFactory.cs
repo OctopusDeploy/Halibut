@@ -13,15 +13,40 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Generic;
 using Halibut.Server.ServiceModel;
 
 namespace Halibut.Server.Dispatch
 {
-    public class ActivatorServiceFactory : IServiceFactory
+    public class DelegateServiceFactory : IServiceFactory
     {
-        public IServiceLease CreateService(Type serviceType)
+        readonly Dictionary<string, Func<object>> services = new Dictionary<string, Func<object>>(StringComparer.OrdinalIgnoreCase);
+
+        public void Register<TContract>(Func<TContract> implementation)
         {
-            var service = Activator.CreateInstance(serviceType);
+            services.Add(typeof(TContract).Name, () => implementation());
+        }
+
+        public IServiceLease CreateService(string serviceName)
+        {
+            var serviceType = GetService(serviceName);
+            return CreateService(serviceType);
+        }
+
+        Func<object> GetService(string name)
+        {
+            Func<object> result;
+            if (!services.TryGetValue(name, out result))
+            {
+                throw new Exception("Service not found: " + name);
+            }
+
+            return result;
+        }
+
+        static IServiceLease CreateService(Func<object> serviceBuilder)
+        {
+            var service = serviceBuilder();
             return new Lease(service);
         }
 
@@ -45,7 +70,7 @@ namespace Halibut.Server.Dispatch
             {
                 if (service is IDisposable)
                 {
-                    ((IDisposable) service).Dispose();
+                    ((IDisposable)service).Dispose();
                 }
             }
         }

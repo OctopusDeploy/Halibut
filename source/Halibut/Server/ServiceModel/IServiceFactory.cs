@@ -18,6 +18,6 @@ namespace Halibut.Server.ServiceModel
 {
     public interface IServiceFactory
     {
-        IServiceLease CreateService(Type serviceType);
+        IServiceLease CreateService(string serviceName);
     }
 }

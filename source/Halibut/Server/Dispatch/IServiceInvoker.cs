@@ -19,6 +19,6 @@ namespace Halibut.Server.Dispatch
 {
     public interface IServiceInvoker
     {
-        JsonRpcResponse Invoke(object service, JsonRpcRequest request);
+        ResponseMessage Invoke(RequestMessage requestMessage);
     }
 }

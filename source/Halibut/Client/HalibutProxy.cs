@@ -23,14 +23,15 @@ namespace Halibut.Client
 {
     class HalibutProxy : RealProxy
     {
+        readonly Func<RequestMessage, ResponseMessage> messageRouter;
         readonly Type contractType;
         readonly ServiceEndPoint endPoint;
-        readonly IHalibutClient rpcClient;
         long callId;
 
-        public HalibutProxy(IHalibutClient rpcClient, Type contractType, ServiceEndPoint endPoint) : base(contractType)
+        public HalibutProxy(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+            : base(contractType)
         {
-            this.rpcClient = rpcClient;
+            this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
         }
@@ -65,34 +66,35 @@ namespace Halibut.Client
             }
         }
 
-        JsonRpcRequest CreateRequest(IMethodMessage methodCall)
+        RequestMessage CreateRequest(IMethodMessage methodCall)
         {
             var activityId = Guid.NewGuid();
 
             var method = ((MethodInfo) methodCall.MethodBase);
-            var request = new JsonRpcRequest
-                          {
-                              Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
-                              ActivityId = activityId,
-                              Service = contractType.Name,
-                              Method = method.Name,
-                              Params = methodCall.Args
-                          };
+            var request = new RequestMessage
+            {
+                Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                ActivityId = activityId,
+                EndPoint = endPoint,
+                MethodName = method.Name,
+                ServiceName = contractType.Name,
+                Params = methodCall.Args
+            };
             return request;
         }
 
-        JsonRpcResponse DispatchRequest(JsonRpcRequest request)
+        ResponseMessage DispatchRequest(RequestMessage requestMessage)
         {
-            return rpcClient.Post(endPoint, request);
+            return messageRouter(requestMessage);
         }
 
-        static void EnsureNotError(JsonRpcResponse response)
+        static void EnsureNotError(ResponseMessage responseMessage)
         {
-            if (response.Error == null)
+            if (responseMessage.Error == null)
                 return;
 
-            var realException = response.Error.Data as string;
-            throw new JsonRpcException(response.Error.Message, realException);
+            var realException = responseMessage.Error.Data as string;
+            throw new JsonRpcException(responseMessage.Error.Message, realException);
         }
     }
 }

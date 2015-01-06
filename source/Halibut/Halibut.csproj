@@ -31,47 +31,48 @@
     <ConsolePause>False</ConsolePause>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.4.5.11\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.6.0.7\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
     </Reference>
+    <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Client\IHalibutClient.cs" />
     <Compile Include="Client\ServiceEndPoint.cs" />
-    <Compile Include="Client\HalibutClient.cs" />
     <Compile Include="Client\HalibutProxy.cs" />
     <Compile Include="Diagnostics\ILog.cs" />
     <Compile Include="Diagnostics\Log.cs" />
     <Compile Include="Diagnostics\Logs.cs" />
     <Compile Include="Protocol\DefaultJsonSerializer.cs" />
+    <Compile Include="Protocol\IdentificationMessage.cs" />
     <Compile Include="Protocol\JsonRpcError.cs" />
     <Compile Include="Protocol\JsonRpcException.cs" />
-    <Compile Include="Protocol\JsonRpcRequest.cs" />
-    <Compile Include="Protocol\JsonRpcResponse.cs" />
-    <Compile Include="Server\Dispatch\ActivatorServiceFactory.cs" />
+    <Compile Include="Protocol\RequestMessage.cs" />
+    <Compile Include="Protocol\ResponseMessage.cs" />
+    <Compile Include="Server\Dispatch\DelegateServiceFactory.cs" />
     <Compile Include="Server\Dispatch\ClientInformation.cs" />
-    <Compile Include="Server\Dispatch\IRequestProcessor.cs" />
-    <Compile Include="Server\Dispatch\IRequestProcessorFactory.cs" />
     <Compile Include="Server\Dispatch\IServiceInvoker.cs" />
-    <Compile Include="Server\Dispatch\IHalibutServerOptions.cs" />
-    <Compile Include="Server\Dispatch\RequestProcessor.cs" />
-    <Compile Include="Server\Dispatch\RequestProcessorFactory.cs" />
     <Compile Include="Server\Dispatch\ServiceInvoker.cs" />
-    <Compile Include="Server\Dispatch\HalibutServerOptions.cs" />
+    <Compile Include="Server\HalibutRuntime.cs" />
+    <Compile Include="Server\SecureListener.cs" />
+    <Compile Include="Services\ActiveRemoteServiceAgent.cs" />
+    <Compile Include="Services\HalibutService.cs" />
     <Compile Include="Server\Security\CertificateValidationCallback.cs" />
     <Compile Include="Server\Security\CertificateValidationResult.cs" />
-    <Compile Include="Server\ServiceModel\IServiceCatalog.cs" />
     <Compile Include="Server\ServiceModel\IServiceFactory.cs" />
     <Compile Include="Server\ServiceModel\IServiceLease.cs" />
-    <Compile Include="Server\ServiceModel\ServiceCatalog.cs" />
-    <Compile Include="Server\HalibutServer.cs" />
+    <Compile Include="Services\IMessageExchangeParticipant.cs" />
+    <Compile Include="Services\IPendingRequestQueue.cs" />
+    <Compile Include="Services\IRemoteServiceAgent.cs" />
+    <Compile Include="Services\MessageExchangeProtocol.cs" />
+    <Compile Include="Services\PendingRequestQueue.cs" />
+    <Compile Include="Services\SecureClient.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
-  <ItemGroup />
 </Project>

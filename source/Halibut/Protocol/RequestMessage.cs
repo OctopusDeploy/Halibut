@@ -13,15 +13,34 @@
 // limitations under the License.
 
 using System;
-using Halibut.Server.ServiceModel;
+using Halibut.Client;
+using Newtonsoft.Json;
 
-namespace Halibut.Server.Dispatch
+namespace Halibut.Protocol
 {
-    public class RequestProcessorFactory : IRequestProcessorFactory
+    public class RequestMessage
     {
-        public IRequestProcessor CreateProcessor(IServiceCatalog services, IHalibutServerOptions options)
+        [JsonProperty("id")]
+        public string Id { get; set; }
+
+        [JsonProperty("activityId")]
+        public Guid ActivityId { get; set; }
+
+        [JsonProperty("endpoint")]
+        public ServiceEndPoint Destination { get; set; }
+
+        [JsonProperty("service")]
+        public string ServiceName { get; set; }
+
+        [JsonProperty("method")]
+        public string MethodName { get; set; }
+
+        [JsonProperty("params")]
+        public object[] Params { get; set; }
+
+        public override string ToString()
         {
-            return new RequestProcessor(options.Serializer, options.ServiceFactory, services, options.ServiceInvoker);
+            return Id;
         }
     }
 }

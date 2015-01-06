@@ -13,37 +13,69 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Halibut.Client;
 using Halibut.Protocol;
+using Halibut.Server.ServiceModel;
 
 namespace Halibut.Server.Dispatch
 {
+    //public class RouteTable
+    //{
+    //    readonly ConcurrentDictionary<Uri, ServiceEndPoint> routes = new ConcurrentDictionary<Uri, ServiceEndPoint>();
+
+    //    public void AddRoute(ServiceEndPoint to, ServiceEndPoint via)
+    //    {
+            
+    //    }
+
+    //    public bool ShouldRoute(RequestMessage request)
+    //    {
+            
+    //    }
+
+    //    public RequestMessage CreateRoutedMessage(RequestMessage request)
+    //    {
+            
+    //    }
+    //}
+
     public class ServiceInvoker : IServiceInvoker
     {
-        public JsonRpcResponse Invoke(object service, JsonRpcRequest request)
+        readonly IServiceFactory factory;
+
+        public ServiceInvoker(IServiceFactory factory)
         {
-            var serviceType = service.GetType();
-            var methods = serviceType.GetMethods().Where(m => string.Equals(m.Name, request.Method, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (methods.Count == 0)
-            {
-                throw new MissingMethodException(serviceType.FullName, request.Method);
-            }
-
-            var method = SelectMethod(methods, request);
-
-            var args = GetArguments(request, method);
-
-            var result = method.Invoke(service, args);
-
-            return new JsonRpcResponse {Id = request.Id, Result = result};
+            this.factory = factory;
         }
 
-        static MethodInfo SelectMethod(IList<MethodInfo> methods, JsonRpcRequest request)
+        public ResponseMessage Invoke(RequestMessage requestMessage)
         {
-            var argumentTypes = request.Params.Select(s => s == null ? null : s.GetType()).ToList();
+            using (var lease = factory.CreateService(requestMessage.ServiceName))
+            {
+                var methods = lease.Service.GetType().GetMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (methods.Count == 0)
+                {
+                    return new ResponseMessage { Id = requestMessage.Id, Error = new JsonRpcError() { Message = string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName) } };
+                }
+
+                var method = SelectMethod(methods, requestMessage);
+
+                var args = GetArguments(requestMessage, method);
+
+                var result = method.Invoke(lease.Service, args);
+
+                return new ResponseMessage { Id = requestMessage.Id, Result = result };
+            }
+        }
+
+        static MethodInfo SelectMethod(IList<MethodInfo> methods, RequestMessage requestMessage)
+        {
+            var argumentTypes = requestMessage.Params.Select(s => s == null ? null : s.GetType()).ToList();
 
             var matches = new List<MethodInfo>();
 
@@ -108,15 +140,15 @@ namespace Halibut.Server.Dispatch
             throw new AmbiguousMatchException(message.ToString());
         }
 
-        static object[] GetArguments(JsonRpcRequest request, MethodInfo methodInfo)
+        static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)
         {
             var methodParams = methodInfo.GetParameters();
             var args = new object[methodParams.Length];
             for (var i = 0; i < methodParams.Length; i++)
             {
-                if (i >= request.Params.Length) continue;
+                if (i >= requestMessage.Params.Length) continue;
 
-                var jsonArg = request.Params[i];
+                var jsonArg = requestMessage.Params[i];
                 args[i] = jsonArg;
             }
 

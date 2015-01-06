@@ -21,4 +21,19 @@ namespace Halibut.SampleContracts
         long Add(long a, long b);
         long Subtract(long a, long b);
     }
+
+    public interface IScriptOutputObserver
+    {
+        void LogWritten(string log);
+    }
+
+    public interface IScriptController
+    {
+        void Execute();
+    }
+
+    public interface IScriptRunner
+    {
+        int RunScript(string scriptName, object[] args);
+    }
 }
