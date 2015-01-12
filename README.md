@@ -41,7 +41,7 @@ Alternatively, here's a mode where Octopus listens, and Tentacle polls it:
 
 ```csharp
 using (var octopus = new HalibutRuntime(services, Certificates.Bob))
-using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
+using (var tentaclePolling = new HalibutRuntime(services, Certificates.Alice))
 {
     octopus.Listen(8013);
     tentaclePolling.Poll(new Uri("poll://subscription123"), new ServiceEndPoint(new Uri("https://localhost:8013"), Certificates.BobPublicThumbprint));
