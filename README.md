@@ -58,7 +58,7 @@ Notice that while the configuration code changed, the request/response code didn
 
 One area we've put a lot of thought into with Halibut is failure modes. Below is a list of possible failure reasons, and how Halibut will handle them. 
 
-TODO
+Todo: thouroughly consider and document these error modes. A short list:
 
  - We cannot connect (TCP failure)
  - We connect, but the connection is torn down
@@ -68,6 +68,10 @@ TODO
  - We connect, but we encounter an error processing a server request
 
 ## Timeouts
+
+Todo: thouroughly consider and document timeouts
+
+## Threading
 
 
 
