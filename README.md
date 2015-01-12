@@ -1,18 +1,21 @@
-## Halibut
+Halibut is the communication framework behind Octopus Deploy 3.0. 
 
-Halibut is a secure, JSON RPC over TLS-based client/server communication framework for .NET. 
+## Overview
 
-Features:
+Like WCF or other RPC-based communication frameworks, it uses a simple request/response based programming model. However, unlike other request/response frameworks, the transport layer can be configured to allow either party to be a TCP listener or TCP client. 
 
- - No dependency on HTTP.sys - simply uses `TcpListener` and `SslStream`
- - Uses Json.NET for serialization of RPC calls following [JSON-RPC](http://json-rpc.org/)
- - Client/server logs can be viewed using the WCF Service Trace Viewer
- - Runs on both Mono and .NET
+![Halibut](http://res.cloudinary.com/octopusdeploy/image/upload/v1421035742/halibut_rqxrw2.png)
 
-Halibut is currently just an experiment, and may someday replace WCF `wsHttpBinding` as the communication stack for [Octopus Deploy](http://octopusdeploy.com/). 
+To understand the difference, consider WCF using `wsHttpBinding`. The WCF "client" is always a TCP client, and the WCF "service" is always a TCP listener. For a client to send a request to a server, TCP ports must be opened on the server. This is not always possible. 
 
-### Protocol and security
+In Halibut, the relationship between the *logical* request/response client/service, and the *underlying* TCP client/listener, is decoupled. The Halibut client might in fact be a TCP listener, while the Halibut service is a TCP client, polling the TCP listener for requests to process. 
 
-Halibut uses the .NET Framework `SslStream` class, using the [TLS 1.0](http://msdn.microsoft.com/en-us/library/system.security.authentication.sslprotocols.aspx) protocol. The client and server must both provide a certificate, and they can choose to validate each other's certificates.
+For Octopus, this means that customers can configure the Tentacle (which hosts services that the Octopus client connects to) in either listening or polling mode. 
 
-Once the SSL connection is established, Halibut sends JSON-RPC requests and responses using Json.NET, encoded using the Json.NET `BsonReader`/`BsonWriter`. 
+Halibut has the following features:
+
+ - A simple, request/response based programming model ([why we prefer this over messaging](http://octopusdeploy.com/blog/actors-vs-rpc-in-octopus-3))
+ - Connections in either direction are secured using SSL, with server and client certificates to provide authentication
+ - No dependency on HTTP.sys - simply uses `TcpListener`, `TcpClient` and `SslStream`
+ - Requests/responses are serialized using Json.NET BSON, and GZipped
+ - Requests and responses can also contain streams of arbitrary length
