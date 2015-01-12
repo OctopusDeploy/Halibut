@@ -24,7 +24,7 @@ Halibut has the following features:
 
 Clients and servers both make use of `HalibutRuntime` to distribute messages. In this example, there's a "Tentacle" that listens on a port, and Octopus connects to it:
 
-```
+```csharp
 using (var octopus = new HalibutRuntime(services, Certificates.Bob))
 using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
 {
@@ -39,7 +39,7 @@ using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
 
 Alternatively, here's a mode where Octopus listens, and Tentacle polls it:
 
-```
+```csharp
 using (var octopus = new HalibutRuntime(services, Certificates.Bob))
 using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
 {
