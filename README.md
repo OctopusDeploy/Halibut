@@ -2,7 +2,7 @@ Halibut is the communication framework behind Octopus Deploy 3.0.
 
 ## Overview
 
-Like WCF or other RPC-based communication frameworks, it uses a simple request/response based programming model. However, unlike other request/response frameworks, the transport layer can be configured to allow either party to be a TCP listener or TCP client. 
+Like WCF and other RPC-based communication frameworks, Halibut uses a simple request/response based programming model. However, unlike other request/response frameworks, the transport layer can be configured to allow either party to be a TCP listener or TCP client. 
 
 ![Halibut](http://res.cloudinary.com/octopusdeploy/image/upload/v1421035742/halibut_rqxrw2.png)
 
