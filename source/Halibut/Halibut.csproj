@@ -45,6 +45,7 @@
     <Compile Include="Diagnostics\ILog.cs" />
     <Compile Include="Diagnostics\Log.cs" />
     <Compile Include="Diagnostics\Logs.cs" />
+    <Compile Include="Protocol\DataStream.cs" />
     <Compile Include="Protocol\DefaultJsonSerializer.cs" />
     <Compile Include="Protocol\IdentificationMessage.cs" />
     <Compile Include="Protocol\JsonRpcError.cs" />
@@ -58,6 +59,7 @@
     <Compile Include="Server\HalibutRuntime.cs" />
     <Compile Include="Server\SecureListener.cs" />
     <Compile Include="Services\ActiveRemoteServiceAgent.cs" />
+    <Compile Include="Services\HalibutContractResolver.cs" />
     <Compile Include="Services\HalibutService.cs" />
     <Compile Include="Server\Security\CertificateValidationCallback.cs" />
     <Compile Include="Server\Security\CertificateValidationResult.cs" />
@@ -69,6 +71,7 @@
     <Compile Include="Services\MessageExchangeProtocol.cs" />
     <Compile Include="Services\PendingRequestQueue.cs" />
     <Compile Include="Services\SecureClient.cs" />
+    <Compile Include="Services\StreamCapture.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />

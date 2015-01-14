@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30110.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut", "Halibut\Halibut.csproj", "{9D8386A2-4F69-4F80-A21F-F646A9828E25}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{807A6FA5-EC26-42DF-BBC4-6F572781D94E}"
@@ -21,6 +23,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{241AE6
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.SampleContracts", "Halibut.SampleContracts\Halibut.SampleContracts.csproj", "{A1E9A35D-F2CB-4223-8640-CC0E21E31C66}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.OctopusSample", "Halibut.OctopusSample\Halibut.OctopusSample.csproj", "{549CD94C-DC6F-4C6A-B063-372E28726D38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -96,6 +100,16 @@ Global
 		{A1E9A35D-F2CB-4223-8640-CC0E21E31C66}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{A1E9A35D-F2CB-4223-8640-CC0E21E31C66}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{A1E9A35D-F2CB-4223-8640-CC0E21E31C66}.Release|x86.ActiveCfg = Release|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -105,6 +119,7 @@ Global
 		{E6A0289F-2F5F-4FBC-8C84-C3D6E4A01C0B} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 		{C54911F0-365C-4F52-8634-A17F7A8815AC} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 		{A1E9A35D-F2CB-4223-8640-CC0E21E31C66} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
+		{549CD94C-DC6F-4C6A-B063-372E28726D38} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = Halibut.SampleClient\Halibut.SampleClient.csproj

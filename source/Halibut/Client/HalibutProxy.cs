@@ -75,7 +75,7 @@ namespace Halibut.Client
             {
                 Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
                 ActivityId = activityId,
-                EndPoint = endPoint,
+                Destination = endPoint,
                 MethodName = method.Name,
                 ServiceName = contractType.Name,
                 Params = methodCall.Args

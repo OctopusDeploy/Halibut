@@ -6,7 +6,6 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Client;
 using Halibut.Protocol;
-using Halibut.Server.Dispatch;
 
 namespace Halibut.Services
 {
@@ -17,7 +16,7 @@ namespace Halibut.Services
         readonly IPendingRequestQueue pending;
         readonly X509Certificate2 clientCertificate;
         readonly Func<RequestMessage, ResponseMessage> serviceInvoker;
-        SslStream currentConnection;
+        Stream currentConnection;
         MessageExchangeProtocol protocol;
 
         public SecureClient(Uri subscriptionName, ServiceEndPoint serviceEndpoint, IPendingRequestQueue pending, X509Certificate2 clientCertificate, Func<RequestMessage, ResponseMessage> serviceInvoker)
@@ -33,12 +32,15 @@ namespace Halibut.Services
 
         public int PerformExchange()
         {
-            if (currentConnection == null)
+            //if (currentConnection == null)
             {
                 OpenConnection();
             }
 
-            return protocol.ExchangeAsClient(currentConnection);
+            var x = protocol.ExchangeAsClient(currentConnection);
+
+            if (currentConnection != null) currentConnection.Dispose();
+            return x;
         }
 
         void OpenConnection()

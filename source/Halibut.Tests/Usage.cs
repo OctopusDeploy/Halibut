@@ -13,7 +13,9 @@
 // limitations under the License.
 
 using System;
+using System.Diagnostics;
 using Halibut.Client;
+using Halibut.Protocol;
 using Halibut.Server;
 using Halibut.Server.Dispatch;
 using NUnit.Framework;
@@ -38,14 +40,17 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Bob))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
             {
-                tentacleListening.Listen(8014);
+                var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.BobPublicThumbprint);
 
-                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:8014"), Certificates.AlicePublicThumbprint));
-                for (var i = 0; i < 100; i++)
+                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint));
+                Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
+                var watch = Stopwatch.StartNew();
+                for (var i = 0; i < 20; i++)
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 }
+                Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
             }
         }
 
@@ -55,8 +60,8 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Bob))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.Eve))
             {
-                octopus.Listen(8013);
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:8013"), Certificates.BobPublicThumbprint));
+                var octopusPort = octopus.Listen();
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.BobPublicThumbprint));
 
                 var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), Certificates.EvePublicThumbprint));
                 for (var i = 0; i < 100; i++)
@@ -73,16 +78,17 @@ namespace Halibut.Tests
             using (var router = new HalibutRuntime(services, Certificates.Eve))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
             {
-                octopus.Route(
-                    to:  new ServiceEndPoint(new Uri("https://localhost:8012"), Certificates.AlicePublicThumbprint),
-                    via: new ServiceEndPoint(new Uri("https://localhost:8014"), Certificates.EvePublicThumbprint)
-                    );
+                var routerPort = router.Listen();
 
-                router.Listen(8014);
                 router.Trust(Certificates.BobPublicThumbprint);
 
-                tentacleListening.Listen(8012);
+                var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.EvePublicThumbprint);
+
+                octopus.Route(
+                    to: new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint),
+                    via: new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.EvePublicThumbprint)
+                    );
 
                 var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:8012"), Certificates.AlicePublicThumbprint));
                 for (var i = 0; i < 100; i++)
@@ -98,14 +104,16 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Bob))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
             {
-                tentacleListening.Listen(8014);
+                var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.BobPublicThumbprint);
+                
+                var data = new byte[1024 * 1024 + 15];
+                new Random().NextBytes(data);
 
-                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:8014"), Certificates.AlicePublicThumbprint));
-                for (var i = 0; i < 100; i++)
-                {
-                    Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
-                }
+                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint));
+
+                var count = echo.CountBytes(DataStream.FromBytes(data));
+                Assert.That(count, Is.EqualTo(1024 * 1024 + 15));
             }
         }
 
@@ -199,6 +207,42 @@ namespace Halibut.Tests
         //    }
         //}
 
+        //[Test]
+        //public void X()
+        //{
+        //    var serializer = new JsonSerializer();
+
+        //    var data = new byte[1024];
+        //    new Random().NextBytes(data);
+        //    var data2 = new byte[1024];
+        //    new Random().NextBytes(data2);
+
+        //    using (var capture = StreamCapture.New())
+        //    {
+        //        using (var ms = new MemoryStream())
+        //        using (var writer = new JsonTextWriter(new StreamWriter(ms)))
+        //        {
+        //            serializer.ContractResolver = new PaulCamelCasePropertyNamesContractResolver();
+        //            serializer.Serialize(writer, new PackageCollection
+        //            {
+        //                Packages = new []
+        //                {
+        //                    DataStream.FromBytes(data),
+        //                    DataStream.FromBytes(data2)
+        //                }
+        //            });
+        //        }
+
+        //        Assert.That(capture.SerializedStreams.Count, Is.EqualTo(2));
+        //        Assert.That(capture.DeserializedStreams.Count, Is.EqualTo(2));
+        //    }
+        //}
+
+        public class PackageCollection
+        {
+            public DataStream[] Packages { get; set; }
+        }
+
         #region Nested type: EchoService
 
         public class EchoService : IEchoService
@@ -213,9 +257,18 @@ namespace Halibut.Tests
                 throw new DivideByZeroException();
             }
 
-            public int CountBytes()
+            public int CountBytes(DataStream stream)
             {
-                
+                int read = 0;
+                stream.Read(s =>
+                {
+                    while (s.ReadByte() != -1)
+                    {
+                        read++;
+                    }
+                });
+
+                return read;
             }
         }
 
@@ -228,6 +281,8 @@ namespace Halibut.Tests
             string SayHello(string name);
 
             bool Crash();
+
+            int CountBytes(DataStream stream);
         }
 
         #endregion

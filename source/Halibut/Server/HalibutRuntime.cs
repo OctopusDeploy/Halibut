@@ -30,7 +30,7 @@ namespace Halibut.Server
             Start();
         }
 
-        public void Start()
+        void Start()
         {
             running = true;
             var worker = new Thread(DispatchThread);
@@ -69,12 +69,21 @@ namespace Halibut.Server
             }
         }
 
-        public void Listen(int port)
+        public int Listen()
         {
-            var endpoint = new IPEndPoint(IPAddress.Any, port);
+            return Listen(0);
+        }
+
+        public int Listen(int port)
+        {
+            return Listen(new IPEndPoint(IPAddress.Any, port));
+        }
+
+        public int Listen(IPEndPoint endpoint)
+        {
             var listener = new SecureListener(endpoint, serverCertficiate, this, HandleIncomingRequest);
             listeners.Add(listener);
-            listener.Start();
+            return listener.Start();
         }
 
         public void Subscription(ServiceEndPoint endPoint)
@@ -96,13 +105,13 @@ namespace Halibut.Server
 
         ResponseMessage SendOutgoingRequest(RequestMessage request)
         {
-            var endPoint = request.EndPoint;
+            var endPoint = request.Destination;
 
             ServiceEndPoint routerEndPoint;
             if (routeTable.TryGetValue(endPoint.BaseUri, out routerEndPoint))
             {
                 endPoint = routerEndPoint;
-                request = new RequestMessage {ActivityId = request.ActivityId, Id = request.Id, Params = new[] {request}, EndPoint = endPoint, ServiceName = "Router", MethodName = "Route"};
+                request = new RequestMessage {ActivityId = request.ActivityId, Id = request.Id, Params = new[] {request}, Destination = endPoint, ServiceName = "Router", MethodName = "Route"};
             }
 
             var queue = GetQueue(endPoint.BaseUri) ?? CreateQueue(endPoint);
@@ -120,7 +129,7 @@ namespace Halibut.Server
                 var original = (RequestMessage) request.Params[0];
 
                 ServiceEndPoint route;
-                if (routeTable.TryGetValue(original.EndPoint.BaseUri, out route))
+                if (routeTable.TryGetValue(original.Destination.BaseUri, out route))
                 {
                     // Needs to be routed again
                     return SendOutgoingRequest(original);

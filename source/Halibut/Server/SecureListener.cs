@@ -32,12 +32,12 @@ namespace Halibut.Server
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
-        public void Start()
+        public int Start()
         {
             listener = new TcpListener(endPoint);
             listener.Start();
-
             Accept();
+            return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
         void Accept()

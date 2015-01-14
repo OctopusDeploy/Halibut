@@ -22,29 +22,25 @@ namespace Halibut.Services
 
         public bool IsEmpty { get { return outgoing.IsEmpty; } }
 
-        public List<RequestMessage> DequeueRequests()
+        public RequestMessage Dequeue()
         {
-            var results = new List<RequestMessage>();
-            RequestMessage request;
-            while (outgoing.TryDequeue(out request))
-            {
-                results.Add(request);
-            }
-            return results;
+            RequestMessage result;
+            outgoing.TryDequeue(out result);
+            return result;
         }
 
-        public void ApplyResponses(List<ResponseMessage> responses)
+        public void ApplyResponse(ResponseMessage response)
         {
-            foreach (var response in responses)
-            {
-                PendingRequest pending;
-                if (!requests.TryRemove(response.Id, out pending))
-                {
-                    throw new Exception("Must have died, message cannot be accepted");
-                }
+            if (response == null)
+                return;
 
-                pending.SetResponse(response);
+            PendingRequest pending;
+            if (!requests.TryRemove(response.Id, out pending))
+            {
+                throw new Exception("Must have died, message cannot be accepted");
             }
+
+            pending.SetResponse(response);
         }
 
         class PendingRequest
