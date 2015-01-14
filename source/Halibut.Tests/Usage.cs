@@ -37,13 +37,13 @@ namespace Halibut.Tests
         [Test]
         public void OctopusCanSendMessagesToListeningTentacle()
         {
-            using (var octopus = new HalibutRuntime(services, Certificates.Bob))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.BobPublicThumbprint);
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
-                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint));
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
                 Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 var watch = Stopwatch.StartNew();
                 for (var i = 0; i < 20; i++)
@@ -57,13 +57,13 @@ namespace Halibut.Tests
         [Test]
         public void OctopusCanSendMessagesToPollingTentacle()
         {
-            using (var octopus = new HalibutRuntime(services, Certificates.Bob))
-            using (var tentaclePolling = new HalibutRuntime(services, Certificates.Eve))
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
                 var octopusPort = octopus.Listen();
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.BobPublicThumbprint));
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
 
-                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), Certificates.EvePublicThumbprint));
+                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 for (var i = 0; i < 100; i++)
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
@@ -74,23 +74,23 @@ namespace Halibut.Tests
         [Test]
         public void MessagesCanBeRouted()
         {
-            using (var octopus = new HalibutRuntime(services, Certificates.Bob))
-            using (var router = new HalibutRuntime(services, Certificates.Eve))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var router = new HalibutRuntime(services, Certificates.TentaclePolling))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var routerPort = router.Listen();
 
-                router.Trust(Certificates.BobPublicThumbprint);
+                router.Trust(Certificates.OctopusPublicThumbprint);
 
                 var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.EvePublicThumbprint);
+                tentacleListening.Trust(Certificates.TentaclePollingPublicThumbprint);
 
                 octopus.Route(
-                    to: new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint),
-                    via: new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.EvePublicThumbprint)
+                    to: new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.TentacleListeningPublicThumbprint),
+                    via: new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.TentaclePollingPublicThumbprint)
                     );
 
-                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint));
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
                 for (var i = 0; i < 100; i++)
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
@@ -101,16 +101,16 @@ namespace Halibut.Tests
         [Test]
         public void StreamsCanBeSent()
         {
-            using (var octopus = new HalibutRuntime(services, Certificates.Bob))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.Alice))
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.BobPublicThumbprint);
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
                 
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
-                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint));
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
 
                 var count = echo.CountBytes(DataStream.FromBytes(data));
                 Assert.That(count, Is.EqualTo(1024 * 1024 + 15));

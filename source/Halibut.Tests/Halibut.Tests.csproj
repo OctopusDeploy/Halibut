@@ -52,13 +52,13 @@
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <None Include="Certificates\HalibutAlice.pfx">
+    <None Include="Certificates\TentacleListening.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Certificates\HalibutBob.pfx">
+    <None Include="Certificates\Octopus.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Certificates\HalibutEve.pfx">
+    <None Include="Certificates\TentaclePolling.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />

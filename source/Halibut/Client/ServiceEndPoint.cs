@@ -21,6 +21,11 @@ namespace Halibut.Client
         readonly Uri baseUri;
         readonly string remoteThumbprint;
 
+        public ServiceEndPoint(string baseUri, string remoteThumbprint)
+            : this(new Uri(baseUri), remoteThumbprint)
+        {
+        }
+
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
         {
             this.baseUri = baseUri;
