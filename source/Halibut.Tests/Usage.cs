@@ -90,7 +90,7 @@ namespace Halibut.Tests
                     via: new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.EvePublicThumbprint)
                     );
 
-                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:8012"), Certificates.AlicePublicThumbprint));
+                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.AlicePublicThumbprint));
                 for (var i = 0; i < 100; i++)
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
