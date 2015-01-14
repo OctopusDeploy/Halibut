@@ -1,29 +1,35 @@
 using System;
 using System.Threading;
+using Halibut.Protocol;
 
 namespace Halibut.Services
 {
     public class ActiveRemoteServiceAgent : IRemoteServiceAgent
     {
-        readonly SecureClient client;
-        DateTimeOffset nextPoll = DateTimeOffset.UtcNow;
+        readonly Uri subscription;
+        readonly SecureClient secureClient;
+        readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
+        DateTimeOffset nextPollDue = DateTimeOffset.UtcNow;
         int working;
 
-        public ActiveRemoteServiceAgent(SecureClient client)
+        public ActiveRemoteServiceAgent(Uri subscription, SecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
         {
-            this.client = client;
+            this.subscription = subscription;
+            this.secureClient = secureClient;
+            this.handleIncomingRequest = handleIncomingRequest;
         }
 
         public bool ProcessNext()
         {
-            var hasWork = !client.IsEmpty || DateTimeOffset.UtcNow > nextPoll;
-            if (!hasWork) return false;
-
-            var value = Interlocked.CompareExchange(ref working, 1, 0);
-            if (value == 0)
+            var now = DateTimeOffset.UtcNow;
+            if (now > nextPollDue)
             {
-                ThreadPool.QueueUserWorkItem(AgentThreadExecutor);
-                return true;
+                var value = Interlocked.CompareExchange(ref working, 1, 0);
+                if (value == 0)
+                {
+                    ThreadPool.QueueUserWorkItem(AgentThreadExecutor);
+                    return true;
+                }
             }
 
             return false;
@@ -33,33 +39,25 @@ namespace Halibut.Services
         {
             try
             {
-                Console.WriteLine("Perform exchange");
-
-                var exchanged = client.PerformExchange();
-
-                while (!client.IsEmpty)
+                int exchanged = 0;
+                secureClient.Connect(protocol =>
                 {
-                    exchanged += client.PerformExchange();
-                }
+                    exchanged = protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
+                });
 
                 if (exchanged > 0)
                 {
-                    nextPoll = DateTimeOffset.UtcNow;
+                    nextPollDue = DateTimeOffset.UtcNow;
                 }
                 else
                 {
-                    nextPoll = DateTimeOffset.UtcNow.AddSeconds(10);
+                    nextPollDue = DateTimeOffset.UtcNow.AddSeconds(10);
                 }
             }
             finally
             {
                 working = 0;
             }
-        }
-
-        public void Dispose()
-        {
-            client.Dispose();
         }
     }
 }

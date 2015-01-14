@@ -17,7 +17,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.SampleContracts;
 using Halibut.Server;
-using Halibut.Server.Security;
+using Halibut.Server.Dispatch;
 
 namespace Halibut.SampleServer
 {
@@ -30,37 +30,34 @@ namespace Halibut.SampleServer
 
             var endPoint = new IPEndPoint(IPAddress.Any, 8433);
 
-            var server = new HalibutServer(endPoint, certificate);
-            server.Services.Register<ICalculatorService, CalculatorService>();
-            server.Options.ClientCertificateValidator = ValidateClientCertificate;
-            server.Start();
+            var services = new DelegateServiceFactory();
+            services.Register<ICalculatorService>(() => new CalculatorService());
 
-            Console.WriteLine("Server listening on port 8433...");
-
-            while (true)
+            using (var server = new HalibutRuntime(services, certificate))
             {
-                var line = Console.ReadLine();
-                if (string.Equals("cls", line, StringComparison.OrdinalIgnoreCase))
+                server.Listen(endPoint);
+                server.Trust("2074529C99D93D5955FEECA859AEAC6092741205");
+
+                Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");
+
+                while (true)
                 {
-                    Console.Clear();
-                    continue;
+                    var line = Console.ReadLine();
+                    if (string.Equals("cls", line, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.Clear();
+                        continue;
+                    }
+
+                    if (string.Equals("q", line, StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    if (string.Equals("exit", line, StringComparison.OrdinalIgnoreCase))
+                        return;
+
+                    Console.WriteLine("Unknown command. Enter 'q' to quit.");
                 }
-
-                if (string.Equals("q", line, StringComparison.OrdinalIgnoreCase))
-                    return;
-
-                if (string.Equals("exit", line, StringComparison.OrdinalIgnoreCase))
-                    return;
-
-                Console.WriteLine("Unknown command. Enter 'q' to quit.");
             }
-        }
-
-        static CertificateValidationResult ValidateClientCertificate(X509Certificate2 clientcertificate)
-        {
-            return clientcertificate.Thumbprint == "2074529C99D93D5955FEECA859AEAC6092741205"
-                       ? CertificateValidationResult.Valid
-                       : CertificateValidationResult.Rejected;
         }
     }
 }

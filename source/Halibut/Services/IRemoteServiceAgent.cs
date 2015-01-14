@@ -2,7 +2,7 @@ using System;
 
 namespace Halibut.Services
 {
-    public interface IRemoteServiceAgent : IDisposable
+    public interface IRemoteServiceAgent
     {
         bool ProcessNext();
     }

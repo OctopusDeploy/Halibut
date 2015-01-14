@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using Newtonsoft.Json;
 
 namespace Halibut.Client
 {
@@ -26,6 +27,7 @@ namespace Halibut.Client
         {
         }
 
+        [JsonConstructor]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
         {
             this.baseUri = baseUri;

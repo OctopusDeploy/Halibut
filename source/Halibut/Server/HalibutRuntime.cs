@@ -12,7 +12,7 @@ using Halibut.Services;
 
 namespace Halibut.Server
 {
-    public class HalibutRuntime : IDisposable, IHalibutClient, IMessageExchangeParticipant
+    public class HalibutRuntime : IDisposable, IHalibutClient
     {
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly List<IRemoteServiceAgent> remotePollingWorkers = new List<IRemoteServiceAgent>();
@@ -23,15 +23,15 @@ namespace Halibut.Server
         readonly ServiceInvoker invoker;
         bool running;
 
+        public HalibutRuntime(X509Certificate2 serverCertficiate) : this(new NullServiceFactory(), serverCertficiate)
+        {
+        }
+
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertficiate)
         {
             this.serverCertficiate = serverCertficiate;
             invoker = new ServiceInvoker(serviceFactory);
-            Start();
-        }
 
-        void Start()
-        {
             running = true;
             var worker = new Thread(DispatchThread);
             worker.Name = "Halibut runtime dispatch thread";
@@ -64,7 +64,7 @@ namespace Halibut.Server
 
                 if (!workDone)
                 {
-                    Thread.Sleep(10);
+                    Thread.Sleep(100);
                 }
             }
         }
@@ -81,9 +81,16 @@ namespace Halibut.Server
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertficiate, this, HandleIncomingRequest);
+            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler);
             listeners.Add(listener);
             return listener.Start();
+        }
+
+        void ListenerHandler(MessageExchangeProtocol obj)
+        {
+            obj.ExchangeAsServer(
+                HandleIncomingRequest,
+                id => GetQueue(id.SubscriptionId));
         }
 
         public void Subscription(ServiceEndPoint endPoint)
@@ -93,9 +100,8 @@ namespace Halibut.Server
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
-            var queue = queues.AddOrUpdate(endPoint.BaseUri, u => new PendingRequestQueue(), (u, q) => q);
-            var client = new SecureClient(subscription, endPoint, queue, serverCertficiate, HandleIncomingRequest);
-            remotePollingWorkers.Add(new ActiveRemoteServiceAgent(client));
+            var client = new SecureClient(endPoint, serverCertficiate);
+            remotePollingWorkers.Add(new ActiveRemoteServiceAgent(subscription, client, HandleIncomingRequest));
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
@@ -112,6 +118,9 @@ namespace Halibut.Server
         {
             var endPoint = request.Destination;
 
+            // If polling, add it to a queue and wait
+            // If https, connect and wait
+
             ServiceEndPoint routerEndPoint;
             if (routeTable.TryGetValue(endPoint.BaseUri, out routerEndPoint))
             {
@@ -119,9 +128,32 @@ namespace Halibut.Server
                 request = new RequestMessage {ActivityId = request.ActivityId, Id = request.Id, Params = new[] {request}, Destination = endPoint, ServiceName = "Router", MethodName = "Route"};
             }
 
-            var queue = GetQueue(endPoint.BaseUri) ?? CreateQueue(endPoint);
-            if (queue != null) return queue.QueueAndWait(request);
-            throw new Exception(string.Format("Message exchange cannot route the request '{0}' because it was destined for an unknown endpoint '{1}'", request, endPoint));
+            switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
+            {
+                case "https":
+                    return SendOutgoingHttpsRequest(request);
+                case "poll":
+                    return SendOutgoingPollingRequest(request);
+                default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
+            }
+        }
+
+        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
+        {
+            var client = new SecureClient(request.Destination, serverCertficiate);
+
+            ResponseMessage response = null;
+            client.Connect(protocol =>
+            {
+                response = protocol.ExchangeAsClient(request);
+            });
+            return response;
+        }
+
+        ResponseMessage SendOutgoingPollingRequest(RequestMessage request)
+        {
+            var queue = queues.GetOrAdd(request.Destination.BaseUri, u => new PendingRequestQueue());
+            return queue.QueueAndWait(request);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)
@@ -144,38 +176,6 @@ namespace Halibut.Server
             }
 
             return invoker.Invoke(request);
-        }
-
-        PendingRequestQueue CreateQueue(ServiceEndPoint endPoint)
-        {
-            switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
-            {
-                case "https":
-                    return CreateActiveWorkerQueue(endPoint);
-                case "poll":
-                    return queues.AddOrUpdate(endPoint.BaseUri, u => new PendingRequestQueue(), (u, q) => q);
-                default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
-            }
-        }
-
-        PendingRequestQueue CreateActiveWorkerQueue(ServiceEndPoint endPoint)
-        {
-            var queue = queues.AddOrUpdate(endPoint.BaseUri, u => new PendingRequestQueue(), (u, q) => q);
-            var client = new SecureClient(null, endPoint, queue, serverCertficiate, HandleIncomingRequest);
-            var worker = new ActiveRemoteServiceAgent(client);
-            lock (sync)
-            {
-                remotePollingWorkers.Add(worker);
-            }
-
-            return queue;
-        }
-
-        IPendingRequestQueue IMessageExchangeParticipant.SelectQueue(IdentificationMessage clientIdentification)
-        {
-            return clientIdentification.Subscription == null 
-                ? new PendingRequestQueue() 
-                : GetQueue(clientIdentification.Subscription);
         }
 
         public void Trust(string evePublicThumbprint)

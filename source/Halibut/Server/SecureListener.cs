@@ -17,17 +17,15 @@ namespace Halibut.Server
     {
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
-        readonly IMessageExchangeParticipant messageExchange;
-        readonly Func<RequestMessage, ResponseMessage> requestHandler;
+        readonly Action<MessageExchangeProtocol> protocolHandler;
         TcpListener listener;
         bool isStopped;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, IMessageExchangeParticipant messageExchange, Func<RequestMessage, ResponseMessage> requestHandler)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
-            this.messageExchange = messageExchange;
-            this.requestHandler = requestHandler;
+            this.protocolHandler = protocolHandler;
 
             EnsureCertificateIsValidForListening(serverCertificate);
         }
@@ -79,7 +77,6 @@ namespace Halibut.Server
 
                     var reader = new StreamReader(ssl);
                     var firstLine = reader.ReadLine();
-                    string nextLine;
                     while (!string.IsNullOrWhiteSpace(reader.ReadLine()))
                     {
                     }
@@ -103,31 +100,27 @@ namespace Halibut.Server
                 }
             }
 
+            // TODO: Is this right?
             client.Close();
         }
 
-        void ProcessMessages(SslStream ssl)
-        {
-            var protocol = new MessageExchangeProtocol(messageExchange, requestHandler);
-            protocol.IdentifyAsServer(null, ssl);
-
-            while (true)
-            {
-                protocol.ExchangeAsServer(ssl);
-            }
-        }
-
-        static void SendFriendlyHtmlPage(SslStream ssl)
+        static void SendFriendlyHtmlPage(Stream stream)
         {
             var message = "<html><body><p>Hello!</p></body></html>";
-            var writer = new StreamWriter(ssl, new UTF8Encoding(false));
+            var writer = new StreamWriter(stream, new UTF8Encoding(false));
             writer.WriteLine("HTTP/1.0 200 OK");
             writer.WriteLine("Content-Type: text/html; charset=utf-8");
             writer.WriteLine("Content-Length: " + message.Length);
             writer.WriteLine();
             writer.WriteLine(message);
             writer.Flush();
-            ssl.Flush();
+            stream.Flush();
+        }
+
+        void ProcessMessages(Stream stream)
+        {
+            var protocol = new MessageExchangeProtocol(stream);
+            protocolHandler(protocol);
         }
 
         bool ValidateCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)

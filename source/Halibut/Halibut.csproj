@@ -57,6 +57,7 @@
     <Compile Include="Server\Dispatch\IServiceInvoker.cs" />
     <Compile Include="Server\Dispatch\ServiceInvoker.cs" />
     <Compile Include="Server\HalibutRuntime.cs" />
+    <Compile Include="Server\NullServiceFactory.cs" />
     <Compile Include="Server\SecureListener.cs" />
     <Compile Include="Services\ActiveRemoteServiceAgent.cs" />
     <Compile Include="Services\HalibutContractResolver.cs" />
@@ -65,10 +66,9 @@
     <Compile Include="Server\Security\CertificateValidationResult.cs" />
     <Compile Include="Server\ServiceModel\IServiceFactory.cs" />
     <Compile Include="Server\ServiceModel\IServiceLease.cs" />
-    <Compile Include="Services\IMessageExchangeParticipant.cs" />
     <Compile Include="Services\IPendingRequestQueue.cs" />
     <Compile Include="Services\IRemoteServiceAgent.cs" />
-    <Compile Include="Services\MessageExchangeProtocol.cs" />
+    <Compile Include="Services\MessageExchangeStream.cs" />
     <Compile Include="Services\PendingRequestQueue.cs" />
     <Compile Include="Services\SecureClient.cs" />
     <Compile Include="Services\StreamCapture.cs" />
