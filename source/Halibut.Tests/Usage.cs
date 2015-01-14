@@ -117,7 +117,20 @@ namespace Halibut.Tests
             }
         }
 
+        [Test]
+        public void FailWhenServerThrowsAnException()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var tentaclePort = tentacleListening.Listen();
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                Assert.That(ex.Message, Is.StringContaining("at Halibut.Tests.Usage.EchoService.Crash()").And.StringContaining("divide by zero"));
+            }
+        }
 
         //[Test]
         //public void AliceOnlySendsMessagesToBob()

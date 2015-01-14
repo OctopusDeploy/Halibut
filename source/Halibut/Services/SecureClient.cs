@@ -38,6 +38,8 @@ namespace Halibut.Services
 
                 var protocol = new MessageExchangeProtocol(ssl);
                 protocolHandler(protocol);
+
+                ssl.Close();
             }
             catch (IOException ioex)
             {
@@ -46,7 +48,7 @@ namespace Halibut.Services
                 {
                     if (inner.ErrorCode == 10053 || inner.ErrorCode == 10054)
                     {
-                        throw new JsonRpcException("The remote host aborted the connection. This can happen when the remote server does not trust the certificate that we provided.", ioex);
+                        throw new HalibutClientException("The remote host aborted the connection. This can happen when the remote server does not trust the certificate that we provided.", ioex);
                     }
                 }
 
@@ -54,7 +56,7 @@ namespace Halibut.Services
             }
             catch (AuthenticationException aex)
             {
-                throw new JsonRpcException("We aborted the connection because the remote host was not authenticated. This happens whtn the remote host presents a different certificate to the one we expected.", aex);
+                throw new HalibutClientException("We aborted the connection because the remote host was not authenticated. This happens whtn the remote host presents a different certificate to the one we expected.", aex);
             }
         }
 

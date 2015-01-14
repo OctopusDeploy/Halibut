@@ -23,9 +23,14 @@ namespace Halibut.Protocol
         public string Id { get; set; }
 
         [JsonProperty("error")]
-        public JsonRpcError Error { get; set; }
+        public ServerError Error { get; set; }
 
         [JsonProperty("result")]
         public object Result { get; set; }
+
+        public static ResponseMessage FromException(RequestMessage request, Exception ex)
+        {
+            return new ResponseMessage {Id = request.Id, Error = new ServerError { Message = ex.Message, Details = ex.ToString() }};
+        }
     }
 }

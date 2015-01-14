@@ -60,7 +60,7 @@ namespace Halibut.Server.Dispatch
                 var methods = lease.Service.GetType().GetMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (methods.Count == 0)
                 {
-                    return new ResponseMessage { Id = requestMessage.Id, Error = new JsonRpcError() { Message = string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName) } };
+                    return new ResponseMessage { Id = requestMessage.Id, Error = new ServerError() { Message = string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName) } };
                 }
 
                 var method = SelectMethod(methods, requestMessage);

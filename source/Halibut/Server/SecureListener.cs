@@ -73,7 +73,7 @@ namespace Halibut.Server
             {
                 try
                 {
-                    ssl.AuthenticateAsServer(serverCertificate, false, SslProtocols.Tls, false);
+                    ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls, false);
 
                     var reader = new StreamReader(ssl);
                     var firstLine = reader.ReadLine();
@@ -99,9 +99,6 @@ namespace Halibut.Server
                     Logs.Server.ErrorFormat("Unhandled error when handling request from client {0}: {1}", clientName, ex);
                 }
             }
-
-            // TODO: Is this right?
-            client.Close();
         }
 
         static void SendFriendlyHtmlPage(Stream stream)

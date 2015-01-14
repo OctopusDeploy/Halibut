@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters;
 using System.Security;
 using System.Text;
+using Halibut.Diagnostics;
 using Halibut.Protocol;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -91,7 +92,6 @@ namespace Halibut.Services
             // SEND: Response
             // Repeat while request != null
 
-            // TODO: Error handling
             stream.IdentifyAsSubscriber(subscriptionId.ToString());
             var requestsProcessed = 0;
             while (ReceiveAndProcessRequest(stream, incomingRequestProcessor)) requestsProcessed++;
@@ -100,10 +100,9 @@ namespace Halibut.Services
 
         static bool ReceiveAndProcessRequest(MessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            // TODO: Error handling
             var request = stream.Receive<RequestMessage>();
             if (request == null) return false;
-            var response = incomingRequestProcessor(request);
+            var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
             stream.Send(response);
             return true;
         }
@@ -139,10 +138,21 @@ namespace Halibut.Services
 
         void ProcessClientRequest(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            // TODO: Error handling
             var request = stream.Receive<RequestMessage>();
-            var response = incomingRequestProcessor(request);
+            var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
             stream.Send(response);
+        }
+
+        static ResponseMessage InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        {
+            try
+            {
+                return incomingRequestProcessor(request);
+            }
+            catch (Exception ex)
+            {
+                return ResponseMessage.FromException(request, ex.UnpackFromContainers());
+            }
         }
 
         void ProcessSubscriber(IPendingRequestQueue pendingRequests)

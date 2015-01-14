@@ -17,15 +17,12 @@ using Newtonsoft.Json;
 
 namespace Halibut.Protocol
 {
-    public class JsonRpcError
+    public class ServerError
     {
-        [JsonProperty("code")]
-        public string Code { get; set; }
-
         [JsonProperty("message")]
         public string Message { get; set; }
 
-        [JsonProperty("data")]
-        public object Data { get; set; }
+        [JsonProperty("details")]
+        public string Details { get; set; }
     }
 }

@@ -93,8 +93,8 @@ namespace Halibut.Client
             if (responseMessage.Error == null)
                 return;
 
-            var realException = responseMessage.Error.Data as string;
-            throw new JsonRpcException(responseMessage.Error.Message, realException);
+            var realException = responseMessage.Error.Details as string;
+            throw new HalibutClientException(responseMessage.Error.Message, realException);
         }
     }
 }

@@ -16,13 +16,13 @@ using System;
 
 namespace Halibut.Protocol
 {
-    public class JsonRpcException : Exception
+    public class HalibutClientException : Exception
     {
-        public JsonRpcException(string message, Exception inner) : base(message, inner)
+        public HalibutClientException(string message, Exception inner) : base(message, inner)
         {
         }
 
-        public JsonRpcException(string message, string serverException)
+        public HalibutClientException(string message, string serverException)
             : base(message + Environment.NewLine + Environment.NewLine + "Server exception: " + Environment.NewLine + serverException)
         {
         }

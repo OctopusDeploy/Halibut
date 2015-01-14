@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.Threading;
 using Halibut.SampleContracts;
 
 namespace Halibut.SampleServer
@@ -21,6 +22,7 @@ namespace Halibut.SampleServer
     {
         public long Add(long a, long b)
         {
+            Thread.Sleep(10000);
             return a + b;
         }
 
