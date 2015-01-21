@@ -16,7 +16,12 @@ namespace Halibut.Services
             var pending = new PendingRequest();
             requests.TryAdd(request.Id, pending);
             outgoing.Enqueue(request);
-            pending.Wait();
+            var success = pending.Wait(TimeSpan.FromSeconds(20));
+            if (!success)
+            {
+                ApplyResponse(ResponseMessage.FromException(request, new TimeoutException("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (20 seconds), so the request timed out.")));
+            }
+
             return pending.Response;
         }
 
@@ -52,9 +57,9 @@ namespace Halibut.Services
                 waiter = new ManualResetEventSlim(false);
             }
 
-            public void Wait()
+            public bool Wait(TimeSpan maxTimeToWait)
             {
-                waiter.Wait();
+                return waiter.Wait(maxTimeToWait);
             }
 
             public ResponseMessage Response { get; private set; }

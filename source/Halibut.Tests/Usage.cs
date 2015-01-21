@@ -41,7 +41,7 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
-                var tentaclePort = tentacleListening.Listen(8012);
+                var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
@@ -71,6 +71,17 @@ namespace Halibut.Tests
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 }
+            }
+        }
+
+        [Test]
+        public void FailsWhenSendingToPollingMachineButNothingPicksItUp()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            {
+                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                var error = Assert.Throws<HalibutClientException>(() => echo.SayHello("Paul"));
+                Assert.That(error.Message, Is.StringContaining("the polling endpoint did not collect the request within the allowed time"));
             }
         }
 
@@ -139,6 +150,23 @@ namespace Halibut.Tests
         }
 
         [Test]
+        public void FailWhenServerThrowsAnExceptionOnPolling()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+
+                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                Assert.That(ex.Message, Is.StringContaining("at Halibut.Tests.Usage.EchoService.Crash()").And.StringContaining("divide by zero"));
+            }
+        }
+
+        [Test]
         public void FailOnInvalidHostname()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -166,13 +194,13 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
-                tentacleListening.Listen(8433);
+                var tentaclePort = tentacleListening.Listen();
 
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 EchoService.OnLongRunningOperation = () => tentacleListening.Dispose();
 
-                var echo = octopus.CreateClient<IEchoService>("https://127.0.0.1:8433", Certificates.TentacleListeningPublicThumbprint);
+                var echo = octopus.CreateClient<IEchoService>("https://127.0.0.1:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
                 echo.LongRunningOperation();
             }
         }
@@ -183,7 +211,7 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.TentaclePolling))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
-                var tentaclePort = tentacleListening.Listen(8012);
+                var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
@@ -198,7 +226,7 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
-                var tentaclePort = tentacleListening.Listen(8012);
+                var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentaclePollingPublicThumbprint);
@@ -424,87 +452,5 @@ namespace Halibut.Tests
         }
 
         #endregion
-    }
-
-    public class PortProxy
-    {
-        public static int AddProxy(int sourcePort, int destinationPort)
-        {
-            return SilentProcessRunner.ExecuteCommand("NETSH.exe", "interface portproxy add v4tov4 listenport=" + sourcePort + " connectaddress=127.0.0.1 connectport=" + destinationPort + " protocol=tcp", 
-                Environment.CurrentDirectory,
-                output => Console.WriteLine(output),
-                error => Console.WriteLine(error));
-        }
-
-        public static int RemoveProxy(int sourcePort)
-        {
-            return SilentProcessRunner.ExecuteCommand("NETSH.exe", "interface portproxy delete v4tov4 listenport=" + sourcePort,
-                Environment.CurrentDirectory,
-                output => Console.WriteLine(output),
-                error => Console.WriteLine(error));
-        }
-    }
-
-    public static class SilentProcessRunner
-    {
-        public static int ExecuteCommand(string executable, string arguments, string workingDirectory, Action<string> output, Action<string> error)
-        {
-            try
-            {
-                using (var process = new Process())
-                {
-                    process.StartInfo.FileName = executable;
-                    process.StartInfo.Arguments = arguments;
-                    process.StartInfo.WorkingDirectory = workingDirectory;
-                    process.StartInfo.UseShellExecute = false;
-                    process.StartInfo.CreateNoWindow = true;
-                    process.StartInfo.RedirectStandardOutput = true;
-                    process.StartInfo.RedirectStandardError = true;
-
-                    using (var outputWaitHandle = new AutoResetEvent(false))
-                    using (var errorWaitHandle = new AutoResetEvent(false))
-                    {
-                        process.OutputDataReceived += (sender, e) =>
-                        {
-                            if (e.Data == null)
-                            {
-                                outputWaitHandle.Set();
-                            }
-                            else
-                            {
-                                output(e.Data);
-                            }
-                        };
-
-                        process.ErrorDataReceived += (sender, e) =>
-                        {
-                            if (e.Data == null)
-                            {
-                                errorWaitHandle.Set();
-                            }
-                            else
-                            {
-                                error(e.Data);
-                            }
-                        };
-
-                        process.Start();
-
-                        process.BeginOutputReadLine();
-                        process.BeginErrorReadLine();
-
-                        process.WaitForExit();
-                        outputWaitHandle.WaitOne();
-                        errorWaitHandle.WaitOne();
-
-                        return process.ExitCode;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(string.Format("Error when attempting to execute {0}: {1}", executable, ex.Message), ex);
-            }
-        }
     }
 }
