@@ -4,7 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.Serialization.Formatters;
-using System.Security;
+using System.Security.Authentication;
 using System.Text;
 using Halibut.Diagnostics;
 using Halibut.Protocol;
@@ -13,58 +13,13 @@ using Newtonsoft.Json.Bson;
 
 namespace Halibut.Services
 {
-    public class ProtocolVersions
-    {
-        
-    }
-
-    public enum RemoteIdentityType
-    {
-        Client,
-        Subscriber,
-        Server
-    }
-
-    public class RemoteIdentity
-    {
-        readonly RemoteIdentityType identityType;
-        readonly Uri subscriptionId;
-
-        public RemoteIdentity(RemoteIdentityType identityType, Uri subscriptionId)
-        {
-            this.identityType = identityType;
-            this.subscriptionId = subscriptionId;
-        }
-
-        public RemoteIdentity(RemoteIdentityType identityType)
-        {
-            this.identityType = identityType;
-        }
-
-        public RemoteIdentityType IdentityType
-        {
-            get { return identityType; }
-        }
-
-        public Uri SubscriptionId
-        {
-            get { return subscriptionId; }
-        }
-    }
-
-    public class ProtocolException : Exception
-    {
-        public ProtocolException(string message) : base(message)
-        {
-        }
-    }
-
     /// <summary>
     /// Implements the core message exchange protocol for both the client and server. 
     /// </summary>
     public class MessageExchangeProtocol
     {
         readonly MessageExchangeStream stream;
+        bool identified;
 
         public MessageExchangeProtocol(Stream stream)
         {
@@ -73,15 +28,30 @@ namespace Halibut.Services
 
         public ResponseMessage ExchangeAsClient(RequestMessage request)
         {
-            // SEND: MX-CLIENT 1.0
-            // RECV: MX-SERVER 1.0
-            // SEND: Request
-            // RECV: Response
+            PrepareExchangeAsClient();
 
-            // TODO: Error handling
-            stream.IdentifyAsClient();
             stream.Send(request);
             return stream.Receive<ResponseMessage>();
+        }
+
+        void PrepareExchangeAsClient()
+        {
+            try
+            {
+                if (!identified)
+                {
+                    // First time connecting, so identify ourselves
+                    stream.IdentifyAsClient();
+                    identified = true;
+                }
+
+                stream.SendHello();
+                stream.ExpectProceeed();
+            }
+            catch (Exception ex)
+            {
+                throw new ConnectionInitializationFailedException(ex);
+            }
         }
 
         public int ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
@@ -126,7 +96,7 @@ namespace Halibut.Services
             switch (identity.IdentityType)
             {
                 case RemoteIdentityType.Client:
-                    ProcessClientRequest(incomingRequestProcessor);
+                    ProcessClientRequests(incomingRequestProcessor);
                     break;
                 case RemoteIdentityType.Subscriber:
                     ProcessSubscriber(pendingRequests(identity));
@@ -136,11 +106,17 @@ namespace Halibut.Services
             }
         }
 
-        void ProcessClientRequest(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        void ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            var request = stream.Receive<RequestMessage>();
-            var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
-            stream.Send(response);
+            while (true)
+            {
+                stream.ExpectHello();
+                stream.SendProceed();
+
+                var request = stream.Receive<RequestMessage>();
+                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                stream.Send(response);
+            }
         }
 
         static ResponseMessage InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
@@ -172,6 +148,23 @@ namespace Halibut.Services
         }
     }
 
+    public class ConnectionInitializationFailedException : Exception
+    {
+        public ConnectionInitializationFailedException(string message) : base(message)
+        {
+        }
+
+        public ConnectionInitializationFailedException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+
+        public ConnectionInitializationFailedException(Exception innerException)
+            : base(innerException.Message, innerException)
+        {
+        }
+    }
+
     public class MessageExchangeStream
     {
         readonly Stream stream;
@@ -199,6 +192,47 @@ namespace Halibut.Services
             streamWriter.Flush();
 
             ExpectServerIdentity();
+        }
+
+        public void SendHello()
+        {
+            streamWriter.Write("HELLO");
+            streamWriter.WriteLine();
+            streamWriter.Flush();
+        }
+
+        public void SendProceed()
+        {
+            streamWriter.Write("PROCEED");
+            streamWriter.WriteLine();
+            streamWriter.Flush();
+        }
+
+        public void ExpectHello()
+        {
+            var line = ReadLine();
+            if (line != "HELLO")
+                throw new ProtocolException("Expected a HELLO line, got: " + line);
+        }
+
+        public void ExpectProceeed()
+        {
+            var line = ReadLine();
+            if (line == null)
+                throw new AuthenticationException("XYZ");
+            if (line != "PROCEED")
+                throw new ProtocolException("Expected a HELLO line, got: " + line);
+        }
+
+        public string ReadLine()
+        {
+            var line = streamReader.ReadLine();
+            while (line == string.Empty)
+            {
+                line = streamReader.ReadLine();
+            }
+
+            return line;
         }
 
         public void IdentifyAsSubscriber(string subscriptionId)
@@ -256,23 +290,6 @@ namespace Halibut.Services
                 return result;
             }
         }
-
-        //int ReceiveIncomingRequests(Stream stream)
-        //{
-        //    var inboundRequests = Read<RequestMessage>(stream);
-        //    var inboundResponse = inboundRequests == null ? null : serviceInvoker(inboundRequests);
-        //    Write(inboundResponse, stream);
-        //    return inboundRequests == null ? 0 : 1;
-        //}
-
-        //int SendOutgoingRequests(Stream stream)
-        //{
-        //    var request = queue.Dequeue();
-        //    Write(request, stream);
-        //    var responses = Read<ResponseMessage>(stream);
-        //    queue.ApplyResponse(responses);
-        //    return request == null ? 0 : 1;
-        //}
 
         static JsonSerializer CreateDefault()
         {

@@ -19,6 +19,7 @@ namespace Halibut.Server
         readonly object sync = new object();
         readonly X509Certificate2 serverCertficiate;
         readonly List<SecureListener> listeners = new List<SecureListener>();
+        readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         bool running;
@@ -81,7 +82,7 @@ namespace Halibut.Server
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler);
+            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler, VerifyThumbprintOfIncomingClient);
             listeners.Add(listener);
             return listener.Start();
         }
@@ -178,8 +179,14 @@ namespace Halibut.Server
             return invoker.Invoke(request);
         }
 
-        public void Trust(string evePublicThumbprint)
+        public void Trust(string clientThumbprint)
         {
+            trustedThumbprints.Add(clientThumbprint);
+        }
+
+        bool VerifyThumbprintOfIncomingClient(string remoteThumbprint)
+        {
+            return trustedThumbprints.Contains(remoteThumbprint);
         }
 
         public void Route(ServiceEndPoint to, ServiceEndPoint via)

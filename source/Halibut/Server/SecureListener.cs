@@ -18,14 +18,16 @@ namespace Halibut.Server
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
         readonly Action<MessageExchangeProtocol> protocolHandler;
+        readonly Predicate<string> verifyClientThumbprint;
         TcpListener listener;
         bool isStopped;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
             this.protocolHandler = protocolHandler;
+            this.verifyClientThumbprint = verifyClientThumbprint;
 
             EnsureCertificateIsValidForListening(serverCertificate);
         }
@@ -56,6 +58,10 @@ namespace Halibut.Server
                     var task = new Task(() => ExecuteRequest(client));
                     task.Start();
                 }
+                catch (ObjectDisposedException dex)
+                {
+                    // Expected
+                }
                 catch (Exception ex)
                 {
                     Logs.Server.Warn("TCP client error: " + ex.ToString());
@@ -68,8 +74,8 @@ namespace Halibut.Server
         void ExecuteRequest(TcpClient client)
         {
             var clientName = client.Client.RemoteEndPoint;
-            using (var stream = client.GetStream())
-            using (var ssl = new SslStream(stream, false, ValidateCertificate))
+            var stream = client.GetStream();
+            using (var ssl = new SslStream(stream, true, ValidateCertificate))
             {
                 try
                 {
@@ -87,7 +93,7 @@ namespace Halibut.Server
                     }
                     else
                     {
-                        ProcessMessages(ssl);
+                        ProcessMessages(client, ssl);
                     }
                 }
                 catch (AuthenticationException ex)
@@ -114,8 +120,26 @@ namespace Halibut.Server
             stream.Flush();
         }
 
-        void ProcessMessages(Stream stream)
+        void ProcessMessages(TcpClient client, SslStream stream)
         {
+            if (stream.RemoteCertificate == null)
+            {
+                Logs.Server.ErrorFormat("A client at {0} connected, and attempted a message exchange, but did not present a client certificate.", client.Client.RemoteEndPoint);
+                stream.Close();
+                client.Close();
+                return;
+            }
+
+            var thumbprint = new X509Certificate2(stream.RemoteCertificate).Thumbprint;
+            var verified = verifyClientThumbprint(thumbprint);
+            if (!verified)
+            {
+                Logs.Server.ErrorFormat("A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust.", client.Client.RemoteEndPoint, thumbprint);
+                stream.Close();
+                client.Close();
+                return;
+            }
+
             var protocol = new MessageExchangeProtocol(stream);
             protocolHandler(protocol);
         }

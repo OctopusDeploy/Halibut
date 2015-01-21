@@ -71,7 +71,12 @@
     <Compile Include="Services\IRemoteServiceAgent.cs" />
     <Compile Include="Services\MessageExchangeStream.cs" />
     <Compile Include="Services\PendingRequestQueue.cs" />
+    <Compile Include="Services\ProtocolException.cs" />
+    <Compile Include="Services\RemoteIdentity.cs" />
+    <Compile Include="Services\RemoteIdentityType.cs" />
     <Compile Include="Services\SecureClient.cs" />
+    <Compile Include="Services\SecureClientConnectionPool.cs" />
+    <Compile Include="Services\SecureConnection.cs" />
     <Compile Include="Services\StreamCapture.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

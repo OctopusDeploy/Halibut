@@ -52,6 +52,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="Certificates\TentacleListening.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

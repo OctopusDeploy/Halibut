@@ -14,6 +14,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using Halibut.Client;
 using Halibut.Protocol;
 using Halibut.Server;
@@ -40,13 +41,13 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
-                var tentaclePort = tentacleListening.Listen();
+                var tentaclePort = tentacleListening.Listen(8012);
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
                 Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 var watch = Stopwatch.StartNew();
-                for (var i = 0; i < 20; i++)
+                for (var i = 0; i < 2000; i++)
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 }
@@ -61,10 +62,12 @@ namespace Halibut.Tests
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
                 var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
 
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                for (var i = 0; i < 100; i++)
+                for (var i = 0; i < 1; i++)
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 }
@@ -112,8 +115,11 @@ namespace Halibut.Tests
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
 
-                var count = echo.CountBytes(DataStream.FromBytes(data));
-                Assert.That(count, Is.EqualTo(1024 * 1024 + 15));
+                for (var i = 0; i < 100; i++)
+                {
+                    var count = echo.CountBytes(DataStream.FromBytes(data));
+                    Assert.That(count, Is.EqualTo(1024 * 1024 + 15));
+                }
             }
         }
 
@@ -132,130 +138,111 @@ namespace Halibut.Tests
             }
         }
 
-        //[Test]
-        //public void AliceOnlySendsMessagesToBob()
-        //{
-        //    using (var eve = new HalibutServer(new IPEndPoint(IPAddress.Any, 8013), Certificates.Eve))
-        //    {
-        //        eve.Services.Register<IEchoService, EchoService>();
-        //        eve.Options.ClientCertificateValidator = v => v.Thumbprint == Certificates.AlicePublicThumbprint ? CertificateValidationResult.Valid : CertificateValidationResult.Rejected;
-        //        eve.Start();
-
-        //        var alice = new HalibutClient(Certificates.Alice);
-        //        var echo = alice.Create<IEchoService>(new Uri("rpc://localhost:8013"), Certificates.BobPublicThumbprint);
-
-        //        var ex = Assert.Throws<JsonRpcException>(() => echo.SayHello("Hi Bob, it's Eve"));
-        //        Assert.That(ex.Message, Is.StringContaining("We aborted the connection because the remote host was not authenticated"));
-        //    }
-        //}
-
-        //[Test]
-        //public void BobOnlyAcceptsMessagesFromAlice()
-        //{
-        //    using (var bob = new HalibutServer(new IPEndPoint(IPAddress.Any, 8013), Certificates.Bob))
-        //    {
-        //        bob.Services.Register<IEchoService, EchoService>();
-        //        bob.Options.ClientCertificateValidator = v => v.Thumbprint == Certificates.AlicePublicThumbprint ? CertificateValidationResult.Valid : CertificateValidationResult.Rejected;
-        //        bob.Start();
-
-        //        var eve = new HalibutClient(Certificates.Eve);
-        //        var echo = eve.Create<IEchoService>(new Uri("rpc://localhost:8013"), Certificates.BobPublicThumbprint);
-
-        //        var ex = Assert.Throws<JsonRpcException>(() => echo.SayHello("Hi Bob, it's Eve"));
-        //        Assert.That(ex.Message, Is.StringContaining("This can happen when the remote server does not trust the certificate that we provided."));
-        //    }
-        //}
-
-        //[Test]
-        //public void ServerExceptionsAreWrappedAsJsonExceptions()
-        //{
-        //    using (var bob = new HalibutServer(new IPEndPoint(IPAddress.Any, 8013), Certificates.Bob))
-        //    {
-        //        bob.Services.Register<IEchoService, EchoService>();
-        //        bob.Options.ClientCertificateValidator = v => v.Thumbprint == Certificates.AlicePublicThumbprint ? CertificateValidationResult.Valid : CertificateValidationResult.Rejected;
-        //        bob.Start();
-
-        //        var alice = new HalibutClient(Certificates.Alice);
-        //        var echo = alice.Create<IEchoService>(new Uri("rpc://localhost:8013"), Certificates.BobPublicThumbprint);
-
-        //        var jsonex = Assert.Throws<JsonRpcException>(() => echo.Crash());
-        //        Assert.That(jsonex.Message, Is.StringContaining("divide by zero"));
-        //    }
-        //}
-
-        //[Test]
-        //public void SupportsDifferentServiceContractMethods()
-        //{
-        //    using (var bob = new HalibutServer(new IPEndPoint(IPAddress.Any, 8013), Certificates.Bob))
-        //    {
-        //        bob.Services.Register<ISupportedServices, SupportedServices>();
-        //        bob.Options.ClientCertificateValidator = v => v.Thumbprint == Certificates.AlicePublicThumbprint ? CertificateValidationResult.Valid : CertificateValidationResult.Rejected;
-        //        bob.Start();
-
-        //        var alice = new HalibutClient(Certificates.Alice);
-        //        var echo = alice.Create<ISupportedServices>(new Uri("rpc://localhost:8013"), Certificates.BobPublicThumbprint);
-
-        //        echo.MethodReturningVoid(12, 14);
-
-        //        Assert.That(echo.Hello(), Is.EqualTo("Hello"));
-        //        Assert.That(echo.Hello("a"), Is.EqualTo("Hello a"));
-        //        Assert.That(echo.Hello("a", "b"), Is.EqualTo("Hello a b"));
-        //        Assert.That(echo.Hello("a", "b", "c"), Is.EqualTo("Hello a b c"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d"), Is.EqualTo("Hello a b c d"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d", "e"), Is.EqualTo("Hello a b c d e"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d", "e", "f"), Is.EqualTo("Hello a b c d e f"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g"), Is.EqualTo("Hello a b c d e f g"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h"), Is.EqualTo("Hello a b c d e f g h"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i"), Is.EqualTo("Hello a b c d e f g h i"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j"), Is.EqualTo("Hello a b c d e f g h i j"));
-        //        Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"), Is.EqualTo("Hello a b c d e f g h i j k"));
-
-        //        Assert.That(echo.Add(1, 2), Is.EqualTo(3));
-        //        Assert.That(echo.Add(1.00, 2.00), Is.EqualTo(3.00));
-        //        Assert.That(echo.Add(1.10M, 2.10M), Is.EqualTo(3.20M));
-
-        //        Assert.That(echo.Ambiguous("a", "b"), Is.EqualTo("Hello string"));
-        //        Assert.That(echo.Ambiguous("a", new Tuple<string, string>("a", "b")), Is.EqualTo("Hello tuple"));
-
-        //        var ex = Assert.Throws<JsonRpcException>(() => echo.Ambiguous("a", (string) null));
-        //        Assert.That(ex.Message, Is.StringContaining("Ambiguous"));
-        //    }
-        //}
-
-        //[Test]
-        //public void X()
-        //{
-        //    var serializer = new JsonSerializer();
-
-        //    var data = new byte[1024];
-        //    new Random().NextBytes(data);
-        //    var data2 = new byte[1024];
-        //    new Random().NextBytes(data2);
-
-        //    using (var capture = StreamCapture.New())
-        //    {
-        //        using (var ms = new MemoryStream())
-        //        using (var writer = new JsonTextWriter(new StreamWriter(ms)))
-        //        {
-        //            serializer.ContractResolver = new PaulCamelCasePropertyNamesContractResolver();
-        //            serializer.Serialize(writer, new PackageCollection
-        //            {
-        //                Packages = new []
-        //                {
-        //                    DataStream.FromBytes(data),
-        //                    DataStream.FromBytes(data2)
-        //                }
-        //            });
-        //        }
-
-        //        Assert.That(capture.SerializedStreams.Count, Is.EqualTo(2));
-        //        Assert.That(capture.DeserializedStreams.Count, Is.EqualTo(2));
-        //    }
-        //}
-
-        public class PackageCollection
+        [Test]
+        public void FailOnInvalidHostname()
         {
-            public DataStream[] Packages { get; set; }
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            {
+                var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
+                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                Assert.That(ex.Message, Is.StringContaining("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request").And.StringContaining("No such host is known"));
+            }
+        }
+
+        [Test]
+        public void FailOnInvalidPort()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            {
+                var echo = octopus.CreateClient<IEchoService>("https://google.com:88", Certificates.TentacleListeningPublicThumbprint);
+                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                Assert.That(ex.Message, Is.StringContaining("when sending a request to 'https://google.com:88/', before the request").And.StringContaining("unable to establish the initial connection "));
+            }
+        }
+
+        [Test]
+        public void FailOnConnectionTearDown()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                tentacleListening.Listen(8433);
+
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                EchoService.OnLongRunningOperation = () => tentacleListening.Dispose();
+
+                var echo = octopus.CreateClient<IEchoService>("https://127.0.0.1:8433", Certificates.TentacleListeningPublicThumbprint);
+                echo.LongRunningOperation();
+            }
+        }
+
+        [Test]
+        public void FailWhenListeningClientPresentsWrongCertificate()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.TentaclePolling))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var tentaclePort = tentacleListening.Listen(8012);
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+
+                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+            }
+        }
+
+        [Test]
+        public void FailWhenListeningServerPresentsWrongCertificate()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var tentaclePort = tentacleListening.Listen(8012);
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentaclePollingPublicThumbprint);
+
+                var ex = Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+            }
+        }
+
+        [Test]
+        public void SupportsDifferentServiceContractMethods()
+        {
+            services.Register<ISupportedServices>(() => new SupportedServices());
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+                var tentaclePort = tentacleListening.Listen();
+
+                var echo = octopus.CreateClient<ISupportedServices>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                echo.MethodReturningVoid(12, 14);
+
+                Assert.That(echo.Hello(), Is.EqualTo("Hello"));
+                Assert.That(echo.Hello("a"), Is.EqualTo("Hello a"));
+                Assert.That(echo.Hello("a", "b"), Is.EqualTo("Hello a b"));
+                Assert.That(echo.Hello("a", "b", "c"), Is.EqualTo("Hello a b c"));
+                Assert.That(echo.Hello("a", "b", "c", "d"), Is.EqualTo("Hello a b c d"));
+                Assert.That(echo.Hello("a", "b", "c", "d", "e"), Is.EqualTo("Hello a b c d e"));
+                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f"), Is.EqualTo("Hello a b c d e f"));
+                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g"), Is.EqualTo("Hello a b c d e f g"));
+                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h"), Is.EqualTo("Hello a b c d e f g h"));
+                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i"), Is.EqualTo("Hello a b c d e f g h i"));
+                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j"), Is.EqualTo("Hello a b c d e f g h i j"));
+                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"), Is.EqualTo("Hello a b c d e f g h i j k"));
+
+                Assert.That(echo.Add(1, 2), Is.EqualTo(3));
+                Assert.That(echo.Add(1.00, 2.00), Is.EqualTo(3.00));
+                Assert.That(echo.Add(1.10M, 2.10M), Is.EqualTo(3.20M));
+
+                Assert.That(echo.Ambiguous("a", "b"), Is.EqualTo("Hello string"));
+                Assert.That(echo.Ambiguous("a", new Tuple<string, string>("a", "b")), Is.EqualTo("Hello tuple"));
+
+                var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
+                Assert.That(ex.Message, Is.StringContaining("Ambiguous"));
+            }
         }
 
         #region Nested type: EchoService
@@ -270,6 +257,15 @@ namespace Halibut.Tests
             public bool Crash()
             {
                 throw new DivideByZeroException();
+            }
+
+            public static Action OnLongRunningOperation { get; set; }
+
+            public int LongRunningOperation()
+            {
+                OnLongRunningOperation();
+                Thread.Sleep(10000);
+                return 12;
             }
 
             public int CountBytes(DataStream stream)
@@ -293,6 +289,8 @@ namespace Halibut.Tests
 
         public interface IEchoService
         {
+            int LongRunningOperation();
+
             string SayHello(string name);
 
             bool Crash();
@@ -426,5 +424,87 @@ namespace Halibut.Tests
         }
 
         #endregion
+    }
+
+    public class PortProxy
+    {
+        public static int AddProxy(int sourcePort, int destinationPort)
+        {
+            return SilentProcessRunner.ExecuteCommand("NETSH.exe", "interface portproxy add v4tov4 listenport=" + sourcePort + " connectaddress=127.0.0.1 connectport=" + destinationPort + " protocol=tcp", 
+                Environment.CurrentDirectory,
+                output => Console.WriteLine(output),
+                error => Console.WriteLine(error));
+        }
+
+        public static int RemoveProxy(int sourcePort)
+        {
+            return SilentProcessRunner.ExecuteCommand("NETSH.exe", "interface portproxy delete v4tov4 listenport=" + sourcePort,
+                Environment.CurrentDirectory,
+                output => Console.WriteLine(output),
+                error => Console.WriteLine(error));
+        }
+    }
+
+    public static class SilentProcessRunner
+    {
+        public static int ExecuteCommand(string executable, string arguments, string workingDirectory, Action<string> output, Action<string> error)
+        {
+            try
+            {
+                using (var process = new Process())
+                {
+                    process.StartInfo.FileName = executable;
+                    process.StartInfo.Arguments = arguments;
+                    process.StartInfo.WorkingDirectory = workingDirectory;
+                    process.StartInfo.UseShellExecute = false;
+                    process.StartInfo.CreateNoWindow = true;
+                    process.StartInfo.RedirectStandardOutput = true;
+                    process.StartInfo.RedirectStandardError = true;
+
+                    using (var outputWaitHandle = new AutoResetEvent(false))
+                    using (var errorWaitHandle = new AutoResetEvent(false))
+                    {
+                        process.OutputDataReceived += (sender, e) =>
+                        {
+                            if (e.Data == null)
+                            {
+                                outputWaitHandle.Set();
+                            }
+                            else
+                            {
+                                output(e.Data);
+                            }
+                        };
+
+                        process.ErrorDataReceived += (sender, e) =>
+                        {
+                            if (e.Data == null)
+                            {
+                                errorWaitHandle.Set();
+                            }
+                            else
+                            {
+                                error(e.Data);
+                            }
+                        };
+
+                        process.Start();
+
+                        process.BeginOutputReadLine();
+                        process.BeginErrorReadLine();
+
+                        process.WaitForExit();
+                        outputWaitHandle.WaitOne();
+                        errorWaitHandle.WaitOne();
+
+                        return process.ExitCode;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error when attempting to execute {0}: {1}", executable, ex.Message), ex);
+            }
+        }
     }
 }
