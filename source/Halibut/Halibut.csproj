@@ -57,6 +57,7 @@
     <Compile Include="Server\Dispatch\ClientInformation.cs" />
     <Compile Include="Server\Dispatch\IServiceInvoker.cs" />
     <Compile Include="Server\Dispatch\ServiceInvoker.cs" />
+    <Compile Include="Server\HalibutLimits.cs" />
     <Compile Include="Server\HalibutRuntime.cs" />
     <Compile Include="Server\NullServiceFactory.cs" />
     <Compile Include="Server\SecureListener.cs" />

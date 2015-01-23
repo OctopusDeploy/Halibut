@@ -8,7 +8,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
-using Halibut.Protocol;
 using Halibut.Services;
 
 namespace Halibut.Server
@@ -58,9 +57,8 @@ namespace Halibut.Server
                     var task = new Task(() => ExecuteRequest(client));
                     task.Start();
                 }
-                catch (ObjectDisposedException dex)
+                catch (ObjectDisposedException)
                 {
-                    // Expected
                 }
                 catch (Exception ex)
                 {

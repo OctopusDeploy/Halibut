@@ -9,9 +9,15 @@ using System.Threading;
 using Halibut.Client;
 using Halibut.Diagnostics;
 using Halibut.Protocol;
+using Halibut.Server;
 
 namespace Halibut.Services
 {
+    public interface IConnectionTransactionLog
+    {
+        void AppendLine(string text);
+    }
+
     public class SecureClient
     {
         static readonly SecureClientConnectionPool Pool = new SecureClientConnectionPool();
@@ -25,23 +31,21 @@ namespace Halibut.Services
             this.clientCertificate = clientCertificate;
         }
 
-        public void Connect(Action<MessageExchangeProtocol> protocolHandler)
+        public void Connect(IConnectionTransactionLog log, Action<MessageExchangeProtocol> protocolHandler)
         {
-            var retryInterval = TimeSpan.FromSeconds(1);
+            var retryInterval = HalibutLimits.TimeToSleepBetweenConnectionRetryAttemptsWhenCallingListeningEndpoint;
 
             Exception lastError = null;
-            string lastThumbprint = null;
 
             var retryAllowed = true;
             var watch = Stopwatch.StartNew();
-            for (var i = 0; i < 5 && retryAllowed && watch.Elapsed.TotalSeconds < 30; i++)
+            for (var i = 0; i < 5 && retryAllowed && watch.Elapsed < HalibutLimits.MaximumTimeToRetryAnyFormOfNetworkCommunicationWhenCallingListeningEndPoint; i++)
             {
                 try
                 {
                     lastError = null;
 
-                    var connection = Pool.Take(serviceEndpoint) ?? EstablishNewConnection();
-                    lastThumbprint = connection.RemoteThumbprint;
+                    var connection = Pool.Take(serviceEndpoint) ?? EstablishNewConnection(log);
 
                     // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                     retryAllowed = false;
@@ -68,11 +72,12 @@ namespace Halibut.Services
                 }
             }
 
-            HandleError(lastError, retryAllowed, lastThumbprint);
+            HandleError(lastError, retryAllowed);
         }
 
-        SecureConnection EstablishNewConnection()
+        SecureConnection EstablishNewConnection(IConnectionTransactionLog log)
         {
+            log.AppendLine("Establishing a fresh connection");
             var remoteUri = serviceEndpoint.BaseUri;
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
             var client = CreateTcpClient();
@@ -87,7 +92,7 @@ namespace Halibut.Services
             return new SecureConnection(client, ssl, protocol);
         }
 
-        void HandleError(Exception lastError, bool retryAllowed, string lastThumbprint)
+        void HandleError(Exception lastError, bool retryAllowed)
         {
             if (lastError == null)
                 return;
@@ -115,26 +120,28 @@ namespace Halibut.Services
         static TcpClient CreateTcpClient()
         {
             var client = new TcpClient();
-            client.SendTimeout = 5 * 60 * 1000;
-            client.ReceiveTimeout = 5 * 60 * 1000;
+            client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalSeconds;
+            client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalSeconds;
             return client;
         }
 
         static void ConnectWithTimeout(TcpClient client, Uri remoteUri)
         {
             var connectResult = client.BeginConnect(remoteUri.Host, remoteUri.Port, ar => { }, null);
-            if (!connectResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(30)))
+            if (!connectResult.AsyncWaitHandle.WaitOne(HalibutLimits.TcpClientConnectTimeout))
             {
                 try
                 {
                     client.Close();
                 }
-                // ReSharper disable once EmptyGeneralCatchClause
-                catch
+                catch (SocketException)
+                {
+                }
+                catch (ObjectDisposedException)
                 {
                 }
 
-                throw new Exception("The client was unable to establish the initial connection within 30 seconds");
+                throw new Exception("The client was unable to establish the initial connection within " + HalibutLimits.TcpClientConnectTimeout);
             }
 
             client.EndConnect(connectResult);

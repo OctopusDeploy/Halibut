@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using Halibut.Protocol;
+using Halibut.Server;
 
 namespace Halibut.Services
 {
@@ -16,10 +16,10 @@ namespace Halibut.Services
             var pending = new PendingRequest();
             requests.TryAdd(request.Id, pending);
             outgoing.Enqueue(request);
-            var success = pending.Wait(TimeSpan.FromSeconds(20));
+            var success = pending.Wait(HalibutLimits.MaximumTimeBeforeRequestsToPollingMachinesThatAreNotCollectedWillTimeOut);
             if (!success)
             {
-                ApplyResponse(ResponseMessage.FromException(request, new TimeoutException("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (20 seconds), so the request timed out.")));
+                ApplyResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", HalibutLimits.MaximumTimeBeforeRequestsToPollingMachinesThatAreNotCollectedWillTimeOut))));
             }
 
             return pending.Response;
