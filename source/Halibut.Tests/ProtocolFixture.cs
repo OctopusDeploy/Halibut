@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using NSubstitute;
@@ -21,7 +20,7 @@ namespace Halibut.Tests
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
-            protocol = new MessageExchangeProtocol(stream, new InMemoryConnectionLog("foo"));
+            protocol = new MessageExchangeProtocol(stream);
         }
 
         [Test]

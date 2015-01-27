@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -10,6 +11,7 @@ namespace Halibut.Transport
         readonly Uri subscription;
         readonly SecureClient secureClient;
         readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
+        readonly PollingWindow pollingWindow = new PollingWindow();
         DateTimeOffset nextPollDue = DateTimeOffset.UtcNow;
         int working;
 
@@ -48,12 +50,10 @@ namespace Halibut.Transport
 
                 if (exchanged > 0)
                 {
-                    nextPollDue = DateTimeOffset.UtcNow;
+                    pollingWindow.Reset();
                 }
-                else
-                {
-                    nextPollDue = DateTimeOffset.UtcNow.AddSeconds(10);
-                }
+
+                nextPollDue = DateTimeOffset.UtcNow.Add(pollingWindow.Increment());
             }
             finally
             {

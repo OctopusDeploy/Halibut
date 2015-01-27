@@ -1,4 +1,5 @@
 using System;
+using Halibut.Diagnostics;
 using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
@@ -26,7 +27,7 @@ namespace Halibut.Transport.Protocol
 
         public static ResponseMessage FromException(RequestMessage request, Exception ex)
         {
-            return new ResponseMessage {Id = request.Id, Error = new ServerError { Message = ex.Message, Details = ex.ToString() }};
+            return new ResponseMessage {Id = request.Id, Error = new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString() }};
         }
     }
 }

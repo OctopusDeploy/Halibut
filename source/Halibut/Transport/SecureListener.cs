@@ -176,7 +176,7 @@ namespace Halibut.Transport
         {
             isStopped = true;
             listener.Stop();
-            log.Write(EventType.ListenerStarted, "Listener stopped");
+            log.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
 }

@@ -8,10 +8,10 @@ namespace Halibut.Diagnostics
 {
     public class InMemoryConnectionLog : ILog
     {
+        static readonly TraceSource TraceSource = new TraceSource("Halibut");
         readonly string endpoint;
         readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
-        readonly TraceSource traceSource = new TraceSource("Halibut");
-
+        
         public InMemoryConnectionLog(string endpoint)
         {
             this.endpoint = endpoint;
@@ -34,10 +34,11 @@ namespace Halibut.Diagnostics
 
         void WriteInternal(LogEvent logEvent)
         {
-            if (traceSource.Switch.ShouldTrace(TraceEventType.Information))
+            if (TraceSource.Switch.ShouldTrace(TraceEventType.Information))
             {
-                traceSource.TraceInformation(string.Format("{0,-30} {1,4}  {2} {3}{4}", endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.Type, logEvent.FormattedMessage, (logEvent.Error == null ? "" : Environment.NewLine + logEvent.Error)));
+                TraceSource.TraceInformation(string.Format("{0,-30} {1,4}  {2} {3}{4}", endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.Type, logEvent.FormattedMessage, (logEvent.Error == null ? "" : Environment.NewLine + logEvent.Error)));
             }
+
             events.Enqueue(logEvent);
 
             LogEvent ignore;

@@ -44,6 +44,7 @@
     <Compile Include="ServiceEndPoint.cs" />
     <Compile Include="ServiceModel\HalibutProxy.cs" />
     <Compile Include="DataStream.cs" />
+    <Compile Include="Transport\PollingWindow.cs" />
     <Compile Include="Transport\Protocol\ServerError.cs" />
     <Compile Include="HalibutClientException.cs" />
     <Compile Include="Transport\Protocol\RequestMessage.cs" />

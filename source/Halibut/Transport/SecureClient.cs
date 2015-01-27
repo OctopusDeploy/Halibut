@@ -43,7 +43,7 @@ namespace Halibut.Transport
                 {
                     lastError = null;
 
-                    var connection = pool.Take(serviceEndpoint) ?? EstablishNewConnection();
+                    var connection = AcquireConnection();
 
                     // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                     retryAllowed = false;
@@ -51,7 +51,7 @@ namespace Halibut.Transport
                     protocolHandler(connection.Protocol);
 
                     // Only return the connection to the pool if all went well
-                    pool.Return(serviceEndpoint, connection);
+                    ReleaseConnection(connection);
                 }
                 catch (AuthenticationException aex)
                 {
@@ -76,6 +76,18 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
+        SecureConnection AcquireConnection()
+        {
+            var connection = pool.Take(serviceEndpoint);
+            if (connection != null)
+            {
+                log.Write(EventType.UsingExistingConnectionFromPool, "Using a connection from the connection pool");
+                return connection;
+            }
+
+            return EstablishNewConnection();
+        }
+
         SecureConnection EstablishNewConnection()
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
@@ -94,9 +106,14 @@ namespace Halibut.Transport
             ssl.Write(MxLine, 0, MxLine.Length);
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint);
-            
+
             var protocol = new MessageExchangeProtocol(ssl, log);
             return new SecureConnection(client, ssl, protocol);
+        }
+
+        void ReleaseConnection(SecureConnection connection)
+        {
+            pool.Return(serviceEndpoint, connection);
         }
 
         void HandleError(Exception lastError, bool retryAllowed)

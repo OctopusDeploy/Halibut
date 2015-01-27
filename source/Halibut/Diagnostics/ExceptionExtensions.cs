@@ -21,15 +21,5 @@ namespace Halibut.Diagnostics
 
             return error;
         }
-
-        public static string GetErrorSummary(this Exception error)
-        {
-            error = error.UnpackFromContainers();
-
-            if (error is TaskCanceledException)
-                return "The task was canceled.";
-
-            return error.Message;
-        }
     }
 }

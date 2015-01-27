@@ -10,20 +10,17 @@ namespace Halibut.Transport.Protocol
     /// </summary>
     public class MessageExchangeProtocol
     {
-        readonly ILog log;
         readonly IMessageExchangeStream stream;
         bool identified;
 
         public MessageExchangeProtocol(Stream stream, ILog log)
         {
             this.stream = new MessageExchangeStream(stream, log);
-            this.log = log;
         }
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream)
         {
             this.stream = stream;
-            this.log = log;
         }
 
         public ResponseMessage ExchangeAsClient(RequestMessage request)
@@ -40,7 +37,6 @@ namespace Halibut.Transport.Protocol
             {
                 if (!identified)
                 {
-                    // First time connecting, so identify ourselves
                     stream.IdentifyAsClient();
                     identified = true;
                 }
@@ -58,14 +54,8 @@ namespace Halibut.Transport.Protocol
 
         public int ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            // SEND: MX-SUBSCRIBER 1.0 [subid]
-            // RECV: MX-SERVER 1.0
-            // RECV: Request -> service invoker
-            // SEND: Response
-            // Repeat while request != null
             if (!identified)
             {
-                // First time connecting, so identify ourselves
                 stream.IdentifyAsSubscriber(subscriptionId.ToString());
                 identified = true;
             }
@@ -94,18 +84,6 @@ namespace Halibut.Transport.Protocol
 
         public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
-            // RECV: <IDENTIFICATION>
-            // SEND: MX-SERVER 1.0
-            // IF MX-CLIENT
-            //   RECV: Request
-            //     call service invoker
-            //   SEND: Response
-            // ELSE
-            //   while not empty
-            //     Get next from queue
-            //     SEND: Request
-            //     RECV: Response
-
             var identity = stream.ReadRemoteIdentity();
             stream.IdentifyAsServer();
             switch (identity.IdentityType)
@@ -142,7 +120,6 @@ namespace Halibut.Transport.Protocol
         {
             while (true)
             {
-                // TODO: Error handling
                 var nextRequest = pendingRequests.Dequeue();
 
                 stream.Send(nextRequest);
@@ -166,7 +143,7 @@ namespace Halibut.Transport.Protocol
             }
             catch (Exception ex)
             {
-                return ResponseMessage.FromException(request, ex.UnpackFromContainers());
+                return ResponseMessage.FromException(request, ex);
             }
         }
     }
