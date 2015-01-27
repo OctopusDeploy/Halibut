@@ -32,9 +32,9 @@ namespace Halibut.Services
     public interface IMessageExchangeStream
     {
         void IdentifyAsClient();
-        void SendHello();
+        void SendNext();
         void SendProceed();
-        void ExpectHello();
+        bool ExpectNextOrEnd();
         void ExpectProceeed();
         void IdentifyAsSubscriber(string subscriptionId);
         void IdentifyAsServer();
@@ -75,9 +75,9 @@ namespace Halibut.Services
             ExpectServerIdentity();
         }
 
-        public void SendHello()
+        public void SendNext()
         {
-            streamWriter.Write("HELLO");
+            streamWriter.Write("NEXT");
             streamWriter.WriteLine();
             streamWriter.Flush();
         }
@@ -89,11 +89,19 @@ namespace Halibut.Services
             streamWriter.Flush();
         }
 
-        public void ExpectHello()
+        public bool ExpectNextOrEnd()
         {
             var line = ReadLine();
-            if (line != "HELLO")
-                throw new ProtocolException("Expected a HELLO line, got: " + line);
+            switch (line)
+            {
+                case "NEXT":
+                    return true;
+                case null:
+                case "END":
+                    return false;
+                default:
+                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+            }
         }
 
         public void ExpectProceeed()
@@ -102,7 +110,7 @@ namespace Halibut.Services
             if (line == null)
                 throw new AuthenticationException("XYZ");
             if (line != "PROCEED")
-                throw new ProtocolException("Expected a HELLO line, got: " + line);
+                throw new ProtocolException("Expected PROCEED, got: " + line);
         }
 
         string ReadLine()

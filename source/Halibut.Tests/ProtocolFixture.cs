@@ -31,8 +31,6 @@ namespace Halibut.Tests
             AssertOutput(@"
 --> MX-CLIENT
 <-- MX-SERVER
---> HELLO
-<-- PROCEED
 --> RequestMessage
 <-- ResponseMessage");
         }
@@ -42,19 +40,16 @@ namespace Halibut.Tests
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
             stream.NextReadReturns(new RequestMessage());
+            stream.SetNumberOfReads(1);
 
             protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue());
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
-<-- HELLO
---> PROCEED
 <-- RequestMessage
 --> ResponseMessage
-<-- HELLO
---> PROCEED
-<-- RequestMessage");
+<-- END");
         }
 
         [Test]
@@ -69,15 +64,13 @@ namespace Halibut.Tests
             AssertOutput(@"
 --> MX-CLIENT
 <-- MX-SERVER
---> HELLO
+--> RequestMessage
+<-- ResponseMessage
+--> NEXT
 <-- PROCEED
 --> RequestMessage
 <-- ResponseMessage
---> HELLO
-<-- PROCEED
---> RequestMessage
-<-- ResponseMessage
---> HELLO
+--> NEXT
 <-- PROCEED
 --> RequestMessage
 <-- ResponseMessage");
@@ -96,21 +89,17 @@ namespace Halibut.Tests
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
-<-- HELLO
+<-- RequestMessage
+--> ResponseMessage
+<-- NEXT
 --> PROCEED
 <-- RequestMessage
 --> ResponseMessage
-<-- HELLO
+<-- NEXT
 --> PROCEED
 <-- RequestMessage
 --> ResponseMessage
-<-- HELLO
---> PROCEED
-<-- RequestMessage
---> ResponseMessage
-<-- HELLO
---> PROCEED
-<-- RequestMessage");
+<-- END");
         }
 
         [Test]
@@ -125,12 +114,20 @@ namespace Halibut.Tests
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
+--> NEXT
+<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
 <-- RequestMessage");
         }
 
@@ -141,7 +138,9 @@ namespace Halibut.Tests
             var requestQueue = Substitute.For<IPendingRequestQueue>();
             var queue = new Queue<RequestMessage>();
             queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new RequestMessage());
             requestQueue.Dequeue().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+            stream.SetNumberOfReads(2);
 
             protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
@@ -150,7 +149,11 @@ namespace Halibut.Tests
 --> MX-SERVER
 --> RequestMessage
 <-- ResponseMessage
---> RequestMessage");
+<-- NEXT
+--> PROCEED
+--> RequestMessage
+<-- ResponseMessage
+<-- END");
         }
 
         [Test]
@@ -168,15 +171,23 @@ namespace Halibut.Tests
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
+--> NEXT
+<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
 <-- RequestMessage
---> MX-SUBSCRIBE subscriptionId
-<-- MX-SERVER
+--> NEXT
+<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
 <-- RequestMessage");
         }
 
@@ -186,13 +197,17 @@ namespace Halibut.Tests
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
             var queue = new Queue<RequestMessage>();
-            queue.Enqueue(new RequestMessage());
-            queue.Enqueue(new RequestMessage());
             requestQueue.Dequeue().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+
+            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new RequestMessage());
+            stream.SetNumberOfReads(2);
 
             protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
             queue.Enqueue(new RequestMessage());
+
+            stream.SetNumberOfReads(1);
 
             protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
@@ -201,14 +216,16 @@ namespace Halibut.Tests
 --> MX-SERVER
 --> RequestMessage
 <-- ResponseMessage
+<-- NEXT
+--> PROCEED
 --> RequestMessage
 <-- ResponseMessage
---> RequestMessage
+<-- END
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
 --> RequestMessage
 <-- ResponseMessage
---> RequestMessage");
+<-- END");
         }
 
         void AssertOutput(string expected)
@@ -222,6 +239,7 @@ namespace Halibut.Tests
             readonly StringBuilder output = new StringBuilder();
             readonly Queue<object> nextReadQueue = new Queue<object>();
             RemoteIdentity remoteIdentity;
+            int numberOfReads = 3;
 
             public DumpStream()
             {
@@ -238,6 +256,11 @@ namespace Halibut.Tests
                 remoteIdentity = identity;
             }
 
+            public void SetNumberOfReads(int reads)
+            {
+                numberOfReads = reads;
+            }
+
             public List<object> Sent { get; set; } 
 
             public void IdentifyAsClient()
@@ -246,9 +269,9 @@ namespace Halibut.Tests
                 output.AppendLine("<-- MX-SERVER");
             }
 
-            public void SendHello()
+            public void SendNext()
             {
-                output.AppendLine("--> HELLO");
+                output.AppendLine("--> NEXT");
             }
 
             public void SendProceed()
@@ -256,9 +279,15 @@ namespace Halibut.Tests
                 output.AppendLine("--> PROCEED");
             }
 
-            public void ExpectHello()
+            public bool ExpectNextOrEnd()
             {
-                output.AppendLine("<-- HELLO");
+                if (--numberOfReads == 0)
+                {
+                    output.AppendLine("<-- END");
+                    return false;
+                }
+                output.AppendLine("<-- NEXT");
+                return true;
             }
 
             public void ExpectProceeed()
