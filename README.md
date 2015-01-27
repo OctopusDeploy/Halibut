@@ -58,20 +58,10 @@ Notice that while the configuration code changed, the request/response code didn
 
 One area we've put a lot of thought into with Halibut is failure modes. Below is a list of possible failure reasons, and how Halibut will handle them. 
 
-Todo: thouroughly consider and document these error modes. A short list:
-
- - We cannot connect (TCP failure)
- - We connect, but the connection is torn down
- - We connect, but the server rejects our certificate
- - We connect, but the server certificate is not what we expect
- - We connect, but the server encounters an error processing a given request
- - We connect, but we encounter an error processing a server request
-
-## Timeouts
-
-Todo: thouroughly consider and document timeouts
-
-## Threading
-
-
-
+ - We cannot connect (invalid host name, port blocked, etc.): we try up to 5 times, and for no longer than 30 seconds
+ - We connect, but the connection is torn down: no retry
+ - We connect, but the server rejects our certificate: no retry
+ - We connect, but the server certificate is not what we expect: no retry
+ - We connect, but the server encounters an error processing a given request: error is returned and rethrown, no retry
+ - We connect, but we encounter an error processing a server request: no retry, error is returned
+ - Sending a message to a polling endpoint, but the endpoint doesn't collect the message in a reasonable time (30 seconds currently): fail
