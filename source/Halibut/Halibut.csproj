@@ -73,6 +73,7 @@
     <Compile Include="Services\IRemoteServiceAgent.cs" />
     <Compile Include="Services\LogEvent.cs" />
     <Compile Include="Services\LogFactory.cs" />
+    <Compile Include="Services\MessageExchangeProtocol.cs" />
     <Compile Include="Services\MessageExchangeStream.cs" />
     <Compile Include="Services\PendingRequestQueue.cs" />
     <Compile Include="Services\ProtocolException.cs" />

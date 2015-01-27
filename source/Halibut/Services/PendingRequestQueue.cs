@@ -10,7 +10,7 @@ namespace Halibut.Services
     {
         readonly ConcurrentDictionary<string, PendingRequest> requests = new ConcurrentDictionary<string, PendingRequest>();
         readonly ConcurrentQueue<RequestMessage> outgoing = new ConcurrentQueue<RequestMessage>();
-
+        
         public ResponseMessage QueueAndWait(RequestMessage request)
         {
             var pending = new PendingRequest();
