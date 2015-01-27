@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Windows.Forms;
-using Halibut.Client;
-using Halibut.Server;
-using Halibut.Server.Dispatch;
+using Halibut.ServiceModel;
 
 namespace Halibut.OctopusSample
 {
     public partial class TentacleForm : Form
     {
-        readonly HalibutRuntime tentacleRuntime;
+        readonly HalibutRuntime tentacleHalibutRuntime;
         readonly Logger log;
 
         public TentacleForm()
@@ -21,19 +19,19 @@ namespace Halibut.OctopusSample
             var tentacleServices = new DelegateServiceFactory();
             tentacleServices.Register<IHealthCheckService>(() => new HealthCheck(log));
 
-            tentacleRuntime = new HalibutRuntime(tentacleServices, new X509Certificate2("OctopusTentacle.pfx"));
+            tentacleHalibutRuntime = new HalibutRuntime(tentacleServices, new X509Certificate2("OctopusTentacle.pfx"));
         }
 
         public void PollingMode(Uri subscription, ServiceEndPoint octopusServer)
         {
-            tentacleRuntime.Poll(subscription, octopusServer);
+            tentacleHalibutRuntime.Poll(subscription, octopusServer);
             Text = "Tentacle: polling, subscription: " + subscription;
         }
 
         public void ListeningMode(int port, string octopusThumbprint)
         {
-            tentacleRuntime.Listen(port);
-            tentacleRuntime.Trust(octopusThumbprint);
+            tentacleHalibutRuntime.Listen(port);
+            tentacleHalibutRuntime.Trust(octopusThumbprint);
             Text = "Tentacle: listening, port: " + port;
         }
 

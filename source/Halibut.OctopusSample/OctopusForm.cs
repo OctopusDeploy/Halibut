@@ -7,15 +7,13 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Windows.Forms;
-using Halibut.Client;
-using Halibut.Server;
-using Halibut.Server.Dispatch;
+using Halibut.ServiceModel;
 
 namespace Halibut.OctopusSample
 {
     public partial class OctopusForm : Form
     {
-        HalibutRuntime serverRuntime;
+        HalibutRuntime serverHalibutRuntime;
         int listenPort = 10900;
         List<ServiceEndPoint> tentacles = new List<ServiceEndPoint>();
         Logger log;
@@ -26,7 +24,7 @@ namespace Halibut.OctopusSample
 
             log = new Logger(logBox);
             var services = new DelegateServiceFactory();
-            serverRuntime = new HalibutRuntime(services, new X509Certificate2("OctopusServer.pfx"));
+            serverHalibutRuntime = new HalibutRuntime(services, new X509Certificate2("OctopusServer.pfx"));
         }
 
         private void AddListeningTentacleClicked(object sender, EventArgs e)
@@ -46,7 +44,7 @@ namespace Halibut.OctopusSample
                 foreach (var tentacle in tentacles)
                 {
                     log.WriteLine("Checking health of: " + tentacle);
-                    var healthCheckService = serverRuntime.CreateClient<IHealthCheckService>(tentacle);
+                    var healthCheckService = serverHalibutRuntime.CreateClient<IHealthCheckService>(tentacle);
                     var isOnline = healthCheckService.IsOnline();
                     log.WriteLine("Result: " + isOnline);
                 }

@@ -14,10 +14,7 @@
 
 using System;
 using System.Diagnostics;
-using Halibut.Client;
-using Halibut.Protocol;
-using Halibut.Server;
-using Halibut.Server.Dispatch;
+using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 

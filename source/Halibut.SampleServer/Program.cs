@@ -16,8 +16,7 @@ using System;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.SampleContracts;
-using Halibut.Server;
-using Halibut.Server.Dispatch;
+using Halibut.ServiceModel;
 
 namespace Halibut.SampleServer
 {

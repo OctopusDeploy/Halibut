@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using Halibut.Protocol;
 
 namespace Halibut.Tests.TestServices
 {

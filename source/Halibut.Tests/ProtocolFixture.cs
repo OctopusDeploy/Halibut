@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using Halibut.Protocol;
-using Halibut.Services;
+using Halibut.Diagnostics;
+using Halibut.ServiceModel;
+using Halibut.Transport.Protocol;
 using NSubstitute;
 using NUnit.Framework;
 
