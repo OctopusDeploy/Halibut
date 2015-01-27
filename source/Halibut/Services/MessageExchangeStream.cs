@@ -18,12 +18,14 @@ namespace Halibut.Services
     /// </summary>
     public class MessageExchangeProtocol
     {
+        readonly ILog log;
         readonly MessageExchangeStream stream;
         bool identified;
 
-        public MessageExchangeProtocol(Stream stream)
+        public MessageExchangeProtocol(Stream stream, ILog log)
         {
-            this.stream = new MessageExchangeStream(stream);
+            this.log = log;
+            this.stream = new MessageExchangeStream(stream, log);
         }
 
         public ResponseMessage ExchangeAsClient(RequestMessage request)
@@ -168,14 +170,16 @@ namespace Halibut.Services
     public class MessageExchangeStream
     {
         readonly Stream stream;
+        readonly ILog log;
         readonly StreamWriter streamWriter;
         readonly StreamReader streamReader;
         readonly JsonSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
-        public MessageExchangeStream(Stream stream)
+        public MessageExchangeStream(Stream stream, ILog log)
         {
             this.stream = stream;
+            this.log = log;
             streamWriter = new StreamWriter(stream, new UTF8Encoding(false));
             streamReader = new StreamReader(stream, new UTF8Encoding(false));
             serializer = Serializer();
@@ -185,6 +189,7 @@ namespace Halibut.Services
 
         public void IdentifyAsClient()
         {
+            log.Write(EventType.Diagnostic, "Identifying as a client");
             streamWriter.Write("MX-CLIENT ");
             streamWriter.Write(currentVersion);
             streamWriter.WriteLine();

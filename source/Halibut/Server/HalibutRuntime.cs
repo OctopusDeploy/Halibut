@@ -22,6 +22,7 @@ namespace Halibut.Server
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
+        readonly LogFactory logs = new LogFactory();
         bool running;
 
         public HalibutRuntime(X509Certificate2 serverCertficiate) : this(new NullServiceFactory(), serverCertficiate)
@@ -37,6 +38,11 @@ namespace Halibut.Server
             var worker = new Thread(DispatchThread);
             worker.Name = "Halibut runtime dispatch thread";
             worker.Start();
+        }
+
+        public LogFactory Logs
+        {
+            get { return logs; }
         }
 
         PendingRequestQueue GetQueue(Uri target)
@@ -82,7 +88,7 @@ namespace Halibut.Server
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler, VerifyThumbprintOfIncomingClient);
+            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs);
             listeners.Add(listener);
             return listener.Start();
         }
@@ -101,7 +107,7 @@ namespace Halibut.Server
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
-            var client = new SecureClient(endPoint, serverCertficiate);
+            var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.ToString()));
             remotePollingWorkers.Add(new ActiveRemoteServiceAgent(subscription, client, HandleIncomingRequest));
         }
 
@@ -141,10 +147,10 @@ namespace Halibut.Server
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
         {
-            var client = new SecureClient(request.Destination, serverCertficiate);
+            var client = new SecureClient(request.Destination, serverCertficiate, logs.ForEndpoint(request.Destination.ToString()));
 
             ResponseMessage response = null;
-            client.Connect(protocol =>
+            client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
             });

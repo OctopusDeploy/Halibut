@@ -22,7 +22,7 @@ namespace Halibut.Services
             id = Interlocked.Increment(ref connectionId);
         }
 
-        public string Id { get {  return } }
+        public string Id { get { return id.ToString(); } }
         public MessageExchangeProtocol Protocol { get { return protocol; } }
         public string RemoteThumbprint { get { return new X509Certificate2(stream.RemoteCertificate).Thumbprint; } }
 

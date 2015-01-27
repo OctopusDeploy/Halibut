@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using Halibut.Protocol;
 
@@ -40,7 +43,7 @@ namespace Halibut.Services
             try
             {
                 int exchanged = 0;
-                secureClient.Connect(protocol =>
+                secureClient.ExecuteTransaction(protocol =>
                 {
                     exchanged = protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
                 });

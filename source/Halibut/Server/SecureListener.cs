@@ -7,7 +7,6 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using Halibut.Diagnostics;
 using Halibut.Services;
 
 namespace Halibut.Server
@@ -18,15 +17,18 @@ namespace Halibut.Server
         readonly X509Certificate2 serverCertificate;
         readonly Action<MessageExchangeProtocol> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
+        readonly ILogFactory logFactory;
+        ILog log;
         TcpListener listener;
         bool isStopped;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
             this.protocolHandler = protocolHandler;
             this.verifyClientThumbprint = verifyClientThumbprint;
+            this.logFactory = logFactory;
 
             EnsureCertificateIsValidForListening(serverCertificate);
         }
@@ -35,6 +37,8 @@ namespace Halibut.Server
         {
             listener = new TcpListener(endPoint);
             listener.Start();
+            log = logFactory.ForEndpoint("listen://" + listener.LocalEndpoint);
+            log.Write(EventType.ListenerStarted, "Listener started");
             Accept();
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
@@ -52,7 +56,7 @@ namespace Halibut.Server
                     if (isStopped)
                         return;
 
-                    Logs.Server.Info("Accepted TCP client " + client.Client.RemoteEndPoint);
+                    log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
 
                     var task = new Task(() => ExecuteRequest(client));
                     task.Start();
@@ -62,7 +66,7 @@ namespace Halibut.Server
                 }
                 catch (Exception ex)
                 {
-                    Logs.Server.Warn("TCP client error: " + ex.ToString());
+                    log.WriteException(EventType.Error, "Error accepting TCP client", ex);
                 }
 
                 Accept();
@@ -77,30 +81,36 @@ namespace Halibut.Server
             {
                 try
                 {
+                    log.Write(EventType.Security, "Performing SSL (TLS 1.0) server handshake");
                     ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls, false);
 
-                    var reader = new StreamReader(ssl);
-                    var firstLine = reader.ReadLine();
-                    while (!string.IsNullOrWhiteSpace(reader.ReadLine()))
+                    log.Write(EventType.Security, "Secure connection established, client is not yet authenticated");
+
+                    var buffer = new byte[20000];
+                    var read = ssl.Read(buffer, 0, buffer.Length);
+                    if (read < 2)
                     {
+                        return;
                     }
 
-                    if (firstLine != "MX")
+                    if (Encoding.ASCII.GetString(buffer, 0, 2) != "MX")
                     {
+                        log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
                         SendFriendlyHtmlPage(ssl);
                     }
                     else
                     {
+                        log.Write(EventType.Diagnostic, "Begin message exchange");
                         ProcessMessages(client, ssl);
                     }
                 }
                 catch (AuthenticationException ex)
                 {
-                    Logs.Server.Warn("Client " + clientName + " failed authentication: " + ex);
+                    log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
                 }
                 catch (Exception ex)
                 {
-                    Logs.Server.ErrorFormat("Unhandled error when handling request from client {0}: {1}", clientName, ex);
+                    log.WriteException(EventType.Error, "Unhandled error when handling request from client: {0}", ex, clientName);
                 }
             }
         }
@@ -122,7 +132,7 @@ namespace Halibut.Server
         {
             if (stream.RemoteCertificate == null)
             {
-                Logs.Server.ErrorFormat("A client at {0} connected, and attempted a message exchange, but did not present a client certificate.", client.Client.RemoteEndPoint);
+                log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", client.Client.RemoteEndPoint);
                 stream.Close();
                 client.Close();
                 return;
@@ -132,13 +142,14 @@ namespace Halibut.Server
             var verified = verifyClientThumbprint(thumbprint);
             if (!verified)
             {
-                Logs.Server.ErrorFormat("A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust.", client.Client.RemoteEndPoint, thumbprint);
+                log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", client.Client.RemoteEndPoint, thumbprint);
                 stream.Close();
                 client.Close();
                 return;
             }
 
-            var protocol = new MessageExchangeProtocol(stream);
+            log.Write(EventType.Security, "Client authenticated as {0}", thumbprint);
+            var protocol = new MessageExchangeProtocol(stream, log);
             protocolHandler(protocol);
         }
 
@@ -161,6 +172,7 @@ namespace Halibut.Server
         {
             isStopped = true;
             listener.Stop();
+            log.Write(EventType.ListenerStarted, "Listener stopped");
         }
     }
 }

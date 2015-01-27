@@ -13,9 +13,17 @@ using Halibut.Server;
 
 namespace Halibut.Services
 {
-    public interface IConnectionTransactionLog
+    public enum EventType
     {
-        void AppendLine(string text);
+        OpeningNewConnection,
+        UsingExistingConnectionFromPool,
+        Security,
+        Diagnostic,
+        ClientDenied,
+        Error,
+        ListenerStarted,
+        ListenerAcceptedClient,
+        ListenerClosed
     }
 
     public class SecureClient
@@ -24,14 +32,16 @@ namespace Halibut.Services
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
+        readonly ILog log;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate)
+        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log)
         {
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
+            this.log = log;
         }
 
-        public void Connect(IConnectionTransactionLog log, Action<MessageExchangeProtocol> protocolHandler)
+        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
         {
             var retryInterval = HalibutLimits.TimeToSleepBetweenConnectionRetryAttemptsWhenCallingListeningEndpoint;
 
@@ -41,11 +51,13 @@ namespace Halibut.Services
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < 5 && retryAllowed && watch.Elapsed < HalibutLimits.MaximumTimeToRetryAnyFormOfNetworkCommunicationWhenCallingListeningEndPoint; i++)
             {
+                if (i > 0) log.Write(EventType.Error, "Retry attempt {0}", i);
+
                 try
                 {
                     lastError = null;
 
-                    var connection = Pool.Take(serviceEndpoint) ?? EstablishNewConnection(log);
+                    var connection = Pool.Take(serviceEndpoint) ?? EstablishNewConnection();
 
                     // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                     retryAllowed = false;
@@ -57,16 +69,19 @@ namespace Halibut.Services
                 }
                 catch (AuthenticationException aex)
                 {
+                    log.WriteException(EventType.Error, aex.Message, aex);
                     lastError = aex;
                     retryAllowed = false;
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
+                    log.WriteException(EventType.Error, cex.Message, cex);
                     lastError = cex;
                     retryAllowed = true;
                 }
                 catch (Exception ex)
                 {
+                    log.WriteException(EventType.Error, ex.Message, ex);
                     lastError = ex;
                     Thread.Sleep(retryInterval);
                 }
@@ -75,20 +90,26 @@ namespace Halibut.Services
             HandleError(lastError, retryAllowed);
         }
 
-        SecureConnection EstablishNewConnection(IConnectionTransactionLog log)
+        SecureConnection EstablishNewConnection()
         {
-            log.AppendLine("Establishing a fresh connection");
+            log.Write(EventType.OpeningNewConnection, "Opening a new connection");
+
             var remoteUri = serviceEndpoint.BaseUri;
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
             var client = CreateTcpClient();
             ConnectWithTimeout(client, remoteUri);
+            log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
+
+            log.Write(EventType.Security, "Performing SSL (TLS 1.0) handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
             ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls, false);
             ssl.Write(MxLine, 0, MxLine.Length);
 
-            var protocol = new MessageExchangeProtocol(ssl);
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint);
+            
+            var protocol = new MessageExchangeProtocol(ssl, log);
             return new SecureConnection(client, ssl, protocol);
         }
 
@@ -150,28 +171,6 @@ namespace Halibut.Services
         X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
         {
             return clientCertificate;
-        }
-
-        class ClientCertificateValidator
-        {
-            readonly string expectedThumbprint;
-
-            public ClientCertificateValidator(string expectedThumbprint)
-            {
-                this.expectedThumbprint = expectedThumbprint;
-            }
-
-            public bool Validate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
-            {
-                var provided = new X509Certificate2(certificate).Thumbprint;
-
-                if (provided == expectedThumbprint)
-                {
-                    return true;
-                }
-
-                throw new AuthenticationException(string.Format("The server presented an unexpected security certificate. We expected the server to present a certificate with the thumbprint '{0}'. Instead, it presented a certificate with a thumbprint of '{1}'. This usually happens when the client has been configured to expect the server to have the wrong certificate, or when the certificate on the server has been regenerated and the client has not been updated. It may also happen if someone is performing a man-in-the-middle attack on the remote machine, or if a proxy server is intercepting requests. Please check the certificate used on the server, and verify that the client has been configured correctly.", expectedThumbprint, provided));
-            }
         }
     }
 }

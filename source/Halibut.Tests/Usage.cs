@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Halibut.Client;
@@ -27,7 +28,7 @@ namespace Halibut.Tests
     public class Usage
     {
         DelegateServiceFactory services;
-        
+
         [SetUp]
         public void SetUp()
         {
@@ -51,6 +52,7 @@ namespace Halibut.Tests
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 }
+
                 Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
             }
         }
@@ -67,7 +69,7 @@ namespace Halibut.Tests
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
 
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                for (var i = 0; i < 1; i++)
+                for (var i = 0; i < 100; i++)
                 {
                     Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
                 }
