@@ -22,6 +22,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
+        readonly SecureClientConnectionPool pool = new SecureClientConnectionPool();
         bool running;
 
         public HalibutRuntime(X509Certificate2 serverCertficiate) : this(new NullServiceFactory(), serverCertficiate)
@@ -106,7 +107,7 @@ namespace Halibut
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
-            var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.ToString()));
+            var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.ToString()), pool);
             remotePollingWorkers.Add(new ActiveRemoteServiceAgent(subscription, client, HandleIncomingRequest));
         }
 
@@ -123,9 +124,6 @@ namespace Halibut
         ResponseMessage SendOutgoingRequest(RequestMessage request)
         {
             var endPoint = request.Destination;
-
-            // If polling, add it to a queue and wait
-            // If https, connect and wait
 
             ServiceEndPoint routerEndPoint;
             if (routeTable.TryGetValue(endPoint.BaseUri, out routerEndPoint))
@@ -146,7 +144,7 @@ namespace Halibut
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
         {
-            var client = new SecureClient(request.Destination, serverCertficiate, logs.ForEndpoint(request.Destination.ToString()));
+            var client = new SecureClient(request.Destination, serverCertficiate, logs.ForEndpoint(request.Destination.ToString()), pool);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -201,6 +199,7 @@ namespace Halibut
 
         public void Dispose()
         {
+            pool.Dispose();
             foreach (var listener in listeners)
             {
                 listener.Dispose();

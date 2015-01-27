@@ -53,7 +53,7 @@
     <Compile Include="TestServices\EchoService.cs" />
     <Compile Include="TestServices\IEchoService.cs" />
     <Compile Include="TestServices\ISupportedServices.cs" />
-    <Compile Include="Usage.cs" />
+    <Compile Include="UsageFixture.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

@@ -40,6 +40,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ICalculatorService.cs" />
+    <Compile Include="IScriptController.cs" />
+    <Compile Include="IScriptOutputObserver.cs" />
+    <Compile Include="IScriptRunner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

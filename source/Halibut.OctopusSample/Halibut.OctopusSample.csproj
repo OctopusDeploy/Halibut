@@ -44,6 +44,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Execute.cs" />
+    <Compile Include="IHealthCheckService.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="OctopusForm.cs">
       <SubType>Form</SubType>
     </Compile>

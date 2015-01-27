@@ -1,18 +1,4 @@
-﻿// Copyright 2012-2013 Octopus Deploy Pty. Ltd.
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//   http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-using System;
+﻿using System;
 
 namespace Halibut.SampleContracts
 {
@@ -20,20 +6,5 @@ namespace Halibut.SampleContracts
     {
         long Add(long a, long b);
         long Subtract(long a, long b);
-    }
-
-    public interface IScriptOutputObserver
-    {
-        void LogWritten(string log);
-    }
-
-    public interface IScriptController
-    {
-        void Execute();
-    }
-
-    public interface IScriptRunner
-    {
-        int RunScript(string scriptName, object[] args);
     }
 }

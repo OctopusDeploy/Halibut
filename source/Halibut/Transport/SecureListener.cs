@@ -57,6 +57,9 @@ namespace Halibut.Transport
                     if (isStopped)
                         return;
 
+                    client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                    client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+
                     log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
 
                     var task = new Task(() => ExecuteRequest(client));
@@ -102,7 +105,7 @@ namespace Halibut.Transport
                     else
                     {
                         log.Write(EventType.Diagnostic, "Begin message exchange");
-                        ProcessMessages(client, ssl);
+                        ExchangeMessages(client, ssl);
                     }
                 }
                 catch (AuthenticationException ex)
@@ -129,7 +132,7 @@ namespace Halibut.Transport
             stream.Flush();
         }
 
-        void ProcessMessages(TcpClient client, SslStream stream)
+        void ExchangeMessages(TcpClient client, SslStream stream)
         {
             if (stream.RemoteCertificate == null)
             {

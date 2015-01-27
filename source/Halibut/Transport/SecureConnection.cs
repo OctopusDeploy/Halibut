@@ -22,8 +22,17 @@ namespace Halibut.Transport
         
         public void Dispose()
         {
-            stream.Dispose();
-            client.Close();
+            try
+            {
+                stream.Dispose();
+                client.Close();
+            }
+            catch (SocketException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 }

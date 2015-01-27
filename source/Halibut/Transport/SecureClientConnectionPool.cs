@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace Halibut.Transport
 {
@@ -26,6 +27,27 @@ namespace Halibut.Transport
                 if (connections.TryTake(out dispose))
                 {
                     dispose.Dispose();
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            var keys = pool.Keys.ToList();
+
+            foreach (var key in keys)
+            {
+                ConcurrentBag<SecureConnection> connections;
+                if (pool.TryRemove(key, out connections))
+                {
+                    while (connections.Count > 0)
+                    {
+                        SecureConnection dispose;
+                        if (connections.TryTake(out dispose))
+                        {
+                            dispose.Dispose();
+                        }
+                    }
                 }
             }
         }

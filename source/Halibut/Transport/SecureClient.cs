@@ -13,17 +13,18 @@ namespace Halibut.Transport
 {
     public class SecureClient
     {
-        static readonly SecureClientConnectionPool Pool = new SecureClientConnectionPool();
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
+        readonly SecureClientConnectionPool pool;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log)
+        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, SecureClientConnectionPool pool)
         {
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
             this.log = log;
+            this.pool = pool;
         }
 
         public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
@@ -42,7 +43,7 @@ namespace Halibut.Transport
                 {
                     lastError = null;
 
-                    var connection = Pool.Take(serviceEndpoint) ?? EstablishNewConnection();
+                    var connection = pool.Take(serviceEndpoint) ?? EstablishNewConnection();
 
                     // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                     retryAllowed = false;
@@ -50,7 +51,7 @@ namespace Halibut.Transport
                     protocolHandler(connection.Protocol);
 
                     // Only return the connection to the pool if all went well
-                    Pool.Return(serviceEndpoint, connection);
+                    pool.Return(serviceEndpoint, connection);
                 }
                 catch (AuthenticationException aex)
                 {
@@ -126,8 +127,8 @@ namespace Halibut.Transport
         static TcpClient CreateTcpClient()
         {
             var client = new TcpClient();
-            client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalSeconds;
-            client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalSeconds;
+            client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+            client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
             return client;
         }
 
