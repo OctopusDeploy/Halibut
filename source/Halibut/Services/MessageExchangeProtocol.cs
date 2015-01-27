@@ -77,14 +77,19 @@ namespace Halibut.Services
 
         static bool ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
+            var hadRequest = false;
+            var request = stream.Receive<RequestMessage>();
+            if (request != null)
+            {
+                hadRequest = true;
+                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                stream.Send(response);
+            }
+
             stream.SendNext();
             stream.ExpectProceeed();
 
-            var request = stream.Receive<RequestMessage>();
-            if (request == null) return false;
-            var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
-            stream.Send(response);
-            return true;
+            return hadRequest;
         }
 
         public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
@@ -141,11 +146,11 @@ namespace Halibut.Services
                 var nextRequest = pendingRequests.Dequeue();
 
                 stream.Send(nextRequest);
-                if (nextRequest == null) 
-                    continue;
-
-                var response = stream.Receive<ResponseMessage>();
-                pendingRequests.ApplyResponse(response);
+                if (nextRequest != null)
+                {
+                    var response = stream.Receive<ResponseMessage>();
+                    pendingRequests.ApplyResponse(response);
+                }
 
                 if (!stream.ExpectNextOrEnd())
                     break;

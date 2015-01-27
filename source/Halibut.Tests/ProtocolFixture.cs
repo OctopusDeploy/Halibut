@@ -114,8 +114,6 @@ namespace Halibut.Tests
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
---> NEXT
-<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
 --> NEXT
@@ -128,7 +126,9 @@ namespace Halibut.Tests
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
-<-- RequestMessage");
+<-- RequestMessage
+--> NEXT
+<-- PROCEED");
         }
 
         [Test]
@@ -171,8 +171,6 @@ namespace Halibut.Tests
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
---> NEXT
-<-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
 --> NEXT
@@ -188,7 +186,9 @@ namespace Halibut.Tests
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
-<-- RequestMessage");
+<-- RequestMessage
+--> NEXT
+<-- PROCEED");
         }
 
         [Test]

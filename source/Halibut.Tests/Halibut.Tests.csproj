@@ -47,7 +47,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Certificates.cs" />
+    <Compile Include="FailureModesFixture.cs" />
     <Compile Include="ProtocolFixture.cs" />
+    <Compile Include="TestServices\SupportedServices.cs" />
+    <Compile Include="TestServices\EchoService.cs" />
+    <Compile Include="TestServices\IEchoService.cs" />
+    <Compile Include="TestServices\ISupportedServices.cs" />
     <Compile Include="Usage.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
