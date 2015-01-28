@@ -19,16 +19,11 @@ namespace Halibut.SampleClient
 
             using (var runtime = new HalibutRuntime(certificate))
             {
-                while (true)
-                {
-                    var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
 
-                    var result = calculator.Add(12, 18);
+                var result = calculator.Add(12, 18);
 
-                    Console.WriteLine("12 + 18 = " + result);
-
-                    Thread.Sleep(10000);
-                }
+                Console.WriteLine("12 + 18 = " + result);
             }
         }
     }

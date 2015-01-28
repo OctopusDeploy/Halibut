@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.SampleContracts", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.OctopusSample", "Halibut.OctopusSample\Halibut.OctopusSample.csproj", "{549CD94C-DC6F-4C6A-B063-372E28726D38}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.SampleLoadTest", "Halibut.SampleLoadTest\Halibut.SampleLoadTest.csproj", "{4134E981-01AF-4398-8560-0F9BBA5480FB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -110,6 +112,16 @@ Global
 		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{549CD94C-DC6F-4C6A-B063-372E28726D38}.Release|x86.ActiveCfg = Release|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{4134E981-01AF-4398-8560-0F9BBA5480FB}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -120,6 +132,7 @@ Global
 		{C54911F0-365C-4F52-8634-A17F7A8815AC} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 		{A1E9A35D-F2CB-4223-8640-CC0E21E31C66} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 		{549CD94C-DC6F-4C6A-B063-372E28726D38} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
+		{4134E981-01AF-4398-8560-0F9BBA5480FB} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = Halibut.SampleClient\Halibut.SampleClient.csproj
