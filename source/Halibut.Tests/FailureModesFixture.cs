@@ -82,25 +82,6 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void FailOnConnectionTearDown()
-        {
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-            {
-                var tentaclePort = tentacleListening.Listen();
-
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                EchoService.OnLongRunningOperation = () => tentacleListening.Dispose();
-
-                var echo = octopus.CreateClient<IEchoService>("https://127.0.0.1:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-
-                var ex = Assert.Throws<HalibutClientException>(() => echo.LongRunningOperation());
-                Assert.That(ex.Message, Is.StringContaining("A connection attempt failed because the connected party did not properly respond after a period of time"));
-            }
-        }
-
-        [Test]
         public void FailWhenListeningClientPresentsWrongCertificate()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.TentaclePolling))
