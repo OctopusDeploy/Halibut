@@ -79,13 +79,7 @@ namespace Halibut.Transport
         SecureConnection AcquireConnection()
         {
             var connection = pool.Take(serviceEndpoint);
-            if (connection != null)
-            {
-                log.Write(EventType.UsingExistingConnectionFromPool, "Using a connection from the connection pool");
-                return connection;
-            }
-
-            return EstablishNewConnection();
+            return connection ?? EstablishNewConnection();
         }
 
         SecureConnection EstablishNewConnection()
@@ -104,6 +98,7 @@ namespace Halibut.Transport
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
             ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls, false);
             ssl.Write(MxLine, 0, MxLine.Length);
+            ssl.Flush();
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint);
 

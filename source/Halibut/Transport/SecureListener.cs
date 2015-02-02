@@ -90,14 +90,13 @@ namespace Halibut.Transport
 
                     log.Write(EventType.Security, "Secure connection established, client is not yet authenticated");
 
-                    var buffer = new byte[20000];
-                    var read = ssl.Read(buffer, 0, buffer.Length);
-                    if (read < 2)
+                    var req = ReadInitialRequest(ssl);
+                    if (string.IsNullOrEmpty(req))
                     {
                         return;
                     }
 
-                    if (Encoding.ASCII.GetString(buffer, 0, 2) != "MX")
+                    if (req.Substring(0, 2) != "MX")
                     {
                         log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
                         SendFriendlyHtmlPage(ssl);
@@ -128,8 +127,10 @@ namespace Halibut.Transport
             writer.WriteLine("Content-Length: " + message.Length);
             writer.WriteLine();
             writer.WriteLine(message);
+            writer.WriteLine();
             writer.Flush();
             stream.Flush();
+            stream.Close();
         }
 
         void ExchangeMessages(TcpClient client, SslStream stream)
@@ -170,6 +171,38 @@ namespace Halibut.Transport
             {
                 throw new Exception("The X509 certificate provided does not have a private key, and so it cannot be used for listening.");
             }
+        }
+
+        string ReadInitialRequest(Stream stream)
+        {
+            var builder = new StringBuilder();
+            var lastWasNewline = false;
+            while (builder.Length < 20000)
+            {
+                var b = stream.ReadByte();
+                if (b == -1) return builder.ToString();
+
+                var c = (char) b;
+                if (c == '\r')
+                {
+                    continue;
+                }
+                else if (c == '\n')
+                {
+                    builder.AppendLine();
+
+                    if (lastWasNewline)
+                        break;
+
+                    lastWasNewline = true;
+                }
+                else
+                {
+                    lastWasNewline = false;
+                    builder.Append(c);
+                }
+            }
+            return builder.ToString();
         }
 
         public void Dispose()
