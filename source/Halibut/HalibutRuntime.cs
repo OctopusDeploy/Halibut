@@ -11,7 +11,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut
 {
-    public class HalibutRuntime : IDisposable, IClientBroker
+    public class HalibutRuntime : IDisposable
     {
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly List<IRemoteServiceAgent> remotePollingWorkers = new List<IRemoteServiceAgent>();
