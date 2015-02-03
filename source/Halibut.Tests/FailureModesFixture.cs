@@ -77,7 +77,7 @@ namespace Halibut.Tests
             {
                 var echo = octopus.CreateClient<IEchoService>("https://google.com:88", Certificates.TentacleListeningPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                Assert.That(ex.Message, Is.StringContaining("when sending a request to 'https://google.com:88/', before the request").And.StringContaining("unable to establish the initial connection "));
+                Assert.That(ex.Message, Is.StringContaining("when sending a request to 'https://google.com:88/', before the request"));
             }
         }
 
