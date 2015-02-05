@@ -89,7 +89,7 @@ namespace Halibut.Transport
             var remoteUri = serviceEndpoint.BaseUri;
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
             var client = CreateTcpClient();
-            ConnectWithTimeout(client, remoteUri);
+            client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
             log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
@@ -142,28 +142,6 @@ namespace Halibut.Transport
             client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
             client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
             return client;
-        }
-
-        static void ConnectWithTimeout(TcpClient client, Uri remoteUri)
-        {
-            var connectResult = client.BeginConnect(remoteUri.Host, remoteUri.Port, ar => { }, null);
-            if (!connectResult.AsyncWaitHandle.WaitOne(HalibutLimits.TcpClientConnectTimeout))
-            {
-                try
-                {
-                    client.Close();
-                }
-                catch (SocketException)
-                {
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-
-                throw new Exception("The client was unable to establish the initial connection within " + HalibutLimits.TcpClientConnectTimeout);
-            }
-
-            client.EndConnect(connectResult);
         }
 
         X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)

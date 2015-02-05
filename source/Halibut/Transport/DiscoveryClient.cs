@@ -1,0 +1,54 @@
+using System;
+using System.Net.Security;
+using System.Net.Sockets;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using Halibut.Diagnostics;
+
+namespace Halibut.Transport
+{
+    public class DiscoveryClient
+    {
+        static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
+        
+        public DiscoveryClient()
+        {
+        }
+
+        public ServiceEndPoint Discover(Uri remoteUri)
+        {
+            using (var client = CreateTcpClient())
+            {
+                client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
+                using (var stream = client.GetStream())
+                {
+                    using (var ssl = new SslStream(stream, false, ValidateCertificate))
+                    {
+                        ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(), SslProtocols.Tls, false);
+                        ssl.Write(HelloLine, 0, HelloLine.Length);
+                        ssl.Flush();
+
+                        if (ssl.RemoteCertificate == null)
+                            throw new Exception("The server did not provide an SSL certificate");
+
+                        return new ServiceEndPoint(remoteUri, new X509Certificate2(ssl.RemoteCertificate).Thumbprint);
+                    }
+                }
+            }
+        }
+
+        bool ValidateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
+        {
+            return true;
+        }
+
+        static TcpClient CreateTcpClient()
+        {
+            var client = new TcpClient();
+            client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+            client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+            return client;
+        }
+    }
+}

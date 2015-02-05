@@ -19,6 +19,19 @@ namespace Halibut.Tests
         }
 
         [Test]
+        public void OctopusCanDiscoverTentacle()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var tentaclePort = tentacleListening.Listen();
+
+                var info = octopus.Discover(new Uri("https://localhost:" + tentaclePort));
+                Assert.That(info.RemoteThumbprint, Is.EqualTo(Certificates.TentacleListeningPublicThumbprint));
+            }
+        }
+
+        [Test]
         public void OctopusCanSendMessagesToListeningTentacle()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))

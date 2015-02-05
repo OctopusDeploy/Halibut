@@ -111,6 +111,12 @@ namespace Halibut
             remotePollingWorkers.Add(new ActiveRemoteServiceAgent(subscription, client, HandleIncomingRequest));
         }
 
+        public ServiceEndPoint Discover(Uri uri)
+        {
+            var client = new DiscoveryClient();
+            return client.Discover(uri);
+        }
+
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
         {
             return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint));

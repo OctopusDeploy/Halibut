@@ -46,6 +46,7 @@
     <Compile Include="ServiceEndPoint.cs" />
     <Compile Include="ServiceModel\HalibutProxy.cs" />
     <Compile Include="DataStream.cs" />
+    <Compile Include="Transport\DiscoveryClient.cs" />
     <Compile Include="Transport\PollingWindow.cs" />
     <Compile Include="Transport\Protocol\ServerError.cs" />
     <Compile Include="HalibutClientException.cs" />
@@ -83,6 +84,7 @@
     <Compile Include="Transport\SecureClientConnectionPool.cs" />
     <Compile Include="Transport\SecureConnection.cs" />
     <Compile Include="Transport\Protocol\StreamCapture.cs" />
+    <Compile Include="Transport\TcpClientExtensions.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
