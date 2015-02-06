@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using Newtonsoft.Json;
 
 namespace Halibut
@@ -75,6 +76,30 @@ namespace Halibut
         public static DataStream FromBytes(byte[] data)
         {
             return new DataStream(data.Length, stream => stream.Write(data, 0, data.Length));
+        }
+
+        public static DataStream FromString(string text)
+        {
+            return FromString(text, new UTF8Encoding(false));
+        }
+
+        public static DataStream FromString(string text, Encoding encoding)
+        {
+            return new DataStream(encoding.GetByteCount(text), stream =>
+            {
+                var writer = new StreamWriter(stream, encoding);
+                writer.Write(text);
+                writer.Flush();
+            });
+        }
+
+        public static DataStream FromStream(Stream source)
+        {
+            return new DataStream(source.Length, stream =>
+            {
+                source.CopyTo(stream);
+                stream.Flush();
+            });
         }
     }
 }
