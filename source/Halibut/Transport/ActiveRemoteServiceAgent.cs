@@ -54,6 +54,11 @@ namespace Halibut.Transport
 
                 nextPollDue = DateTimeOffset.UtcNow.Add(pollingWindow.Increment());
             }
+            catch (Exception ex)
+            {
+                // Always 5 seconds on error
+                nextPollDue = DateTimeOffset.UtcNow.AddSeconds(5);
+            }
             finally
             {
                 working = 0;
