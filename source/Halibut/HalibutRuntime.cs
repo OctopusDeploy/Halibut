@@ -108,7 +108,10 @@ namespace Halibut
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
             var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.ToString()), pool);
-            remotePollingWorkers.Add(new ActiveRemoteServiceAgent(subscription, client, HandleIncomingRequest));
+            lock (sync)
+            {
+                remotePollingWorkers.Add(new ActiveRemoteServiceAgent(subscription, client, HandleIncomingRequest));
+            }
         }
 
         public ServiceEndPoint Discover(Uri uri)

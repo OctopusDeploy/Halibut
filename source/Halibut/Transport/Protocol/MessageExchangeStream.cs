@@ -46,6 +46,7 @@ namespace Halibut.Transport.Protocol
 
         public void SendNext()
         {
+            stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             streamWriter.Write("NEXT");
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -75,6 +76,7 @@ namespace Halibut.Transport.Protocol
 
         public void ExpectProceeed()
         {
+            stream.ReadTimeout = (int) HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
             var line = ReadLine();
             if (line == null)
                 throw new AuthenticationException("XYZ");

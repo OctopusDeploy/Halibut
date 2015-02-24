@@ -7,7 +7,6 @@ namespace Halibut.SampleServer
     {
         public long Add(long a, long b)
         {
-            throw new DivideByZeroException();
             return a + b;
         }
 
