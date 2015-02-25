@@ -1,16 +1,33 @@
 using System;
+using System.Configuration;
+using System.Reflection;
 
 namespace Halibut.Diagnostics
 {
     public class HalibutLimits
     {
-        public static readonly TimeSpan MaximumTimeBeforeRequestsToPollingMachinesThatAreNotCollectedWillTimeOut = TimeSpan.FromMinutes(5);
-        public static readonly TimeSpan TimeToSleepBetweenConnectionRetryAttemptsWhenCallingListeningEndpoint = TimeSpan.FromSeconds(1);
-        public static readonly TimeSpan MaximumTimeToRetryAnyFormOfNetworkCommunicationWhenCallingListeningEndPoint = TimeSpan.FromSeconds(60);
-        public static readonly TimeSpan TcpClientSendTimeout = TimeSpan.FromMinutes(10);
-        public static readonly TimeSpan TcpClientReceiveTimeout = TimeSpan.FromMinutes(10);
-        public static readonly TimeSpan TcpClientHeartbeatSendTimeout = TimeSpan.FromSeconds(30);
-        public static readonly TimeSpan TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(30);
-        public static readonly TimeSpan TcpClientConnectTimeout = TimeSpan.FromSeconds(30);
+        static HalibutLimits()
+        {
+            var settings = ConfigurationManager.AppSettings;
+
+            var fields = typeof (HalibutLimits).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            foreach (var field in fields)
+            {
+                var value = settings.Get("Halibut." + field.Name);
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                var time = TimeSpan.Parse(value);
+                field.SetValue(null, time);
+            }
+        }
+
+        public static TimeSpan PollingRequestQueueTimeout = TimeSpan.FromMinutes(2);
+        public static TimeSpan RetryListeningSleepInterval = TimeSpan.FromSeconds(1);
+        public static TimeSpan ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(60);
+        public static TimeSpan TcpClientSendTimeout = TimeSpan.FromMinutes(10);
+        public static TimeSpan TcpClientReceiveTimeout = TimeSpan.FromMinutes(10);
+        public static TimeSpan TcpClientHeartbeatSendTimeout = TimeSpan.FromSeconds(30);
+        public static TimeSpan TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(30);
+        public static TimeSpan TcpClientConnectTimeout = TimeSpan.FromSeconds(30);
+        public static TimeSpan PollingQueueWaitTimeout = TimeSpan.FromSeconds(30);
     }
 }

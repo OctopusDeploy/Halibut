@@ -34,13 +34,13 @@ namespace Halibut.Transport
 
         public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
         {
-            var retryInterval = HalibutLimits.TimeToSleepBetweenConnectionRetryAttemptsWhenCallingListeningEndpoint;
+            var retryInterval = HalibutLimits.RetryListeningSleepInterval;
 
             Exception lastError = null;
 
             var retryAllowed = true;
             var watch = Stopwatch.StartNew();
-            for (var i = 0; i < 5 && retryAllowed && watch.Elapsed < HalibutLimits.MaximumTimeToRetryAnyFormOfNetworkCommunicationWhenCallingListeningEndPoint; i++)
+            for (var i = 0; i < 5 && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
                 if (i > 0) log.Write(EventType.Error, "Retry attempt {0}", i);
 
