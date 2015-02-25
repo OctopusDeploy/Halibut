@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport;
@@ -11,11 +10,38 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut
 {
+    public class PollingClientCollection
+    {
+        readonly List<IPollingClient> pollingClients = new List<IPollingClient>();
+        readonly object sync = new object();
+
+        public void Add(PollingClient pollingClient)
+        {
+            lock (sync)
+            {
+                pollingClients.Add(pollingClient);
+            }
+
+            pollingClient.Start();
+        }
+
+        public void Dispose()
+        {
+            lock (sync)
+            {
+                foreach (var worker in pollingClients)
+                {
+                    worker.Dispose();
+                }
+
+                pollingClients.Clear();
+            }
+        }
+    }
+
     public class HalibutRuntime : IDisposable
     {
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
-        readonly List<IRemoteServiceAgent> remotePollingWorkers = new List<IRemoteServiceAgent>();
-        readonly object sync = new object();
         readonly X509Certificate2 serverCertficiate;
         readonly List<SecureListener> listeners = new List<SecureListener>();
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
@@ -23,8 +49,8 @@ namespace Halibut
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
         readonly SecureClientConnectionPool pool = new SecureClientConnectionPool();
-        bool running;
-
+        readonly PollingClientCollection pollingClients = new PollingClientCollection();
+        
         public HalibutRuntime(X509Certificate2 serverCertficiate) : this(new NullServiceFactory(), serverCertficiate)
         {
         }
@@ -33,11 +59,6 @@ namespace Halibut
         {
             this.serverCertficiate = serverCertficiate;
             invoker = new ServiceInvoker(serviceFactory);
-
-            running = true;
-            var worker = new Thread(DispatchThread);
-            worker.Name = "Halibut runtime dispatch thread";
-            worker.Start();
         }
 
         public LogFactory Logs
@@ -47,33 +68,7 @@ namespace Halibut
 
         PendingRequestQueue GetQueue(Uri target)
         {
-            PendingRequestQueue queue;
-            queues.TryGetValue(target, out queue);
-            return queue;
-        }
-
-        void DispatchThread()
-        {
-            while (running)
-            {
-                var workDone = false;
-
-                IRemoteServiceAgent[] workers;
-                lock (sync)
-                {
-                    workers = remotePollingWorkers.ToArray();
-                }
-
-                foreach (var worker in workers)
-                {
-                    workDone |= worker.ProcessNext();
-                }
-
-                if (!workDone)
-                {
-                    Thread.Sleep(100);
-                }
-            }
+            return queues.GetOrAdd(target, u => new PendingRequestQueue());
         }
 
         public int Listen()
@@ -108,10 +103,7 @@ namespace Halibut
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
             var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.ToString()), pool);
-            lock (sync)
-            {
-                remotePollingWorkers.Add(new ActiveRemoteServiceAgent(subscription, client, HandleIncomingRequest));
-            }
+            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
 
         public ServiceEndPoint Discover(Uri uri)
@@ -208,12 +200,12 @@ namespace Halibut
 
         public void Dispose()
         {
+            pollingClients.Dispose();
             pool.Dispose();
             foreach (var listener in listeners)
             {
                 listener.Dispose();
             }
-            running = false;
         }
     }
 }

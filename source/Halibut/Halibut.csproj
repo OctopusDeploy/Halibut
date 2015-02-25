@@ -50,7 +50,6 @@
     <Compile Include="ServiceModel\HalibutProxy.cs" />
     <Compile Include="DataStream.cs" />
     <Compile Include="Transport\DiscoveryClient.cs" />
-    <Compile Include="Transport\PollingWindow.cs" />
     <Compile Include="Transport\Protocol\ServerError.cs" />
     <Compile Include="HalibutClientException.cs" />
     <Compile Include="Transport\Protocol\RequestMessage.cs" />
@@ -62,7 +61,7 @@
     <Compile Include="HalibutRuntime.cs" />
     <Compile Include="ServiceModel\NullServiceFactory.cs" />
     <Compile Include="Transport\SecureListener.cs" />
-    <Compile Include="Transport\ActiveRemoteServiceAgent.cs" />
+    <Compile Include="Transport\PollingClient.cs" />
     <Compile Include="Transport\ClientCertificateValidator.cs" />
     <Compile Include="Transport\Protocol\ConnectionInitializationFailedException.cs" />
     <Compile Include="Diagnostics\EventType.cs" />
@@ -74,7 +73,7 @@
     <Compile Include="Transport\Protocol\IMessageExchangeStream.cs" />
     <Compile Include="Diagnostics\InMemoryConnectionLog.cs" />
     <Compile Include="ServiceModel\IPendingRequestQueue.cs" />
-    <Compile Include="ServiceModel\IRemoteServiceAgent.cs" />
+    <Compile Include="ServiceModel\IPollingClient.cs" />
     <Compile Include="Diagnostics\LogEvent.cs" />
     <Compile Include="Diagnostics\LogFactory.cs" />
     <Compile Include="Transport\Protocol\MessageExchangeProtocol.cs" />

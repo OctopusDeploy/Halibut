@@ -139,6 +139,8 @@ namespace Halibut.Transport.Protocol
                 WriteBsonMessage(message);
                 WriteEachStream(capture.SerializedStreams);
             }
+
+            log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
         public T Receive<T>()
@@ -147,6 +149,7 @@ namespace Halibut.Transport.Protocol
             {
                 var result = ReadBsonMessage<T>();
                 ReadStreams(capture);
+                log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
             }
         }

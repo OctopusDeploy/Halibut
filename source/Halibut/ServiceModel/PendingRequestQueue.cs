@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
@@ -8,30 +9,73 @@ namespace Halibut.ServiceModel
 {
     public class PendingRequestQueue : IPendingRequestQueue
     {
-        readonly ConcurrentDictionary<string, PendingRequest> requests = new ConcurrentDictionary<string, PendingRequest>();
-        readonly ConcurrentQueue<RequestMessage> outgoing = new ConcurrentQueue<RequestMessage>();
-        
+        readonly List<PendingRequest> queue = new List<PendingRequest>();
+        readonly Dictionary<string, PendingRequest> inProgress = new Dictionary<string, PendingRequest>();
+        readonly object sync = new object();
+        readonly ManualResetEventSlim hasItems = new ManualResetEventSlim();
+
         public ResponseMessage QueueAndWait(RequestMessage request)
         {
-            var pending = new PendingRequest();
-            requests.TryAdd(request.Id, pending);
-            outgoing.Enqueue(request);
-            var success = pending.Wait(HalibutLimits.MaximumTimeBeforeRequestsToPollingMachinesThatAreNotCollectedWillTimeOut);
-            if (!success)
+            var pending = new PendingRequest(request);
+
+            lock (sync)
             {
-                ApplyResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", HalibutLimits.MaximumTimeBeforeRequestsToPollingMachinesThatAreNotCollectedWillTimeOut))));
+                queue.Add(pending);
+                inProgress.Add(request.Id, pending);
+                hasItems.Set();
+            }
+
+            pending.WaitUntilComplete(HalibutLimits.MaximumTimeBeforeRequestsToPollingMachinesThatAreNotCollectedWillTimeOut);
+
+            lock (sync)
+            {
+                inProgress.Remove(request.Id);
             }
 
             return pending.Response;
         }
 
-        public bool IsEmpty { get { return outgoing.IsEmpty; } }
+        public bool IsEmpty
+        {
+            get
+            {
+                lock (sync)
+                {
+                    return queue.Count == 0;
+                }
+            }
+        }
 
         public RequestMessage Dequeue()
         {
-            RequestMessage result;
-            outgoing.TryDequeue(out result);
-            return result;
+            var pending = DequeueNext(TimeSpan.FromSeconds(30));
+            if (pending == null) return null;
+            return pending.BeginTransfer() ? pending.Request : null;
+        }
+
+        PendingRequest DequeueNext(TimeSpan maximumTimeToWaitForItem)
+        {
+            var first = TakeFirst();
+            if (first != null)
+                return first;
+
+            hasItems.Wait(maximumTimeToWaitForItem);
+            hasItems.Reset();
+
+            return TakeFirst();
+        }
+
+        PendingRequest TakeFirst()
+        {
+            lock (sync)
+            {
+                if (queue.Count == 0)
+                    return null;
+
+                var first = queue[0];
+                queue.RemoveAt(0);
+                return first;
+            }
         }
 
         public void ApplyResponse(ResponseMessage response)
@@ -39,27 +83,74 @@ namespace Halibut.ServiceModel
             if (response == null)
                 return;
 
-            PendingRequest pending;
-            if (!requests.TryRemove(response.Id, out pending))
+            lock (sync)
             {
-                throw new Exception("Must have died, message cannot be accepted");
+                PendingRequest pending;
+                if (inProgress.TryGetValue(response.Id, out pending))
+                {
+                    pending.SetResponse(response);
+                }
             }
-
-            pending.SetResponse(response);
         }
 
         class PendingRequest
         {
+            readonly RequestMessage request;
             readonly ManualResetEventSlim waiter;
+            readonly object sync = new object();
+            bool transferBegun;
+            bool completed;
 
-            public PendingRequest()
+            public PendingRequest(RequestMessage request)
             {
+                this.request = request;
                 waiter = new ManualResetEventSlim(false);
             }
 
-            public bool Wait(TimeSpan maxTimeToWait)
+            public RequestMessage Request
             {
-                return waiter.Wait(maxTimeToWait);
+                get { return request; }
+            }
+
+            public void WaitUntilComplete(TimeSpan maxTimeToWait)
+            {
+                var success = waiter.Wait(maxTimeToWait);
+                if (success) 
+                    return;
+
+                var waitForTransferToComplete = false;
+                lock (sync)
+                {
+                    if (transferBegun)
+                    {
+                        waitForTransferToComplete = true;
+                    }
+                    else
+                    {
+                        completed = true;
+                    }
+                }
+
+                if (waitForTransferToComplete)
+                {
+                    waiter.Wait();
+                }
+                else
+                {
+                    SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", HalibutLimits.MaximumTimeBeforeRequestsToPollingMachinesThatAreNotCollectedWillTimeOut))));
+                }
+            }
+
+            public bool BeginTransfer()
+            {
+                lock (sync)
+                {
+                    if (completed)
+                        return false;
+
+                    transferBegun = true;
+                    return true;
+                }
             }
 
             public ResponseMessage Response { get; private set; }

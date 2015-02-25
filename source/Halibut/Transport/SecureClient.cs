@@ -27,6 +27,11 @@ namespace Halibut.Transport
             this.pool = pool;
         }
 
+        public ServiceEndPoint ServiceEndpoint
+        {
+            get { return serviceEndpoint; }
+        }
+
         public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
         {
             var retryInterval = HalibutLimits.TimeToSleepBetweenConnectionRetryAttemptsWhenCallingListeningEndpoint;

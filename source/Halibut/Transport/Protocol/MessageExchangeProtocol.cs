@@ -52,7 +52,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public int ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        public void ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, int maxAttempts = int.MaxValue)
         {
             if (!identified)
             {
@@ -60,26 +60,23 @@ namespace Halibut.Transport.Protocol
                 identified = true;
             }
 
-            var requestsProcessed = 0;
-            while (ReceiveAndProcessRequest(stream, incomingRequestProcessor)) requestsProcessed++;
-            return requestsProcessed;
+            for (var i = 0; i < maxAttempts; i++)
+            {
+                ReceiveAndProcessRequest(stream, incomingRequestProcessor);                
+            }
         }
 
-        static bool ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        static void ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            var hadRequest = false;
             var request = stream.Receive<RequestMessage>();
             if (request != null)
             {
-                hadRequest = true;
                 var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
                 stream.Send(response);
             }
 
             stream.SendNext();
             stream.ExpectProceeed();
-
-            return hadRequest;
         }
 
         public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)

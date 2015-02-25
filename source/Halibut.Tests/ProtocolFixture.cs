@@ -109,7 +109,7 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
             
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")));
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
             
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
@@ -124,6 +124,9 @@ namespace Halibut.Tests
 <-- PROCEED
 <-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
+<-- RequestMessage
 --> NEXT
 <-- PROCEED
 <-- RequestMessage
@@ -162,11 +165,11 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")));
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
 
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")));
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
 
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
@@ -183,7 +186,22 @@ namespace Halibut.Tests
 --> NEXT
 <-- PROCEED
 <-- RequestMessage
+--> NEXT
+<-- PROCEED
+<-- RequestMessage
+--> NEXT
+<-- PROCEED
+<-- RequestMessage
 --> ResponseMessage
+--> NEXT
+<-- PROCEED
+<-- RequestMessage
+--> NEXT
+<-- PROCEED
+<-- RequestMessage
+--> NEXT
+<-- PROCEED
+<-- RequestMessage
 --> NEXT
 <-- PROCEED
 <-- RequestMessage

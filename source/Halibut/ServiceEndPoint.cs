@@ -7,6 +7,7 @@ namespace Halibut
     {
         readonly Uri baseUri;
         readonly string remoteThumbprint;
+        readonly string baseUriString;
 
         public ServiceEndPoint(string baseUri, string remoteThumbprint)
             : this(new Uri(baseUri), remoteThumbprint)
@@ -16,7 +17,8 @@ namespace Halibut
         [JsonConstructor]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
         {
-            this.baseUri = baseUri;
+            baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
+            this.baseUri = new Uri(baseUriString);
             this.remoteThumbprint = remoteThumbprint;
         }
 
@@ -32,14 +34,14 @@ namespace Halibut
 
         public override string ToString()
         {
-            return baseUri.ToString();
+            return baseUriString;
         }
 
         public bool Equals(ServiceEndPoint other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(baseUri, other.baseUri) && string.Equals(remoteThumbprint, other.remoteThumbprint);
+            return Equals(baseUriString, other.baseUriString) && string.Equals(remoteThumbprint, other.remoteThumbprint);
         }
 
         public override bool Equals(object obj)
@@ -54,7 +56,7 @@ namespace Halibut
         {
             unchecked
             {
-                return ((baseUri != null ? baseUri.GetHashCode() : 0)*397) ^ (remoteThumbprint != null ? remoteThumbprint.GetHashCode() : 0);
+                return ((baseUriString != null ? baseUriString.GetHashCode() : 0) * 397) ^ (remoteThumbprint != null ? remoteThumbprint.GetHashCode() : 0);
             }
         }
 

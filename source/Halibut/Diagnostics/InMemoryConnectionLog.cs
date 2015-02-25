@@ -34,15 +34,20 @@ namespace Halibut.Diagnostics
 
         void WriteInternal(LogEvent logEvent)
         {
-            if (TraceSource.Switch.ShouldTrace(TraceEventType.Information))
-            {
-                TraceSource.TraceInformation(string.Format("{0,-30} {1,4}  {2} {3}{4}", endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.Type, logEvent.FormattedMessage, (logEvent.Error == null ? "" : Environment.NewLine + logEvent.Error)));
-            }
+            SendToTrace(logEvent, logEvent.Type == EventType.Diagnostic ? TraceEventType.Verbose : TraceEventType.Information);
 
             events.Enqueue(logEvent);
 
             LogEvent ignore;
             while (events.Count > 100 && events.TryDequeue(out ignore)) { }
+        }
+
+        void SendToTrace(LogEvent logEvent, TraceEventType level)
+        {
+            if (TraceSource.Switch.ShouldTrace(level))
+            {
+                TraceSource.TraceEvent(level, 0, string.Format("{0,-30} {1,4}  {2}{3}", endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, (logEvent.Error == null ? "" : Environment.NewLine + logEvent.Error)));
+            }
         }
     }
 }

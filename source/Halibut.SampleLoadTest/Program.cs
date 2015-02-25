@@ -18,7 +18,7 @@ namespace Halibut.SampleLoadTest
 
         const int Servers = 100;
         const int ClientsPerServer = 1;
-        const int RequestsPerClient = 3000;
+        const int RequestsPerClient = 100;
 
         static void Main(string[] args)
         {
