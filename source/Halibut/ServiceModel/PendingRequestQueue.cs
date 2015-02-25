@@ -12,10 +12,16 @@ namespace Halibut.ServiceModel
         readonly Dictionary<string, PendingRequest> inProgress = new Dictionary<string, PendingRequest>();
         readonly object sync = new object();
         readonly ManualResetEventSlim hasItems = new ManualResetEventSlim();
+        readonly ILog log;
+
+        public PendingRequestQueue(ILog log)
+        {
+            this.log = log;
+        }
 
         public ResponseMessage QueueAndWait(RequestMessage request)
         {
-            var pending = new PendingRequest(request);
+            var pending = new PendingRequest(request, log);
 
             lock (sync)
             {
@@ -95,14 +101,16 @@ namespace Halibut.ServiceModel
         class PendingRequest
         {
             readonly RequestMessage request;
+            readonly ILog log;
             readonly ManualResetEventSlim waiter;
             readonly object sync = new object();
             bool transferBegun;
             bool completed;
 
-            public PendingRequest(RequestMessage request)
+            public PendingRequest(RequestMessage request, ILog log)
             {
                 this.request = request;
+                this.log = log;
                 waiter = new ManualResetEventSlim(false);
             }
 
@@ -113,9 +121,14 @@ namespace Halibut.ServiceModel
 
             public void WaitUntilComplete()
             {
+                log.Write(EventType.MessageExchange, "Request {0} was queued", request);
+
                 var success = waiter.Wait(HalibutLimits.PollingRequestQueueTimeout);
-                if (success) 
+                if (success)
+                {
+                    log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
                     return;
+                }
 
                 var waitForTransferToComplete = false;
                 lock (sync)
@@ -133,9 +146,11 @@ namespace Halibut.ServiceModel
                 if (waitForTransferToComplete)
                 {
                     waiter.Wait();
+                    log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
                 }
                 else
                 {
+                    log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
                     SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", HalibutLimits.PollingRequestQueueTimeout))));
                 }
             }

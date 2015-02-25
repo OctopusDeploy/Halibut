@@ -38,7 +38,7 @@ namespace Halibut.Transport
         {
             listener = new TcpListener(endPoint);
             listener.Start();
-            log = logFactory.ForEndpoint("listen://" + listener.LocalEndpoint);
+            log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
             Accept();
             return ((IPEndPoint)listener.LocalEndpoint).Port;

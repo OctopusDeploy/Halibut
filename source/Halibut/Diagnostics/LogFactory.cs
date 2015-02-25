@@ -6,16 +6,22 @@ namespace Halibut.Diagnostics
 {
     public class LogFactory : ILogFactory
     {
-        readonly ConcurrentDictionary<string, InMemoryConnectionLog> events = new ConcurrentDictionary<string, InMemoryConnectionLog>();
+        readonly ConcurrentDictionary<Uri, InMemoryConnectionLog> events = new ConcurrentDictionary<Uri, InMemoryConnectionLog>();
 
-        public string[] GetEndpoints()
+        public Uri[] GetEndpoints()
         {
             return events.Keys.ToArray();
         }
 
-        public ILog ForEndpoint(string endpoint)
+        public ILog ForEndpoint(Uri endpoint)
         {
-            return events.GetOrAdd(endpoint, e => new InMemoryConnectionLog(endpoint));
+            endpoint = NormalizeEndpoint(endpoint);
+            return events.GetOrAdd(endpoint, e => new InMemoryConnectionLog(endpoint.ToString()));
+        }
+
+        static Uri NormalizeEndpoint(Uri endpoint)
+        {
+            return new Uri(endpoint.GetLeftPart(UriPartial.Authority).TrimEnd('/').ToLowerInvariant());
         }
     }
 }

@@ -10,35 +10,6 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut
 {
-    public class PollingClientCollection
-    {
-        readonly List<IPollingClient> pollingClients = new List<IPollingClient>();
-        readonly object sync = new object();
-
-        public void Add(PollingClient pollingClient)
-        {
-            lock (sync)
-            {
-                pollingClients.Add(pollingClient);
-            }
-
-            pollingClient.Start();
-        }
-
-        public void Dispose()
-        {
-            lock (sync)
-            {
-                foreach (var worker in pollingClients)
-                {
-                    worker.Dispose();
-                }
-
-                pollingClients.Clear();
-            }
-        }
-    }
-
     public class HalibutRuntime : IDisposable
     {
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
@@ -68,7 +39,7 @@ namespace Halibut
 
         PendingRequestQueue GetQueue(Uri target)
         {
-            return queues.GetOrAdd(target, u => new PendingRequestQueue());
+            return queues.GetOrAdd(target, u => new PendingRequestQueue(logs.ForEndpoint(target)));
         }
 
         public int Listen()
@@ -95,14 +66,9 @@ namespace Halibut
                 id => GetQueue(id.SubscriptionId));
         }
 
-        public void Subscription(ServiceEndPoint endPoint)
-        {
-            queues.AddOrUpdate(endPoint.BaseUri, u => new PendingRequestQueue(), (u, q) => q);
-        }
-
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
-            var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.ToString()), pool);
+            var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.BaseUri), pool);
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
 
@@ -126,13 +92,6 @@ namespace Halibut
         {
             var endPoint = request.Destination;
 
-            ServiceEndPoint routerEndPoint;
-            if (routeTable.TryGetValue(endPoint.BaseUri, out routerEndPoint))
-            {
-                endPoint = routerEndPoint;
-                request = new RequestMessage {ActivityId = request.ActivityId, Id = request.Id, Params = new[] {request}, Destination = endPoint, ServiceName = "Router", MethodName = "Route"};
-            }
-
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
@@ -145,7 +104,7 @@ namespace Halibut
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
         {
-            var client = new SecureClient(request.Destination, serverCertficiate, logs.ForEndpoint(request.Destination.ToString()), pool);
+            var client = new SecureClient(request.Destination, serverCertficiate, logs.ForEndpoint(request.Destination.BaseUri), pool);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -157,29 +116,12 @@ namespace Halibut
 
         ResponseMessage SendOutgoingPollingRequest(RequestMessage request)
         {
-            var queue = queues.GetOrAdd(request.Destination.BaseUri, u => new PendingRequestQueue());
+            var queue = GetQueue(request.Destination.BaseUri);
             return queue.QueueAndWait(request);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)
         {
-            // Is this message intended for /route? If so, unwrap the original message. 
-            // If we have a route table entry for the original, then route it using SendOutgoingRequest again. Otherwise, 
-            // pass it to the invoker since it must be intended for us.
-            if (request.ServiceName == "Router")
-            {
-                var original = (RequestMessage) request.Params[0];
-
-                ServiceEndPoint route;
-                if (routeTable.TryGetValue(original.Destination.BaseUri, out route))
-                {
-                    // Needs to be routed again
-                    return SendOutgoingRequest(original);
-                }
-
-                request = original;
-            }
-
             return invoker.Invoke(request);
         }
 

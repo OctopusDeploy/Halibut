@@ -76,33 +76,6 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void MessagesCanBeRouted()
-        {
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            using (var router = new HalibutRuntime(services, Certificates.TentaclePolling))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-            {
-                var routerPort = router.Listen();
-
-                router.Trust(Certificates.OctopusPublicThumbprint);
-
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-                octopus.Route(
-                    to: new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.TentacleListeningPublicThumbprint),
-                    via: new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.TentaclePollingPublicThumbprint)
-                    );
-
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                for (var i = 0; i < 100; i++)
-                {
-                    Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
-                }
-            }
-        }
-
-        [Test]
         public void StreamsCanBeSentToListening()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))

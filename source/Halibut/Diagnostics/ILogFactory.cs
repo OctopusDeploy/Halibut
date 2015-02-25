@@ -4,7 +4,7 @@ namespace Halibut.Diagnostics
 {
     public interface ILogFactory
     {
-        string[] GetEndpoints();
-        ILog ForEndpoint(string endpoint);
+        Uri[] GetEndpoints();
+        ILog ForEndpoint(Uri endpoint);
     }
 }
