@@ -28,6 +28,7 @@ namespace Halibut.Transport.Protocol
             streamWriter = new StreamWriter(stream, new UTF8Encoding(false));
             streamReader = new StreamReader(stream, new UTF8Encoding(false));
             serializer = Serializer();
+            SetNormalTimeouts();
         }
 
         public static Func<JsonSerializer> Serializer = CreateDefault;
@@ -40,16 +41,16 @@ namespace Halibut.Transport.Protocol
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
-
             ExpectServerIdentity();
         }
 
         public void SendNext()
         {
-            stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
+            SetShortTimeouts();
             streamWriter.Write("NEXT");
             streamWriter.WriteLine();
             streamWriter.Flush();
+            SetNormalTimeouts();
         }
 
         public void SendProceed()
@@ -76,12 +77,13 @@ namespace Halibut.Transport.Protocol
 
         public void ExpectProceeed()
         {
-            stream.ReadTimeout = (int) HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+            SetShortTimeouts();
             var line = ReadLine();
             if (line == null)
                 throw new AuthenticationException("XYZ");
             if (line != "PROCEED")
                 throw new ProtocolException("Expected PROCEED, got: " + line);
+            SetNormalTimeouts();
         }
 
         string ReadLine()
@@ -301,6 +303,18 @@ namespace Halibut.Transport.Protocol
         class MessageEnvelope
         {
             public object Message { get; set; }
+        }
+
+        void SetNormalTimeouts()
+        {
+            stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+        }
+
+        void SetShortTimeouts()
+        {
+            stream.WriteTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
         }
     }
 }
