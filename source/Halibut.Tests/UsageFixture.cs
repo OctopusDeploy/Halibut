@@ -1,11 +1,7 @@
 using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
-using NSubstitute;
 using NUnit.Framework;
 
 namespace Halibut.Tests

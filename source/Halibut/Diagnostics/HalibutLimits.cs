@@ -25,6 +25,7 @@ namespace Halibut.Diagnostics
         public static TimeSpan ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan TcpClientSendTimeout = TimeSpan.FromMinutes(10);
         public static TimeSpan TcpClientReceiveTimeout = TimeSpan.FromMinutes(10);
+        public static TimeSpan TcpClientPooledConnectionTimeout = TimeSpan.FromMinutes(9);
         public static TimeSpan TcpClientHeartbeatSendTimeout = TimeSpan.FromSeconds(30);
         public static TimeSpan TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(30);
         public static TimeSpan TcpClientConnectTimeout = TimeSpan.FromSeconds(30);

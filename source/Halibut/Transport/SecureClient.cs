@@ -17,9 +17,9 @@ namespace Halibut.Transport
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
-        readonly SecureClientConnectionPool pool;
+        readonly ConnectionPool<ServiceEndPoint, SecureConnection> pool;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, SecureClientConnectionPool pool)
+        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, SecureConnection> pool)
         {
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;

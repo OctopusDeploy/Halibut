@@ -19,7 +19,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
-        readonly SecureClientConnectionPool pool = new SecureClientConnectionPool();
+        readonly ConnectionPool<ServiceEndPoint, SecureConnection> pool = new ConnectionPool<ServiceEndPoint, SecureConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         
         public HalibutRuntime(X509Certificate2 serverCertficiate) : this(new NullServiceFactory(), serverCertficiate)

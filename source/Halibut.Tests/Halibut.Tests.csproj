@@ -47,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Certificates.cs" />
+    <Compile Include="ConnectionPoolFixture.cs" />
     <Compile Include="FailureModesFixture.cs" />
     <Compile Include="ProtocolFixture.cs" />
     <Compile Include="TestServices\SupportedServices.cs" />

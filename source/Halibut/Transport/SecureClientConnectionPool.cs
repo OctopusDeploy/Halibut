@@ -4,27 +4,41 @@ using System.Linq;
 
 namespace Halibut.Transport
 {
-    public class SecureClientConnectionPool
+    public class ConnectionPool<TKey, TPooledResource> 
+        where TPooledResource : class, IPooledResource
     {
-        readonly ConcurrentDictionary<ServiceEndPoint, ConcurrentBag<SecureConnection>> pool = new ConcurrentDictionary<ServiceEndPoint, ConcurrentBag<SecureConnection>>();
+        readonly ConcurrentDictionary<TKey, ConcurrentBag<TPooledResource>> pool = new ConcurrentDictionary<TKey, ConcurrentBag<TPooledResource>>();
 
-        public SecureConnection Take(ServiceEndPoint endPoint)
+        public int GetTotalConnectionCount()
         {
-            var connections = pool.GetOrAdd(endPoint, i => new ConcurrentBag<SecureConnection>());
-            SecureConnection connection;
-            connections.TryTake(out connection);
-            return connection;
+            return pool.ToArray().Sum(p => p.Value.Count);
         }
 
-        public void Return(ServiceEndPoint endPoint, SecureConnection connection)
+        public TPooledResource Take(TKey endPoint)
         {
-            var connections = pool.GetOrAdd(endPoint, i => new ConcurrentBag<SecureConnection>());
-            connections.Add(connection);
-
-            while (connections.Count > 5)
+            while (true)
             {
-                SecureConnection dispose;
-                if (connections.TryTake(out dispose))
+                var connections = pool.GetOrAdd(endPoint, i => new ConcurrentBag<TPooledResource>());
+                TPooledResource connection;
+                connections.TryTake(out connection);
+
+                if (connection == null || !connection.HasExpired()) 
+                    return connection;
+                
+                connection.Dispose();
+            }
+        }
+
+        public void Return(TKey key, TPooledResource resource)
+        {
+            var resources = pool.GetOrAdd(key, i => new ConcurrentBag<TPooledResource>());
+            resources.Add(resource);
+            resource.NotifyUsed();
+
+            while (resources.Count > 5)
+            {
+                TPooledResource dispose;
+                if (resources.TryTake(out dispose))
                 {
                     dispose.Dispose();
                 }
@@ -37,12 +51,12 @@ namespace Halibut.Transport
 
             foreach (var key in keys)
             {
-                ConcurrentBag<SecureConnection> connections;
+                ConcurrentBag<TPooledResource> connections;
                 if (pool.TryRemove(key, out connections))
                 {
                     while (connections.Count > 0)
                     {
-                        SecureConnection dispose;
+                        TPooledResource dispose;
                         if (connections.TryTake(out dispose))
                         {
                             dispose.Dispose();
