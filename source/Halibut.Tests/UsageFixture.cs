@@ -27,7 +27,7 @@ namespace Halibut.Tests
                 var tentaclePort = tentacleListening.Listen();
 
                 var info = octopus.Discover(new Uri("https://localhost:" + tentaclePort));
-                Assert.That(info.RemoteThumbprint, Is.EqualTo(Certificates.TentacleListeningPublicThumbprint));
+                Assert.That(info.RemoteThumbprints, Is.EqualTo(Certificates.TentacleListeningPublicThumbprint));
             }
         }
 

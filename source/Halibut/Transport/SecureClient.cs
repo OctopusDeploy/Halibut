@@ -92,7 +92,7 @@ namespace Halibut.Transport
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
             var remoteUri = serviceEndpoint.BaseUri;
-            var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
+            var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprints);
             var client = CreateTcpClient();
             client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
             log.Write(EventType.Diagnostic, "Connection established");
@@ -105,7 +105,7 @@ namespace Halibut.Transport
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
 
-            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint);
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprints);
 
             var protocol = new MessageExchangeProtocol(ssl, log);
             return new SecureConnection(client, ssl, protocol);

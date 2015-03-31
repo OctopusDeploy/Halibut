@@ -83,6 +83,11 @@ namespace Halibut
             return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint));
         }
 
+        public TService CreateClient<TService>(string endpointBaseUri, List<string> publicThumbprints)
+        {
+            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprints));
+        }
+
         public TService CreateClient<TService>(ServiceEndPoint endpoint)
         {
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
