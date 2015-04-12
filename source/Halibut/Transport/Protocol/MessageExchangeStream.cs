@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
+using System.Threading;
 using Halibut.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -222,7 +223,7 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
             }
 
-            dataStream.Attach(tempFile.ReadAndDelete);
+            ((IDataStreamInternal)dataStream).Received(tempFile);
         }
 
         static TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
@@ -230,10 +231,10 @@ namespace Halibut.Transport.Protocol
             var path = Path.Combine(Path.GetTempPath(), id.ToString());
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
-                var buffer = new byte[1024*128];
+                var buffer = new byte[1024 * 128];
                 while (length > 0)
                 {
-                    var read = reader.Read(buffer, 0, (int) Math.Min(buffer.Length, length));
+                    var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, length));
                     length -= read;
                     fileStream.Write(buffer, 0, read);
                 }
@@ -252,7 +253,7 @@ namespace Halibut.Transport.Protocol
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
             using (var buffer = new BufferedStream(zip))
-            using (var bson = new BsonWriter(buffer) {CloseOutput = false})
+            using (var bson = new BsonWriter(buffer) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
                 bson.Flush();
@@ -269,43 +270,11 @@ namespace Halibut.Transport.Protocol
                 writer.Flush();
 
                 var buffer = new BufferedStream(stream, 8192);
-                dataStream.Write(buffer);
+                ((IDataStreamInternal)dataStream).Transmit(buffer);
                 buffer.Flush();
 
                 writer.Write(dataStream.Length);
                 writer.Flush();
-            }
-        }
-
-        class TemporaryFileStream
-        {
-            readonly string path;
-            bool deleted;
-
-            public TemporaryFileStream(string path)
-            {
-                this.path = path;
-            }
-
-            public void ReadAndDelete(Action<Stream> callback)
-            {
-                if (deleted) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
-                deleted = true;
-                Read(callback);
-                Delete();
-            }
-
-            void Read(Action<Stream> callback)
-            {
-                using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
-                {
-                    callback(file);
-                }
-            }
-
-            void Delete()
-            {
-                File.Delete(path);
             }
         }
 
@@ -324,6 +293,66 @@ namespace Halibut.Transport.Protocol
         {
             stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+        }
+    }
+
+    public class TemporaryFileStream : IDataStreamReceiver
+    {
+        readonly string path;
+        bool moved;
+
+        public TemporaryFileStream(string path)
+        {
+            this.path = path;
+        }
+
+        public void SaveTo(string filePath)
+        {
+            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+
+            AttemptToDelete(filePath);
+            File.Move(path, filePath);
+            moved = true;
+            GC.SuppressFinalize(this);
+        }
+
+        static void AttemptToDelete(string fileToDelete)
+        {
+            for (var i = 1; i <= 3; i++)
+            {
+                try
+                {
+                    if (File.Exists(fileToDelete))
+                    {
+                        File.Delete(fileToDelete);
+                    }
+                }
+                catch (Exception)
+                {
+                    if (i == 3)
+                        throw;
+                    Thread.Sleep(1000);
+                }
+            }
+        }
+
+        // Ensure that if a receiver doesn't process a file, we still clean ourselves up
+        ~TemporaryFileStream()
+        {
+            if (moved) 
+                return;
+
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception)
+            {
+                // ignored - can't throw in the GC
+            }
         }
     }
 }

@@ -46,6 +46,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Diagnostics\ExceptionExtensions.cs" />
+    <Compile Include="IDataStreamInternal.cs" />
+    <Compile Include="IDataStreamReceiver.cs" />
     <Compile Include="ServiceModel\PollingClientCollection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceEndPoint.cs" />

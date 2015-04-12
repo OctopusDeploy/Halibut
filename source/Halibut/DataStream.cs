@@ -5,10 +5,10 @@ using Newtonsoft.Json;
 
 namespace Halibut
 {
-    public class DataStream : IEquatable<DataStream>
+    public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
         readonly Action<Stream> writer;
-        Action<Action<Stream>> attachedReader;
+        IDataStreamReceiver receiver;
 
         [JsonConstructor]
         public DataStream()
@@ -28,19 +28,11 @@ namespace Halibut
         [JsonProperty("length")]
         public long Length { get; set; }
 
-        public void Attach(Action<Action<Stream>> reader)
+        public IDataStreamReceiver Receiver()
         {
-            attachedReader = reader;
-        }
-
-        public void Read(Action<Stream> reader)
-        {
-            attachedReader(reader);
-        }
-
-        public void Write(Stream stream)
-        {
-            writer(stream);
+            if (receiver == null) 
+                throw new InvalidOperationException("This data stream can only be read on the server that received the stream.");
+            return receiver;
         }
 
         public bool Equals(DataStream other)
@@ -138,6 +130,16 @@ namespace Halibut
 
                 destination.Flush();
             }
+        }
+
+        void IDataStreamInternal.Transmit(Stream stream)
+        {
+            writer(stream);
+        }
+
+        void IDataStreamInternal.Received(IDataStreamReceiver attachedReceiver)
+        {
+            receiver = attachedReceiver;
         }
     }
 }

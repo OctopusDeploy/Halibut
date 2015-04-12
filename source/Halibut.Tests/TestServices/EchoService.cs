@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 
 namespace Halibut.Tests.TestServices
@@ -26,16 +27,11 @@ namespace Halibut.Tests.TestServices
 
         public int CountBytes(DataStream stream)
         {
-            int read = 0;
-            stream.Read(s =>
-            {
-                while (s.ReadByte() != -1)
-                {
-                    read++;
-                }
-            });
-
-            return read;
+            var tempFile = Path.GetFullPath(Guid.NewGuid().ToString());
+            stream.Receiver().SaveTo(tempFile);
+            var length = (int) new FileInfo(tempFile).Length;
+            File.Delete(tempFile);
+            return length;
         }
     }
 }
