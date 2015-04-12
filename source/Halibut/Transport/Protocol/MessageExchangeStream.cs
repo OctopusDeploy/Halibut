@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
-using System.Threading;
 using Halibut.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -293,66 +292,6 @@ namespace Halibut.Transport.Protocol
         {
             stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
-        }
-    }
-
-    public class TemporaryFileStream : IDataStreamReceiver
-    {
-        readonly string path;
-        bool moved;
-
-        public TemporaryFileStream(string path)
-        {
-            this.path = path;
-        }
-
-        public void SaveTo(string filePath)
-        {
-            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
-
-            AttemptToDelete(filePath);
-            File.Move(path, filePath);
-            moved = true;
-            GC.SuppressFinalize(this);
-        }
-
-        static void AttemptToDelete(string fileToDelete)
-        {
-            for (var i = 1; i <= 3; i++)
-            {
-                try
-                {
-                    if (File.Exists(fileToDelete))
-                    {
-                        File.Delete(fileToDelete);
-                    }
-                }
-                catch (Exception)
-                {
-                    if (i == 3)
-                        throw;
-                    Thread.Sleep(1000);
-                }
-            }
-        }
-
-        // Ensure that if a receiver doesn't process a file, we still clean ourselves up
-        ~TemporaryFileStream()
-        {
-            if (moved) 
-                return;
-
-            try
-            {
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-            }
-            catch (Exception)
-            {
-                // ignored - can't throw in the GC
-            }
         }
     }
 }
