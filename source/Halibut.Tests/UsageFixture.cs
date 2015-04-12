@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
@@ -152,6 +155,30 @@ namespace Halibut.Tests
 
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
                 Assert.That(ex.Message, Is.StringContaining("Ambiguous"));
+            }
+        }
+
+        [Test]
+        public void StreamsCanBeSentToListeningWithProgressReporting()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var tentaclePort = tentacleListening.Listen();
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                var progressReported = new List<int>();
+
+                var data = new byte[1024 * 1024 + 15];
+                new Random().NextBytes(data);
+                var stream = new MemoryStream(data);
+                
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+
+                var count = echo.CountBytes(DataStream.FromStream(stream, progressReported.Add));
+                Assert.That(count, Is.EqualTo(1024 * 1024 + 15));
+
+                CollectionAssert.AreEqual(Enumerable.Range(1, 100).ToList(), progressReported);
             }
         }
     }

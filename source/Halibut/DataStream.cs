@@ -93,13 +93,51 @@ namespace Halibut
             });
         }
 
-        public static DataStream FromStream(Stream source)
+        public static DataStream FromStream(Stream source, Action<int> updateProgress)
         {
-            return new DataStream(source.Length, stream =>
+            var streamer = new StreamingDataStream(source, updateProgress);
+            return new DataStream(source.Length, streamer.CopyAndReportProgress);
+        }
+
+        class StreamingDataStream
+        {
+            readonly Stream source;
+            readonly Action<int> updateProgress;
+
+            public StreamingDataStream(Stream source, Action<int> updateProgress)
             {
-                source.CopyTo(stream);
-                stream.Flush();
-            });
+                this.source = source;
+                this.updateProgress = updateProgress;
+            }
+
+            public void CopyAndReportProgress(Stream destination)
+            {
+                var buffer = new byte[8192];
+
+                var progress = 0;
+
+                int count;
+                var totalLength = source.Length;
+                long copiedSoFar = 0;
+                source.Seek(0, SeekOrigin.Begin);
+                while ((count = source.Read(buffer, 0, buffer.Length)) != 0)
+                {
+                    destination.Write(buffer, 0, count);
+
+                    copiedSoFar += count;
+
+                    var progressNow = (int)((double)copiedSoFar / totalLength * 100.00);
+                    if (progressNow == progress)
+                        continue;
+                    updateProgress(progressNow);
+                    progress = progressNow;
+                }
+
+                if (progress != 100)
+                    updateProgress(100);
+
+                destination.Flush();
+            }
         }
     }
 }

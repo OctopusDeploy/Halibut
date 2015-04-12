@@ -216,6 +216,12 @@ namespace Halibut.Transport.Protocol
             var length = reader.ReadInt64();
             var dataStream = FindStreamById(capture, id);
             var tempFile = CopyStreamToFile(id, length, reader);
+            var lengthAgain = reader.ReadInt64();
+            if (lengthAgain != length)
+            {
+                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
+            }
+
             dataStream.Attach(tempFile.ReadAndDelete);
         }
 
@@ -265,6 +271,9 @@ namespace Halibut.Transport.Protocol
                 var buffer = new BufferedStream(stream, 8192);
                 dataStream.Write(buffer);
                 buffer.Flush();
+
+                writer.Write(dataStream.Length);
+                writer.Flush();
             }
         }
 
