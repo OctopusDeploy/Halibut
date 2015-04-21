@@ -145,7 +145,7 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    waiter.Wait();
+                    waiter.Wait(HalibutLimits.PollingRequestMaximumMessageProcessingTimeout);
                     log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
                 }
                 else

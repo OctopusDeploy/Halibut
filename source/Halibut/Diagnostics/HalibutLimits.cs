@@ -21,6 +21,7 @@ namespace Halibut.Diagnostics
         }
 
         public static TimeSpan PollingRequestQueueTimeout = TimeSpan.FromMinutes(2);
+        public static TimeSpan PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromMinutes(10);
         public static TimeSpan RetryListeningSleepInterval = TimeSpan.FromSeconds(1);
         public static TimeSpan ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan TcpClientSendTimeout = TimeSpan.FromMinutes(10);
