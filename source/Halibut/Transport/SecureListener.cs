@@ -53,6 +53,9 @@ namespace Halibut.Transport
             {
                 try
                 {
+                    if (isStopped)
+                        return;
+
                     var client = listener.EndAcceptTcpClient(r);
                     if (isStopped)
                         return;
