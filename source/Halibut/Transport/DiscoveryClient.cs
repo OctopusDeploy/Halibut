@@ -11,30 +11,33 @@ namespace Halibut.Transport
     public class DiscoveryClient
     {
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
-        
-        public DiscoveryClient()
-        {
-        }
 
         public ServiceEndPoint Discover(Uri remoteUri)
         {
-            using (var client = CreateTcpClient())
+            try
             {
-                client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
-                using (var stream = client.GetStream())
+                using (var client = CreateTcpClient())
                 {
-                    using (var ssl = new SslStream(stream, false, ValidateCertificate))
+                    client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
+                    using (var stream = client.GetStream())
                     {
-                        ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(), SslProtocols.Tls, false);
-                        ssl.Write(HelloLine, 0, HelloLine.Length);
-                        ssl.Flush();
+                        using (var ssl = new SslStream(stream, false, ValidateCertificate))
+                        {
+                            ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(), SslProtocols.Tls, false);
+                            ssl.Write(HelloLine, 0, HelloLine.Length);
+                            ssl.Flush();
 
-                        if (ssl.RemoteCertificate == null)
-                            throw new Exception("The server did not provide an SSL certificate");
+                            if (ssl.RemoteCertificate == null)
+                                throw new Exception("The server did not provide an SSL certificate");
 
-                        return new ServiceEndPoint(remoteUri, new X509Certificate2(ssl.RemoteCertificate).Thumbprint);
+                            return new ServiceEndPoint(remoteUri, new X509Certificate2(ssl.RemoteCertificate).Thumbprint);
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                throw new HalibutClientException(ex.Message, ex);
             }
         }
 
