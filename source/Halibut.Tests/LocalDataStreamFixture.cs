@@ -25,9 +25,16 @@ namespace Halibut.Tests
             var dataStream = DataStream.FromString(input);
             var filePath = Path.GetTempFileName();
 
-            dataStream.Receiver().SaveTo(filePath);
+            try
+            {
+                dataStream.Receiver().SaveTo(filePath);
 
-            Assert.AreEqual(input, File.ReadAllText(filePath));
+                Assert.AreEqual(input, File.ReadAllText(filePath));
+            }
+            finally
+            {
+               File.Delete(filePath); 
+            }
         }
 
         private static string ReadStreamAsString(Stream stream)
