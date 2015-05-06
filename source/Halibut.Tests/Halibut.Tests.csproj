@@ -49,6 +49,7 @@
     <Compile Include="Certificates.cs" />
     <Compile Include="ConnectionPoolFixture.cs" />
     <Compile Include="FailureModesFixture.cs" />
+    <Compile Include="LocalDataStreamFixture.cs" />
     <Compile Include="ProtocolFixture.cs" />
     <Compile Include="TestServices\SupportedServices.cs" />
     <Compile Include="TestServices\EchoService.cs" />

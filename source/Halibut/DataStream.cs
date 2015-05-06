@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
 
 namespace Halibut
@@ -30,9 +31,7 @@ namespace Halibut
 
         public IDataStreamReceiver Receiver()
         {
-            if (receiver == null) 
-                throw new InvalidOperationException("This data stream can only be read on the server that received the stream.");
-            return receiver;
+            return receiver ?? new InMemoryDataStreamReceiver(writer);
         }
 
         public bool Equals(DataStream other)
