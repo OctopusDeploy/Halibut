@@ -55,6 +55,7 @@
     <Compile Include="DataStream.cs" />
     <Compile Include="Transport\DiscoveryClient.cs" />
     <Compile Include="Transport\IPooledResource.cs" />
+    <Compile Include="Transport\Protocol\InMemoryDataStreamReceiver.cs" />
     <Compile Include="Transport\Protocol\ServerError.cs" />
     <Compile Include="HalibutClientException.cs" />
     <Compile Include="Transport\Protocol\RequestMessage.cs" />
