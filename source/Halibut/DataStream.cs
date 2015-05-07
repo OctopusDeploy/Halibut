@@ -90,6 +90,11 @@ namespace Halibut
             return new DataStream(source.Length, streamer.CopyAndReportProgress);
         }
 
+        public static DataStream FromStream(Stream source)
+        {
+            return FromStream(source, (progress) => { });
+        }
+
         class StreamingDataStream
         {
             readonly Stream source;
