@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.Remoting.Messaging;
 using System.Text;
 using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
@@ -98,6 +99,7 @@ namespace Halibut
         class StreamingDataStream
         {
             const int SmallestBuffer = 8192;
+            const int LargestBuffer = SmallestBuffer*32;
             readonly Stream source;
             readonly Action<int> updateProgress;
 
@@ -141,7 +143,11 @@ namespace Halibut
             {
                 var totalLength = source.Length;
                 var onePercent = totalLength/100;
-                return (onePercent <= SmallestBuffer) ? SmallestBuffer : onePercent;
+                if (onePercent <= SmallestBuffer)
+                    return SmallestBuffer;
+                if (onePercent >= LargestBuffer)
+                    return LargestBuffer;
+                return onePercent;
             }
         }
 
