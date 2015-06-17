@@ -98,8 +98,7 @@ namespace Halibut
 
         class StreamingDataStream
         {
-            const int SmallestBuffer = 8192;
-            const int LargestBuffer = SmallestBuffer*32;
+            const int BufferSize = 262144;
             readonly Stream source;
             readonly Action<int> updateProgress;
 
@@ -110,9 +109,8 @@ namespace Halibut
             }
 
             public void CopyAndReportProgress(Stream destination)
-            {
-                var bufferSize = GetBufferSize();
-                var buffer = new byte[bufferSize];
+            {                
+                var buffer = new byte[BufferSize];
 
                 var progress = 0;
 
@@ -137,17 +135,6 @@ namespace Halibut
                     updateProgress(100);
 
                 destination.Flush();
-            }
-
-            private long GetBufferSize()
-            {
-                var totalLength = source.Length;
-                var onePercent = totalLength/100;
-                if (onePercent <= SmallestBuffer)
-                    return SmallestBuffer;
-                if (onePercent >= LargestBuffer)
-                    return LargestBuffer;
-                return onePercent;
             }
         }
 
