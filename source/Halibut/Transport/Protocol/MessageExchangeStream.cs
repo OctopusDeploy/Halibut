@@ -268,9 +268,8 @@ namespace Halibut.Transport.Protocol
                 writer.Write(dataStream.Length);
                 writer.Flush();
 
-                var buffer = new BufferedStream(stream, 8192);
-                ((IDataStreamInternal)dataStream).Transmit(buffer);
-                buffer.Flush();
+                ((IDataStreamInternal)dataStream).Transmit(stream);
+                stream.Flush();
 
                 writer.Write(dataStream.Length);
                 writer.Flush();
