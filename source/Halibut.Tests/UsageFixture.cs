@@ -169,14 +169,14 @@ namespace Halibut.Tests
 
                 var progressReported = new List<int>();
 
-                var data = new byte[1024 * 1024 + 15];
+                var data = new byte[1024 * 1024 * 16 + 15];
                 new Random().NextBytes(data);
                 var stream = new MemoryStream(data);
                 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
 
                 var count = echo.CountBytes(DataStream.FromStream(stream, progressReported.Add));
-                Assert.That(count, Is.EqualTo(1024 * 1024 + 15));
+                Assert.That(count, Is.EqualTo(1024 * 1024 * 16 + 15));
 
                 CollectionAssert.AreEqual(Enumerable.Range(1, 100).ToList(), progressReported);
             }
