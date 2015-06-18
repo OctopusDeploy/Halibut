@@ -98,7 +98,7 @@ namespace Halibut
 
         class StreamingDataStream
         {
-            const int BufferSize = 262144;
+            const int BufferSize = 84000;
             readonly Stream source;
             readonly Action<int> updateProgress;
 
@@ -109,18 +109,23 @@ namespace Halibut
             }
 
             public void CopyAndReportProgress(Stream destination)
-            {                
-                var buffer = new byte[BufferSize];
+            {
+                var readBuffer = new byte[BufferSize];
+                var writeBuffer = new byte[BufferSize];
 
                 var progress = 0;
-
-                int count;
+                
                 var totalLength = source.Length;
                 long copiedSoFar = 0;
                 source.Seek(0, SeekOrigin.Begin);
-                while ((count = source.Read(buffer, 0, buffer.Length)) != 0)
+
+                var count = source.Read(readBuffer, 0, BufferSize);
+                while (count > 0)
                 {
-                    destination.Write(buffer, 0, count);
+                    Swap(ref readBuffer, ref writeBuffer);
+                    var asyncResult = destination.BeginWrite(writeBuffer, 0, count, null, null);
+                    count = source.Read(readBuffer, 0, BufferSize);
+                    destination.EndWrite(asyncResult);
 
                     copiedSoFar += count;
 
@@ -136,7 +141,16 @@ namespace Halibut
 
                 destination.Flush();
             }
+
+            static void Swap<T>(ref T x, ref T y)
+            {
+                T tmp = x;
+                x = y;
+                y = tmp;
+            }
+
         }
+
 
         void IDataStreamInternal.Transmit(Stream stream)
         {
