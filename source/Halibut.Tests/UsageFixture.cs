@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
@@ -179,6 +180,37 @@ namespace Halibut.Tests
                 Assert.That(count, Is.EqualTo(1024 * 1024 * 16 + 15));
 
                 CollectionAssert.AreEqual(Enumerable.Range(1, 100).ToList(), progressReported);
+            }
+        }
+
+        [Test]
+        [TestCase("https://127.0.0.1:{port}")]
+        [TestCase("https://127.0.0.1:{port}/")]
+        [TestCase("https://localhost:{port}")]
+        [TestCase("https://localhost:{port}/")]
+        [TestCase("https://{machine}:{port}")]
+        [TestCase("https://{machine}:{port}/")]
+        public void SupportsHttpsGet(string uriFormat)
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            {
+                var listenPort = octopus.Listen();
+
+                using (var webClient = new WebClient())
+                {
+                    try
+                    {
+                        // We need to ignore server certificate validation errors - the server certificate is self-signed
+                        ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+                        var result = webClient.DownloadString(uriFormat.Replace("{machine}", Environment.MachineName).Replace("{port}", listenPort.ToString()));
+                        Assert.That(result, Is.EqualTo("<html><body><p>Hello!</p></body></html>"));
+                    }
+                    finally
+                    {
+                        // And restore it back to default behaviour
+                        ServicePointManager.ServerCertificateValidationCallback = null;
+                    }
+                }
             }
         }
     }
