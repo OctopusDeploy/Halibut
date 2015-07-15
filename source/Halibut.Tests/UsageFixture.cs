@@ -195,21 +195,48 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var listenPort = octopus.Listen();
+                var uri = uriFormat.Replace("{machine}", Environment.MachineName).Replace("{port}", listenPort.ToString());
+                
+                var result = DownloadStringIgnoringCertificateValidation(uri);
 
-                using (var webClient = new WebClient())
+                Assert.That(result, Is.EqualTo("<html><body><p>Hello!</p></body></html>"));
+            }
+        }
+
+        [Test]
+        [TestCase("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
+        [TestCase("Simple text works too!", null)]
+        [TestCase("", null)]
+        [TestCase(null, "<html><body><p>Hello!</p></body></html>")]
+        public void CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
+        {
+            expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
+
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            {
+                octopus.SetFriendlyHtmlPageContent(html);
+                var listenPort = octopus.Listen();
+
+                var result = DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
+
+                Assert.That(result, Is.EqualTo(expectedResult));
+            }
+        }
+
+        static string DownloadStringIgnoringCertificateValidation(string uri)
+        {
+            using (var webClient = new WebClient())
+            {
+                try
                 {
-                    try
-                    {
-                        // We need to ignore server certificate validation errors - the server certificate is self-signed
-                        ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
-                        var result = webClient.DownloadString(uriFormat.Replace("{machine}", Environment.MachineName).Replace("{port}", listenPort.ToString()));
-                        Assert.That(result, Is.EqualTo("<html><body><p>Hello!</p></body></html>"));
-                    }
-                    finally
-                    {
-                        // And restore it back to default behaviour
-                        ServicePointManager.ServerCertificateValidationCallback = null;
-                    }
+                    // We need to ignore server certificate validation errors - the server certificate is self-signed
+                    ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+                    return webClient.DownloadString(uri);
+                }
+                finally
+                {
+                    // And restore it back to default behaviour
+                    ServicePointManager.ServerCertificateValidationCallback = null;
                 }
             }
         }
