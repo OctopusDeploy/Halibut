@@ -19,17 +19,19 @@ namespace Halibut.Transport
         readonly Action<MessageExchangeProtocol> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
         readonly ILogFactory logFactory;
+        readonly Func<string> getFriendlyHtmlPageContent;
         ILog log;
         TcpListener listener;
         bool isStopped;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
             this.protocolHandler = protocolHandler;
             this.verifyClientThumbprint = verifyClientThumbprint;
             this.logFactory = logFactory;
+            this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
 
             EnsureCertificateIsValidForListening(serverCertificate);
         }
@@ -121,9 +123,9 @@ namespace Halibut.Transport
             }
         }
 
-        static void SendFriendlyHtmlPage(Stream stream)
+        void SendFriendlyHtmlPage(Stream stream)
         {
-            var message = "<html><body><p>Hello!</p></body></html>";
+            var message = getFriendlyHtmlPageContent();
             var writer = new StreamWriter(stream, new UTF8Encoding(false));
             writer.WriteLine("HTTP/1.0 200 OK");
             writer.WriteLine("Content-Type: text/html; charset=utf-8");
