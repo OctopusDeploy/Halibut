@@ -38,6 +38,7 @@ namespace Halibut.Transport
 
             Exception lastError = null;
 
+            // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < 5 && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
@@ -63,12 +64,24 @@ namespace Halibut.Transport
                     log.WriteException(EventType.Error, aex.Message, aex);
                     lastError = aex;
                     retryAllowed = false;
+                    break;
+                }
+                catch (SocketException sex)
+                {
+                    log.WriteException(EventType.Error, sex.Message, sex);
+                    lastError = sex;
+                    // When the host is not found an immediate retry isn't going to help
+                    if (sex.SocketErrorCode == SocketError.HostNotFound)
+                    {
+                        break;
+                    }
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
                     log.WriteException(EventType.Error, cex.Message, cex);
                     lastError = cex;
                     retryAllowed = true;
+                    Thread.Sleep(retryInterval);
                 }
                 catch (Exception ex)
                 {
