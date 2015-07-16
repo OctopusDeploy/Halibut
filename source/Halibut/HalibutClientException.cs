@@ -4,7 +4,13 @@ namespace Halibut
 {
     public class HalibutClientException : Exception
     {
-        public HalibutClientException(string message, Exception inner) : base(message, inner)
+        public HalibutClientException(string message)
+            : base(message)
+        {
+        }
+
+        public HalibutClientException(string message, Exception inner)
+            : base(message, inner)
         {
         }
 
