@@ -223,6 +223,18 @@ namespace Halibut.Tests
             }
         }
 
+        [Test]
+        [Timeout(5000)]
+        [Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
+        public void ConnectingOverHttpShouldFailQuickly()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            {
+                var listenPort = octopus.Listen();
+                Assert.Throws<WebException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
+            }
+        }
+
         static string DownloadStringIgnoringCertificateValidation(string uri)
         {
             using (var webClient = new WebClient())

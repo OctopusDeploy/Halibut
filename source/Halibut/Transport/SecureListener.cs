@@ -84,9 +84,13 @@ namespace Halibut.Transport
 
         void ExecuteRequest(TcpClient client)
         {
+            // By default we will close the stream to cater for failure scenarios
+            var keepStreamOpen = false;
+
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
-            using (var ssl = new SslStream(stream, true, ValidateCertificate))
+
+            using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 try
                 {
@@ -98,6 +102,7 @@ namespace Halibut.Transport
                     var req = ReadInitialRequest(ssl);
                     if (string.IsNullOrEmpty(req))
                     {
+                        log.Write(EventType.Diagnostic, "Ignoring empty request");
                         return;
                     }
 
@@ -105,11 +110,16 @@ namespace Halibut.Transport
                     {
                         log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
                         SendFriendlyHtmlPage(ssl);
+                        return;
                     }
-                    else
+
+                    if (Authorize(ssl, clientName))
                     {
-                        log.Write(EventType.Diagnostic, "Begin message exchange");
-                        ExchangeMessages(client, ssl);
+                        // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
+                        ExchangeMessages(ssl);
+
+                        // Mark the stream as delegated once everything has succeeded
+                        keepStreamOpen = true;
                     }
                 }
                 catch (AuthenticationException ex)
@@ -120,54 +130,73 @@ namespace Halibut.Transport
                 {
                     log.WriteException(EventType.Error, "Unhandled error when handling request from client: {0}", ex, clientName);
                 }
+                finally
+                {
+                    if (!keepStreamOpen)
+                    {
+                        // Closing an already closed stream or client is safe, better not to leak
+                        stream.Close();
+                        client.Close();
+                    }
+                }
             }
         }
 
         void SendFriendlyHtmlPage(Stream stream)
         {
             var message = getFriendlyHtmlPageContent();
-            var writer = new StreamWriter(stream, new UTF8Encoding(false));
-            writer.WriteLine("HTTP/1.0 200 OK");
-            writer.WriteLine("Content-Type: text/html; charset=utf-8");
-            writer.WriteLine("Content-Length: " + message.Length);
-            writer.WriteLine();
-            writer.WriteLine(message);
-            writer.WriteLine();
-            writer.Flush();
-            stream.Flush();
-            stream.Close();
+
+            // This could fail if the client terminates the connection and we attempt to write to it
+            // Disposing the StreamWriter will close the stream - it owns the stream
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+            {
+                writer.WriteLine("HTTP/1.0 200 OK");
+                writer.WriteLine("Content-Type: text/html; charset=utf-8");
+                writer.WriteLine("Content-Length: " + message.Length);
+                writer.WriteLine();
+                writer.WriteLine(message);
+                writer.WriteLine();
+                writer.Flush();
+                stream.Flush();
+            }
         }
 
-        void ExchangeMessages(TcpClient client, SslStream stream)
+        bool Authorize(SslStream stream, EndPoint clientName)
         {
+            log.Write(EventType.Diagnostic, "Begin authorization");
+
             if (stream.RemoteCertificate == null)
             {
-                log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", client.Client.RemoteEndPoint);
-                stream.Close();
-                client.Close();
-                return;
+                log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", clientName);
+                return false;
             }
 
             var thumbprint = new X509Certificate2(stream.RemoteCertificate).Thumbprint;
-            var verified = verifyClientThumbprint(thumbprint);
-            if (!verified)
+            var isAuthorized = verifyClientThumbprint(thumbprint);
+
+            if (!isAuthorized)
             {
-                log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", client.Client.RemoteEndPoint, thumbprint);
-                stream.Close();
-                client.Close();
-                return;
+                log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", clientName, thumbprint);
+                return false;
             }
 
-            log.Write(EventType.Security, "Client authenticated as {0}", thumbprint);
-            var protocol = new MessageExchangeProtocol(stream, log);
-            protocolHandler(protocol);
+            log.Write(EventType.Security, "Client at {0} authenticated as {1}", clientName, thumbprint);
+            return true;
         }
 
-        bool ValidateCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
+        void ExchangeMessages(SslStream stream)
+        {
+            log.Write(EventType.Diagnostic, "Begin message exchange");
+
+            protocolHandler(new MessageExchangeProtocol(stream, log));
+        }
+
+        bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
         {
             return true;
         }
 
+        // ReSharper disable once UnusedParameter.Local
         static void EnsureCertificateIsValidForListening(X509Certificate2 certificate)
         {
             if (certificate == null) throw new Exception("No certificate was provided.");
