@@ -13,7 +13,7 @@ namespace Halibut
     public class HalibutRuntime : IDisposable
     {
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
-        readonly X509Certificate2 serverCertficiate;
+        readonly X509Certificate2 serverCertificate;
         readonly List<SecureListener> listeners = new List<SecureListener>();
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
@@ -22,13 +22,13 @@ namespace Halibut
         readonly ConnectionPool<ServiceEndPoint, SecureConnection> pool = new ConnectionPool<ServiceEndPoint, SecureConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         
-        public HalibutRuntime(X509Certificate2 serverCertficiate) : this(new NullServiceFactory(), serverCertficiate)
+        public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate)
         {
         }
 
-        public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertficiate)
+        public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate)
         {
-            this.serverCertficiate = serverCertficiate;
+            this.serverCertificate = serverCertificate;
             invoker = new ServiceInvoker(serviceFactory);
         }
 
@@ -54,7 +54,7 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs);
             listeners.Add(listener);
             return listener.Start();
         }
@@ -68,7 +68,7 @@ namespace Halibut
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
-            var client = new SecureClient(endPoint, serverCertficiate, logs.ForEndpoint(endPoint.BaseUri), pool);
+            var client = new SecureClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
 
@@ -104,7 +104,7 @@ namespace Halibut
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
         {
-            var client = new SecureClient(request.Destination, serverCertficiate, logs.ForEndpoint(request.Destination.BaseUri), pool);
+            var client = new SecureClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), pool);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
