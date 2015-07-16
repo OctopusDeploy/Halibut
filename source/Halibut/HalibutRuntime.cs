@@ -12,6 +12,8 @@ namespace Halibut
 {
     public class HalibutRuntime : IDisposable
     {
+        public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
+
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly X509Certificate2 serverCertficiate;
         readonly List<SecureListener> listeners = new List<SecureListener>();
@@ -21,7 +23,8 @@ namespace Halibut
         readonly LogFactory logs = new LogFactory();
         readonly ConnectionPool<ServiceEndPoint, SecureConnection> pool = new ConnectionPool<ServiceEndPoint, SecureConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
-        
+        string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
+
         public HalibutRuntime(X509Certificate2 serverCertficiate) : this(new NullServiceFactory(), serverCertficiate)
         {
         }
@@ -54,7 +57,7 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs);
+            var listener = new SecureListener(endpoint, serverCertficiate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs, () => friendlyHtmlPageContent);
             listeners.Add(listener);
             return listener.Start();
         }
@@ -138,6 +141,11 @@ namespace Halibut
         public void Route(ServiceEndPoint to, ServiceEndPoint via)
         {
             routeTable.TryAdd(to.BaseUri, via);
+        }
+
+        public void SetFriendlyHtmlPageContent(string html)
+        {
+            friendlyHtmlPageContent = html ?? DefaultFriendlyHtmlPageContent;
         }
 
         public void Dispose()
