@@ -94,10 +94,10 @@ namespace Halibut.Transport
             {
                 try
                 {
-                    log.Write(EventType.Security, "Performing SSL (TLS 1.0) server handshake");
-                    ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls, false);
+                    log.Write(EventType.Security, "Performing TLS server handshake");
+                    ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 
-                    log.Write(EventType.Security, "Secure connection established, client is not yet authenticated");
+                    log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
                     var req = ReadInitialRequest(ssl);
                     if (string.IsNullOrEmpty(req))

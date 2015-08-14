@@ -112,13 +112,13 @@ namespace Halibut.Transport
 
             var stream = client.GetStream();
 
-            log.Write(EventType.Security, "Performing SSL (TLS 1.0) handshake");
+            log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls, false);
+            ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
 
-            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint);
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
 
             var protocol = new MessageExchangeProtocol(ssl, log);
             return new SecureConnection(client, ssl, protocol);
