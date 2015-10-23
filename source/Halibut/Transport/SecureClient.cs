@@ -156,9 +156,12 @@ namespace Halibut.Transport
 
         static TcpClient CreateTcpClient()
         {
-            var client = new TcpClient();
-            client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-            client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+            var client = new TcpClient(AddressFamily.InterNetworkV6)
+            {
+                SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
+                ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
+                Client = {DualMode = true}
+            };
             return client;
         }
 

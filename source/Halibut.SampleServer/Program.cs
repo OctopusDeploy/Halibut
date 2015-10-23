@@ -13,7 +13,7 @@ namespace Halibut.SampleServer
             Console.Title = "Halibut Server";
             var certificate = new X509Certificate2("HalibutServer.pfx");
 
-            var endPoint = new IPEndPoint(IPAddress.Any, 8433);
+            var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
 
             var services = new DelegateServiceFactory();
             services.Register<ICalculatorService>(() => new CalculatorService());

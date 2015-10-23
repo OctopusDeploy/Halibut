@@ -39,6 +39,7 @@ namespace Halibut.Transport
         public int Start()
         {
             listener = new TcpListener(endPoint);
+            listener.Server.DualMode = (endPoint.Address.AddressFamily == AddressFamily.InterNetworkV6);
             listener.Start();
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
