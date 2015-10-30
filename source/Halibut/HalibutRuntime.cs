@@ -52,7 +52,7 @@ namespace Halibut
 
         public int Listen(int port)
         {
-            return Listen(new IPEndPoint(IPAddress.Any, port));
+            return Listen(new IPEndPoint(IPAddress.IPv6Any, port));
         }
 
         public int Listen(IPEndPoint endpoint)
