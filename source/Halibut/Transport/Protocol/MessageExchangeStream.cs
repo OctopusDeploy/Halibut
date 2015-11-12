@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
+using System.Threading;
 using Halibut.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -31,6 +32,7 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
+        static int streamCount = 0;
         public static Func<JsonSerializer> Serializer = CreateDefault;
 
         public void IdentifyAsClient()
@@ -225,9 +227,10 @@ namespace Halibut.Transport.Protocol
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
 
+        
         static TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
-            var path = Path.Combine(Path.GetTempPath(), id.ToString());
+            var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
                 var buffer = new byte[1024 * 128];
