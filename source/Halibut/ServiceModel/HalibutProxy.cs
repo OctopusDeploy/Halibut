@@ -76,6 +76,9 @@ namespace Halibut.ServiceModel
 
         static void EnsureNotError(ResponseMessage responseMessage)
         {
+            if (responseMessage == null)
+                throw new HalibutClientException("No response was received from the endpoint within the allowed time.");
+
             if (responseMessage.Error == null)
                 return;
 
