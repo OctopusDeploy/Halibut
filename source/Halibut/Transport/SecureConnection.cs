@@ -6,7 +6,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public class SecureConnection : IPooledResource
+    public class SecureConnection : IConnection
     {
         readonly TcpClient client;
         readonly SslStream stream;

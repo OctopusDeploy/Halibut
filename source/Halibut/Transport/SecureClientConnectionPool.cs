@@ -45,24 +45,29 @@ namespace Halibut.Transport
             }
         }
 
+        public void Clear(TKey key)
+        {
+            ConcurrentBag<TPooledResource> connections;
+            if (!pool.TryRemove(key, out connections))
+                return;
+
+            while (connections.Count > 1)
+            {
+                TPooledResource connection;
+                if (connections.TryTake(out connection))
+                {
+                    connection.Dispose();
+                }
+            }
+        }
+
         public void Dispose()
         {
             var keys = pool.Keys.ToList();
 
             foreach (var key in keys)
             {
-                ConcurrentBag<TPooledResource> connections;
-                if (pool.TryRemove(key, out connections))
-                {
-                    while (connections.Count > 0)
-                    {
-                        TPooledResource dispose;
-                        if (connections.TryTake(out dispose))
-                        {
-                            dispose.Dispose();
-                        }
-                    }
-                }
+                Clear(key);
             }
         }
     }

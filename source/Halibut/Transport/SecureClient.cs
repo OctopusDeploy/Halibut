@@ -13,13 +13,14 @@ namespace Halibut.Transport
 {
     public class SecureClient
     {
+        public const int RetryCountLimit = 5; 
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
-        readonly ConnectionPool<ServiceEndPoint, SecureConnection> pool;
+        readonly ConnectionPool<ServiceEndPoint, IConnection> pool;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, SecureConnection> pool)
+        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, IConnection> pool)
         {
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
@@ -41,7 +42,7 @@ namespace Halibut.Transport
             // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
             var watch = Stopwatch.StartNew();
-            for (var i = 0; i < 5 && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
+            for (var i = 0; i < RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
                 if (i > 0) log.Write(EventType.Error, "Retry attempt {0}", i);
 
@@ -81,6 +82,14 @@ namespace Halibut.Transport
                     log.WriteException(EventType.Error, cex.Message, cex);
                     lastError = cex;
                     retryAllowed = true;
+
+                    // If this is the second failure, clear the pooled connections as a precaution 
+                    // against all connections in the pool being bad
+                    if (i == 1)
+                    {
+                        pool.Clear(serviceEndpoint);
+                    }
+
                     Thread.Sleep(retryInterval);
                 }
                 catch (Exception ex)
@@ -94,7 +103,7 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
-        SecureConnection AcquireConnection()
+        IConnection AcquireConnection()
         {
             var connection = pool.Take(serviceEndpoint);
             return connection ?? EstablishNewConnection();
@@ -124,7 +133,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        void ReleaseConnection(SecureConnection connection)
+        void ReleaseConnection(IConnection connection)
         {
             pool.Return(serviceEndpoint, connection);
         }
