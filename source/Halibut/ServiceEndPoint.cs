@@ -11,31 +11,21 @@ namespace Halibut
         readonly List<string> remoteThumbprints = new List<string>();
         readonly string baseUriString;
 
-        public ServiceEndPoint(string baseUri, IEnumerable<string> remoteThumbprints)
-            : this(new Uri(baseUri), remoteThumbprints)
-        {
-        }
-
-        public ServiceEndPoint(string baseUri, string remoteThumbprint)
-            : this(new Uri(baseUri), remoteThumbprint)
+        public ServiceEndPoint(string baseUri, string remoteThumbprint, params string[] additionalThumprints)
+            : this(new Uri(baseUri), remoteThumbprint, additionalThumprints)
         {
         }
 
         [JsonConstructor]
-        public ServiceEndPoint(Uri baseUri, IEnumerable<string> remoteThumbprints)
-        {
-            baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
-            this.baseUri = new Uri(baseUriString);
-            this.remoteThumbprints = remoteThumbprints.ToList();
-        }
-
-
-        public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
+        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, params string[] additionalThumbprints)
         {
             baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
             this.baseUri = new Uri(baseUriString);
             this.remoteThumbprints = new List<string>();
             this.remoteThumbprints.Add(remoteThumbprint);
+
+            if (additionalThumbprints != null)
+                this.remoteThumbprints.AddRange(additionalThumbprints);
         }
 
         public Uri BaseUri

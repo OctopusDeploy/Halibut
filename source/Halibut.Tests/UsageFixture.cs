@@ -245,7 +245,7 @@ namespace Halibut.Tests
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, 
-                    new List<string> { Certificates.TentaclePollingPublicThumbprint, Certificates.TentacleListeningPublicThumbprint });
+                    Certificates.TentaclePollingPublicThumbprint, Certificates.TentacleListeningPublicThumbprint );
                 Assert.That(echo.SayHello("Papa Smurf"), Is.EqualTo("Papa Smurf..."));
             }
         }

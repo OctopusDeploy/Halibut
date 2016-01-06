@@ -81,14 +81,9 @@ namespace Halibut
             return client.Discover(uri);
         }
 
-        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, params string[] additionalThumbprints)
         {
-            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint));
-        }
-
-        public TService CreateClient<TService>(string endpointBaseUri, IEnumerable<string> publicThumbprints)
-        {
-            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprints));
+            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint, additionalThumbprints));
         }
 
         public TService CreateClient<TService>(ServiceEndPoint endpoint)
