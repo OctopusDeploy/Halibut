@@ -31,7 +31,7 @@ namespace Halibut.Tests
                 var tentaclePort = tentacleListening.Listen();
 
                 var info = octopus.Discover(new Uri("https://localhost:" + tentaclePort));
-                Assert.That(info.RemoteThumbprints.Contains(Certificates.TentacleListeningPublicThumbprint));
+                Assert.That(info.RemoteThumbprint, Is.EqualTo(Certificates.TentacleListeningPublicThumbprint));
             }
         }
 
@@ -232,21 +232,6 @@ namespace Halibut.Tests
             {
                 var listenPort = octopus.Listen();
                 Assert.Throws<WebException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
-            }
-        }
-
-        [Test]
-        public void CanCreateClientWithMultipleCertificateThumbprints()
-        {
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-            {
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, 
-                    Certificates.TentaclePollingPublicThumbprint, Certificates.TentacleListeningPublicThumbprint );
-                Assert.That(echo.SayHello("Papa Smurf"), Is.EqualTo("Papa Smurf..."));
             }
         }
 

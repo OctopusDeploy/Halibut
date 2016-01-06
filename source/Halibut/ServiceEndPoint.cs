@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 
 namespace Halibut
@@ -8,24 +6,20 @@ namespace Halibut
     public class ServiceEndPoint : IEquatable<ServiceEndPoint>
     {
         readonly Uri baseUri;
-        readonly List<string> remoteThumbprints = new List<string>();
+        readonly string remoteThumbprint;
         readonly string baseUriString;
 
-        public ServiceEndPoint(string baseUri, string remoteThumbprint, params string[] additionalThumprints)
-            : this(new Uri(baseUri), remoteThumbprint, additionalThumprints)
+        public ServiceEndPoint(string baseUri, string remoteThumbprint)
+            : this(new Uri(baseUri), remoteThumbprint)
         {
         }
 
         [JsonConstructor]
-        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, params string[] additionalThumbprints)
+        public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
         {
             baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
             this.baseUri = new Uri(baseUriString);
-            this.remoteThumbprints = new List<string>();
-            this.remoteThumbprints.Add(remoteThumbprint);
-
-            if (additionalThumbprints != null)
-                this.remoteThumbprints.AddRange(additionalThumbprints);
+            this.remoteThumbprint = remoteThumbprint;
         }
 
         public Uri BaseUri
@@ -33,9 +27,9 @@ namespace Halibut
             get { return baseUri; }
         }
 
-        public IList<string> RemoteThumbprints
+        public string RemoteThumbprint
         {
-            get { return remoteThumbprints; }
+            get { return remoteThumbprint; }
         }
 
         public override string ToString()
@@ -47,7 +41,7 @@ namespace Halibut
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(baseUriString, other.baseUriString);
+            return Equals(baseUriString, other.baseUriString) && string.Equals(remoteThumbprint, other.remoteThumbprint);
         }
 
         public override bool Equals(object obj)
@@ -62,7 +56,7 @@ namespace Halibut
         {
             unchecked
             {
-                return baseUriString != null ? baseUriString.GetHashCode() : 0;
+                return ((baseUriString != null ? baseUriString.GetHashCode() : 0) * 397) ^ (remoteThumbprint != null ? remoteThumbprint.GetHashCode() : 0);
             }
         }
 
