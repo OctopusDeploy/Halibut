@@ -226,7 +226,6 @@ namespace Halibut.Transport.Protocol
 
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
-
         
         static TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {

@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
@@ -32,7 +31,16 @@ namespace Halibut
 
         public IDataStreamReceiver Receiver()
         {
-            return receiver ?? new InMemoryDataStreamReceiver(writer);
+            if (receiver != null)
+                return receiver;
+
+            // Use a FileStream for packages over 2GB, or you risk running into OutOfMemory
+            // exceptions with MemoryStream.
+            var maxMemoryStreamLength = Int32.MaxValue; // Int32 on purpose, don't use int alias or this will change the behaviour on 64-bit systems.
+            if (Length >= maxMemoryStreamLength)
+                return new TemporaryFileDataStreamReceiver(writer);
+            else
+                return new InMemoryDataStreamReceiver(writer);
         }
 
         public bool Equals(DataStream other)
