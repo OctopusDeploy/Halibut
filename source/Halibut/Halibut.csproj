@@ -71,6 +71,7 @@
     <Compile Include="Diagnostics\HalibutLimits.cs" />
     <Compile Include="HalibutRuntime.cs" />
     <Compile Include="ServiceModel\NullServiceFactory.cs" />
+    <Compile Include="Transport\Protocol\TemporaryFileDataStreamReceiver.cs" />
     <Compile Include="Transport\Protocol\TemporaryFileStream.cs" />
     <Compile Include="Transport\SecureListener.cs" />
     <Compile Include="Transport\PollingClient.cs" />

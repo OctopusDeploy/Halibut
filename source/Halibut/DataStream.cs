@@ -32,7 +32,16 @@ namespace Halibut
 
         public IDataStreamReceiver Receiver()
         {
-            return receiver ?? new InMemoryDataStreamReceiver(writer);
+            if (receiver != null)
+                return receiver;
+
+            // Use a FileStream for packages over 2GB, or you risk running into OutOfMemory
+            // exceptions with MemoryStream.
+            var maxMemoryStreamLength = 2147483648;
+            if (Length >= maxMemoryStreamLength)
+                return new TemporaryFileDataStreamReceiver(writer);
+            else
+                return new InMemoryDataStreamReceiver(writer);
         }
 
         public bool Equals(DataStream other)
