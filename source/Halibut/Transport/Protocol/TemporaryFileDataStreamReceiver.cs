@@ -23,14 +23,20 @@ namespace Halibut.Transport.Protocol
         public void Read(Action<Stream> reader)
         {
             var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 65536))
+            try
             {
-                writer(fileStream);
-                fileStream.Seek(0, SeekOrigin.Begin);
-                reader(fileStream);
+                using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 65536))
+                {
+                    writer(fileStream);
+                    fileStream.Seek(0, SeekOrigin.Begin);
+                    reader(fileStream);
+                }
             }
-            if (File.Exists(path))
-                File.Delete(path);
+            finally
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
         }
     }
 }
