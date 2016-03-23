@@ -36,7 +36,7 @@ namespace Halibut
 
             // Use a FileStream for packages over 2GB, or you risk running into OutOfMemory
             // exceptions with MemoryStream.
-            var maxMemoryStreamLength = Int32.MaxValue; // Int32 on purpose, don't use int alias or this will change the behaviour on 64-bit systems.
+            var maxMemoryStreamLength = int.MaxValue;
             if (Length >= maxMemoryStreamLength)
                 return new TemporaryFileDataStreamReceiver(writer);
             else
@@ -156,9 +156,7 @@ namespace Halibut
                 x = y;
                 y = tmp;
             }
-
         }
-
 
         void IDataStreamInternal.Transmit(Stream stream)
         {
