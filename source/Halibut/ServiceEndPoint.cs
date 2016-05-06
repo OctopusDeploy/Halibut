@@ -8,18 +8,27 @@ namespace Halibut
         readonly Uri baseUri;
         readonly string remoteThumbprint;
         readonly string baseUriString;
+        readonly ProxyDetails proxy;
 
         public ServiceEndPoint(string baseUri, string remoteThumbprint)
             : this(new Uri(baseUri), remoteThumbprint)
         {
         }
 
-        [JsonConstructor]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
         {
             baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
             this.baseUri = new Uri(baseUriString);
             this.remoteThumbprint = remoteThumbprint;
+        }
+
+        [JsonConstructor]
+        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy)
+        {
+            baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
+            this.baseUri = new Uri(baseUriString);
+            this.remoteThumbprint = remoteThumbprint;
+            this.proxy = proxy;
         }
 
         public Uri BaseUri
@@ -32,6 +41,11 @@ namespace Halibut
             get { return remoteThumbprint; }
         }
 
+        public ProxyDetails Proxy
+        {
+            get { return proxy; }
+        }
+
         public override string ToString()
         {
             return baseUriString;
@@ -41,7 +55,7 @@ namespace Halibut
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(baseUriString, other.baseUriString) && string.Equals(remoteThumbprint, other.remoteThumbprint);
+            return string.Equals(remoteThumbprint, other.remoteThumbprint) && string.Equals(baseUriString, other.baseUriString) && Equals(proxy, other.proxy);
         }
 
         public override bool Equals(object obj)
@@ -56,7 +70,10 @@ namespace Halibut
         {
             unchecked
             {
-                return ((baseUriString != null ? baseUriString.GetHashCode() : 0) * 397) ^ (remoteThumbprint != null ? remoteThumbprint.GetHashCode() : 0);
+                var hashCode = (remoteThumbprint != null ? remoteThumbprint.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (baseUriString != null ? baseUriString.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (proxy != null ? proxy.GetHashCode() : 0);
+                return hashCode;
             }
         }
 

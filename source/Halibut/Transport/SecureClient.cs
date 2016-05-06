@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Halibut.Transport.Proxy;
 
 namespace Halibut.Transport
 {
@@ -113,17 +114,15 @@ namespace Halibut.Transport
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
-            var remoteUri = serviceEndpoint.BaseUri;
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
-            var client = CreateTcpClient();
-            client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
+            var client = CreateConnectedTcpClient(serviceEndpoint);
             log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
 
             log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+            ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
 
@@ -131,6 +130,23 @@ namespace Halibut.Transport
 
             var protocol = new MessageExchangeProtocol(ssl, log);
             return new SecureConnection(client, ssl, protocol);
+        }
+
+        static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
+        {
+            TcpClient client;
+            if (endPoint.Proxy == null)
+            {
+                client = CreateTcpClient();
+                client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
+            }
+            else
+            {
+                var proxyClient = new ProxyClientFactory().CreateProxyClient(endPoint.Proxy);
+                proxyClient.TcpClient = CreateTcpClient();
+                client = proxyClient.CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port);
+            }
+            return client;
         }
 
         void ReleaseConnection(IConnection connection)
