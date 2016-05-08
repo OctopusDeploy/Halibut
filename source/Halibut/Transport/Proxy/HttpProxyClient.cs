@@ -48,11 +48,8 @@ namespace Halibut.Transport.Proxy
     /// </summary>
     public class HttpProxyClient : IProxyClient
     {
-        private string _proxyHost;
-        private int _proxyPort;
         private HttpResponseCodes _respCode;
         private string _respText;
-        private TcpClient _tcpClient;
 
         private const int HTTP_PROXY_DEFAULT_PORT = 8080;
         private const string HTTP_PROXY_CONNECT_CMD = "CONNECT {0}:{1} HTTP/1.0\r\nHost: {0}:{1}\r\n\r\n";
@@ -105,71 +102,42 @@ namespace Halibut.Transport.Proxy
         }
 
         /// <summary>
-        /// Constructor.
-        /// </summary>
-        public HttpProxyClient() { }
-
-        /// <summary>
-        /// Creates a HTTP proxy client object using the supplied TcpClient object connection.
-        /// </summary>
-        /// <param name="tcpClient">A TcpClient connection object.</param>
-        public HttpProxyClient(TcpClient tcpClient)
-        {
-            if (tcpClient == null)
-                throw new ArgumentNullException("tcpClient");
-
-            _tcpClient = tcpClient;
-        }
-
-
-        /// <summary>
-        /// Constructor.  The default HTTP proxy port 8080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy.</param>
-        public HttpProxyClient(string proxyHost)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-                throw new ArgumentNullException("proxyHost");
-
-            _proxyHost = proxyHost;
-            _proxyPort = HTTP_PROXY_DEFAULT_PORT;
-        }
-
-        /// <summary>
         /// Constructor.  
         /// </summary>
         /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
         /// <param name="proxyPort">Port number for the proxy server.</param>
-        public HttpProxyClient(string proxyHost, int proxyPort)
+        /// <param name="proxyUserName">Proxy authentication user name.</param>
+        /// <param name="proxyPassword">Proxy authentication password.</param>
+        public HttpProxyClient(string proxyHost, int proxyPort, string proxyUserName, string proxyPassword)
         {
-            if (String.IsNullOrEmpty(proxyHost))
-                throw new ArgumentNullException("proxyHost");
+            if (string.IsNullOrEmpty(proxyHost))
+                throw new ArgumentNullException(nameof(proxyHost));
 
             if (proxyPort <= 0 || proxyPort > 65535)
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
+                throw new ArgumentOutOfRangeException(nameof(proxyPort), "port must be greater than zero and less than 65535");
 
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
+            if (proxyUserName == null)
+                throw new ArgumentNullException(nameof(proxyUserName));
+
+            if (proxyPassword == null)
+                throw new ArgumentNullException(nameof(proxyPassword));
+
+            ProxyHost = proxyHost;
+            ProxyPort = proxyPort;
+            ProxyUserName = proxyUserName;
+            ProxyPassword = proxyPassword;
         }
 
         /// <summary>
         /// Gets or sets host name or IP address of the proxy server.
         /// </summary>
-        public string ProxyHost
-        {
-            get { return _proxyHost; }
-            set { _proxyHost = value; }
-        }
+        public string ProxyHost { get; set; }
 
         /// <summary>
         /// Gets or sets port number for the proxy server.
         /// </summary>
-        public int ProxyPort
-        {
-            get { return _proxyPort; }
-            set { _proxyPort = value; }
-        }
-
+        public int ProxyPort { get; set; }
+        
         /// <summary>
         /// Gets String representing the name of the proxy. 
         /// </summary>
@@ -180,20 +148,26 @@ namespace Halibut.Transport.Proxy
         }
 
         /// <summary>
+        /// Gets or sets proxy authentication user name.
+        /// </summary>
+        public string ProxyUserName { get; set; }
+
+        /// <summary>
+        /// Gets or sets proxy authentication password.
+        /// </summary>
+        public string ProxyPassword { get; set; }
+
+        /// <summary>
         /// Gets or sets the TcpClient object. 
         /// This property can be set prior to executing CreateConnection to use an existing TcpClient connection.
         /// </summary>
-        public TcpClient TcpClient
-        {
-            get { return _tcpClient; }
-            set { _tcpClient = value; }
-        }
+        public TcpClient TcpClient { get; set; }
 
-        Func<TcpClient> _tcpClientFactory = () => new TcpClient();
+        Func<TcpClient> tcpClientFactory = () => new TcpClient();
 
         public IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory)
         {
-            _tcpClientFactory = tcpClientfactory;
+            tcpClientFactory = tcpClientfactory;
             return this;
         }
 
@@ -217,37 +191,37 @@ namespace Halibut.Transport.Proxy
             try
             {
                 // if we have no connection, create one
-                if (_tcpClient == null)
+                if (TcpClient == null)
                 {
-                    if (String.IsNullOrEmpty(_proxyHost))
+                    if (string.IsNullOrEmpty(ProxyHost))
                         throw new ProxyException("ProxyHost property must contain a value.");
 
-                    if (_proxyPort <= 0 || _proxyPort > 65535)
+                    if (ProxyPort <= 0 || ProxyPort > 65535)
                         throw new ProxyException("ProxyPort value must be greater than zero and less than 65535");
 
                     //  create new tcp client object to the proxy server
-                    _tcpClient = _tcpClientFactory();
+                    TcpClient = tcpClientFactory();
 
                     // attempt to open the connection
-                    _tcpClient.ConnectWithTimeout(_proxyHost, _proxyPort, timeout);
+                    TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port
                 SendConnectionCommand(destinationHost, destinationPort);
 
                 // return the open proxied tcp client object to the caller for normal use
-                return _tcpClient;
+                return TcpClient;
             }
             catch (SocketException ex)
             {
-                throw new ProxyException(String.Format(CultureInfo.InvariantCulture, "Connection to proxy host {0} on port {1} failed.", Utils.GetHost(_tcpClient), Utils.GetPort(_tcpClient)), ex);
+                throw new ProxyException(string.Format(CultureInfo.InvariantCulture, "Connection to proxy host {0} on port {1} failed.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), ex);
             }
         }
 
 
         private void SendConnectionCommand(string host, int port)
         {
-            NetworkStream stream = _tcpClient.GetStream(); 
+            var stream = TcpClient.GetStream(); 
 
             // PROXY SERVER REQUEST
             // =======================================================================
@@ -256,8 +230,8 @@ namespace Halibut.Transport.Proxy
             //[... other HTTP header lines ending with <CR><LF> if required]>
             //<CR><LF>    // Last Empty Line
 
-            string connectCmd = String.Format(CultureInfo.InvariantCulture, HTTP_PROXY_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture));
-            byte[] request = ASCIIEncoding.ASCII.GetBytes(connectCmd);
+            var connectCmd = string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture));
+            var request = Encoding.ASCII.GetBytes(connectCmd);
 
             // send the connect request
             stream.Write(request, 0, request.Length);
@@ -273,16 +247,16 @@ namespace Halibut.Transport.Proxy
             //<CR><LF>    // Last Empty Line
 
             // create an byte response array  
-            byte[] response = new byte[_tcpClient.ReceiveBufferSize];
-            StringBuilder sbuilder = new StringBuilder();
-            int bytes = 0;
+            var response = new byte[TcpClient.ReceiveBufferSize];
+            var sbuilder = new StringBuilder();
+            var bytes = 0;
             long total = 0;
 
             do
             {
-                bytes = stream.Read(response, 0, _tcpClient.ReceiveBufferSize);
+                bytes = stream.Read(response, 0, TcpClient.ReceiveBufferSize);
                 total += bytes;
-                sbuilder.Append(System.Text.ASCIIEncoding.UTF8.GetString(response, 0, bytes));
+                sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
             } while (stream.DataAvailable);
 
             ParseResponse(sbuilder.ToString());
@@ -299,16 +273,16 @@ namespace Halibut.Transport.Proxy
             switch (_respCode)
             {
                 case HttpResponseCodes.None:
-                    msg = String.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} failed to return a recognized HTTP response code.  Server response: {2}", Utils.GetHost(_tcpClient), Utils.GetPort(_tcpClient), _respText);
+                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} failed to return a recognized HTTP response code.  Server response: {2}", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient), _respText);
                     break;                   
 
                 case HttpResponseCodes.BadGateway:
                     //HTTP/1.1 502 Proxy Error (The specified Secure Sockets Layer (SSL) port is not allowed. ISA Server is not configured to allow SSL requests from this port. Most Web browsers use port 443 for SSL requests.)
-                    msg = String.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a 502 code - Bad Gateway.  If you are connecting to a Microsoft ISA destination please refer to knowledge based article Q283284 for more information.  Server response: {2}", Utils.GetHost(_tcpClient), Utils.GetPort(_tcpClient), _respText);
+                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a 502 code - Bad Gateway.  If you are connecting to a Microsoft ISA destination please refer to knowledge based article Q283284 for more information.  Server response: {2}", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient), _respText);
                     break;
 
                 default:
-                    msg = String.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a {2} code - {3}", Utils.GetHost(_tcpClient), Utils.GetPort(_tcpClient), ((int)_respCode).ToString(CultureInfo.InvariantCulture), _respText);
+                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a {2} code - {3}", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient), ((int)_respCode).ToString(CultureInfo.InvariantCulture), _respText);
                     break;
             }
 
@@ -318,13 +292,13 @@ namespace Halibut.Transport.Proxy
 
         private void WaitForData(NetworkStream stream)
         {
-            int sleepTime = 0;
+            var sleepTime = 0;
             while (!stream.DataAvailable)
             {
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
-                    throw new ProxyException(String.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(_tcpClient), Utils.GetPort(_tcpClient) ));
+                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient) ));
             }
         }
 
@@ -340,21 +314,21 @@ namespace Halibut.Transport.Proxy
 
         private void ParseCodeAndText(string line)
         {
-            int begin = 0;
-            int end = 0;
+            var begin = 0;
+            var end = 0;
             string val = null;
 
             if (line.IndexOf("HTTP") == -1)
-                throw new ProxyException(String.Format("No HTTP response received from proxy destination.  Server response: {0}.", line));
+                throw new ProxyException(string.Format("No HTTP response received from proxy destination.  Server response: {0}.", line));
 
             begin = line.IndexOf(" ") + 1;
             end = line.IndexOf(" ", begin);
 
             val = line.Substring(begin, end - begin);
-            Int32 code = 0;
+            var code = 0;
 
-            if (!Int32.TryParse(val, out code))
-                throw new ProxyException(String.Format("An invalid response code was received from proxy destination.  Server response: {0}.", line));
+            if (!int.TryParse(val, out code))
+                throw new ProxyException(string.Format("An invalid response code was received from proxy destination.  Server response: {0}.", line));
 
             _respCode = (HttpResponseCodes)code;
             _respText = line.Substring(end + 1).Trim();

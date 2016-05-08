@@ -34,8 +34,6 @@ namespace Halibut.Transport.Proxy.EventArgs
     /// </summary>
     public class CreateConnectionAsyncCompletedEventArgs : AsyncCompletedEventArgs
     {
-        private TcpClient _proxyConnection;
-        
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -45,16 +43,13 @@ namespace Halibut.Transport.Proxy.EventArgs
         public CreateConnectionAsyncCompletedEventArgs(Exception error, bool cancelled, TcpClient proxyConnection)
             : base(error, cancelled, null)
         {
-            _proxyConnection = proxyConnection;
+            ProxyConnection = proxyConnection;
         }
 
         /// <summary>
         /// The proxy connection.
         /// </summary>
-        public TcpClient ProxyConnection
-        {
-            get { return _proxyConnection; }
-        }
+        public TcpClient ProxyConnection { get; }
     }
 
 } 

@@ -9,9 +9,9 @@ namespace Halibut.Transport.Proxy
         internal static string GetHost(TcpClient client)
         {
             if (client == null)
-                throw new ArgumentNullException("client");
+                throw new ArgumentNullException(nameof(client));
 
-            string host = "";
+            var host = "";
             try
             {
                 host = ((System.Net.IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
@@ -25,9 +25,9 @@ namespace Halibut.Transport.Proxy
         internal static string GetPort(TcpClient client)
         {
             if (client == null)
-                throw new ArgumentNullException("client");
+                throw new ArgumentNullException(nameof(client));
 
-            string port = "";
+            var port = "";
             try
             {
                 port = ((System.Net.IPEndPoint)client.Client.RemoteEndPoint).Port.ToString(CultureInfo.InvariantCulture);

@@ -24,13 +24,11 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using Halibut.Transport.Proxy.EventArgs;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport.Proxy
@@ -46,11 +44,6 @@ namespace Halibut.Transport.Proxy
         private const int WAIT_FOR_DATA_INTERVAL = 50;   // 50 ms
         private const int WAIT_FOR_DATA_TIMEOUT = 15000; // 15 seconds
         private const string PROXY_NAME = "SOCKS4";
-        private TcpClient _tcpClient;
-
-        private string _proxyHost;
-        private int _proxyPort;
-        private string _proxyUserId;
 
         /// <summary>
         /// Default Socks4 proxy port.
@@ -86,41 +79,6 @@ namespace Halibut.Transport.Proxy
         internal const byte SOCKS4_CMD_REPLY_REQUEST_REJECTED_DIFFERENT_IDENTD = 93;
 
         /// <summary>
-        /// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        public Socks4ProxyClient() { }
-
-        /// <summary>
-        /// Creates a Socks4 proxy client object using the supplied TcpClient object connection.
-        /// </summary>
-        /// <param name="tcpClient">A TcpClient connection object.</param>
-        public Socks4ProxyClient(TcpClient tcpClient)
-        {
-            if (tcpClient == null)
-                throw new ArgumentNullException("tcpClient");
-
-            _tcpClient = tcpClient;
-        }
-
-        /// <summary>
-        /// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyUserId">Proxy user identification information.</param>
-        public Socks4ProxyClient(string proxyHost, string proxyUserId) 
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-                throw new ArgumentNullException("proxyHost");
-            
-            if (proxyUserId == null)
-                throw new ArgumentNullException("proxyUserId");
-
-            _proxyHost = proxyHost;
-            _proxyPort = SOCKS_PROXY_DEFAULT_PORT;
-            _proxyUserId = proxyUserId;
-        }
-
-        /// <summary>
         /// Create a Socks4 proxy client object.
         /// </summary>
         /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
@@ -128,73 +86,35 @@ namespace Halibut.Transport.Proxy
         /// <param name="proxyUserId">Proxy user identification information.</param>
         public Socks4ProxyClient(string proxyHost, int proxyPort, string proxyUserId)
         {
-            if (String.IsNullOrEmpty(proxyHost))
-                throw new ArgumentNullException("proxyHost");
+            if (string.IsNullOrEmpty(proxyHost))
+                throw new ArgumentNullException(nameof(proxyHost));
 
             if (proxyPort <= 0 || proxyPort > 65535)
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
+                throw new ArgumentOutOfRangeException(nameof(proxyPort), "port must be greater than zero and less than 65535");
             
             if (proxyUserId == null)
-                throw new ArgumentNullException("proxyUserId");
+                throw new ArgumentNullException(nameof(proxyUserId));
             
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
-            _proxyUserId = proxyUserId;
-        }
-
-        /// <summary>
-        /// Create a Socks4 proxy client object.  The default proxy port 1080 is used.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        public Socks4ProxyClient(string proxyHost)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-                throw new ArgumentNullException("proxyHost");
-            
-            _proxyHost = proxyHost;
-            _proxyPort = SOCKS_PROXY_DEFAULT_PORT;
-        }
-
-        /// <summary>
-        /// Create a Socks4 proxy client object.
-        /// </summary>
-        /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
-        /// <param name="proxyPort">Port used to connect to proxy server.</param>
-        public Socks4ProxyClient(string proxyHost, int proxyPort)
-        {
-            if (String.IsNullOrEmpty(proxyHost))
-                throw new ArgumentNullException("proxyHost");
-
-            if (proxyPort <= 0 || proxyPort > 65535)
-                throw new ArgumentOutOfRangeException("proxyPort", "port must be greater than zero and less than 65535");
-
-            _proxyHost = proxyHost;
-            _proxyPort = proxyPort;
+            ProxyHost = proxyHost;
+            ProxyPort = proxyPort;
+            ProxyUserId = proxyUserId;
         }
 
         /// <summary>
         /// Gets or sets host name or IP address of the proxy server.
         /// </summary>
-        public string ProxyHost
-        {
-            get { return _proxyHost; }
-            set { _proxyHost = value; }
-        }
+        public string ProxyHost { get; set; }
 
         /// <summary>
         /// Gets or sets port used to connect to proxy server.
         /// </summary>
-        public int ProxyPort
-        {
-            get { return _proxyPort; }
-            set { _proxyPort = value; }
-        }
+        public int ProxyPort { get; set; }
 
         /// <summary>
         /// Gets String representing the name of the proxy. 
         /// </summary>
         /// <remarks>This property will always return the value 'SOCKS4'</remarks>
-        virtual public string ProxyName
+        public virtual string ProxyName
         {
             get { return PROXY_NAME; }
         }
@@ -202,27 +122,19 @@ namespace Halibut.Transport.Proxy
         /// <summary>
         /// Gets or sets proxy user identification information.
         /// </summary>
-        public string ProxyUserId
-        {
-            get { return _proxyUserId; }
-            set { _proxyUserId = value; }
-        }
+        public string ProxyUserId { get; set; }
 
         /// <summary>
         /// Gets or sets the TcpClient object. 
         /// This property can be set prior to executing CreateConnection to use an existing TcpClient connection.
         /// </summary>
-        public TcpClient TcpClient
-        {
-            get { return _tcpClient; }
-            set { _tcpClient = value; }
-        }
+        public TcpClient TcpClient { get; set; }
 
-        Func<TcpClient> _tcpClientFactory = () => new TcpClient();
+        Func<TcpClient> tcpClientFactory = () => new TcpClient();
 
         public IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory)
         {
-            _tcpClientFactory = tcpClientfactory;
+            tcpClientFactory = tcpClientfactory;
             return this;
         }
 
@@ -244,39 +156,39 @@ namespace Halibut.Transport.Proxy
         /// </remarks>
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
         {
-            if (String.IsNullOrEmpty(destinationHost))
-                throw new ArgumentNullException("destinationHost");
+            if (string.IsNullOrEmpty(destinationHost))
+                throw new ArgumentNullException(nameof(destinationHost));
 
             if (destinationPort <= 0 || destinationPort > 65535)
-                throw new ArgumentOutOfRangeException("destinationPort", "port must be greater than zero and less than 65535");
+                throw new ArgumentOutOfRangeException(nameof(destinationPort), "port must be greater than zero and less than 65535");
 
             try
             {
                 // if we have no connection, create one
-                if (_tcpClient == null)
+                if (TcpClient == null)
                 {
-                    if (String.IsNullOrEmpty(_proxyHost))
+                    if (string.IsNullOrEmpty(ProxyHost))
                         throw new ProxyException("ProxyHost property must contain a value.");
 
-                    if (_proxyPort <= 0 || _proxyPort > 65535)
+                    if (ProxyPort <= 0 || ProxyPort > 65535)
                         throw new ProxyException("ProxyPort value must be greater than zero and less than 65535");
 
                     //  create new tcp client object to the proxy server
-                    _tcpClient = _tcpClientFactory();
+                    TcpClient = tcpClientFactory();
 
                     // attempt to open the connection
-                    _tcpClient.ConnectWithTimeout(_proxyHost, _proxyPort, timeout);
+                    TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port
-                SendCommand(_tcpClient.GetStream(), SOCKS4_CMD_CONNECT, destinationHost, destinationPort, _proxyUserId);
+                SendCommand(TcpClient.GetStream(), SOCKS4_CMD_CONNECT, destinationHost, destinationPort, ProxyUserId);
 
                 // return the open proxied tcp client object to the caller for normal use
-                return _tcpClient;
+                return TcpClient;
             }
             catch (Exception ex)
             {
-                throw new ProxyException(String.Format(CultureInfo.InvariantCulture, "Connection to proxy host {0} on port {1} failed.", Utils.GetHost(_tcpClient), Utils.GetPort(_tcpClient)), ex);
+                throw new ProxyException(string.Format(CultureInfo.InvariantCulture, "Connection to proxy host {0} on port {1} failed.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), ex);
             }
         }
 
@@ -311,10 +223,10 @@ namespace Halibut.Transport.Proxy
             if (userId == null)
                 userId = "";
 
-            byte[] destIp = GetIPAddressBytes(destinationHost);
-            byte[] destPort = GetDestinationPortBytes(destinationPort);
-            byte[] userIdBytes = ASCIIEncoding.ASCII.GetBytes(userId);   
-            byte[] request = new byte[9 + userIdBytes.Length];
+            var destIp = GetIPAddressBytes(destinationHost);
+            var destPort = GetDestinationPortBytes(destinationPort);
+            var userIdBytes = Encoding.ASCII.GetBytes(userId);   
+            var request = new byte[9 + userIdBytes.Length];
 
             //  set the bits on the request byte array
             request[0] = SOCKS4_VERSION_NUMBER;
@@ -363,7 +275,7 @@ namespace Halibut.Transport.Proxy
             // connected to the application server.
 
             // create an 8 byte response array  
-            byte[] response = new byte[8];
+            var response = new byte[8];
             
             // read the resonse from the network stream
             proxy.Read(response, 0, 8);
@@ -391,7 +303,7 @@ namespace Halibut.Transport.Proxy
                 }
                 catch (Exception ex)
                 {
-                    throw new ProxyException(String.Format(CultureInfo.InvariantCulture, "A error occurred while attempting to DNS resolve the host name {0}.", destinationHost), ex);
+                    throw new ProxyException(string.Format(CultureInfo.InvariantCulture, "A error occurred while attempting to DNS resolve the host name {0}.", destinationHost), ex);
                 }
             }
            
@@ -406,7 +318,7 @@ namespace Halibut.Transport.Proxy
         /// <returns>Byte array representing an 16 bit port number as two bytes.</returns>
         internal byte[] GetDestinationPortBytes(int value)
         {
-            byte[] array = new byte[2];
+            var array = new byte[2];
             array[0] = Convert.ToByte(value / 256);
             array[1] = Convert.ToByte(value % 256);
             return array;
@@ -422,24 +334,24 @@ namespace Halibut.Transport.Proxy
         {
 
             if (response == null)
-                throw new ArgumentNullException("response"); 
+                throw new ArgumentNullException(nameof(response)); 
 
             //  extract the reply code
-            byte replyCode = response[1];
+            var replyCode = response[1];
            
             //  extract the ip v4 address (4 bytes)
-            byte[] ipBytes = new byte[4];
-            for (int i = 0; i < 4; i++)
+            var ipBytes = new byte[4];
+            for (var i = 0; i < 4; i++)
                 ipBytes[i] = response[i + 4];
             
             //  convert the ip address to an IPAddress object
-            IPAddress ipAddr = new IPAddress(ipBytes);
+            var ipAddr = new IPAddress(ipBytes);
 
             //  extract the port number big endian (2 bytes)
-            byte[] portBytes = new byte[2];
+            var portBytes = new byte[2];
             portBytes[0] = response[3];
             portBytes[1] = response[2];
-            Int16 port = BitConverter.ToInt16(portBytes, 0);
+            var port = BitConverter.ToInt16(portBytes, 0);
 
             // translate the reply code error number to human readable text
             string proxyErrorText;
@@ -455,12 +367,12 @@ namespace Halibut.Transport.Proxy
                     proxyErrorText = "connection request rejected because the client program and identd report different user-ids";
                     break;
                 default:
-                    proxyErrorText = String.Format(CultureInfo.InvariantCulture, "proxy client received an unknown reply with the code value '{0}' from the proxy destination", replyCode.ToString(CultureInfo.InvariantCulture));
+                    proxyErrorText = string.Format(CultureInfo.InvariantCulture, "proxy client received an unknown reply with the code value '{0}' from the proxy destination", replyCode.ToString(CultureInfo.InvariantCulture));
                     break;
             }
 
             //  build the exeception message string
-            string exceptionMsg = String.Format(CultureInfo.InvariantCulture, "The {0} concerning destination host {1} port number {2}.  The destination reported the host as {3} port {4}.", proxyErrorText, destinationHost, destinationPort, ipAddr.ToString(), port.ToString(CultureInfo.InvariantCulture));
+            var exceptionMsg = string.Format(CultureInfo.InvariantCulture, "The {0} concerning destination host {1} port number {2}.  The destination reported the host as {3} port {4}.", proxyErrorText, destinationHost, destinationPort, ipAddr.ToString(), port.ToString(CultureInfo.InvariantCulture));
 
             //  throw a new application exception 
             throw new ProxyException(exceptionMsg);
@@ -468,7 +380,7 @@ namespace Halibut.Transport.Proxy
 
         internal void WaitForData(NetworkStream stream)
         {
-            int sleepTime = 0;
+            var sleepTime = 0;
             while (!stream.DataAvailable)
             {
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);

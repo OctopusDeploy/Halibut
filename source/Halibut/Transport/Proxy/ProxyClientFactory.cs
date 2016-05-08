@@ -76,94 +76,6 @@ namespace Halibut.Transport.Proxy
     {
         readonly Func<TcpClient> tcpClientFactory;
 
-        public ProxyClientFactory()
-        {
-            this.tcpClientFactory = () => new TcpClient();
-        }
-
-        public ProxyClientFactory(Func<TcpClient> tcpClientFactory)
-        {
-            this.tcpClientFactory = tcpClientFactory;
-        }
-
-        /// <summary>
-        /// Factory method for creating new proxy client objects.
-        /// </summary>
-        /// <param name="type">The type of proxy client to create.</param>
-        /// <returns>Proxy client object.</returns>
-        public IProxyClient CreateProxyClient(ProxyType type)
-        {
-            if (type == ProxyType.None)
-                throw new ArgumentOutOfRangeException("type");
-
-            switch (type)
-            {
-                case ProxyType.HTTP:
-                    return new HttpProxyClient();
-                case ProxyType.SOCKS4:
-                    return new Socks4ProxyClient();
-                case ProxyType.SOCKS4A:
-                    return new Socks4aProxyClient();
-                case ProxyType.SOCKS5:
-                    return new Socks5ProxyClient();
-                default:
-                    throw new ProxyException(String.Format("Unknown proxy type {0}.", type.ToString()));
-            }
-        }        
-
-        /// <summary>
-        /// Factory method for creating new proxy client objects using an existing TcpClient connection object.
-        /// </summary>
-        /// <param name="type">The type of proxy client to create.</param>
-        /// <param name="tcpClient">Open TcpClient object.</param>
-        /// <returns>Proxy client object.</returns>
-        public IProxyClient CreateProxyClient(ProxyType type, TcpClient tcpClient)
-        {
-            if (type == ProxyType.None)
-                throw new ArgumentOutOfRangeException("type");
-            
-            switch (type)
-            {
-                case ProxyType.HTTP:
-                    return new HttpProxyClient(tcpClient);
-                case ProxyType.SOCKS4:
-                    return new Socks4ProxyClient(tcpClient);
-                case ProxyType.SOCKS4A:
-                    return new Socks4aProxyClient(tcpClient);
-                case ProxyType.SOCKS5:
-                    return new Socks5ProxyClient(tcpClient);
-                default:
-                    throw new ProxyException(String.Format("Unknown proxy type {0}.", type.ToString()));
-            }
-        }        
-        
-        /// <summary>
-        /// Factory method for creating new proxy client objects.  
-        /// </summary>
-        /// <param name="type">The type of proxy client to create.</param>
-        /// <param name="proxyHost">The proxy host or IP address.</param>
-        /// <param name="proxyPort">The proxy port number.</param>
-        /// <returns>Proxy client object.</returns>
-        public IProxyClient CreateProxyClient(ProxyType type, string proxyHost, int proxyPort)
-        {
-            if (type == ProxyType.None)
-                throw new ArgumentOutOfRangeException("type");
-            
-            switch (type)
-            {
-                case ProxyType.HTTP:
-                    return new HttpProxyClient(proxyHost, proxyPort);
-                case ProxyType.SOCKS4:
-                    return new Socks4ProxyClient(proxyHost, proxyPort);
-                case ProxyType.SOCKS4A:
-                    return new Socks4aProxyClient(proxyHost, proxyPort);
-                case ProxyType.SOCKS5:
-                    return new Socks5ProxyClient(proxyHost, proxyPort);
-                default:
-                    throw new ProxyException(String.Format("Unknown proxy type {0}.", type.ToString()));
-            }
-        }
-
         /// <summary>
         /// Factory method for creating new proxy client objects.  
         /// </summary>
@@ -176,12 +88,12 @@ namespace Halibut.Transport.Proxy
         public IProxyClient CreateProxyClient(ProxyType type, string proxyHost, int proxyPort, string proxyUsername, string proxyPassword)
         {
             if (type == ProxyType.None)
-                throw new ArgumentOutOfRangeException("type");
+                throw new ArgumentOutOfRangeException(nameof(type));
 
             switch (type)
             {
                 case ProxyType.HTTP:
-                    return new HttpProxyClient(proxyHost, proxyPort);
+                    return new HttpProxyClient(proxyHost, proxyPort, proxyUsername, proxyPassword);
                 case ProxyType.SOCKS4:
                     return new Socks4ProxyClient(proxyHost, proxyPort, proxyUsername);
                 case ProxyType.SOCKS4A:
@@ -189,30 +101,13 @@ namespace Halibut.Transport.Proxy
                 case ProxyType.SOCKS5:
                     return new Socks5ProxyClient(proxyHost, proxyPort, proxyUsername, proxyPassword);
                 default:
-                    throw new ProxyException(String.Format("Unknown proxy type {0}.", type.ToString()));
+                    throw new ProxyException(string.Format("Unknown proxy type {0}.", type.ToString()));
             }
         }
 
         public IProxyClient CreateProxyClient(ProxyDetails proxyDetails)
         {
             return CreateProxyClient(proxyDetails.Type, proxyDetails.Host, proxyDetails.Port, proxyDetails.UserName, proxyDetails.Password);
-        }
-
-        /// <summary>
-        /// Factory method for creating new proxy client objects.  
-        /// </summary>
-        /// <param name="type">The type of proxy client to create.</param>
-        /// <param name="tcpClient">Open TcpClient object.</param>
-        /// <param name="proxyHost">The proxy host or IP address.</param>
-        /// <param name="proxyPort">The proxy port number.</param>
-        /// <param name="proxyUsername">The proxy username.  This parameter is only used by Socks4 and Socks5 proxy objects.</param>
-        /// <param name="proxyPassword">The proxy user password.  This parameter is only used Socks5 proxy objects.</param>
-        /// <returns>Proxy client object.</returns>
-        public IProxyClient CreateProxyClient(ProxyType type, TcpClient tcpClient, string proxyHost, int proxyPort, string proxyUsername, string proxyPassword)
-        {
-            IProxyClient c = CreateProxyClient(type, proxyHost, proxyPort, proxyUsername, proxyPassword);
-            c.TcpClient = tcpClient;
-            return c;
         }
     }
 }
