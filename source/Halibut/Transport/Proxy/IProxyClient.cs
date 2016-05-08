@@ -34,12 +34,6 @@ namespace Halibut.Transport.Proxy
     /// </summary>
     public interface IProxyClient
     {
-
-        /// <summary>
-        /// Event handler for CreateConnectionAsync method completed.
-        /// </summary>
-        event EventHandler<CreateConnectionAsyncCompletedEventArgs> CreateConnectionAsyncCompleted;
-        
         /// <summary>
         /// Gets or sets proxy host name or IP address.
         /// </summary>
@@ -60,12 +54,14 @@ namespace Halibut.Transport.Proxy
         /// </summary>
         TcpClient TcpClient { get; set; }
 
-        TcpClient CreateConnection(string destinationHost, int destinationPort);
+        IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory);
 
         /// <summary>
+        /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
         /// </summary>
         /// <param name="destinationHost">Destination host name or IP address.</param>
         /// <param name="destinationPort">Port number to connect to on the destination host.</param>
+        /// <param name="timeout">Timeout duration for the Connect attempt.</param>
         /// <returns>
         /// Returns an open TcpClient object that can be used normally to communicate
         /// with the destination server
@@ -75,5 +71,6 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
+        TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout);
     }
 }

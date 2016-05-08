@@ -8,7 +8,12 @@ namespace Halibut.Transport
     {
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {
-            var connectResult = client.BeginConnect(remoteUri.Host, remoteUri.Port, ar => { }, null);
+            client.ConnectWithTimeout(remoteUri.Host, remoteUri.Port, timeout);
+        }
+
+        public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
+        {
+            var connectResult = client.BeginConnect(host, port, ar => { }, null);
             if (!connectResult.AsyncWaitHandle.WaitOne(HalibutLimits.TcpClientConnectTimeout))
             {
                 try

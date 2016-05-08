@@ -142,9 +142,10 @@ namespace Halibut.Transport
             }
             else
             {
-                var proxyClient = new ProxyClientFactory().CreateProxyClient(endPoint.Proxy);
-                proxyClient.TcpClient = CreateTcpClient();
-                client = proxyClient.CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port);
+                client = new ProxyClientFactory()
+                    .CreateProxyClient(endPoint.Proxy)
+                    .WithTcpClientFactory(CreateTcpClient)
+                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout);
             }
             return client;
         }

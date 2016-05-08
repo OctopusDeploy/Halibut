@@ -189,12 +189,20 @@ namespace Halibut.Transport.Proxy
             set { _tcpClient = value; }
         }
 
+        Func<TcpClient> _tcpClientFactory = () => new TcpClient();
+
+        public IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory)
+        {
+            _tcpClientFactory = tcpClientfactory;
+            return this;
+        }
 
         /// <summary>
         /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
         /// </summary>
         /// <param name="destinationHost">Destination host name or IP address.</param>
         /// <param name="destinationPort">Port number to connect to on the destination host.</param>
+        /// <param name="timeout">Timeout duration for the Connect attempt.</param>
         /// <returns>
         /// Returns an open TcpClient object that can be used normally to communicate
         /// with the destination server
@@ -204,7 +212,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        public TcpClient CreateConnection(string destinationHost, int destinationPort)
+        public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
         {
             try
             {
@@ -218,10 +226,10 @@ namespace Halibut.Transport.Proxy
                         throw new ProxyException("ProxyPort value must be greater than zero and less than 65535");
 
                     //  create new tcp client object to the proxy server
-                    _tcpClient = new TcpClient();
+                    _tcpClient = _tcpClientFactory();
 
                     // attempt to open the connection
-                    _tcpClient.Connect(_proxyHost, _proxyPort);
+                    _tcpClient.ConnectWithTimeout(_proxyHost, _proxyPort, timeout);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port
