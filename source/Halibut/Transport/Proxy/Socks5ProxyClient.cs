@@ -30,7 +30,6 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Halibut.Transport.Proxy.EventArgs;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport.Proxy
@@ -103,12 +102,6 @@ namespace Halibut.Transport.Proxy
 
             if (proxyPort <= 0 || proxyPort > 65535)
                 throw new ArgumentOutOfRangeException(nameof(proxyPort), "port must be greater than zero and less than 65535");
-
-            if (proxyUserName == null)
-                throw new ArgumentNullException(nameof(proxyUserName));
-
-            if (proxyPassword == null)
-                throw new ArgumentNullException(nameof(proxyPassword));
             
             ProxyHost = proxyHost;
             ProxyPort = proxyPort;
@@ -341,7 +334,7 @@ namespace Halibut.Transport.Proxy
                 stream.Write(credentials, 0, credentials.Length);
                 var crResponse = new byte[2];
                 stream.Read(crResponse, 0, crResponse.Length);
-
+                
                 if (crResponse[1] != 0)
                 {
                     TcpClient.Close();

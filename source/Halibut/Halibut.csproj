@@ -82,7 +82,6 @@
     <Compile Include="ServiceModel\NullServiceFactory.cs" />
     <Compile Include="Transport\Protocol\TemporaryFileDataStreamReceiver.cs" />
     <Compile Include="Transport\Protocol\TemporaryFileStream.cs" />
-    <Compile Include="Transport\Proxy\EventArgs\CreateConnectionAsyncCompletedEventArgs.cs" />
     <Compile Include="Transport\Proxy\Exceptions\ProxyException.cs" />
     <Compile Include="Transport\Proxy\HttpProxyClient.cs" />
     <Compile Include="Transport\Proxy\IProxyClient.cs" />

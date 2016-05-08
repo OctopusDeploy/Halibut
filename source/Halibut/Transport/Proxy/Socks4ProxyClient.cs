@@ -92,9 +92,6 @@ namespace Halibut.Transport.Proxy
             if (proxyPort <= 0 || proxyPort > 65535)
                 throw new ArgumentOutOfRangeException(nameof(proxyPort), "port must be greater than zero and less than 65535");
             
-            if (proxyUserId == null)
-                throw new ArgumentNullException(nameof(proxyUserId));
-            
             ProxyHost = proxyHost;
             ProxyPort = proxyPort;
             ProxyUserId = proxyUserId;

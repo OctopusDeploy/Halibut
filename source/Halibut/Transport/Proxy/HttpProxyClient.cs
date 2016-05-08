@@ -29,7 +29,6 @@ using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using Halibut.Transport.Proxy.EventArgs;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport.Proxy
@@ -51,8 +50,8 @@ namespace Halibut.Transport.Proxy
         private HttpResponseCodes _respCode;
         private string _respText;
 
-        private const int HTTP_PROXY_DEFAULT_PORT = 8080;
         private const string HTTP_PROXY_CONNECT_CMD = "CONNECT {0}:{1} HTTP/1.0\r\nHost: {0}:{1}\r\n\r\n";
+        private const string HTTP_PROXY_AUTH_CONNECT_CMD = "CONNECT {0}:{1} HTTP/1.0\r\nHost: {0}:{1}\r\nProxy-Authorization: Basic {2}\r\n\r\n";
         private const int WAIT_FOR_DATA_INTERVAL = 50; // 50 ms
         private const int WAIT_FOR_DATA_TIMEOUT = 15000; // 15 seconds
         private const string PROXY_NAME = "HTTP";
@@ -115,12 +114,6 @@ namespace Halibut.Transport.Proxy
 
             if (proxyPort <= 0 || proxyPort > 65535)
                 throw new ArgumentOutOfRangeException(nameof(proxyPort), "port must be greater than zero and less than 65535");
-
-            if (proxyUserName == null)
-                throw new ArgumentNullException(nameof(proxyUserName));
-
-            if (proxyPassword == null)
-                throw new ArgumentNullException(nameof(proxyPassword));
 
             ProxyHost = proxyHost;
             ProxyPort = proxyPort;
@@ -219,18 +212,10 @@ namespace Halibut.Transport.Proxy
         }
 
 
-        private void SendConnectionCommand(string host, int port)
+        void SendConnectionCommand(string host, int port)
         {
             var stream = TcpClient.GetStream(); 
-
-            // PROXY SERVER REQUEST
-            // =======================================================================
-            //CONNECT starksoft.com:443 HTTP/1.0 <CR><LF>
-            //HOST starksoft.com:443<CR><LF>
-            //[... other HTTP header lines ending with <CR><LF> if required]>
-            //<CR><LF>    // Last Empty Line
-
-            var connectCmd = string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture));
+            var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 
             // send the connect request
@@ -249,13 +234,10 @@ namespace Halibut.Transport.Proxy
             // create an byte response array  
             var response = new byte[TcpClient.ReceiveBufferSize];
             var sbuilder = new StringBuilder();
-            var bytes = 0;
-            long total = 0;
 
             do
             {
-                bytes = stream.Read(response, 0, TcpClient.ReceiveBufferSize);
-                total += bytes;
+                var bytes = stream.Read(response, 0, TcpClient.ReceiveBufferSize);
                 sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
             } while (stream.DataAvailable);
 
@@ -265,8 +247,27 @@ namespace Halibut.Transport.Proxy
             if (_respCode != HttpResponseCodes.OK)
                 HandleProxyCommandError(host, port);
         }
-        
-        private void HandleProxyCommandError(string host, int port)
+
+        string GetConnectCmd(string host, int port)
+        {
+            if (string.IsNullOrWhiteSpace(ProxyUserName))
+            {
+                return string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture));
+            }
+            else
+            {
+                var userNameAndPassword = EncodeTo64(ProxyUserName + ":" + ProxyPassword);
+                return string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_AUTH_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture), userNameAndPassword);
+            }
+        }
+
+        static string EncodeTo64(string toEncode)
+        {
+            var bytes = Encoding.ASCII.GetBytes(toEncode);
+            return Convert.ToBase64String(bytes);
+        }
+
+        void HandleProxyCommandError(string host, int port)
         {
             string msg;
 
@@ -290,7 +291,7 @@ namespace Halibut.Transport.Proxy
             throw new ProxyException(msg);
         }
 
-        private void WaitForData(NetworkStream stream)
+        void WaitForData(NetworkStream stream)
         {
             var sleepTime = 0;
             while (!stream.DataAvailable)
@@ -302,31 +303,25 @@ namespace Halibut.Transport.Proxy
             }
         }
 
-        private void ParseResponse(string response)
+        void ParseResponse(string response)
         {
-            string[] data = null;
-
             //  get rid of the LF character if it exists and then split the string on all CR
-            data = response.Replace('\n', ' ').Split('\r');
+            var data = response.Replace('\n', ' ').Split('\r');
             
             ParseCodeAndText(data[0]);
         }
 
-        private void ParseCodeAndText(string line)
+        void ParseCodeAndText(string line)
         {
-            var begin = 0;
-            var end = 0;
-            string val = null;
-
             if (line.IndexOf("HTTP") == -1)
                 throw new ProxyException(string.Format("No HTTP response received from proxy destination.  Server response: {0}.", line));
 
-            begin = line.IndexOf(" ") + 1;
-            end = line.IndexOf(" ", begin);
+            var begin = line.IndexOf(" ") + 1;
+            var end = line.IndexOf(" ", begin);
 
-            val = line.Substring(begin, end - begin);
-            var code = 0;
+            var val = line.Substring(begin, end - begin);
 
+            int code;
             if (!int.TryParse(val, out code))
                 throw new ProxyException(string.Format("An invalid response code was received from proxy destination.  Server response: {0}.", line));
 

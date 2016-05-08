@@ -25,7 +25,6 @@
 
 using System;
 using System.Net.Sockets;
-using Halibut.Transport.Proxy.EventArgs;
 
 namespace Halibut.Transport.Proxy
 {
