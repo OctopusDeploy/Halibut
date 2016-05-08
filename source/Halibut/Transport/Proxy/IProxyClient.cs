@@ -60,24 +60,9 @@ namespace Halibut.Transport.Proxy
         /// </summary>
         TcpClient TcpClient { get; set; }
 
-        /// <summary>
-        /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
-        /// </summary>
-        /// <param name="destinationHost">Destination host name or IP address.</param>
-        /// <param name="destinationPort">Port number to connect to on the destination host.</param>
-        /// <returns>
-        /// Returns an open TcpClient object that can be used normally to communicate
-        /// with the destination server
-        /// </returns>
-        /// <remarks>
-        /// This method creates a connection to the proxy server and instructs the proxy server
-        /// to make a pass through connection to the specified destination host on the specified
-        /// port.  
-        /// </remarks>
         TcpClient CreateConnection(string destinationHost, int destinationPort);
 
         /// <summary>
-        /// Asynchronously creates a remote TCP connection through a proxy server to the destination host on the destination port.
         /// </summary>
         /// <param name="destinationHost">Destination host name or IP address.</param>
         /// <param name="destinationPort">Port number to connect to on the destination host.</param>
@@ -90,7 +75,5 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        void CreateConnectionAsync(string destinationHost, int destinationPort);
-
     }
 }
