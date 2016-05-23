@@ -30,6 +30,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport.Proxy
@@ -42,6 +43,7 @@ namespace Halibut.Transport.Proxy
     /// </remarks>
     public class Socks5ProxyClient : IProxyClient
     {
+        readonly ILog log;
         private SocksAuthentication _proxyAuthMethod;
 
         private const string PROXY_NAME = "SOCKS5";        
@@ -91,12 +93,14 @@ namespace Halibut.Transport.Proxy
         /// <summary>
         /// Create a Socks5 proxy client object.  
         /// </summary>
+        /// <param name="logger"></param>
         /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
         /// <param name="proxyPort">Port used to connect to proxy server.</param>
         /// <param name="proxyUserName">Proxy authentication user name.</param>
         /// <param name="proxyPassword">Proxy authentication password.</param>
-        public Socks5ProxyClient(string proxyHost, int proxyPort, string proxyUserName, string proxyPassword)
+        public Socks5ProxyClient(ILog logger, string proxyHost, int proxyPort, string proxyUserName, string proxyPassword)
         {
+            log = logger;
             if (string.IsNullOrEmpty(proxyHost))
                 throw new ArgumentNullException(nameof(proxyHost));
 

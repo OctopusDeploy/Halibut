@@ -29,6 +29,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport.Proxy
@@ -81,10 +82,11 @@ namespace Halibut.Transport.Proxy
         /// <summary>
         /// Create a Socks4 proxy client object.
         /// </summary>
+        /// <param name="logger"></param>
         /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
         /// <param name="proxyPort">Port used to connect to proxy server.</param>
         /// <param name="proxyUserId">Proxy user identification information.</param>
-        public Socks4ProxyClient(string proxyHost, int proxyPort, string proxyUserId)
+        public Socks4ProxyClient(ILog logger, string proxyHost, int proxyPort, string proxyUserId)
         {
             if (string.IsNullOrEmpty(proxyHost))
                 throw new ArgumentNullException(nameof(proxyHost));

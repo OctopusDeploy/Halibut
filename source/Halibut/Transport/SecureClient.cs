@@ -132,7 +132,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
+        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
@@ -142,8 +142,9 @@ namespace Halibut.Transport
             }
             else
             {
+                log.Write(EventType.Diagnostic, "Creating a proxy client");
                 client = new ProxyClientFactory()
-                    .CreateProxyClient(endPoint.Proxy)
+                    .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
                     .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout);
             }

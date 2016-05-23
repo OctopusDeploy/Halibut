@@ -29,6 +29,7 @@ using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport.Proxy
@@ -49,6 +50,7 @@ namespace Halibut.Transport.Proxy
     {
         private HttpResponseCodes _respCode;
         private string _respText;
+        readonly ILog log;
 
         private const string HTTP_PROXY_CONNECT_CMD = "CONNECT {0}:{1} HTTP/1.0\r\nHost: {0}:{1}\r\n\r\n";
         private const string HTTP_PROXY_AUTH_CONNECT_CMD = "CONNECT {0}:{1} HTTP/1.0\r\nHost: {0}:{1}\r\nProxy-Authorization: Basic {2}\r\n\r\n";
@@ -103,12 +105,14 @@ namespace Halibut.Transport.Proxy
         /// <summary>
         /// Constructor.  
         /// </summary>
+        /// <param name="logger"></param>
         /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
         /// <param name="proxyPort">Port number for the proxy server.</param>
         /// <param name="proxyUserName">Proxy authentication user name.</param>
         /// <param name="proxyPassword">Proxy authentication password.</param>
-        public HttpProxyClient(string proxyHost, int proxyPort, string proxyUserName, string proxyPassword)
+        public HttpProxyClient(ILog logger, string proxyHost, int proxyPort, string proxyUserName, string proxyPassword)
         {
+            log = logger;
             if (string.IsNullOrEmpty(proxyHost))
                 throw new ArgumentNullException(nameof(proxyHost));
 
@@ -196,6 +200,7 @@ namespace Halibut.Transport.Proxy
                     TcpClient = tcpClientFactory();
 
                     // attempt to open the connection
+                    log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
                     TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout);
                 }
 
@@ -252,10 +257,12 @@ namespace Halibut.Transport.Proxy
         {
             if (string.IsNullOrWhiteSpace(ProxyUserName))
             {
+                log.Write(EventType.Diagnostic, "Sending unauthorized server CONNECT command for {0}:{1} to proxy", host, port.ToString(CultureInfo.InvariantCulture));
                 return string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture));
             }
             else
             {
+                log.Write(EventType.Diagnostic, "Sending authorized server CONNECT command for {0}:{1} to proxy", host, port.ToString(CultureInfo.InvariantCulture));
                 var userNameAndPassword = EncodeTo64(ProxyUserName + ":" + ProxyPassword);
                 return string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_AUTH_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture), userNameAndPassword);
             }

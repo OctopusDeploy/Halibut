@@ -26,6 +26,7 @@
 using System;
 using System.Net.Sockets;
 using System.Text;
+using Halibut.Diagnostics;
 
 namespace Halibut.Transport.Proxy
 {
@@ -47,8 +48,8 @@ namespace Halibut.Transport.Proxy
         /// <param name="proxyHost">Host name or IP address of the proxy server.</param>
         /// <param name="proxyPort">Port used to connect to proxy server.</param>
         /// <param name="proxyUserId">Proxy user identification information.</param>
-        public Socks4aProxyClient(string proxyHost, int proxyPort, string proxyUserId) 
-            : base(proxyHost, proxyPort, proxyUserId)
+        public Socks4aProxyClient(ILog logger, string proxyHost, int proxyPort, string proxyUserId) 
+            : base(logger, proxyHost, proxyPort, proxyUserId)
         { }
 
         /// <summary>

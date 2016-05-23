@@ -25,6 +25,7 @@
 
 using System;
 using System.Net.Sockets;
+using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport.Proxy
@@ -85,7 +86,7 @@ namespace Halibut.Transport.Proxy
         /// <param name="proxyUsername">The proxy username.  This parameter is only used by Socks4 and Socks5 proxy objects.</param>
         /// <param name="proxyPassword">The proxy user password.  This parameter is only used Socks5 proxy objects.</param>
         /// <returns>Proxy client object.</returns>
-        public IProxyClient CreateProxyClient(ProxyType type, string proxyHost, int proxyPort, string proxyUsername, string proxyPassword)
+        public IProxyClient CreateProxyClient(ILog logger, ProxyType type, string proxyHost, int proxyPort, string proxyUsername, string proxyPassword)
         {
             if (type == ProxyType.None)
                 throw new ArgumentOutOfRangeException(nameof(type));
@@ -93,21 +94,21 @@ namespace Halibut.Transport.Proxy
             switch (type)
             {
                 case ProxyType.HTTP:
-                    return new HttpProxyClient(proxyHost, proxyPort, proxyUsername, proxyPassword);
+                    return new HttpProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
                 case ProxyType.SOCKS4:
-                    return new Socks4ProxyClient(proxyHost, proxyPort, proxyUsername);
+                    return new Socks4ProxyClient(logger, proxyHost, proxyPort, proxyUsername);
                 case ProxyType.SOCKS4A:
-                    return new Socks4aProxyClient(proxyHost, proxyPort, proxyUsername);
+                    return new Socks4aProxyClient(logger, proxyHost, proxyPort, proxyUsername);
                 case ProxyType.SOCKS5:
-                    return new Socks5ProxyClient(proxyHost, proxyPort, proxyUsername, proxyPassword);
+                    return new Socks5ProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
                 default:
                     throw new ProxyException(string.Format("Unknown proxy type {0}.", type.ToString()));
             }
         }
 
-        public IProxyClient CreateProxyClient(ProxyDetails proxyDetails)
+        public IProxyClient CreateProxyClient(ILog logger, ProxyDetails proxyDetails)
         {
-            return CreateProxyClient(proxyDetails.Type, proxyDetails.Host, proxyDetails.Port, proxyDetails.UserName, proxyDetails.Password);
+            return CreateProxyClient(logger, proxyDetails.Type, proxyDetails.Host, proxyDetails.Port, proxyDetails.UserName, proxyDetails.Password);
         }
     }
 }
