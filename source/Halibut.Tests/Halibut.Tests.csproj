@@ -64,6 +64,7 @@
     <Compile Include="LocalDataStreamFixture.cs" />
     <Compile Include="ProtocolFixture.cs" />
     <Compile Include="SecureClientFixture.cs" />
+    <Compile Include="ServiceEndPointFixture.cs" />
     <Compile Include="TestServices\SupportedServices.cs" />
     <Compile Include="TestServices\EchoService.cs" />
     <Compile Include="TestServices\IEchoService.cs" />
