@@ -1,0 +1,14 @@
+{
+  "version": "0.0.0-*",
+  "dependencies": {
+    "Newtonsoft.Json": "9.0.1",
+    "Halibut.SampleContracts": "*",
+    "Halibut": "*"
+  },
+  "frameworks": {
+    "net45": {}
+  },
+  "buildOptions": {
+    "emitEntryPoint": true
+  }
+}

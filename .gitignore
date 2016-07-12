@@ -36,7 +36,7 @@ x64/
 *.vspscc
 *.vssscc
 .builds
-
+.vs
 # Visual C++ cache files
 ipch/
 *.aps
@@ -93,6 +93,9 @@ AppPackages/
 [Oo]bj
 sql
 TestResults
+*.received.*
+Publish/
+project.lock.json
 [Tt]est[Rr]esult*
 *.Cache
 ClientBin

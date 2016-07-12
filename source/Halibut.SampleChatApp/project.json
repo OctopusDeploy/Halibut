@@ -1,0 +1,19 @@
+{
+  "version": "0.0.0-*",
+  "dependencies": {},
+  "frameworks": {
+    "net40": {
+      "frameworkAssemblies": {
+        "System.Core": "*",
+        "System.Xml.Linq": "*",
+        "System.Data.DataSetExtensions": "*",
+        "Microsoft.CSharp": "*",
+        "System.Data": "*",
+        "System.Deployment": "*",
+        "System.Drawing": "*",
+        "System.Windows.Forms": "*",
+        "System.Xml": "*"
+      }
+    }
+  }
+}

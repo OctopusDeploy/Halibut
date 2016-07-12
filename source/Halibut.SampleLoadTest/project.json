@@ -1,0 +1,21 @@
+{
+  "version": "0.0.0-*",
+  "dependencies": {
+    "Halibut": "*"
+  },
+  "frameworks": {
+    "net45": {
+      "frameworkAssemblies": {
+        "System.Core": "*",
+        "System.Xml.Linq": "*",
+        "System.Data.DataSetExtensions": "*",
+        "Microsoft.CSharp": "*",
+        "System.Data": "*",
+        "System.Xml": "*"
+      }
+    }
+  },
+  "buildOptions": {
+    "emitEntryPoint": true
+  }
+}
