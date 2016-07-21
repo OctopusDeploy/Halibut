@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -12,8 +13,18 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
+    [Flags]
+    enum HANDLE_FLAGS : uint
+    {
+        None = 0,
+        INHERIT = 1,
+        PROTECT_FROM_CLOSE = 2
+    }
+
     public class SecureListener
     {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
         readonly Action<MessageExchangeProtocol> protocolHandler;
@@ -44,6 +55,9 @@ namespace Halibut.Transport
                 listener.Server.DualMode = true;
             }
             listener.Start();
+            // set socket handle as not inherited so that when tentacle runs powershell
+            // with System.Diagnostics.Process those scripts don't lock the socket
+            SetHandleInformation(listener.Server.Handle, HANDLE_FLAGS.INHERIT, HANDLE_FLAGS.None);
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
             Accept();
