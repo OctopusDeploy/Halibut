@@ -6,7 +6,7 @@
     "Halibut": "*"
   },
   "frameworks": {
-    "net45": {}
+    "net451": {}
   },
   "buildOptions": {
     "emitEntryPoint": true
