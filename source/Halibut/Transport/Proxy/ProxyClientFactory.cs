@@ -95,12 +95,6 @@ namespace Halibut.Transport.Proxy
             {
                 case ProxyType.HTTP:
                     return new HttpProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
-                case ProxyType.SOCKS4:
-                    return new Socks4ProxyClient(logger, proxyHost, proxyPort, proxyUsername);
-                case ProxyType.SOCKS4A:
-                    return new Socks4aProxyClient(logger, proxyHost, proxyPort, proxyUsername);
-                case ProxyType.SOCKS5:
-                    return new Socks5ProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
                 default:
                     throw new ProxyException(string.Format("Unknown proxy type {0}.", type.ToString()));
             }

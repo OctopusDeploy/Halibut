@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -78,7 +79,7 @@ namespace Halibut
         public ServiceEndPoint Discover(Uri uri)
         {
             var client = new DiscoveryClient();
-            return client.Discover(uri);
+            return client.Discover(uri).Result;
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
@@ -88,7 +89,13 @@ namespace Halibut
 
         public TService CreateClient<TService>(ServiceEndPoint endpoint)
         {
+#if HAS_REAL_PROXY
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
+#else
+            var proxy = DispatchProxy.Create<TService, HalibutProxy>();
+            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint);
+            return proxy;
+#endif
         }
 
         ResponseMessage SendOutgoingRequest(RequestMessage request)
@@ -113,7 +120,7 @@ namespace Halibut
             client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
-            });
+            }).Wait();
             return response;
         }
 

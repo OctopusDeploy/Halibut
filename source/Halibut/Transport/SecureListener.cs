@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
@@ -23,8 +24,10 @@ namespace Halibut.Transport
 
     public class SecureListener
     {
+#if CAN_GET_SOCKET_HANDLE
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
+#endif
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
         readonly Action<MessageExchangeProtocol> protocolHandler;
@@ -55,52 +58,50 @@ namespace Halibut.Transport
                 listener.Server.DualMode = true;
             }
             listener.Start();
+
+#if CAN_GET_SOCKET_HANDLE
             // set socket handle as not inherited so that when tentacle runs powershell
             // with System.Diagnostics.Process those scripts don't lock the socket
             SetHandleInformation(listener.Server.Handle, HANDLE_FLAGS.INHERIT, HANDLE_FLAGS.None);
+#endif
+
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Accept();
+            Task.Run(async () => await Accept().ConfigureAwait(false)); //don't await, we want to kick off and return
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
-        void Accept()
+        async Task Accept()
         {
-            if (isStopped)
-                return;
-
-            listener.BeginAcceptTcpClient(r =>
+            while (true)
             {
-                try
-                {
-                    if (isStopped)
-                        return;
-
-                    var client = listener.EndAcceptTcpClient(r);
-                    if (isStopped)
-                        return;
-
-                    client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                    client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
-
-                    log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-
-                    var task = new Task(() => ExecuteRequest(client));
-                    task.Start();
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-                catch (Exception ex)
-                {
-                    log.WriteException(EventType.Error, "Error accepting TCP client", ex);
-                }
-
-                Accept();
-            }, null);
+                if (isStopped) return;
+                var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                if (isStopped) return;
+                Task.Run(() => HandleClient(client).ConfigureAwait(false)); //don't await, we want to kick off and keep looping
+            }
         }
 
-        void ExecuteRequest(TcpClient client)
+        async Task HandleClient(TcpClient client)
+        {
+            try
+            {
+                client.SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+
+                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
+                await ExecuteRequest(client).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (Exception ex)
+            {
+                log.WriteException(EventType.Error, "Error accepting TCP client", ex);
+            }
+        }
+
+        async Task ExecuteRequest(TcpClient client)
         {
             // By default we will close the stream to cater for failure scenarios
             var keepStreamOpen = false;
@@ -113,7 +114,7 @@ namespace Halibut.Transport
                 try
                 {
                     log.Write(EventType.Security, "Performing TLS server handshake");
-                    ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
 
                     log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -153,8 +154,13 @@ namespace Halibut.Transport
                     if (!keepStreamOpen)
                     {
                         // Closing an already closed stream or client is safe, better not to leak
+#if NET40
                         stream.Close();
                         client.Close();
+#else
+                        stream.Dispose();
+                        client.Dispose();
+#endif
                     }
                 }
             }
@@ -189,7 +195,7 @@ namespace Halibut.Transport
                 return false;
             }
 
-            var thumbprint = new X509Certificate2(stream.RemoteCertificate).Thumbprint;
+            var thumbprint = new X509Certificate2(stream.RemoteCertificate.Export(X509ContentType.Cert)).Thumbprint;
             var isAuthorized = verifyClientThumbprint(thumbprint);
 
             if (!isAuthorized)
