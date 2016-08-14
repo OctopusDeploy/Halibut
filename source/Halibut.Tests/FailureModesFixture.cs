@@ -5,6 +5,27 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    //public static class Test
+    //{
+    //    public static Exception Throws<T>(Action action) where T: Exception
+    //    {
+    //        try
+    //        {
+    //            action();
+    //            Assert.Fail("Test did not throw");
+    //            return null;
+    //        }
+    //        catch (T ex)
+    //        {
+    //            return ex;
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            Assert.Fail($"Test did not throw expected exception, instead threw {ex.GetType()}");
+    //            return null;
+    //        }
+    //    }
+    //}
     public class FailureModesFixture
     {
         DelegateServiceFactory services;
@@ -23,7 +44,7 @@ namespace Halibut.Tests
             {
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 var error = Assert.Throws<HalibutClientException>(() => echo.SayHello("Paul"));
-                Assert.That(error.Message, Is.StringContaining("the polling endpoint did not collect the request within the allowed time"));
+                Assert.That(error.Message, Does.Contain("the polling endpoint did not collect the request within the allowed time"));
             }
         }
 
@@ -38,7 +59,7 @@ namespace Halibut.Tests
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                Assert.That(ex.Message, Is.StringContaining("at Halibut.Tests.TestServices.EchoService.Crash()").And.StringContaining("divide by zero"));
+                Assert.That(ex.Message, Does.Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contains("divide by zero"));
             }
         }
 
@@ -55,7 +76,7 @@ namespace Halibut.Tests
 
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                Assert.That(ex.Message, Is.StringContaining("at Halibut.Tests.TestServices.EchoService.Crash()").And.StringContaining("divide by zero"));
+                Assert.That(ex.Message, Does.Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contains("divide by zero"));
             }
         }
 
@@ -66,7 +87,7 @@ namespace Halibut.Tests
             {
                 var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                Assert.That(ex.Message, Is.StringContaining("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request").And.StringContaining("No such host is known"));
+                Assert.That(ex.Message, Does.Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request").And.Contains("No such host is known"));
             }
         }
 
@@ -77,7 +98,7 @@ namespace Halibut.Tests
             {
                 var echo = octopus.CreateClient<IEchoService>("https://google.com:88", Certificates.TentacleListeningPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                Assert.That(ex.Message, Is.StringContaining("when sending a request to 'https://google.com:88/', before the request"));
+                Assert.That(ex.Message, Does.Contain("when sending a request to 'https://google.com:88/', before the request"));
             }
         }
 

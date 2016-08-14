@@ -1,11 +1,15 @@
 {
   "version": "0.0.0-*",
+  "buildOptions": {
+    "emitEntryPoint": true 
+  },
   "dependencies": {
     "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
     "NSubstitute": "2.0.0-alpha003",
     "NUnit": "3.4.1",
-    "dotnet-test-nunit": "3.4.0-beta-1",
+    "NUnitLite": "3.4.1",
+    "dotnet-test-nunit": "3.4.0-beta-2",
     "Halibut": "*"
   },
   "testRunner": "nunit",

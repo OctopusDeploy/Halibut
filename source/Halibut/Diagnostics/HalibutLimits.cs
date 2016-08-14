@@ -1,7 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using System;
-#if NET40
-using System.Configuration;
-#endif
+using System.IO;
 using System.Reflection;
 
 namespace Halibut.Diagnostics
@@ -10,20 +9,23 @@ namespace Halibut.Diagnostics
     {
         static HalibutLimits()
         {
-#if NET40
-            var settings = ConfigurationManager.AppSettings;
+
+            var builder = new ConfigurationBuilder();
+            builder.SetBasePath(Directory.GetCurrentDirectory());
+            builder.AddJsonFile("appsettings.json");
+            var halibutConfig = builder.Build();
+
+            //var settings = ConfigurationManager.AppSettings;
 
             var fields = typeof (HalibutLimits).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
             foreach (var field in fields)
             {
-                var value = settings.Get("Halibut." + field.Name);
+                var value = halibutConfig["Halibut:" + field.Name];
                 if (string.IsNullOrWhiteSpace(value)) continue;
                 var time = TimeSpan.Parse(value);
                 field.SetValue(null, time);
             }
-#else
-            throw new NotImplementedException();
-#endif
+
         }
 
         public static TimeSpan PollingRequestQueueTimeout = TimeSpan.FromMinutes(2);

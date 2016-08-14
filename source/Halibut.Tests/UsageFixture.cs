@@ -155,7 +155,7 @@ namespace Halibut.Tests
                 Assert.That(echo.Ambiguous("a", new Tuple<string, string>("a", "b")), Is.EqualTo("Hello tuple"));
 
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
-                Assert.That(ex.Message, Is.StringContaining("Ambiguous"));
+                Assert.That(ex.Message, Does.Contain("Ambiguous"));
             }
         }
 

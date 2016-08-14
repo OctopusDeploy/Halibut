@@ -29,6 +29,7 @@ using System.Globalization;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
 
@@ -183,7 +184,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
+        public async Task<TcpClient> CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
         {
             try
             {
@@ -201,7 +202,7 @@ namespace Halibut.Transport.Proxy
 
                     // attempt to open the connection
                     log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
-                    TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout);
+                    await TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port

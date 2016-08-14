@@ -25,6 +25,7 @@
 
 using System;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport.Proxy
 {
@@ -70,7 +71,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout);
+        Task<TcpClient> CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout);
     }
 }
     

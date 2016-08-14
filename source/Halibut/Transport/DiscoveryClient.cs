@@ -19,7 +19,7 @@ namespace Halibut.Transport
             {
                 using (var client = CreateTcpClient())
                 {
-                    client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
+                    await client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
                     using (var stream = client.GetStream())
                     {
                         using (var ssl = new SslStream(stream, false, ValidateCertificate))

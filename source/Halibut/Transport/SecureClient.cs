@@ -116,7 +116,7 @@ namespace Halibut.Transport
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
-            var client = CreateConnectedTcpClient(serviceEndpoint);
+            var client = await CreateConnectedTcpClient(serviceEndpoint);
             log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
@@ -133,18 +133,18 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
+        async Task<TcpClient> CreateConnectedTcpClient(ServiceEndPoint endPoint)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
             {
                 client = CreateTcpClient();
-                client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
+                await client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
             }
             else
             {
                 log.Write(EventType.Diagnostic, "Creating a proxy client");
-                client = new ProxyClientFactory()
+                client = await new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
                     .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout);

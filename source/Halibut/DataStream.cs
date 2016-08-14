@@ -133,7 +133,7 @@ namespace Halibut
                     Swap(ref readBuffer, ref writeBuffer);
                     var asyncResult = destination.WriteAsync(writeBuffer, 0, count);
                     count = source.Read(readBuffer, 0, BufferSize);
-                    asyncResult.Wait();
+                    asyncResult.GetAwaiter().GetResult();
 
                     copiedSoFar += count;
 

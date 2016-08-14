@@ -79,7 +79,7 @@ namespace Halibut
         public ServiceEndPoint Discover(Uri uri)
         {
             var client = new DiscoveryClient();
-            return client.Discover(uri).Result;
+            return client.Discover(uri).GetAwaiter().GetResult();
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
@@ -120,7 +120,7 @@ namespace Halibut
             client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
-            }).Wait();
+            }).GetAwaiter().GetResult();
             return response;
         }
 
