@@ -34,9 +34,9 @@ namespace Halibut.Transport
         readonly Predicate<string> verifyClientThumbprint;
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
+        readonly CancellationTokenSource cts = new CancellationTokenSource();
         ILog log;
         TcpListener listener;
-        bool isStopped;
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
         {
@@ -46,7 +46,6 @@ namespace Halibut.Transport
             this.verifyClientThumbprint = verifyClientThumbprint;
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
-
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -67,18 +66,27 @@ namespace Halibut.Transport
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(() => Accept()); 
+            Task.Run(async () => await Accept()); 
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
-        void Accept()
+        async Task Accept()
         {
-            while (true)
+            while (!cts.IsCancellationRequested)
             {
-                if (isStopped) return;
-                var client = listener.AcceptTcpClientAsync().GetAwaiter().GetResult();
-                if (isStopped) return;
-                Task.Run(() => HandleClient(client));
+                using (cts.Token.Register(listener.Stop))
+                {
+                    try
+                    {
+                        var client = await listener.AcceptTcpClientAsync();
+                        Task.Run(() => HandleClient(client));
+                    }
+                    catch (SocketException e)
+                    {
+                        if (e.SocketErrorCode != SocketError.Interrupted)
+                        throw;
+                    }
+                }
             }
         }
 
@@ -265,7 +273,7 @@ namespace Halibut.Transport
 
         public void Dispose()
         {
-            isStopped = true;
+            cts.Cancel();
             listener.Stop();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }

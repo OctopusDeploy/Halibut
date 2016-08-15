@@ -2,10 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
+using Newtonsoft.Json.Bson;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -224,20 +229,34 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [Timeout(5000)]
         [Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
         public void ConnectingOverHttpShouldFailQuickly()
+        {
+            var task = Task.Run(() => DoConnectingOverHttpShouldFailQuickly());
+            if (!task.Wait(5000))
+            {
+                Assert.Fail("Test did not complete within timeout");
+            }
+        }
+
+        void DoConnectingOverHttpShouldFailQuickly()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var listenPort = octopus.Listen();
+#if NET40
                 Assert.Throws<WebException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
+#else
+                Assert.Throws<HttpRequestException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
+#endif
+
             }
         }
 
         static string DownloadStringIgnoringCertificateValidation(string uri)
         {
-            using (var webClient = new WebClient())
+#if NET40
+             using (var webClient = new WebClient())
             {
                 try
                 {
@@ -251,6 +270,15 @@ namespace Halibut.Tests
                     ServicePointManager.ServerCertificateValidationCallback = null;
                 }
             }
+#else
+            var handler = new HttpClientHandler();
+            // We need to ignore server certificate validation errors - the server certificate is self-signed
+            handler.ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) => true;
+            using (var webClient = new HttpClient(handler))
+            {
+                return webClient.GetStringAsync(uri).GetAwaiter().GetResult();
+            }
+#endif
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
@@ -193,8 +194,18 @@ namespace Halibut.Transport.Protocol
 
         T ReadBsonMessage<T>()
         {
+            // the BufferedStream -> DeflateStream -> NetworkStream combination
+            // isn't flushing properly in netcore leaving the Read side to sit
+            // waiting for ever. Removing DeflateStream fixes
+            // it for now, but stock BufferedStream doesn't have an option to
+            // not close the underlying stream on dispose, so we've copied it
+            // and added that flag.
+#if NET40
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var buffer = new BufferedStream(zip, 8192))
+            using (var buffer = new System.IO.BufferedStream(zip, 8192))
+#else
+            using (var buffer = new BufferedStream(stream, 8192, true))
+#endif
             using (var bson = new BsonReader(buffer) { CloseInput = false })
             {
                 return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
@@ -252,8 +263,13 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
+            // See ReadBsonMessage for why all this is here for now.
+#if NET40
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var buffer = new BufferedStream(zip))
+            using (var buffer = new System.IO.BufferedStream(zip))
+#else
+            using (var buffer = new BufferedStream(stream, true))
+#endif
             using (var bson = new BsonWriter(buffer) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });

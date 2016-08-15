@@ -26,7 +26,7 @@
         "System.Runtime.InteropServices.RuntimeInformation": "4.0.0",
         "System.Net.Security": "4.0.0",
         "System.Threading.Thread": "4.0.0",
-        "System.Diagnostics.TraceSource": "4.0.0" 
+        "System.Diagnostics.TraceSource": "4.0.0"
       },
       "buildOptions": {
         "define": [ "HAS_DISPATCH_PROXY", "HAS_ASYNC_LOCAL" ]
