@@ -67,22 +67,22 @@ namespace Halibut.Transport
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(async () => await Accept().ConfigureAwait(false)); //don't await, we want to kick off and return
+            Task.Run(() => Accept()); 
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
-        async Task Accept()
+        void Accept()
         {
             while (true)
             {
                 if (isStopped) return;
-                var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                var client = listener.AcceptTcpClientAsync().GetAwaiter().GetResult();
                 if (isStopped) return;
-                Task.Run(() => HandleClient(client).ConfigureAwait(false)); //don't await, we want to kick off and keep looping
+                Task.Run(() => HandleClient(client));
             }
         }
 
-        async Task HandleClient(TcpClient client)
+        void HandleClient(TcpClient client)
         {
             try
             {
@@ -90,7 +90,7 @@ namespace Halibut.Transport
                 client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-                await ExecuteRequest(client).ConfigureAwait(false);
+                ExecuteRequest(client);
             }
             catch (ObjectDisposedException)
             {
@@ -101,7 +101,7 @@ namespace Halibut.Transport
             }
         }
 
-        async Task ExecuteRequest(TcpClient client)
+        void ExecuteRequest(TcpClient client)
         {
             // By default we will close the stream to cater for failure scenarios
             var keepStreamOpen = false;
@@ -114,7 +114,7 @@ namespace Halibut.Transport
                 try
                 {
                     log.Write(EventType.Security, "Performing TLS server handshake");
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+                    ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
 
                     log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 

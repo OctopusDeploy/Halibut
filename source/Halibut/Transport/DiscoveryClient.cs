@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 using Halibut.Diagnostics;
 
 namespace Halibut.Transport
@@ -13,18 +12,18 @@ namespace Halibut.Transport
     {
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
 
-        public async Task<ServiceEndPoint> Discover(Uri remoteUri)
+        public ServiceEndPoint Discover(Uri remoteUri)
         {
             try
             {
                 using (var client = CreateTcpClient())
                 {
-                    await client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
+                    client.ConnectWithTimeout(remoteUri, HalibutLimits.TcpClientConnectTimeout);
                     using (var stream = client.GetStream())
                     {
                         using (var ssl = new SslStream(stream, false, ValidateCertificate))
                         {
-                            await ssl.AuthenticateAsClientAsync(remoteUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+                            ssl.AuthenticateAsClientAsync(remoteUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
                             ssl.Write(HelloLine, 0, HelloLine.Length);
                             ssl.Flush();
 

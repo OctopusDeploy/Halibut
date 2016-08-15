@@ -35,7 +35,7 @@ namespace Halibut.Transport
             get { return serviceEndpoint; }
         }
 
-        public async Task ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
+        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
         {
             var retryInterval = HalibutLimits.RetryListeningSleepInterval;
 
@@ -52,7 +52,7 @@ namespace Halibut.Transport
                 {
                     lastError = null;
 
-                    var connection = await AcquireConnection().ConfigureAwait(false);
+                    var connection = AcquireConnection();
 
                     // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                     retryAllowed = false;
@@ -105,25 +105,25 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
-        async Task<IConnection> AcquireConnection()
+        IConnection AcquireConnection()
         {
             var connection = pool.Take(serviceEndpoint);
-            return connection ?? await EstablishNewConnection().ConfigureAwait(false);
+            return connection ?? EstablishNewConnection();
         }
 
-        async Task<SecureConnection> EstablishNewConnection()
+        SecureConnection EstablishNewConnection()
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
-            var client = await CreateConnectedTcpClient(serviceEndpoint);
+            var client = CreateConnectedTcpClient(serviceEndpoint);
             log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
 
             log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+            ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
 
@@ -133,18 +133,18 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        async Task<TcpClient> CreateConnectedTcpClient(ServiceEndPoint endPoint)
+        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
             {
                 client = CreateTcpClient();
-                await client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
+                client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
             }
             else
             {
                 log.Write(EventType.Diagnostic, "Creating a proxy client");
-                client = await new ProxyClientFactory()
+                client = new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
                     .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout);
