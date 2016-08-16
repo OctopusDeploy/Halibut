@@ -6,7 +6,7 @@ using Halibut.ServiceModel;
 
 namespace Halibut.SampleServer
 {
-    class Program
+    public class Program
     {
         public static void Main(string[] args)
         {

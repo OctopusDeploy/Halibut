@@ -6,7 +6,7 @@ using Halibut.SampleContracts;
 
 namespace Halibut.SampleClient
 {
-    class Program
+    public class Program
     {
         public static void Main(string[] args)
         {
@@ -24,6 +24,8 @@ namespace Halibut.SampleClient
                 var result = calculator.Add(12, 18);
 
                 Console.WriteLine("12 + 18 = " + result);
+
+                Console.ReadKey();
             }
         }
     }

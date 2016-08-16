@@ -45,6 +45,7 @@ namespace Halibut.SampleLoadTest
             var watch = Stopwatch.StartNew();
             Parallel.ForEach(tasks, t => t());
             Console.WriteLine("Done in: {0:n0}ms", watch.ElapsedMilliseconds);
+            Console.ReadKey();
         }
 
         static int RunServer()

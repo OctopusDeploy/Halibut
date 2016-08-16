@@ -12,7 +12,7 @@ namespace Halibut.Diagnostics
 
             var builder = new ConfigurationBuilder();
             builder.SetBasePath(Directory.GetCurrentDirectory());
-            builder.AddJsonFile("appsettings.json");
+            builder.AddJsonFile("appsettings.json", optional: true);
             var halibutConfig = builder.Build();
 
             //var settings = ConfigurationManager.AppSettings;

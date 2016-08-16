@@ -13,6 +13,7 @@
         "System.Data": "*",
         "System.Xml": "*"
       }
-    }
+    },
+    "netstandard1.5": {}
   }
 }
