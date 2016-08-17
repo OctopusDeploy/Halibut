@@ -89,8 +89,6 @@ namespace Halibut.ServiceModel
         }
     }
 #else
-    using System.Reflection;
-    using System;
     public class HalibutProxy : DispatchProxy
     {
         Func<RequestMessage, ResponseMessage> messageRouter;
@@ -111,28 +109,22 @@ namespace Halibut.ServiceModel
         {
             if (!configured)
                 throw new Exception("Proxy not configured");
-            //try
-            //{
-                var request = CreateRequest(targetMethod, args);
 
-                var response = DispatchRequest(request);
+            var request = CreateRequest(targetMethod, args);
 
-                EnsureNotError(response);
+            var response = DispatchRequest(request);
 
-                var result = response.Result;
+            EnsureNotError(response);
 
-                var returnType = targetMethod.ReturnType;
-                if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
-                {
-                    result = Convert.ChangeType(result, returnType);
-                }
+            var result = response.Result;
 
-                return result;
-            //}
-            //catch (Exception ex)
-            //{
-            //    return new ReturnMessage(ex, methodCall);
-            //}
+            var returnType = targetMethod.ReturnType;
+            if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
+            {
+                result = Convert.ChangeType(result, returnType);
+            }
+
+            return result;
         }
 
         RequestMessage CreateRequest(MethodInfo targetMethod, object[] args)

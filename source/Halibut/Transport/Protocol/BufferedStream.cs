@@ -1114,11 +1114,6 @@ namespace Halibut.Transport.Protocol
             return TaskFromException<bool>(e);
         }
 
-        Task TaskFromCanceled(CancellationToken cancellationToken)
-        {
-            return TaskFromCanceled<bool>(cancellationToken);
-        }
-
         Task<T> TaskFromCanceled<T>(CancellationToken cancellationToken)
         {
             return new Task<T>(x => default(T), cancellationToken);
