@@ -1,0 +1,14 @@
+version: '{build}'
+environment:
+  MyGetApiKey:
+    secure: KXI+KWF6Al2eqoBTWzeVMMQbcESCM2uJDCOZE/u446fUaXDxvUTe+3UzllVULt3b
+configuration: Release
+platform: Any CPU
+build_script:
+- cmd: build.cmd
+artifacts:
+- path: artifacts\**\*.*
+cache:
+- '%USERPROFILE%\.nuget\packages'
+test: off
+deploy: off
