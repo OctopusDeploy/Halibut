@@ -9,8 +9,16 @@ namespace Halibut.Diagnostics
     {
         static HalibutLimits()
         {
+            // should be able to use Directory.GetCurrentDirectory()
+            // to get the working path, but the nunit test runner
+            // runs from another directory. Go with dll location for now.
+#if NET40
+            var directory = Path.GetDirectoryName(new Uri(typeof(HalibutLimits).Assembly.CodeBase).LocalPath);
+#else
+            var directory = Path.GetDirectoryName(new Uri(typeof(HalibutLimits).GetTypeInfo().Assembly.CodeBase).LocalPath);
+#endif
             var builder = new ConfigurationBuilder();
-            builder.SetBasePath(Directory.GetCurrentDirectory());
+            builder.SetBasePath(directory);
             builder.AddJsonFile("appsettings.json", optional: true);
             var halibutConfig = builder.Build();
 
