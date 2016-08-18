@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
+using Halibut.Logging;
 
 namespace Halibut.Diagnostics
 {
     public class InMemoryConnectionLog : ILog
     {
-        static readonly TraceSource TraceSource = new TraceSource("Halibut");
         readonly string endpoint;
         readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
         
@@ -34,7 +33,7 @@ namespace Halibut.Diagnostics
 
         void WriteInternal(LogEvent logEvent)
         {
-            SendToTrace(logEvent, logEvent.Type == EventType.Diagnostic ? TraceEventType.Verbose : TraceEventType.Information);
+            SendToTrace(logEvent, logEvent.Type == EventType.Diagnostic ? LogLevel.Trace : LogLevel.Info);
 
             events.Enqueue(logEvent);
 
@@ -42,12 +41,10 @@ namespace Halibut.Diagnostics
             while (events.Count > 100 && events.TryDequeue(out ignore)) { }
         }
 
-        void SendToTrace(LogEvent logEvent, TraceEventType level)
+        void SendToTrace(LogEvent logEvent, LogLevel level)
         {
-            if (TraceSource.Switch.ShouldTrace(level))
-            {
-                TraceSource.TraceEvent(level, 0, string.Format("{0,-30} {1,4}  {2}{3}", endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, (logEvent.Error == null ? "" : Environment.NewLine + logEvent.Error)));
-            }
+            var logger = LogProvider.GetLogger("Halibut");
+            logger.Log(level, () => "{0,-30} {1,4}  {2}{3}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, logEvent.Error == null ? "" : Environment.NewLine + logEvent.Error);
         }
     }
 }

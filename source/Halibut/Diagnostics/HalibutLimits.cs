@@ -9,13 +9,10 @@ namespace Halibut.Diagnostics
     {
         static HalibutLimits()
         {
-
             var builder = new ConfigurationBuilder();
             builder.SetBasePath(Directory.GetCurrentDirectory());
             builder.AddJsonFile("appsettings.json", optional: true);
             var halibutConfig = builder.Build();
-
-            //var settings = ConfigurationManager.AppSettings;
 
             var fields = typeof (HalibutLimits).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
             foreach (var field in fields)
@@ -25,7 +22,6 @@ namespace Halibut.Diagnostics
                 var time = TimeSpan.Parse(value);
                 field.SetValue(null, time);
             }
-
         }
 
         public static TimeSpan PollingRequestQueueTimeout = TimeSpan.FromMinutes(2);

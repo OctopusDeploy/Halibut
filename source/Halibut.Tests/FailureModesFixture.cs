@@ -5,27 +5,6 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    //public static class Test
-    //{
-    //    public static Exception Throws<T>(Action action) where T: Exception
-    //    {
-    //        try
-    //        {
-    //            action();
-    //            Assert.Fail("Test did not throw");
-    //            return null;
-    //        }
-    //        catch (T ex)
-    //        {
-    //            return ex;
-    //        }
-    //        catch (Exception ex)
-    //        {
-    //            Assert.Fail($"Test did not throw expected exception, instead threw {ex.GetType()}");
-    //            return null;
-    //        }
-    //    }
-    //}
     public class FailureModesFixture
     {
         DelegateServiceFactory services;
