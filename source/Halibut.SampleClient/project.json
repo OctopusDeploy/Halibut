@@ -18,6 +18,9 @@
     }
   },
   "buildOptions": {
-    "emitEntryPoint": true
+    "emitEntryPoint": true,
+    "embed": [
+        "HalibutClient.pfx"
+      ]
   }
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Security.Cryptography.X509Certificates;
+using System.IO;
+using System.Reflection;
 
 namespace Halibut.Tests
 {
@@ -14,11 +16,17 @@ namespace Halibut.Tests
 
         static Certificates()
         {
-            TentacleListening = new X509Certificate2("Certificates\\TentacleListening.pfx");
+            //jump through hoops to find certs because the nunit test runner is messing with directories
+#if NET40
+                var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).Assembly.CodeBase).LocalPath), "Certificates");
+#else
+                var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).GetTypeInfo().Assembly.CodeBase).LocalPath), "Certificates");
+#endif
+            TentacleListening = new X509Certificate2(Path.Combine(directory, "TentacleListening.pfx"));
             TentacleListeningPublicThumbprint = TentacleListening.Thumbprint;
-            Octopus = new X509Certificate2("Certificates\\Octopus.pfx");
+            Octopus = new X509Certificate2(Path.Combine(directory, "Octopus.pfx"));
             OctopusPublicThumbprint = Octopus.Thumbprint;
-            TentaclePolling = new X509Certificate2("Certificates\\TentaclePolling.pfx");
+            TentaclePolling = new X509Certificate2(Path.Combine(directory, "TentaclePolling.pfx"));
             TentaclePollingPublicThumbprint = TentaclePolling.Thumbprint;
         }
     }

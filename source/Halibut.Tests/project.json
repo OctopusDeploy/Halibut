@@ -1,5 +1,15 @@
 {
   "version": "0.0.0-*",
+  "buildOptions": {
+    "copyToOutput": {
+      "include": [
+        "Certificates/Octopus.pfx",
+        "Certificates/TentacleListening.pfx",
+        "Certificates/TentaclePolling.pfx",
+        "appsettings.json"
+      ]
+    }
+  },
   "dependencies": {
     "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
