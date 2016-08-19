@@ -81,10 +81,12 @@ namespace Halibut.Transport
                         var client = await listener.AcceptTcpClientAsync();
                         Task.Run(() => HandleClient(client));
                     }
-                    catch (SocketException e)
+                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
-                        if (e.SocketErrorCode != SocketError.Interrupted)
-                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        log.WriteException(EventType.Error, "Error accepting TCP client", ex);
                     }
                 }
             }
