@@ -1,10 +1,7 @@
 {
   "version": "0.0.0-*",
   "dependencies": {
-    "Newtonsoft.Json": "9.0.1",
-    "Microsoft.Extensions.Configuration": "1.0.0",
-    "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
-    "Microsoft.Extensions.Configuration.Json": "1.0.0"
+    "Newtonsoft.Json": "9.0.1"
   },
   "frameworks": {
     "netstandard1.5": {
@@ -26,7 +23,10 @@
         "System.Runtime.InteropServices.RuntimeInformation": "4.0.0",
         "System.Net.Security": "4.0.0",
         "System.Threading.Thread": "4.0.0",
-        "System.Diagnostics.Tools": "4.0.1" 
+        "System.Diagnostics.Tools": "4.0.1",
+        "Microsoft.Extensions.Configuration": "1.0.0",
+        "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
+        "Microsoft.Extensions.Configuration.Json": "1.0.0"
       },
       "buildOptions": {
         "define": [ "HAS_DISPATCH_PROXY", "HAS_ASYNC_LOCAL", "LIBLOG_PORTABLE" ]
@@ -37,8 +37,6 @@
         "System.Configuration": "*"
         },
         "dependenncies": {
-          "Microsoft.Extensions.Configuration": "1.0.0",
-          "Microsoft.Extensions.Configuration.Xml": "1.0.0"
         },
         "buildOptions": {
           "define": [ "NET40", "HAS_REAL_PROXY", "CAN_GET_SOCKET_HANDLE", "HAS_SERIALIZABLE_EXCEPTIONS" ]
