@@ -135,11 +135,11 @@ Task("__Publish")
     if (shouldPushToMyGet)
     {
         NuGetPush("artifacts/Halibut." + nugetVersion + ".nupkg", new NuGetPushSettings {
-            Source = "https://www.myget.org/F/octopus-dependencies/api/v2/package",
+            Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
             ApiKey = EnvironmentVariable("MyGetApiKey")
         });
         NuGetPush("artifacts/Halibut." + nugetVersion + ".symbols.nupkg", new NuGetPushSettings {
-            Source = "https://www.myget.org/F/octopus-dependencies/api/v2/package",
+            Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
             ApiKey = EnvironmentVariable("MyGetApiKey")
         });
     }
