@@ -38,7 +38,7 @@ namespace Halibut.Transport
             try
             {
                 stream.Dispose();
-                ((IDisposable)client).Dispose();
+                client.Dispose();
             }
             catch (SocketException)
             {

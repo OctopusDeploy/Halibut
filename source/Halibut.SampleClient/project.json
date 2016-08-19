@@ -3,7 +3,9 @@
   "dependencies": {
     "Newtonsoft.Json": "9.0.1",
     "Halibut.SampleContracts": "*",
-    "Halibut": "*"
+    "Halibut": "*",
+    "Serilog": "2.1.0",
+    "Serilog.Sinks.ColoredConsole": "2.0.0"
   },
   "frameworks": {
     "net451": {},
@@ -18,9 +20,6 @@
     }
   },
   "buildOptions": {
-    "emitEntryPoint": true,
-    "embed": [
-        "HalibutClient.pfx"
-      ]
+    "emitEntryPoint": true
   }
 }

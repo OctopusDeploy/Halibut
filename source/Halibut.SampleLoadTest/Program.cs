@@ -19,15 +19,14 @@ namespace Halibut.SampleLoadTest
         static X509Certificate2 ClientCertificate = new X509Certificate2("HalibutClient.pfx");
         static X509Certificate2 ServerCertificate = new X509Certificate2("HalibutServer.pfx");
 
-        const int Servers = 30;
+        const int Servers = 10;
         const int ClientsPerServer = 1;
-        const int RequestsPerClient = 50;
+        const int RequestsPerClient = 10;
 
         static void Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.ColoredConsole()
-                    .Filter.ByExcluding(Matching.WithProperty<string>("SourceContext", p => p == "Halibut"))
                 .CreateLogger();
 
             Console.Title = "Halibut Load Test";
