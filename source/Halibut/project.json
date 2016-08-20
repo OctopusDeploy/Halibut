@@ -34,7 +34,6 @@
     },
     "net451": {
       "frameworkAssemblies": {
-        "System.Configuration": "*"
         },
         "dependenncies": {
         },
