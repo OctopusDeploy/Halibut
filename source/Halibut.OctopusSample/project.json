@@ -4,7 +4,7 @@
     "Halibut": "*"
   },
   "frameworks": {
-    "net451": {
+    "net450": {
       "frameworkAssemblies": {
         "System.Core": "*",
         "System.Xml.Linq": "*",

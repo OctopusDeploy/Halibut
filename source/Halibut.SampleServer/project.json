@@ -8,7 +8,7 @@
     "Serilog.Sinks.ColoredConsole": "2.0.0"
   },
   "frameworks": {
-    "net451": {},
+    "net450": {},
     "netcoreapp1.0": {
      "imports": "dnxcore50",
       "dependencies": {

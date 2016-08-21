@@ -32,10 +32,11 @@
         "define": [ "HAS_DISPATCH_PROXY", "HAS_ASYNC_LOCAL", "LIBLOG_PORTABLE" ]
       }
     },
-    "net451": {
+    "net450": {
       "frameworkAssemblies": {
-        },
-        "dependenncies": {
+        "System.Configuration" : "" 
+      },
+        "dependencies": {
         },
         "buildOptions": {
           "define": [ "NET40", "HAS_REAL_PROXY", "CAN_GET_SOCKET_HANDLE", "HAS_SERIALIZABLE_EXCEPTIONS" ]
