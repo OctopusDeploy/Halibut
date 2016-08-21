@@ -75,11 +75,10 @@ namespace Halibut.Transport.Proxy
     /// </remarks>
     public class ProxyClientFactory
     {
-        readonly Func<TcpClient> tcpClientFactory;
-
         /// <summary>
         /// Factory method for creating new proxy client objects.  
         /// </summary>
+        /// <param name="logger">The logger instance</param>
         /// <param name="type">The type of proxy client to create.</param>
         /// <param name="proxyHost">The proxy host or IP address.</param>
         /// <param name="proxyPort">The proxy port number.</param>

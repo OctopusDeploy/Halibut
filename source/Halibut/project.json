@@ -34,7 +34,10 @@
     },
     "net450": {
       "frameworkAssemblies": {
-        "System.Configuration" : "" 
+        "System.Configuration": {
+          "version": "4.0.0",
+          "type": "build"
+        }
       },
         "dependencies": {
         },
