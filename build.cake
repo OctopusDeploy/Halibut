@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // TOOLS
 //////////////////////////////////////////////////////////////////////
-#tool "nuget:?package=GitVersion.CommandLine"
+// #tool "nuget:?package=GitVersion.CommandLine"
 #addin "MagicChunks"
 
 //////////////////////////////////////////////////////////////////////
@@ -161,6 +161,20 @@ Task("__Publish")
 //////////////////////////////////////////////////////////////////////
 Task("Default")
     .IsDependentOn("__Default");
+
+Task("GitVersion")
+    .Does(() =>
+{
+     GitVersion(new GitVersionSettings {
+        UpdateAssemblyInfo = false,
+        UpdateAssemblyInfoFilePath = globalAssemblyFile
+    });
+
+    Information("AssemblyVersion -> {0}", gitVersionInfo.AssemblySemVer);
+    Information("AssemblyFileVersion -> {0}", $"{gitVersionInfo.MajorMinorPatch}.0");
+    Information("AssemblyInformationalVersion -> {0}", gitVersionInfo.InformationalVersion);
+});
+
 
 //////////////////////////////////////////////////////////////////////
 // EXECUTION
