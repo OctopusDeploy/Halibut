@@ -173,6 +173,7 @@ Task("GitVersion")
     Information("AssemblyVersion -> {0}", gitVersionInfo.AssemblySemVer);
     Information("AssemblyFileVersion -> {0}", $"{gitVersionInfo.MajorMinorPatch}.0");
     Information("AssemblyInformationalVersion -> {0}", gitVersionInfo.InformationalVersion);
+    Information("FullSemVer -> {0}", gitVersionInfo.FullSemVer);
 });
 
 
