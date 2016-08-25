@@ -51,7 +51,7 @@ namespace Halibut.Transport
             if (!pool.TryRemove(key, out connections))
                 return;
 
-            while (connections.Count > 1)
+            while (connections.Count > 0)
             {
                 TPooledResource connection;
                 if (connections.TryTake(out connection))
