@@ -24,6 +24,9 @@ var gitVersionInfo = GitVersion(new GitVersionSettings {
     OutputType = GitVersionOutput.Json
 });
 
+if(BuildSystem.IsRunningOnTeamCity)
+    BuildSystem.TeamCity.SetBuildNumber(gitVersionInfo.NuGetVersion);
+
 var nugetVersion = isContinuousIntegrationBuild ? gitVersionInfo.NuGetVersion : "0.0.0";
 
 ///////////////////////////////////////////////////////////////////////////////
