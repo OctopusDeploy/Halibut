@@ -90,15 +90,21 @@ Task("__Build")
 Task("__Test")
     .Does(() =>
 {
-    GetFiles("**/*Tests/project.json")
-        .ToList()
-        .ForEach(testProjectFile => 
-        {
-            DotNetCoreTest(testProjectFile.ToString(), new DotNetCoreTestSettings
-            {
-                Configuration = configuration
-            });
-        });
+    DotNetCoreTest("./source/Halibut.Tests", new DotNetCoreTestSettings
+    {
+        Configuration = configuration,
+        Framework = "net451"
+    });
+
+    MoveFile("./TestResult.xml", "./TestResult.net451.xml");
+
+    DotNetCoreTest("./source/Halibut.Tests", new DotNetCoreTestSettings
+    {
+        Configuration = configuration,
+        Framework = "netcoreapp1.0"
+    });
+
+    MoveFile("./TestResult.xml", "./TestResult.netcoreapp1.0.xml");
 });
 
 Task("__UpdateProjectJsonVersion")
