@@ -21,7 +21,7 @@ namespace Halibut.Diagnostics
 
         static Uri NormalizeEndpoint(Uri endpoint)
         {
-            return new Uri(endpoint.GetLeftPart(UriPartial.Authority).TrimEnd('/').ToLowerInvariant());
+            return new Uri(endpoint.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).TrimEnd('/').ToLowerInvariant());
         }
     }
 }

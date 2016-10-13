@@ -23,14 +23,14 @@ namespace Halibut.Transport
                     {
                         using (var ssl = new SslStream(stream, false, ValidateCertificate))
                         {
-                            ssl.AuthenticateAsClient(remoteUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+                            ssl.AuthenticateAsClientAsync(remoteUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
                             ssl.Write(HelloLine, 0, HelloLine.Length);
                             ssl.Flush();
 
                             if (ssl.RemoteCertificate == null)
                                 throw new Exception("The server did not provide an SSL certificate");
 
-                            return new ServiceEndPoint(remoteUri, new X509Certificate2(ssl.RemoteCertificate).Thumbprint);
+                            return new ServiceEndPoint(remoteUri, new X509Certificate2(ssl.RemoteCertificate.Export(X509ContentType.Cert)).Thumbprint);
                         }
                     }
                 }

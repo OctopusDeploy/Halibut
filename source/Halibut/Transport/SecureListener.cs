@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
@@ -23,17 +24,19 @@ namespace Halibut.Transport
 
     public class SecureListener
     {
+#if CAN_GET_SOCKET_HANDLE
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
+#endif
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
         readonly Action<MessageExchangeProtocol> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
+        readonly CancellationTokenSource cts = new CancellationTokenSource();
         ILog log;
         TcpListener listener;
-        bool isStopped;
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
         {
@@ -43,7 +46,6 @@ namespace Halibut.Transport
             this.verifyClientThumbprint = verifyClientThumbprint;
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
-
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -55,49 +57,58 @@ namespace Halibut.Transport
                 listener.Server.DualMode = true;
             }
             listener.Start();
+
+#if CAN_GET_SOCKET_HANDLE
             // set socket handle as not inherited so that when tentacle runs powershell
             // with System.Diagnostics.Process those scripts don't lock the socket
             SetHandleInformation(listener.Server.Handle, HANDLE_FLAGS.INHERIT, HANDLE_FLAGS.None);
+#endif
+
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Accept();
+            Task.Run(async () => await Accept()); 
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
-        void Accept()
+        async Task Accept()
         {
-            if (isStopped)
-                return;
-
-            listener.BeginAcceptTcpClient(r =>
+            while (!cts.IsCancellationRequested)
             {
-                try
+                using (cts.Token.Register(listener.Stop))
                 {
-                    if (isStopped)
-                        return;
-
-                    var client = listener.EndAcceptTcpClient(r);
-                    if (isStopped)
-                        return;
-
-                    client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                    client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
-
-                    log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-
-                    var task = new Task(() => ExecuteRequest(client));
-                    task.Start();
+                    try
+                    {
+                        var client = await listener.AcceptTcpClientAsync();
+                        Task.Run(() => HandleClient(client));
+                    }
+                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                        log.WriteException(EventType.Error, "Error accepting TCP client", ex);
+                    }
                 }
-                catch (ObjectDisposedException)
-                {
-                }
-                catch (Exception ex)
-                {
-                    log.WriteException(EventType.Error, "Error accepting TCP client", ex);
-                }
+            }
+        }
 
-                Accept();
-            }, null);
+        void HandleClient(TcpClient client)
+        {
+            try
+            {
+                client.SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+
+                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
+                ExecuteRequest(client);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (Exception ex)
+            {
+                log.WriteException(EventType.Error, "Error accepting TCP client", ex);
+            }
         }
 
         void ExecuteRequest(TcpClient client)
@@ -113,7 +124,7 @@ namespace Halibut.Transport
                 try
                 {
                     log.Write(EventType.Security, "Performing TLS server handshake");
-                    ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+                    ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
 
                     log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -153,8 +164,13 @@ namespace Halibut.Transport
                     if (!keepStreamOpen)
                     {
                         // Closing an already closed stream or client is safe, better not to leak
+#if NET40
                         stream.Close();
                         client.Close();
+#else
+                        stream.Dispose();
+                        client.Dispose();
+#endif
                     }
                 }
             }
@@ -189,7 +205,7 @@ namespace Halibut.Transport
                 return false;
             }
 
-            var thumbprint = new X509Certificate2(stream.RemoteCertificate).Thumbprint;
+            var thumbprint = new X509Certificate2(stream.RemoteCertificate.Export(X509ContentType.Cert)).Thumbprint;
             var isAuthorized = verifyClientThumbprint(thumbprint);
 
             if (!isAuthorized)
@@ -259,7 +275,7 @@ namespace Halibut.Transport
 
         public void Dispose()
         {
-            isStopped = true;
+            cts.Cancel();
             listener.Stop();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }

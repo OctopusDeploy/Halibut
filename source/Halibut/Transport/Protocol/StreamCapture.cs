@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+
+#if HAS_ASYNC_LOCAL
+#else
 using System.Runtime.Remoting.Messaging;
+#endif
 
 namespace Halibut.Transport.Protocol
 {
@@ -9,11 +14,21 @@ namespace Halibut.Transport.Protocol
         readonly HashSet<DataStream> serializedStreams = new HashSet<DataStream>();
         readonly HashSet<DataStream> deserializedStreams = new HashSet<DataStream>();
 
+#if HAS_ASYNC_LOCAL
+        static AsyncLocal<StreamCapture> current = new AsyncLocal<StreamCapture>();
+
         public static StreamCapture Current
         {
-            get { return (StreamCapture)CallContext.GetData("HalibutStreamCapture"); }
+            get { return current.Value; }
+            private set { current.Value = value; }
+        }
+#else
+        public static StreamCapture Current
+        {
+            get { return (StreamCapture) CallContext.GetData("HalibutStreamCapture"); }
             private set { CallContext.SetData("HalibutStreamCapture", value); }
         }
+#endif
 
         public ICollection<DataStream> SerializedStreams
         {

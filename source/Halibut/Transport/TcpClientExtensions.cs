@@ -13,12 +13,12 @@ namespace Halibut.Transport
 
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
-            var connectResult = client.BeginConnect(host, port, ar => { }, null);
-            if (!connectResult.AsyncWaitHandle.WaitOne(HalibutLimits.TcpClientConnectTimeout))
+            var connectTask = client.ConnectAsync(host, port);
+            if (!connectTask.Wait(timeout))
             {
                 try
                 {
-                    client.Close();
+                    ((IDisposable)client).Dispose();
                 }
                 catch (SocketException)
                 {
@@ -30,7 +30,8 @@ namespace Halibut.Transport
                 throw new HalibutClientException("The client was unable to establish the initial connection within " + HalibutLimits.TcpClientConnectTimeout);
             }
 
-            client.EndConnect(connectResult);
+            // unwrap the connect task to throw any connection exceptions
+            connectTask.GetAwaiter().GetResult();
         }
     }
 }

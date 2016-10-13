@@ -17,7 +17,7 @@ namespace Halibut
 
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
         {
-            baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
+            baseUriString = baseUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).ToLowerInvariant();
             this.baseUri = new Uri(baseUriString);
             this.remoteThumbprint = remoteThumbprint;
         }
@@ -25,7 +25,7 @@ namespace Halibut
         [JsonConstructor]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy)
         {
-            baseUriString = baseUri.GetLeftPart(UriPartial.Authority).ToLowerInvariant();
+            baseUriString = baseUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).ToLowerInvariant();
             this.baseUri = new Uri(baseUriString);
             this.remoteThumbprint = remoteThumbprint;
             this.proxy = proxy;

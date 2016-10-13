@@ -8,6 +8,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.ServiceModel;
+using Serilog;
+using Serilog.Context;
+using Serilog.Filters;
 
 namespace Halibut.SampleLoadTest
 {
@@ -16,12 +19,16 @@ namespace Halibut.SampleLoadTest
         static X509Certificate2 ClientCertificate = new X509Certificate2("HalibutClient.pfx");
         static X509Certificate2 ServerCertificate = new X509Certificate2("HalibutServer.pfx");
 
-        const int Servers = 100;
+        const int Servers = 10;
         const int ClientsPerServer = 1;
-        const int RequestsPerClient = 100;
+        const int RequestsPerClient = 10;
 
         static void Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.ColoredConsole()
+                .CreateLogger();
+
             Console.Title = "Halibut Load Test";
 
             var servers = new List<int>();
@@ -45,6 +52,7 @@ namespace Halibut.SampleLoadTest
             var watch = Stopwatch.StartNew();
             Parallel.ForEach(tasks, t => t());
             Console.WriteLine("Done in: {0:n0}ms", watch.ElapsedMilliseconds);
+            Console.ReadKey();
         }
 
         static int RunServer()

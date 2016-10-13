@@ -75,11 +75,10 @@ namespace Halibut.Transport.Proxy
     /// </remarks>
     public class ProxyClientFactory
     {
-        readonly Func<TcpClient> tcpClientFactory;
-
         /// <summary>
         /// Factory method for creating new proxy client objects.  
         /// </summary>
+        /// <param name="logger">The logger instance</param>
         /// <param name="type">The type of proxy client to create.</param>
         /// <param name="proxyHost">The proxy host or IP address.</param>
         /// <param name="proxyPort">The proxy port number.</param>
@@ -95,12 +94,6 @@ namespace Halibut.Transport.Proxy
             {
                 case ProxyType.HTTP:
                     return new HttpProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
-                case ProxyType.SOCKS4:
-                    return new Socks4ProxyClient(logger, proxyHost, proxyPort, proxyUsername);
-                case ProxyType.SOCKS4A:
-                    return new Socks4aProxyClient(logger, proxyHost, proxyPort, proxyUsername);
-                case ProxyType.SOCKS5:
-                    return new Socks5ProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
                 default:
                     throw new ProxyException(string.Format("Unknown proxy type {0}.", type.ToString()));
             }

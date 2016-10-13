@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Reflection;
-using System.Runtime.Remoting.Messaging;
-using System.Runtime.Remoting.Proxies;
+
 using System.Threading;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
 {
+#if HAS_REAL_PROXY
+    using System.Runtime.Remoting.Messaging;
+    using System.Runtime.Remoting.Proxies;
     class HalibutProxy : RealProxy
     {
         readonly Func<RequestMessage, ResponseMessage> messageRouter;
@@ -86,4 +88,77 @@ namespace Halibut.ServiceModel
             throw new HalibutClientException(responseMessage.Error.Message, realException);
         }
     }
+#else
+    public class HalibutProxy : DispatchProxy
+    {
+        Func<RequestMessage, ResponseMessage> messageRouter;
+        Type contractType;
+        ServiceEndPoint endPoint;
+        long callId;
+        bool configured;
+
+        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        {
+            this.messageRouter = messageRouter;
+            this.contractType = contractType;
+            this.endPoint = endPoint;
+            this.configured = true;
+        }
+
+        protected override object Invoke(MethodInfo targetMethod, object[] args)
+        {
+            if (!configured)
+                throw new Exception("Proxy not configured");
+
+            var request = CreateRequest(targetMethod, args);
+
+            var response = DispatchRequest(request);
+
+            EnsureNotError(response);
+
+            var result = response.Result;
+
+            var returnType = targetMethod.ReturnType;
+            if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
+            {
+                result = Convert.ChangeType(result, returnType);
+            }
+
+            return result;
+        }
+
+        RequestMessage CreateRequest(MethodInfo targetMethod, object[] args)
+        {
+            var activityId = Guid.NewGuid();
+
+            var request = new RequestMessage
+            {
+                Id = contractType.Name + "::" + targetMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                ActivityId = activityId,
+                Destination = endPoint,
+                MethodName = targetMethod.Name,
+                ServiceName = contractType.Name,
+                Params = args
+            };
+            return request;
+        }
+
+        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        {
+            return messageRouter(requestMessage);
+        }
+
+        static void EnsureNotError(ResponseMessage responseMessage)
+        {
+            if (responseMessage == null)
+                throw new HalibutClientException("No response was received from the endpoint within the allowed time.");
+
+            if (responseMessage.Error == null)
+                return;
+
+            var realException = responseMessage.Error.Details as string;
+            throw new HalibutClientException(responseMessage.Error.Message, realException);
+        }
+    }
+#endif
 }

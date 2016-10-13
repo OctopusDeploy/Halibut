@@ -3,13 +3,18 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.SampleContracts;
 using Halibut.ServiceModel;
+using Serilog;
 
 namespace Halibut.SampleServer
 {
-    class Program
+    public class Program
     {
         public static void Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.ColoredConsole()
+                .CreateLogger();
+
             Console.Title = "Halibut Server";
             var certificate = new X509Certificate2("HalibutServer.pfx");
 

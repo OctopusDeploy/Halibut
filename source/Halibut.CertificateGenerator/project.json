@@ -1,0 +1,12 @@
+{
+  "version": "0.0.0-*",
+  "dependencies": {
+    "BouncyCastle": "1.7.0"
+  },
+  "frameworks": {
+    "net450": {}
+  },
+  "buildOptions": {
+    "emitEntryPoint": true
+  }
+}

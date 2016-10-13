@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
@@ -193,9 +194,9 @@ namespace Halibut.Transport.Protocol
 
         T ReadBsonMessage<T>()
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var buffer = new BufferedStream(zip, 8192))
-            using (var bson = new BsonReader(buffer) { CloseInput = false })
+            using (var buffer = new BufferedStream(stream, 8192, true))
+            using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
+            using (var bson = new BsonReader(zip) { CloseInput = false })
             {
                 return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
             }
@@ -252,9 +253,9 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var buffer = new BufferedStream(zip))
-            using (var bson = new BsonWriter(buffer) { CloseOutput = false })
+            using (var buffer = new BufferedStream(stream, 4096, true))
+            using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
+            using (var bson = new BsonWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
                 bson.Flush();

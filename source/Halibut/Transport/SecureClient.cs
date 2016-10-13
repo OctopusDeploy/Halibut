@@ -122,7 +122,7 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+            ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
 
@@ -171,7 +171,7 @@ namespace Halibut.Transport
             var inner = lastError as SocketException;
             if (inner != null)
             {
-                if ((inner.ErrorCode == 10053 || inner.ErrorCode == 10054) && retryAllowed)
+                if ((inner.SocketErrorCode == SocketError.ConnectionAborted  || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
                 {
                     error.Append("The server aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '");
                     error.Append(clientCertificate.Thumbprint + "'.");
