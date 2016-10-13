@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // TOOLS
 //////////////////////////////////////////////////////////////////////
-#tool "nuget:?package=GitVersion.CommandLine&version=4.0.0-beta0005"
+#tool "nuget:?package=GitVersion.CommandLine&version=4.0.0-beta0007"
 #addin "MagicChunks"
 
 //////////////////////////////////////////////////////////////////////
@@ -9,15 +9,16 @@
 //////////////////////////////////////////////////////////////////////
 var target = Argument("target", "Default");
 var configuration = Argument("configuration", "Release");
+var forceCiBuild = Argument("forceCiBuild", false);
 
 ///////////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
 ///////////////////////////////////////////////////////////////////////////////
-var artifactsDir = "./artifacts";
+var artifactsDir = "./artifacts/";
 var globalAssemblyFile = "./source/Halibut/Properties/AssemblyInfo.cs";
 var projectToPackage = "./source/Halibut";
 
-var isContinuousIntegrationBuild = !BuildSystem.IsLocalBuild;
+var isContinuousIntegrationBuild = !BuildSystem.IsLocalBuild || forceCiBuild;
 
 var gitVersionInfo = GitVersion(new GitVersionSettings {
     OutputType = GitVersionOutput.Json
@@ -49,8 +50,8 @@ Task("__Default")
     .IsDependentOn("__Build")
     .IsDependentOn("__Test")
     .IsDependentOn("__UpdateProjectJsonVersion")
-    .IsDependentOn("__Pack")
-    .IsDependentOn("__Publish");
+    .IsDependentOn("__Pack");
+    // .IsDependentOn("__Publish");
 
 Task("__Clean")
     .Does(() =>
@@ -121,47 +122,46 @@ Task("__Pack")
         OutputDirectory = artifactsDir,
         NoBuild = true
     });
+
+    DeleteFiles(artifactsDir + "*symbols*");
 });
 
-Task("__Publish")
-    .WithCriteria(isContinuousIntegrationBuild)
-    .Does(() =>
-{
-    var isPullRequest = !String.IsNullOrEmpty(EnvironmentVariable("APPVEYOR_PULL_REQUEST_NUMBER"));
-    var isMasterBranch = EnvironmentVariable("APPVEYOR_REPO_BRANCH") == "master" && !isPullRequest;
-    var shouldPushToMyGet = !BuildSystem.IsLocalBuild;
-    var shouldPushToNuGet = !BuildSystem.IsLocalBuild && isMasterBranch;
+// Task("__Publish")
+//     .WithCriteria(isContinuousIntegrationBuild && !forceCiBuild)
+//     .Does(() =>
+// {
+//     var isPullRequest = !String.IsNullOrEmpty(EnvironmentVariable("APPVEYOR_PULL_REQUEST_NUMBER"));
+//     var isMasterBranch = EnvironmentVariable("APPVEYOR_REPO_BRANCH") == "master" && !isPullRequest;
+//     var shouldPushToMyGet = !BuildSystem.IsLocalBuild;
+//     var shouldPushToNuGet = !BuildSystem.IsLocalBuild && isMasterBranch;
 
-    if (shouldPushToMyGet)
-    {
-        NuGetPush("artifacts/Halibut." + nugetVersion + ".nupkg", new NuGetPushSettings {
-            Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
-            ApiKey = EnvironmentVariable("MyGetApiKey")
-        });
-        NuGetPush("artifacts/Halibut." + nugetVersion + ".symbols.nupkg", new NuGetPushSettings {
-            Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
-            ApiKey = EnvironmentVariable("MyGetApiKey")
-        });
-    }
-    if (shouldPushToNuGet)
-    {
-        NuGetPush("artifacts/Halibut." + nugetVersion + ".nupkg", new NuGetPushSettings {
-            Source = "https://www.nuget.org/api/v2/package",
-            ApiKey = EnvironmentVariable("NuGetApiKey")
-        });
-        NuGetPush("artifacts/Halibut." + nugetVersion + ".symbols.nupkg", new NuGetPushSettings {
-            Source = "https://www.nuget.org/api/v2/package",
-            ApiKey = EnvironmentVariable("NuGetApiKey")
-        });
-    }
-});
+//     if (shouldPushToMyGet)
+//     {
+//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".nupkg", new NuGetPushSettings {
+//             Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
+//             ApiKey = EnvironmentVariable("MyGetApiKey")
+//         });
+//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".symbols.nupkg", new NuGetPushSettings {
+//             Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
+//             ApiKey = EnvironmentVariable("MyGetApiKey")
+//         });
+//     }
+//     if (shouldPushToNuGet)
+//     {
+//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".nupkg", new NuGetPushSettings {
+//             Source = "https://www.nuget.org/api/v2/package",
+//             ApiKey = EnvironmentVariable("NuGetApiKey")
+//         });
+//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".symbols.nupkg", new NuGetPushSettings {
+//             Source = "https://www.nuget.org/api/v2/package",
+//             ApiKey = EnvironmentVariable("NuGetApiKey")
+//         });
+//     }
+// });
 
 //////////////////////////////////////////////////////////////////////
 // TASKS
 //////////////////////////////////////////////////////////////////////
-Task("Default")
-    .IsDependentOn("__Default");
-
 Task("GitVersion")
     .Does(() =>
 {
@@ -176,6 +176,32 @@ Task("GitVersion")
     Information("FullSemVer -> {0}", gitVersionInfo.FullSemVer);
 });
 
+Task("Default")
+    .IsDependentOn("__Default");
+
+Task("Clean")
+    .IsDependentOn("__Clean");
+
+Task("Restore")
+    .IsDependentOn("__Restore");
+
+Task("Build")
+    .IsDependentOn("__Build");
+
+Task("Test")
+    .IsDependentOn("__Test");
+
+Task("Pack")
+    .IsDependentOn("__Clean")
+    .IsDependentOn("__Restore")
+    .IsDependentOn("__UpdateProjectJsonVersion")
+    .IsDependentOn("__UpdateAssemblyVersionInformation")
+    .IsDependentOn("__Build")
+    .IsDependentOn("__Pack");
+
+// Task("Publish")
+//     .IsDependentOn("Pack")
+//     .IsDependentOn("__Publish");
 
 //////////////////////////////////////////////////////////////////////
 // EXECUTION
