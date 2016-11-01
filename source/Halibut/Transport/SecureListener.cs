@@ -84,6 +84,9 @@ namespace Halibut.Transport
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
                     }
+                    catch (ObjectDisposedException)
+                    {
+                    }
                     catch (Exception ex)
                     {
                         log.WriteException(EventType.Error, "Error accepting TCP client", ex);
@@ -107,7 +110,7 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.Error, "Error accepting TCP client", ex);
+                log.WriteException(EventType.Error, "Error initializing TCP client", ex);
             }
         }
 
