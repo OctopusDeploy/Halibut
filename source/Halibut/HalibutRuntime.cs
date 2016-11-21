@@ -78,8 +78,13 @@ namespace Halibut
 
         public ServiceEndPoint Discover(Uri uri)
         {
+            return Discover(new ServiceEndPoint(uri, null));
+        }
+
+        public ServiceEndPoint Discover(ServiceEndPoint endpoint)
+        {
             var client = new DiscoveryClient();
-            return client.Discover(uri);
+            return client.Discover(endpoint);
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
