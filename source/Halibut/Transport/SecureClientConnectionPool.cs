@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Runtime.Serialization;
+using Halibut.Diagnostics;
+using Halibut.Logging;
 
 namespace Halibut.Transport
 {
@@ -45,17 +48,37 @@ namespace Halibut.Transport
             }
         }
 
-        public void Clear(TKey key)
+        public void Clear(TKey key, Diagnostics.ILog log = null)
         {
             ConcurrentBag<TPooledResource> connections;
             if (!pool.TryRemove(key, out connections))
                 return;
 
-            while (connections.Count > 0)
+            // this looks like it should be connections.Count > 0, however setting it to 0
+            // led to an uptick in users seeing Halibut stacktraces in
+            // in their logs. This may have just uncovered another issue.
+            // We are returning to 1 in Dec 2016 and will monitor. Are
+            // we disposing a connection that is in use somehow? Adding the same connection
+            // twice?
+#if NET40
+            var generator = new ObjectIDGenerator();
+#endif
+            while (connections.Count > 1)
             {
                 TPooledResource connection;
                 if (connections.TryTake(out connection))
                 {
+#if NET40
+                    if (log != null)
+                    {
+                        bool firstTime;
+                        generator.GetId(connection, out firstTime);
+                        if (!firstTime)
+                        {
+                            log.Write(EventType.Error, "Duplicate connection found in conenction pool");
+                        }
+                    }
+#endif
                     connection.Dispose();
                 }
             }

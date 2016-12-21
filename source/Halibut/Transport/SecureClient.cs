@@ -88,7 +88,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        pool.Clear(serviceEndpoint);
+                        pool.Clear(serviceEndpoint, log);
                     }
 
                     Thread.Sleep(retryInterval);
