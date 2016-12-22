@@ -12,7 +12,7 @@ namespace Halibut.Transport.Protocol
     {
         readonly IMessageExchangeStream stream;
         bool identified;
-        bool acceptClientRequests = true;
+        volatile bool acceptClientRequests = true;
 
         public MessageExchangeProtocol(Stream stream, ILog log)
         {
@@ -107,17 +107,19 @@ namespace Halibut.Transport.Protocol
             while (acceptClientRequests)
             {
                 var request = stream.Receive<RequestMessage>();
-                if (request == null)
-                    break;
+                if (request == null || !acceptClientRequests)
+                    return;
+
+                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
 
                 if (!acceptClientRequests)
                     return;
 
-                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
                 stream.Send(response);
 
-                if (!stream.ExpectNextOrEnd() || !acceptClientRequests)
-                    break;
+                if (!acceptClientRequests || !stream.ExpectNextOrEnd())
+                    return;
+
                 stream.SendProceed();
             }
         }
