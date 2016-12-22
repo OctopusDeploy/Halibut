@@ -44,7 +44,7 @@ namespace Halibut.Diagnostics
         void SendToTrace(LogEvent logEvent, LogLevel level)
         {
             var logger = LogProvider.GetLogger("Halibut");
-            logger.Log(level, () => "{0,-30} {1,4}  {2}{3}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, logEvent.Error == null ? "" : Environment.NewLine + logEvent.Error);
+            logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
         }
     }
 }

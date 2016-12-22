@@ -63,14 +63,14 @@ namespace Halibut.Transport
                 }
                 catch (AuthenticationException aex)
                 {
-                    log.WriteException(EventType.Error, aex.Message, aex);
+                    log.WriteException(EventType.Error, $"Authentication failed while setting up connection to {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", aex);
                     lastError = aex;
                     retryAllowed = false;
                     break;
                 }
                 catch (SocketException sex)
                 {
-                    log.WriteException(EventType.Error, sex.Message, sex);
+                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", sex);
                     lastError = sex;
                     // When the host is not found an immediate retry isn't going to help
                     if (sex.SocketErrorCode == SocketError.HostNotFound)
@@ -80,7 +80,7 @@ namespace Halibut.Transport
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
-                    log.WriteException(EventType.Error, cex.Message, cex);
+                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", cex);
                     lastError = cex;
                     retryAllowed = true;
 
@@ -95,7 +95,7 @@ namespace Halibut.Transport
                 }
                 catch (Exception ex)
                 {
-                    log.WriteException(EventType.Error, ex.Message, ex);
+                    log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
                     lastError = ex;
                     Thread.Sleep(retryInterval);
                 }
@@ -114,7 +114,7 @@ namespace Halibut.Transport
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
-            var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
+            var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = CreateConnectedTcpClient(serviceEndpoint);
             log.Write(EventType.Diagnostic, "Connection established");
 
