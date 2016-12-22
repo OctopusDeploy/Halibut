@@ -17,6 +17,7 @@ var forceCiBuild = Argument("forceCiBuild", false);
 var artifactsDir = "./artifacts/";
 var globalAssemblyFile = "./source/Halibut/Properties/AssemblyInfo.cs";
 var projectToPackage = "./source/Halibut";
+var localPackagesDir = "../LocalPackages";
 
 var isContinuousIntegrationBuild = !BuildSystem.IsLocalBuild || forceCiBuild;
 
@@ -27,7 +28,8 @@ var gitVersionInfo = GitVersion(new GitVersionSettings {
 if(BuildSystem.IsRunningOnTeamCity)
     BuildSystem.TeamCity.SetBuildNumber(gitVersionInfo.NuGetVersion);
 
-var nugetVersion = isContinuousIntegrationBuild ? gitVersionInfo.NuGetVersion : "0.0.0";
+var nugetVersion = gitVersionInfo.NuGetVersion;
+var cleanups = new List<IDisposable>(); 
 
 ///////////////////////////////////////////////////////////////////////////////
 // SETUP / TEARDOWN
@@ -39,6 +41,10 @@ Setup(context =>
 
 Teardown(context =>
 {
+     Information("Cleaning up");
+    foreach(var item in cleanups)
+        item.Dispose();
+
     Information("Finished running tasks.");
 });
 
@@ -53,6 +59,7 @@ Task("__Default")
     .IsDependentOn("__Build")
     .IsDependentOn("__Test")
     .IsDependentOn("__UpdateProjectJsonVersion")
+    .IsDependentOn("__CopyToLocalPackages")
     .IsDependentOn("__Pack");
     // .IsDependentOn("__Publish");
 
@@ -111,12 +118,12 @@ Task("__Test")
 });
 
 Task("__UpdateProjectJsonVersion")
-    .WithCriteria(isContinuousIntegrationBuild)
     .Does(() =>
 {
     var projectToPackagePackageJson = $"{projectToPackage}/project.json";
     Information("Updating {0} version -> {1}", projectToPackagePackageJson, nugetVersion);
 
+    cleanups.Add(new AutoRestoreFile(projectToPackagePackageJson));
     TransformConfig(projectToPackagePackageJson, projectToPackagePackageJson, new TransformationCollection {
         { "version", nugetVersion }
     });
@@ -134,6 +141,27 @@ Task("__Pack")
 
     DeleteFiles(artifactsDir + "*symbols*");
 });
+
+Task("__CopyToLocalPackages")
+    .IsDependentOn("__Pack")
+    .Does(() =>
+{
+    CreateDirectory(localPackagesDir);
+    CopyFileToDirectory("{artifactsDir}/Halibut.{nugetVersion}.nupkg", localPackagesDir);
+});
+
+private class AutoRestoreFile : IDisposable
+{
+	private byte[] _contents;
+	private string _filename;
+	public AutoRestoreFile(string filename)
+	{
+		_filename = filename;
+		_contents = System.IO.File.ReadAllBytes(filename);
+	}
+
+	public void Dispose() => System.IO.File.WriteAllBytes(_filename, _contents);
+}
 
 // Task("__Publish")
 //     .WithCriteria(isContinuousIntegrationBuild && !forceCiBuild)
