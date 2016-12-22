@@ -145,12 +145,6 @@ namespace Halibut
             trustedThumbprints.Add(clientThumbprint);
         }
 
-        public void RemoveTrust(string clientThumbprint)
-        {
-            if (trustedThumbprints.Contains(clientThumbprint))
-                trustedThumbprints.Remove(clientThumbprint);
-        }
-
         bool VerifyThumbprintOfIncomingClient(string remoteThumbprint)
         {
             return trustedThumbprints.Contains(remoteThumbprint);
