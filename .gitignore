@@ -112,3 +112,4 @@ UpgradeLog*.XML
 
 tools/
 built-packages/**
+artifacts/

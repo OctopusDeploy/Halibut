@@ -147,7 +147,7 @@ Task("__CopyToLocalPackages")
     .Does(() =>
 {
     CreateDirectory(localPackagesDir);
-    CopyFileToDirectory("{artifactsDir}/Halibut.{nugetVersion}.nupkg", localPackagesDir);
+    CopyFileToDirectory($"{artifactsDir}/Halibut.{nugetVersion}.nupkg", localPackagesDir);
 });
 
 private class AutoRestoreFile : IDisposable
