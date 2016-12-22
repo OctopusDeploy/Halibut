@@ -114,7 +114,7 @@ namespace Halibut.Transport
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
-            var certificateValidator = new ClientCertificateValidator(serviceEndpoint.RemoteThumbprint);
+            var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = CreateConnectedTcpClient(serviceEndpoint);
             log.Write(EventType.Diagnostic, "Connection established");
 
