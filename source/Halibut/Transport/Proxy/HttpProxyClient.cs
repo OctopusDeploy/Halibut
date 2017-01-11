@@ -26,6 +26,7 @@
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -192,10 +193,14 @@ namespace Halibut.Transport.Proxy
                 if (TcpClient == null)
                 {
                     if (string.IsNullOrEmpty(ProxyHost))
-                        throw new ProxyException("ProxyHost property must contain a value.");
+                        throw new ProxyException("ProxyHost property must contain a value");
 
                     if (ProxyPort <= 0 || ProxyPort > 65535)
                         throw new ProxyException("ProxyPort value must be greater than zero and less than 65535");
+
+                    if(ProxyHost.Contains("://"))
+                        throw new ProxyException("The proxy's hostname cannot contain a protocol prefix (eg http://)");
+
 
                     //  create new tcp client object to the proxy server
                     TcpClient = tcpClientFactory();
@@ -211,16 +216,24 @@ namespace Halibut.Transport.Proxy
                 // return the open proxied tcp client object to the caller for normal use
                 return TcpClient;
             }
+            catch (AggregateException ae)
+            {
+                var se = ae.InnerExceptions.OfType<SocketException>().FirstOrDefault();
+                if (se != null)
+                    throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {se.Message}", se);
+
+                throw;
+            }
             catch (SocketException ex)
             {
-                throw new ProxyException(string.Format(CultureInfo.InvariantCulture, "Connection to proxy host {0} on port {1} failed.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), ex);
+                throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {ex.Message}", ex);
             }
         }
 
 
         void SendConnectionCommand(string host, int port)
         {
-            var stream = TcpClient.GetStream(); 
+            var stream = TcpClient.GetStream();
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 
@@ -283,7 +296,7 @@ namespace Halibut.Transport.Proxy
             {
                 case HttpResponseCodes.None:
                     msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} failed to return a recognized HTTP response code.  Server response: {2}", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient), _respText);
-                    break;                   
+                    break;
 
                 case HttpResponseCodes.BadGateway:
                     //HTTP/1.1 502 Proxy Error (The specified Secure Sockets Layer (SSL) port is not allowed. ISA Server is not configured to allow SSL requests from this port. Most Web browsers use port 443 for SSL requests.)
@@ -307,7 +320,7 @@ namespace Halibut.Transport.Proxy
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
-                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient) ));
+                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)));
             }
         }
 
