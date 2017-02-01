@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -68,6 +69,11 @@ namespace Halibut.Transport
                     retryAllowed = false;
                     break;
                 }
+                catch (SocketException cex) when (cex.SocketErrorCode == SocketError.ConnectionRefused)
+                {
+                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
+                    lastError = cex;
+                }
                 catch (SocketException sex)
                 {
                     log.WriteException(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", sex);
@@ -91,6 +97,19 @@ namespace Halibut.Transport
                         pool.Clear(serviceEndpoint, log);
                     }
 
+                    Thread.Sleep(retryInterval);
+                }
+                catch (IOException iox) when (iox.IsSocketConnectionReset())
+                {
+                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service was shut down.");
+                    lastError = iox;
+                    Thread.Sleep(retryInterval);
+                }
+                catch (IOException iox) when (iox.IsSocketConnectionTimeout())
+                {
+                    // Received on a polling client when the network connection is lost.
+                    log.Write(EventType.Error, $"The connection to the host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} timed out, there may be problems with the network, connection will be retried.");
+                    lastError = iox;
                     Thread.Sleep(retryInterval);
                 }
                 catch (Exception ex)
