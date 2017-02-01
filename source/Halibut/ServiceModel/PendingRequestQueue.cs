@@ -145,8 +145,15 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    waiter.Wait(HalibutLimits.PollingRequestMaximumMessageProcessingTimeout);
-                    log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
+                    success = waiter.Wait(HalibutLimits.PollingRequestMaximumMessageProcessingTimeout);
+                    if (success)
+                    {
+                        log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
+                    }
+                    else
+                    {
+                        SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", HalibutLimits.PollingRequestMaximumMessageProcessingTimeout))));
+                    }
                 }
                 else
                 {
