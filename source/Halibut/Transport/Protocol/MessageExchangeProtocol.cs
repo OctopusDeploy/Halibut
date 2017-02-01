@@ -141,26 +141,24 @@ namespace Halibut.Transport.Protocol
             while (true)
             {
                 var nextRequest = pendingRequests.Dequeue();
-                var faulted = false;
 
                 try
                 {
                     stream.Send(nextRequest);
+                    if (nextRequest != null)
+                    {
+                        var response = stream.Receive<ResponseMessage>();
+                        pendingRequests.ApplyResponse(response);
+                    }
                 }
-                catch (IOException ex)
+                catch (Exception ex)
                 {
                     if (nextRequest != null)
                     {
                         var response = ResponseMessage.FromException(nextRequest, ex);
                         pendingRequests.ApplyResponse(response);
-                        faulted = true;
                     }
-                }
-
-                if (nextRequest != null && !faulted)
-                {
-                    var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response);
+                    break;
                 }
 
                 try
