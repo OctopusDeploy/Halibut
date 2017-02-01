@@ -12,6 +12,7 @@ namespace Halibut.Transport.Protocol
     {
         readonly IMessageExchangeStream stream;
         bool identified;
+        volatile bool acceptClientRequests = true;
 
         public MessageExchangeProtocol(Stream stream, ILog log)
         {
@@ -29,6 +30,11 @@ namespace Halibut.Transport.Protocol
 
             stream.Send(request);
             return stream.Receive<ResponseMessage>();
+        }
+
+        public void StopAcceptingClientRequests()
+        {
+            acceptClientRequests = false;
         }
 
         void PrepareExchangeAsClient()
@@ -98,17 +104,22 @@ namespace Halibut.Transport.Protocol
 
         void ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            while (true)
+            while (acceptClientRequests)
             {
                 var request = stream.Receive<RequestMessage>();
-                if (request == null)
-                    continue;
-                
+                if (request == null || !acceptClientRequests)
+                    return;
+
                 var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+
+                if (!acceptClientRequests)
+                    return;
+
                 stream.Send(response);
 
-                if (!stream.ExpectNextOrEnd())
-                    break;
+                if (!acceptClientRequests || !stream.ExpectNextOrEnd())
+                    return;
+
                 stream.SendProceed();
             }
         }
