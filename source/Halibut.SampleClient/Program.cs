@@ -6,7 +6,7 @@ using Serilog;
 
 namespace Halibut.SampleClient
 {
-    public class Program
+    class Program
     {
         public static void Main(string[] args)
         {
@@ -15,25 +15,30 @@ namespace Halibut.SampleClient
                 .CreateLogger();
 
             Console.Title = "Halibut Client";
+            var certificate = new X509Certificate2("HalibutClient.pfx");
 
             var hostName = args.FirstOrDefault() ?? "localhost";
             var port = args.Skip(1).FirstOrDefault() ?? "8433";
-
-            var certificate = new X509Certificate2("HalibutClient.pfx");
-
             using (var runtime = new HalibutRuntime(certificate))
             {
-                Console.WriteLine("creating calculator");
+                //Begin make request of Listening server
                 var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                //End make request of Listening server
 
-                Console.WriteLine("making call 1");
-                var result = calculator.Add(12, 18);
-                Console.WriteLine("making call 2");
-                result = calculator.Add(12, 18);
+                //Begin make request of Polling server
+                //var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
+                //runtime.Listen(endPoint);
+                //runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                //var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
+                //End make request of Polling server
 
+                while (true)
+                {
+                    var result = calculator.Add(12, 18);
 
-                Console.WriteLine("12 + 18 = " + result);
-                Console.ReadKey();
+                    Console.WriteLine("12 + 18 = " + result);
+                    Console.ReadKey();
+                }
             }
         }
     }

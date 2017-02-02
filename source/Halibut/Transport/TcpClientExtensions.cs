@@ -1,6 +1,7 @@
 using System;
 using System.Net.Sockets;
 using Halibut.Diagnostics;
+using System.Runtime.ExceptionServices;
 
 namespace Halibut.Transport
 {
@@ -13,8 +14,20 @@ namespace Halibut.Transport
 
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
-            var connectTask = client.ConnectAsync(host, port);
-            if (!connectTask.Wait(timeout))
+            var connectResult = false;
+            try
+            {
+                connectResult = client.ConnectAsync(host, port).Wait(timeout);
+            }
+            catch (AggregateException aex) when (aex.IsSocketConnectionTimeout())
+            {
+                // if timeout is > 20 seconds the underlying socket will timeout first
+            }
+            catch(AggregateException aex)
+            {
+                ExceptionDispatchInfo.Capture(aex.InnerException).Throw();
+            }
+            if (!connectResult)
             {
                 try
                 {
@@ -29,9 +42,6 @@ namespace Halibut.Transport
 
                 throw new HalibutClientException("The client was unable to establish the initial connection within " + HalibutLimits.TcpClientConnectTimeout);
             }
-
-            // unwrap the connect task to throw any connection exceptions
-            connectTask.GetAwaiter().GetResult();
         }
     }
 }

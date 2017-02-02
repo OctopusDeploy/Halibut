@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -20,6 +22,21 @@ namespace Halibut.Diagnostics
             }
 
             return error;
+        }
+
+        public static bool IsSocketTimeout(this Exception exception)
+        {
+            return (exception.InnerException as SocketException)?.SocketErrorCode == SocketError.TimedOut;
+        }
+
+        public static bool IsSocketConnectionReset(this Exception exception)
+        {
+            return (exception.InnerException as SocketException)?.SocketErrorCode == SocketError.ConnectionReset;
+        }
+
+        public static bool IsSocketConnectionTimeout(this Exception exception)
+        {
+            return (exception.InnerException as SocketException)?.SocketErrorCode == SocketError.TimedOut;
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net.Sockets;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 
@@ -11,12 +12,14 @@ namespace Halibut.Transport.Protocol
     public class MessageExchangeProtocol
     {
         readonly IMessageExchangeStream stream;
+        readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
         public MessageExchangeProtocol(Stream stream, ILog log)
         {
             this.stream = new MessageExchangeStream(stream, log);
+            this.log = log;
         }
 
         public MessageExchangeProtocol(IMessageExchangeStream stream)
@@ -117,9 +120,18 @@ namespace Halibut.Transport.Protocol
 
                 stream.Send(response);
 
-                if (!acceptClientRequests || !stream.ExpectNextOrEnd())
+                try
+                {
+                    if (!acceptClientRequests || !stream.ExpectNextOrEnd())
+                        return;
+                }
+                catch (Exception ex) when (ex.IsSocketConnectionTimeout())
+                {
+                    // We get socket timeout on the Listening side (a Listening Tentacle in Octopus use) as part of normal operation
+                    // if we don't hear from the other end within our TcpRx Timeout.
+                    log.Write(EventType.Diagnostic, "No messages received from client for timeout period. Connection closed and will be re-opened when required");
                     return;
-
+                }
                 stream.SendProceed();
             }
         }
@@ -129,30 +141,39 @@ namespace Halibut.Transport.Protocol
             while (true)
             {
                 var nextRequest = pendingRequests.Dequeue();
-                var faulted = false;
 
                 try
                 {
                     stream.Send(nextRequest);
+                    if (nextRequest != null)
+                    {
+                        var response = stream.Receive<ResponseMessage>();
+                        pendingRequests.ApplyResponse(response);
+                    }
                 }
-                catch (IOException ex)
+                catch (Exception ex)
                 {
                     if (nextRequest != null)
                     {
                         var response = ResponseMessage.FromException(nextRequest, ex);
                         pendingRequests.ApplyResponse(response);
-                        faulted = true;
                     }
-                }
-
-                if (nextRequest != null && !faulted)
-                {
-                    var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response);
-                }
-
-                if (!stream.ExpectNextOrEnd())
                     break;
+                }
+
+                try
+                {
+                    if (!stream.ExpectNextOrEnd())
+                        break;
+                }
+                catch (Exception ex) when (ex.IsSocketConnectionTimeout())
+                {
+                    // We get socket timeout on the server when the network connection to a polling client drops
+                    // (in Octopus this is the server for a Polling Tentacle)
+                    // In normal operation a client will poll more often than the timeout so we shouldn't see this.
+                    log.Write(EventType.Error, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
+                    break;
+                }
                 stream.SendProceed();
             }
         }

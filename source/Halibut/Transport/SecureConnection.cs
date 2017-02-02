@@ -30,7 +30,7 @@ namespace Halibut.Transport
 
         public bool HasExpired()
         {
-            return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.TcpClientPooledConnectionTimeout);
+            return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.SafeTcpClientPooledConnectionTimeout);
         }
 
         public void Dispose()

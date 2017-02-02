@@ -56,5 +56,28 @@ namespace Halibut.Diagnostics
         public static TimeSpan TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan TcpClientConnectTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan PollingQueueWaitTimeout = TimeSpan.FromSeconds(30);
+
+        // After a client/server message exchange is complete, the client returns
+        // the connection to the pool but the server continues to block and reads
+        // from the connection until the TcpClientReceiveTimeout.
+        // If TcpClientPooledConnectionTimeout is greater than TcpClientReceiveTimeout
+        // when the client goes to the pool to get a connection for the next
+        // exchange it can get one that has timed out, so make sure our pool
+        // timeout is smaller than the tcp timeout.
+        public static TimeSpan SafeTcpClientPooledConnectionTimeout
+        {
+            get
+            {
+                if (TcpClientPooledConnectionTimeout < TcpClientReceiveTimeout)
+                {
+                    return TcpClientPooledConnectionTimeout;
+                }
+                else
+                {
+                    var timeout = TcpClientReceiveTimeout - TimeSpan.FromSeconds(10);
+                    return timeout > TimeSpan.Zero ? timeout : TcpClientReceiveTimeout;
+                }
+            }
+        }
     }
 }
