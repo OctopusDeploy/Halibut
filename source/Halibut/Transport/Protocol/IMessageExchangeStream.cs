@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport.Protocol
 {
@@ -10,7 +11,7 @@ namespace Halibut.Transport.Protocol
         bool ExpectNextOrEnd();
         void ExpectProceeed();
         void IdentifyAsSubscriber(string subscriptionId);
-        void IdentifyAsServer();
+        Task IdentifyAsServer();
         RemoteIdentity ReadRemoteIdentity();
         void Send<T>(T message);
         T Receive<T>();

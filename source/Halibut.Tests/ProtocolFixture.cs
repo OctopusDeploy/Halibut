@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -43,7 +44,7 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x"))).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -85,7 +86,7 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x"))).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -146,7 +147,7 @@ namespace Halibut.Tests
             requestQueue.Dequeue().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -222,13 +223,13 @@ namespace Halibut.Tests
             queue.Enqueue(new RequestMessage());
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             queue.Enqueue(new RequestMessage());
 
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -320,9 +321,10 @@ namespace Halibut.Tests
                 output.AppendLine("<-- MX-SERVER");
             }
 
-            public void IdentifyAsServer()
+            public Task IdentifyAsServer()
             {
                 output.AppendLine("--> MX-SERVER");
+                return Task.WhenAll();
             }
 
             public RemoteIdentity ReadRemoteIdentity()

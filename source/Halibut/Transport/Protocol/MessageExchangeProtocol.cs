@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 
@@ -88,59 +89,62 @@ namespace Halibut.Transport.Protocol
             stream.ExpectProceeed();
         }
 
-        public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
+        public async Task ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
-            stream.IdentifyAsServer();
+            await stream.IdentifyAsServer();
             switch (identity.IdentityType)
             {
                 case RemoteIdentityType.Client:
-                    ProcessClientRequests(incomingRequestProcessor);
+                    await ProcessClientRequests(incomingRequestProcessor);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    ProcessSubscriber(pendingRequests(identity));
+                    await ProcessSubscriber(pendingRequests(identity));
                     break;
                 default:
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
             }
         }
 
-        void ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        Task ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            while (acceptClientRequests)
+            return Task.Run(() =>
             {
-                var request = stream.Receive<RequestMessage>();
-                if (request == null || !acceptClientRequests)
-                    return;
-
-                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
-
-                if (!acceptClientRequests)
-                    return;
-
-                stream.Send(response);
-
-                try
+                while (acceptClientRequests)
                 {
-                    if (!acceptClientRequests || !stream.ExpectNextOrEnd())
+                    var request = stream.Receive<RequestMessage>();
+                    if (request == null || !acceptClientRequests)
                         return;
+
+                    var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+
+                    if (!acceptClientRequests)
+                        return;
+
+                    stream.Send(response);
+
+                    try
+                    {
+                        if (!acceptClientRequests || !stream.ExpectNextOrEnd())
+                            return;
+                    }
+                    catch (Exception ex) when (ex.IsSocketConnectionTimeout())
+                    {
+                        // We get socket timeout on the Listening side (a Listening Tentacle in Octopus use) as part of normal operation
+                        // if we don't hear from the other end within our TcpRx Timeout.
+                        log.Write(EventType.Diagnostic, "No messages received from client for timeout period. Connection closed and will be re-opened when required");
+                        return;
+                    }
+                    stream.SendProceed();
                 }
-                catch (Exception ex) when (ex.IsSocketConnectionTimeout())
-                {
-                    // We get socket timeout on the Listening side (a Listening Tentacle in Octopus use) as part of normal operation
-                    // if we don't hear from the other end within our TcpRx Timeout.
-                    log.Write(EventType.Diagnostic, "No messages received from client for timeout period. Connection closed and will be re-opened when required");
-                    return;
-                }
-                stream.SendProceed();
-            }
+            });
         }
 
-        void ProcessSubscriber(IPendingRequestQueue pendingRequests)
+        async Task ProcessSubscriber(IPendingRequestQueue pendingRequests)
         {
             while (true)
             {
-                var nextRequest = pendingRequests.Dequeue();
+                var nextRequest = await pendingRequests.Dequeue();
 
                 try
                 {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport;
@@ -63,9 +64,9 @@ namespace Halibut
             return listener.Start();
         }
 
-        void ListenerHandler(MessageExchangeProtocol obj)
+        Task ListenerHandler(MessageExchangeProtocol obj)
         {
-            obj.ExchangeAsServer(
+            return obj.ExchangeAsServer(
                 HandleIncomingRequest,
                 id => GetQueue(id.SubscriptionId));
         }

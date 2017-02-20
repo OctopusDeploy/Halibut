@@ -8,6 +8,7 @@ using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -113,13 +114,13 @@ namespace Halibut.Transport.Protocol
             ExpectServerIdentity();
         }
 
-        public void IdentifyAsServer()
+        public async Task IdentifyAsServer()
         {
-            streamWriter.Write("MX-SERVER ");
-            streamWriter.Write(currentVersion);
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            await streamWriter.WriteAsync("MX-SERVER ");
+            await streamWriter.WriteAsync(currentVersion.ToString());
+            await streamWriter.WriteLineAsync();
+            await streamWriter.WriteLineAsync();
+            await streamWriter.FlushAsync();
         }
 
         public RemoteIdentity ReadRemoteIdentity()
