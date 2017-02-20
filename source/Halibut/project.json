@@ -58,7 +58,6 @@
       "buildOptions": {
         "define": [
           "NET40",
-          "NET45",
           "HAS_REAL_PROXY",
           "CAN_GET_SOCKET_HANDLE",
           "HAS_SERIALIZABLE_EXCEPTIONS"

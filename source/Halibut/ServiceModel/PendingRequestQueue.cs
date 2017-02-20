@@ -53,14 +53,34 @@ namespace Halibut.ServiceModel
             }
         }
 
-        public async Task<RequestMessage> Dequeue()
+
+        public RequestMessage Dequeue()
         {
-            var pending = await DequeueNext();
+            var pending = DequeueNext();
             if (pending == null) return null;
             return pending.BeginTransfer() ? pending.Request : null;
         }
 
-        async Task<PendingRequest> DequeueNext()
+        PendingRequest DequeueNext()
+        {
+            var first = TakeFirst();
+            if (first != null)
+                return first;
+
+            var cts = new CancellationTokenSource(HalibutLimits.PollingQueueWaitTimeout);
+            hasItems.Wait(cts.Token);
+            hasItems.Reset();
+            return TakeFirst();
+        }
+
+        public async Task<RequestMessage> DequeueAsync()
+        {
+            var pending = await DequeueNextAsync();
+            if (pending == null) return null;
+            return pending.BeginTransfer() ? pending.Request : null;
+        }
+
+        async Task<PendingRequest> DequeueNextAsync()
         {
             var first = TakeFirst();
             if (first != null)

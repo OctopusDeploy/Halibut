@@ -144,7 +144,7 @@ namespace Halibut.Transport.Protocol
         {
             while (true)
             {
-                var nextRequest = await pendingRequests.Dequeue();
+                var nextRequest = await pendingRequests.DequeueAsync();
 
                 try
                 {

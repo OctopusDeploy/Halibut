@@ -8,6 +8,7 @@ namespace Halibut.ServiceModel
     {
         bool IsEmpty { get; }
         void ApplyResponse(ResponseMessage response);
-        Task<RequestMessage> Dequeue();
+        RequestMessage Dequeue();
+        Task<RequestMessage> DequeueAsync();
     }
 }
