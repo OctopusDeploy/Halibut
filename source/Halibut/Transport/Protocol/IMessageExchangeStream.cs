@@ -11,7 +11,7 @@ namespace Halibut.Transport.Protocol
         bool ExpectNextOrEnd();
         void ExpectProceeed();
         void IdentifyAsSubscriber(string subscriptionId);
-        Task IdentifyAsServer();
+        void IdentifyAsServer();
         RemoteIdentity ReadRemoteIdentity();
         void Send<T>(T message);
         T Receive<T>();

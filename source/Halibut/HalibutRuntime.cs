@@ -66,7 +66,7 @@ namespace Halibut
 
         Task ListenerHandler(MessageExchangeProtocol obj)
         {
-            return obj.ExchangeAsServer(
+            return obj.ExchangeAsServerAsync(
                 HandleIncomingRequest,
                 id => GetQueue(id.SubscriptionId));
         }

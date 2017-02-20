@@ -38,6 +38,12 @@ namespace Halibut.Transport
         ILog log;
         TcpListener listener;
 
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
+            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent)
+
+        {
+        }
+
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
         {
             this.endPoint = endPoint;
@@ -66,7 +72,7 @@ namespace Halibut.Transport
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(async () => await Accept()); 
+            Task.Run(async () => await Accept());
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
@@ -255,7 +261,7 @@ namespace Halibut.Transport
                 var b = stream.ReadByte();
                 if (b == -1) return builder.ToString();
 
-                var c = (char) b;
+                var c = (char)b;
                 if (c == '\r')
                 {
                     continue;
