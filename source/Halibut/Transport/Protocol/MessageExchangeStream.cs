@@ -116,7 +116,11 @@ namespace Halibut.Transport.Protocol
 
         public void IdentifyAsServer()
         {
-            streamWriter.FlushAsync();
+            streamWriter.Write("MX-SERVER ");
+            streamWriter.Write(currentVersion.ToString());
+            streamWriter.WriteLine();
+            streamWriter.WriteLine();
+            streamWriter.Flush();
         }
 
         public RemoteIdentity ReadRemoteIdentity()
