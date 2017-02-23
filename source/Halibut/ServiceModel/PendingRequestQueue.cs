@@ -67,8 +67,9 @@ namespace Halibut.ServiceModel
             if (first != null)
                 return first;
 
-            var cts = new CancellationTokenSource(HalibutLimits.PollingQueueWaitTimeout);
-            hasItems.Wait(cts.Token);
+            using (var cts = new CancellationTokenSource(HalibutLimits.PollingQueueWaitTimeout))
+                hasItems.Wait(cts.Token);
+
             hasItems.Reset();
             return TakeFirst();
         }
