@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Halibut.Util.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
@@ -11,7 +13,7 @@ namespace Halibut.ServiceModel
         readonly List<PendingRequest> queue = new List<PendingRequest>();
         readonly Dictionary<string, PendingRequest> inProgress = new Dictionary<string, PendingRequest>();
         readonly object sync = new object();
-        readonly ManualResetEventSlim hasItems = new ManualResetEventSlim();
+        readonly AsyncManualResetEvent hasItems = new AsyncManualResetEvent();
         readonly ILog log;
 
         public PendingRequestQueue(ILog log)
@@ -51,6 +53,7 @@ namespace Halibut.ServiceModel
             }
         }
 
+
         public RequestMessage Dequeue()
         {
             var pending = DequeueNext();
@@ -64,9 +67,28 @@ namespace Halibut.ServiceModel
             if (first != null)
                 return first;
 
-            hasItems.Wait(HalibutLimits.PollingQueueWaitTimeout);
-            hasItems.Reset();
+            using (var cts = new CancellationTokenSource(HalibutLimits.PollingQueueWaitTimeout))
+                hasItems.Wait(cts.Token);
 
+            hasItems.Reset();
+            return TakeFirst();
+        }
+
+        public async Task<RequestMessage> DequeueAsync()
+        {
+            var pending = await DequeueNextAsync();
+            if (pending == null) return null;
+            return pending.BeginTransfer() ? pending.Request : null;
+        }
+
+        async Task<PendingRequest> DequeueNextAsync()
+        {
+            var first = TakeFirst();
+            if (first != null)
+                return first;
+
+            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(HalibutLimits.PollingQueueWaitTimeout));
+            hasItems.Reset();
             return TakeFirst();
         }
 

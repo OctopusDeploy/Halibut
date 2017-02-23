@@ -30,7 +30,7 @@ namespace Halibut.Transport
 #endif
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
-        readonly Action<MessageExchangeProtocol> protocolHandler;
+        readonly Func<MessageExchangeProtocol, Task> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
@@ -39,6 +39,12 @@ namespace Halibut.Transport
         TcpListener listener;
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
+            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent)
+
+        {
+        }
+
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -66,7 +72,7 @@ namespace Halibut.Transport
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(async () => await Accept()); 
+            Task.Run(async () => await Accept());
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
@@ -80,7 +86,7 @@ namespace Halibut.Transport
                     {
                         var client = await listener.AcceptTcpClientAsync();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        Task.Run(() => HandleClient(client));
+                        HandleClient(client);
 #pragma warning restore CS4014
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
@@ -97,15 +103,15 @@ namespace Halibut.Transport
             }
         }
 
-        void HandleClient(TcpClient client)
+        async Task HandleClient(TcpClient client)
         {
             try
             {
-                client.SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-                ExecuteRequest(client);
+                await ExecuteRequest(client);
             }
             catch (ObjectDisposedException)
             {
@@ -116,7 +122,7 @@ namespace Halibut.Transport
             }
         }
 
-        void ExecuteRequest(TcpClient client)
+        async Task ExecuteRequest(TcpClient client)
         {
             // By default we will close the stream to cater for failure scenarios
             var keepStreamOpen = false;
@@ -129,7 +135,7 @@ namespace Halibut.Transport
                 try
                 {
                     log.Write(EventType.Security, "Performing TLS server handshake");
-                    ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
+                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 
                     log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -150,7 +156,7 @@ namespace Halibut.Transport
                     if (Authorize(ssl, clientName))
                     {
                         // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                        ExchangeMessages(ssl);
+                        await ExchangeMessages(ssl);
 
                         // Mark the stream as delegated once everything has succeeded
                         keepStreamOpen = true;
@@ -223,11 +229,11 @@ namespace Halibut.Transport
             return true;
         }
 
-        void ExchangeMessages(SslStream stream)
+        Task ExchangeMessages(SslStream stream)
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
-            protocolHandler(new MessageExchangeProtocol(stream, log));
+            return protocolHandler(new MessageExchangeProtocol(stream, log));
         }
 
         bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
@@ -255,7 +261,7 @@ namespace Halibut.Transport
                 var b = stream.ReadByte();
                 if (b == -1) return builder.ToString();
 
-                var c = (char) b;
+                var c = (char)b;
                 if (c == '\r')
                 {
                     continue;

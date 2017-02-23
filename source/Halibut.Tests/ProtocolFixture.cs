@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -161,6 +162,31 @@ namespace Halibut.Tests
         }
 
         [Test]
+        public void ShouldExchangeAsServerOfSubscriberAsync()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
+            var requestQueue = Substitute.For<IPendingRequestQueue>();
+            var queue = new Queue<RequestMessage>();
+            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new RequestMessage());
+            requestQueue.DequeueAsync().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+            stream.SetNumberOfReads(2);
+
+            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+--> RequestMessage
+<-- ResponseMessage
+<-- NEXT
+--> PROCEED
+--> RequestMessage
+<-- ResponseMessage
+<-- END");
+        }
+
+        [Test]
         public void ShouldExchangeAsSubscriberWithPooling()
         {
             stream.NextReadReturns(new RequestMessage());
@@ -229,6 +255,44 @@ namespace Halibut.Tests
             stream.SetNumberOfReads(1);
 
             protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+--> RequestMessage
+<-- ResponseMessage
+<-- NEXT
+--> PROCEED
+--> RequestMessage
+<-- ResponseMessage
+<-- END
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+--> RequestMessage
+<-- ResponseMessage
+<-- END");
+        }
+
+
+        [Test]
+        public void ShouldExchangeAsServerOfSubscriberWithPoolingAsync()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
+            var requestQueue = Substitute.For<IPendingRequestQueue>();
+            var queue = new Queue<RequestMessage>();
+            requestQueue.DequeueAsync().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+
+            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new RequestMessage());
+            stream.SetNumberOfReads(2);
+
+            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+
+            queue.Enqueue(new RequestMessage());
+
+            stream.SetNumberOfReads(1);
+
+            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId

@@ -8,6 +8,7 @@ using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -116,7 +117,7 @@ namespace Halibut.Transport.Protocol
         public void IdentifyAsServer()
         {
             streamWriter.Write("MX-SERVER ");
-            streamWriter.Write(currentVersion);
+            streamWriter.Write(currentVersion.ToString());
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
