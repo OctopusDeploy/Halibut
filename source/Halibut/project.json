@@ -32,6 +32,7 @@
         "System.Net.Security": "4.0.0",
         "System.Threading.Thread": "4.0.0",
         "System.Diagnostics.Tools": "4.0.1",
+        "System.Net.WebSockets.Client": "4.0.0",
         "Microsoft.Extensions.Configuration": "1.0.0",
         "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
         "Microsoft.Extensions.Configuration.Json": "1.0.0",
@@ -60,7 +61,8 @@
           "NET40",
           "HAS_REAL_PROXY",
           "CAN_GET_SOCKET_HANDLE",
-          "HAS_SERIALIZABLE_EXCEPTIONS"
+          "HAS_SERIALIZABLE_EXCEPTIONS",
+          "HAS_WEB_SOCKET_LISTENER"
         ]
       }
     }

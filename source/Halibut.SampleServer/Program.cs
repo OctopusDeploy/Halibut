@@ -29,13 +29,17 @@ namespace Halibut.SampleServer
                 //in Octopus terms, this would be the Tentacle, being asked to do some work
 
                 //Begin Listening Setup
-                server.Listen(endPoint);
-                server.Trust("2074529C99D93D5955FEECA859AEAC6092741205");
+                //server.Listen(endPoint);
+                //server.Trust("2074529C99D93D5955FEECA859AEAC6092741205");
                 //End Listening Setup
 
                 //Begin Polling Setup
                 //server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:8433"), "2074529C99D93D5955FEECA859AEAC6092741205"));
                 //End Polling Setup
+
+                //Begin WebSocket Polling Setup
+                server.PollWebSocket(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433"), "2074529C99D93D5955FEECA859AEAC6092741205"));
+                //End WebSocket Polling Setup
 
                 Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");
                 while (true)

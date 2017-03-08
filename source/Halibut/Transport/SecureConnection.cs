@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using Halibut.Diagnostics;
@@ -8,12 +9,12 @@ namespace Halibut.Transport
 {
     public class SecureConnection : IConnection
     {
-        readonly TcpClient client;
-        readonly SslStream stream;
+        readonly IDisposable client;
+        readonly Stream stream;
         readonly MessageExchangeProtocol protocol;
         DateTimeOffset lastUsed;
 
-        public SecureConnection(TcpClient client, SslStream stream, MessageExchangeProtocol protocol)
+        public SecureConnection(IDisposable client, Stream stream, MessageExchangeProtocol protocol)
         {
             this.client = client;
             this.stream = stream;

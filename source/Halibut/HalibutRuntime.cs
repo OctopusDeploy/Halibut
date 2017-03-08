@@ -18,7 +18,7 @@ namespace Halibut
 
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly X509Certificate2 serverCertificate;
-        readonly List<SecureListener> listeners = new List<SecureListener>();
+        readonly List<IDisposable> listeners = new List<IDisposable>();
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
@@ -63,6 +63,14 @@ namespace Halibut
             listeners.Add(listener);
             return listener.Start();
         }
+#if HAS_WEB_SOCKET_LISTENER
+        public void ListenWebSocket(string endpoint)
+        {
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs, () => friendlyHtmlPageContent);
+            listeners.Add(listener);
+            listener.Start();
+        }
+#endif
 
         Task ListenerHandler(MessageExchangeProtocol obj)
         {
@@ -74,6 +82,12 @@ namespace Halibut
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
             var client = new SecureClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
+            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
+        }
+
+        public void PollWebSocket(Uri subscription, ServiceEndPoint endPoint)
+        {
+            var client = new SecureWebSocketClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
 

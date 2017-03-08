@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.SampleContracts;
 using Serilog;
@@ -22,7 +23,7 @@ namespace Halibut.SampleClient
             using (var runtime = new HalibutRuntime(certificate))
             {
                 //Begin make request of Listening server
-                var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                //var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
                 //End make request of Listening server
 
                 //Begin make request of Polling server
@@ -31,6 +32,12 @@ namespace Halibut.SampleClient
                 //runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
                 //var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
                 //End make request of Polling server
+
+                //Begin make request of WebSocket Polling server
+                runtime.ListenWebSocket("https://+:8433/");
+                runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
+                //End make request of WebSocket Polling server
 
                 while (true)
                 {
