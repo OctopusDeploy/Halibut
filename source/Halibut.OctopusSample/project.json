@@ -6,15 +6,15 @@
   "frameworks": {
     "net450": {
       "frameworkAssemblies": {
-        "System.Core": "*",
-        "System.Xml.Linq": "*",
-        "System.Data.DataSetExtensions": "*",
-        "Microsoft.CSharp": "*",
-        "System.Data": "*",
-        "System.Deployment": "*",
-        "System.Drawing": "*",
-        "System.Windows.Forms": "*",
-        "System.Xml": "*"
+        "System.Core": "4.0.0.0",
+        "System.Xml.Linq": "4.0.0.0",
+        "System.Data.DataSetExtensions": "4.0.0.0",
+        "Microsoft.CSharp": "4.0.0.0",
+        "System.Data": "4.0.0.0",
+        "System.Deployment": "4.0.0.0",
+        "System.Drawing": "4.0.0.0",
+        "System.Windows.Forms": "4.0.0.0",
+        "System.Xml": "4.0.0.0"
       }
     }
   },
