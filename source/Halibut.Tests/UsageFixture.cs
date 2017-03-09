@@ -1,33 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+#if !NET40
 using System.Net.Http;
+#endif
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Newtonsoft.Json.Bson;
-using NUnit.Framework;
+using Xunit;
 
 namespace Halibut.Tests
 {
-    [TestFixture]
     public class UsageFixture
     {
         DelegateServiceFactory services;
 
-        [SetUp]
-        public void SetUp()
+        public UsageFixture()
         {
             services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
         }
 
-        [Test]
+        [Fact]
         public void OctopusCanDiscoverTentacle()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -36,11 +38,11 @@ namespace Halibut.Tests
                 var tentaclePort = tentacleListening.Listen();
 
                 var info = octopus.Discover(new Uri("https://localhost:" + tentaclePort));
-                Assert.That(info.RemoteThumbprint, Is.EqualTo(Certificates.TentacleListeningPublicThumbprint));
+                info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }
 
-        [Test]
+        [Fact]
         public void OctopusCanSendMessagesToListeningTentacle()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -50,18 +52,18 @@ namespace Halibut.Tests
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
                 var watch = Stopwatch.StartNew();
                 for (var i = 0; i < 2000; i++)
                 {
-                    Assert.That(echo.SayHello("Deploy package A"), Is.EqualTo("Deploy package A..."));
+                    echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
                 }
 
                 Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
             }
         }
 
-        [Test]
+        [Fact]
         public void OctopusCanSendMessagesToPollingTentacle()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -75,12 +77,12 @@ namespace Halibut.Tests
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 for (var i = 0; i < 2000; i++)
                 {
-                    Assert.That(echo.SayHello("Deploy package A" + i), Is.EqualTo("Deploy package A" + i + "..."));
+                    echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void StreamsCanBeSentToListening()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -97,12 +99,12 @@ namespace Halibut.Tests
                 for (var i = 0; i < 100; i++)
                 {
                     var count = echo.CountBytes(DataStream.FromBytes(data));
-                    Assert.That(count, Is.EqualTo(1024 * 1024 + 15));
+                    count.Should().Be(1024 * 1024 + 15);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void StreamsCanBeSentToPolling()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -121,12 +123,12 @@ namespace Halibut.Tests
                 for (var i = 0; i < 100; i++)
                 {
                     var count = echo.CountBytes(DataStream.FromBytes(data));
-                    Assert.That(count, Is.EqualTo(1024 * 1024 + 15));
+                    count.Should().Be(1024 * 1024 + 15);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void SupportsDifferentServiceContractMethods()
         {
             services.Register<ISupportedServices>(() => new SupportedServices());
@@ -139,32 +141,32 @@ namespace Halibut.Tests
                 var echo = octopus.CreateClient<ISupportedServices>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
                 echo.MethodReturningVoid(12, 14);
 
-                Assert.That(echo.Hello(), Is.EqualTo("Hello"));
-                Assert.That(echo.Hello("a"), Is.EqualTo("Hello a"));
-                Assert.That(echo.Hello("a", "b"), Is.EqualTo("Hello a b"));
-                Assert.That(echo.Hello("a", "b", "c"), Is.EqualTo("Hello a b c"));
-                Assert.That(echo.Hello("a", "b", "c", "d"), Is.EqualTo("Hello a b c d"));
-                Assert.That(echo.Hello("a", "b", "c", "d", "e"), Is.EqualTo("Hello a b c d e"));
-                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f"), Is.EqualTo("Hello a b c d e f"));
-                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g"), Is.EqualTo("Hello a b c d e f g"));
-                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h"), Is.EqualTo("Hello a b c d e f g h"));
-                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i"), Is.EqualTo("Hello a b c d e f g h i"));
-                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j"), Is.EqualTo("Hello a b c d e f g h i j"));
-                Assert.That(echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"), Is.EqualTo("Hello a b c d e f g h i j k"));
+                echo.Hello().Should().Be("Hello");
+                echo.Hello("a").Should().Be("Hello a");
+                echo.Hello("a", "b").Should().Be("Hello a b");
+                echo.Hello("a", "b", "c").Should().Be("Hello a b c");
+                echo.Hello("a", "b", "c", "d").Should().Be("Hello a b c d");
+                echo.Hello("a", "b", "c", "d", "e").Should().Be("Hello a b c d e");
+                echo.Hello("a", "b", "c", "d", "e", "f").Should().Be("Hello a b c d e f");
+                echo.Hello("a", "b", "c", "d", "e", "f", "g").Should().Be("Hello a b c d e f g");
+                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h").Should().Be("Hello a b c d e f g h");
+                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i").Should().Be("Hello a b c d e f g h i");
+                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j").Should().Be("Hello a b c d e f g h i j");
+                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k").Should().Be("Hello a b c d e f g h i j k");
 
-                Assert.That(echo.Add(1, 2), Is.EqualTo(3));
-                Assert.That(echo.Add(1.00, 2.00), Is.EqualTo(3.00));
-                Assert.That(echo.Add(1.10M, 2.10M), Is.EqualTo(3.20M));
+                echo.Add(1, 2).Should().Be(3);
+                echo.Add(1.00, 2.00).Should().Be(3.00);
+                echo.Add(1.10M, 2.10M).Should().Be(3.20M);
 
-                Assert.That(echo.Ambiguous("a", "b"), Is.EqualTo("Hello string"));
-                Assert.That(echo.Ambiguous("a", new Tuple<string, string>("a", "b")), Is.EqualTo("Hello tuple"));
+                echo.Ambiguous("a", "b").Should().Be("Hello string");
+                echo.Ambiguous("a", new Tuple<string, string>("a", "b")).Should().Be("Hello tuple");
 
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
-                Assert.That(ex.Message, Does.Contain("Ambiguous"));
+                ex.Message.Should().Contain("Ambiguous");
             }
         }
 
-        [Test]
+        [Fact]
         public void StreamsCanBeSentToListeningWithProgressReporting()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -182,19 +184,18 @@ namespace Halibut.Tests
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
 
                 var count = echo.CountBytes(DataStream.FromStream(stream, progressReported.Add));
-                Assert.That(count, Is.EqualTo(1024 * 1024 * 16 + 15));
+                count.Should().Be(1024 * 1024 * 16 + 15);
 
-                CollectionAssert.AreEqual(Enumerable.Range(1, 100).ToList(), progressReported);
+                progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
             }
         }
 
-        [Test]
-        [TestCase("https://127.0.0.1:{port}")]
-        [TestCase("https://127.0.0.1:{port}/")]
-        [TestCase("https://localhost:{port}")]
-        [TestCase("https://localhost:{port}/")]
-        [TestCase("https://{machine}:{port}")]
-        [TestCase("https://{machine}:{port}/")]
+        [InlineData("https://127.0.0.1:{port}")]
+        [InlineData("https://127.0.0.1:{port}/")]
+        [InlineData("https://localhost:{port}")]
+        [InlineData("https://localhost:{port}/")]
+        [InlineData("https://{machine}:{port}")]
+        [InlineData("https://{machine}:{port}/")]
         public void SupportsHttpsGet(string uriFormat)
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -204,15 +205,14 @@ namespace Halibut.Tests
                 
                 var result = DownloadStringIgnoringCertificateValidation(uri);
 
-                Assert.That(result, Is.EqualTo("<html><body><p>Hello!</p></body></html>"));
+                result.Should().Be("<html><body><p>Hello!</p></body></html>");
             }
         }
 
-        [Test]
-        [TestCase("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
-        [TestCase("Simple text works too!", null)]
-        [TestCase("", null)]
-        [TestCase(null, "<html><body><p>Hello!</p></body></html>")]
+        [InlineData("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
+        [InlineData("Simple text works too!", null)]
+        [InlineData("", null)]
+        [InlineData(null, "<html><body><p>Hello!</p></body></html>")]
         public void CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
         {
             expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
@@ -224,18 +224,18 @@ namespace Halibut.Tests
 
                 var result = DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
 
-                Assert.That(result, Is.EqualTo(expectedResult));
+                result.Should().Be(expectedResult);
             }
         }
 
-        [Test]
+        [Fact]
         [Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
         public void ConnectingOverHttpShouldFailQuickly()
         {
             var task = Task.Run(() => DoConnectingOverHttpShouldFailQuickly());
             if (!task.Wait(5000))
             {
-                Assert.Fail("Test did not complete within timeout");
+                Assert.True(false, "Test did not complete within timeout");
             }
         }
 
