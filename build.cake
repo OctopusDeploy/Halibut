@@ -54,7 +54,7 @@ Task("Clean")
     CleanDirectory(artifactsDir);
     CleanDirectories("./source/**/bin");
     CleanDirectories("./source/**/obj");
-    CleanDirectories("./TestResults");
+    CleanDirectories("./source/**/TestResults");
 });
 
 Task("Restore")
