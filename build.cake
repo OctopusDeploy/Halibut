@@ -2,49 +2,45 @@
 // TOOLS
 //////////////////////////////////////////////////////////////////////
 #tool "nuget:?package=GitVersion.CommandLine&version=4.0.0-beta0007"
-#addin "MagicChunks"
+#tool "nuget:?package=NUnit.ConsoleRunner"&version=3.6.1
+#addin "Cake.FileHelpers"
 
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
 var target = Argument("target", "Default");
 var configuration = Argument("configuration", "Release");
-var forceCiBuild = Argument("forceCiBuild", false);
 
 ///////////////////////////////////////////////////////////////////////////////
 // GLOBAL VARIABLES
 ///////////////////////////////////////////////////////////////////////////////
 var artifactsDir = "./artifacts/";
-var globalAssemblyFile = "./source/Halibut/Properties/AssemblyInfo.cs";
-var projectToPackage = "./source/Halibut";
 var localPackagesDir = "../LocalPackages";
 
-var isContinuousIntegrationBuild = !BuildSystem.IsLocalBuild || forceCiBuild;
+GitVersion gitVersionInfo;
+string nugetVersion;
 
-var gitVersionInfo = GitVersion(new GitVersionSettings {
-    OutputType = GitVersionOutput.Json
-});
-
-if(BuildSystem.IsRunningOnTeamCity)
-    BuildSystem.TeamCity.SetBuildNumber(gitVersionInfo.NuGetVersion);
-
-var nugetVersion = gitVersionInfo.NuGetVersion;
-var cleanups = new List<IDisposable>(); 
 
 ///////////////////////////////////////////////////////////////////////////////
 // SETUP / TEARDOWN
 ///////////////////////////////////////////////////////////////////////////////
 Setup(context =>
 {
+    gitVersionInfo = GitVersion(new GitVersionSettings {
+        OutputType = GitVersionOutput.Json
+    });
+
+    if(BuildSystem.IsRunningOnTeamCity)
+        BuildSystem.TeamCity.SetBuildNumber(gitVersionInfo.NuGetVersion);
+
+    nugetVersion = gitVersionInfo.NuGetVersion;
+
     Information("Building Halibut v{0}", nugetVersion);
+    Information("Informational Version {0}", gitVersionInfo.InformationalVersion);
 });
 
 Teardown(context =>
 {
-     Information("Cleaning up");
-    foreach(var item in cleanups)
-        item.Dispose();
-
     Information("Finished running tasks.");
 });
 
@@ -52,193 +48,73 @@ Teardown(context =>
 //  PRIVATE TASKS
 //////////////////////////////////////////////////////////////////////
 
-Task("__Default")
-    .IsDependentOn("__Clean")
-    .IsDependentOn("__Restore")
-    .IsDependentOn("__UpdateAssemblyVersionInformation")
-    .IsDependentOn("__Build")
-    .IsDependentOn("__Test")
-    .IsDependentOn("__UpdateProjectJsonVersion")
-    .IsDependentOn("__CopyToLocalPackages")
-    .IsDependentOn("__Pack");
-    // .IsDependentOn("__Publish");
-
-Task("__Clean")
+Task("Clean")
     .Does(() =>
 {
     CleanDirectory(artifactsDir);
-    CleanDirectories("./src/**/bin");
-    CleanDirectories("./src/**/obj");
+    CleanDirectories("./source/**/bin");
+    CleanDirectories("./source/**/obj");
+    CleanDirectories("./TestResults");
 });
 
-Task("__Restore")
-    .Does(() => DotNetCoreRestore());
-
-Task("__UpdateAssemblyVersionInformation")
-    .WithCriteria(isContinuousIntegrationBuild)
-    .Does(() =>
-{
-     GitVersion(new GitVersionSettings {
-        UpdateAssemblyInfo = true,
-        UpdateAssemblyInfoFilePath = globalAssemblyFile
+Task("Restore")
+    .IsDependentOn("Clean")
+    .Does(() => {
+        DotNetCoreRestore("source");
     });
 
-    Information("AssemblyVersion -> {0}", gitVersionInfo.AssemblySemVer);
-    Information("AssemblyFileVersion -> {0}", $"{gitVersionInfo.MajorMinorPatch}.0");
-    Information("AssemblyInformationalVersion -> {0}", gitVersionInfo.InformationalVersion);
-});
 
-Task("__Build")
+Task("Build")
+    .IsDependentOn("Restore")
+    .IsDependentOn("Clean")
     .Does(() =>
 {
-    DotNetCoreBuild("**/project.json", new DotNetCoreBuildSettings
-    {
-        Configuration = configuration
-    });
+    MSBuild("./source/Halibut.sln", configurator =>
+        configurator.SetConfiguration(configuration)
+            .SetVerbosity(Verbosity.Minimal)
+            .UseToolVersion(MSBuildToolVersion.VS2017)
+            .WithProperty("VersionPrefix", gitVersionInfo.InformationalVersion)
+    );
 });
 
-Task("__Test")
+Task("Test")
+    .IsDependentOn("Build")
     .Does(() =>
 {
-    DotNetCoreTest("./source/Halibut.Tests", new DotNetCoreTestSettings
+    DotNetCoreTest("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCoreTestSettings
     {
         Configuration = configuration,
-        Framework = "net451"
-    });
-
-    MoveFile("./TestResult.xml", "./TestResult.net451.xml");
-
-    DotNetCoreTest("./source/Halibut.Tests", new DotNetCoreTestSettings
-    {
-        Configuration = configuration,
-        Framework = "netcoreapp1.0"
-    });
-
-    MoveFile("./TestResult.xml", "./TestResult.netcoreapp1.0.xml");
-});
-
-Task("__UpdateProjectJsonVersion")
-    .Does(() =>
-{
-    var projectToPackagePackageJson = $"{projectToPackage}/project.json";
-    Information("Updating {0} version -> {1}", projectToPackagePackageJson, nugetVersion);
-
-    cleanups.Add(new AutoRestoreFile(projectToPackagePackageJson));
-    TransformConfig(projectToPackagePackageJson, projectToPackagePackageJson, new TransformationCollection {
-        { "version", nugetVersion }
+        NoBuild = true,
+        ArgumentCustomization = args => args.Append("-l trx")
     });
 });
 
-Task("__Pack")
+Task("Pack")
+    .IsDependentOn("Test")
     .Does(() =>
 {
-    DotNetCorePack(projectToPackage, new DotNetCorePackSettings
+    DotNetCorePack("./source/Halibut", new DotNetCorePackSettings
     {
         Configuration = configuration,
         OutputDirectory = artifactsDir,
-        NoBuild = true
+        NoBuild = true,
+        ArgumentCustomization = args => args.Append($"/p:Version={nugetVersion}")
     });
 
     DeleteFiles(artifactsDir + "*symbols*");
 });
 
-Task("__CopyToLocalPackages")
-    .IsDependentOn("__Pack")
+Task("CopyToLocalPackages")
+    .IsDependentOn("Pack")
+    .WithCriteria(BuildSystem.IsLocalBuild)
     .Does(() =>
 {
     CreateDirectory(localPackagesDir);
     CopyFileToDirectory($"{artifactsDir}/Halibut.{nugetVersion}.nupkg", localPackagesDir);
 });
 
-private class AutoRestoreFile : IDisposable
-{
-	private byte[] _contents;
-	private string _filename;
-	public AutoRestoreFile(string filename)
-	{
-		_filename = filename;
-		_contents = System.IO.File.ReadAllBytes(filename);
-	}
-
-	public void Dispose() => System.IO.File.WriteAllBytes(_filename, _contents);
-}
-
-// Task("__Publish")
-//     .WithCriteria(isContinuousIntegrationBuild && !forceCiBuild)
-//     .Does(() =>
-// {
-//     var isPullRequest = !String.IsNullOrEmpty(EnvironmentVariable("APPVEYOR_PULL_REQUEST_NUMBER"));
-//     var isMasterBranch = EnvironmentVariable("APPVEYOR_REPO_BRANCH") == "master" && !isPullRequest;
-//     var shouldPushToMyGet = !BuildSystem.IsLocalBuild;
-//     var shouldPushToNuGet = !BuildSystem.IsLocalBuild && isMasterBranch;
-
-//     if (shouldPushToMyGet)
-//     {
-//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".nupkg", new NuGetPushSettings {
-//             Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
-//             ApiKey = EnvironmentVariable("MyGetApiKey")
-//         });
-//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".symbols.nupkg", new NuGetPushSettings {
-//             Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
-//             ApiKey = EnvironmentVariable("MyGetApiKey")
-//         });
-//     }
-//     if (shouldPushToNuGet)
-//     {
-//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".nupkg", new NuGetPushSettings {
-//             Source = "https://www.nuget.org/api/v2/package",
-//             ApiKey = EnvironmentVariable("NuGetApiKey")
-//         });
-//         NuGetPush(artifactsDir + "Halibut." + nugetVersion + ".symbols.nupkg", new NuGetPushSettings {
-//             Source = "https://www.nuget.org/api/v2/package",
-//             ApiKey = EnvironmentVariable("NuGetApiKey")
-//         });
-//     }
-// });
-
-//////////////////////////////////////////////////////////////////////
-// TASKS
-//////////////////////////////////////////////////////////////////////
-Task("GitVersion")
-    .Does(() =>
-{
-     GitVersion(new GitVersionSettings {
-        UpdateAssemblyInfo = false,
-        UpdateAssemblyInfoFilePath = globalAssemblyFile
-    });
-
-    Information("AssemblyVersion -> {0}", gitVersionInfo.AssemblySemVer);
-    Information("AssemblyFileVersion -> {0}", $"{gitVersionInfo.MajorMinorPatch}.0");
-    Information("AssemblyInformationalVersion -> {0}", gitVersionInfo.InformationalVersion);
-    Information("FullSemVer -> {0}", gitVersionInfo.FullSemVer);
-});
-
 Task("Default")
-    .IsDependentOn("__Default");
-
-Task("Clean")
-    .IsDependentOn("__Clean");
-
-Task("Restore")
-    .IsDependentOn("__Restore");
-
-Task("Build")
-    .IsDependentOn("__Build");
-
-Task("Test")
-    .IsDependentOn("__Test");
-
-Task("Pack")
-    .IsDependentOn("__Clean")
-    .IsDependentOn("__Restore")
-    .IsDependentOn("__UpdateProjectJsonVersion")
-    .IsDependentOn("__UpdateAssemblyVersionInformation")
-    .IsDependentOn("__Build")
-    .IsDependentOn("__Pack");
-
-// Task("Publish")
-//     .IsDependentOn("Pack")
-//     .IsDependentOn("__Publish");
+    .IsDependentOn("CopyToLocalPackages");
 
 //////////////////////////////////////////////////////////////////////
 // EXECUTION
