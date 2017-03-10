@@ -190,6 +190,7 @@ namespace Halibut.Tests
             }
         }
 
+        [Theory]
         [InlineData("https://127.0.0.1:{port}")]
         [InlineData("https://127.0.0.1:{port}/")]
         [InlineData("https://localhost:{port}")]
@@ -208,7 +209,8 @@ namespace Halibut.Tests
                 result.Should().Be("<html><body><p>Hello!</p></body></html>");
             }
         }
-
+        
+        [Theory]
         [InlineData("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
         [InlineData("Simple text works too!", null)]
         [InlineData("", null)]
