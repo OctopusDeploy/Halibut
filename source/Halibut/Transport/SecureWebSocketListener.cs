@@ -32,6 +32,9 @@ namespace Halibut.Transport
 
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
         {
+            if (!endPoint.EndsWith("/"))
+                endPoint += "/";
+
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
             this.protocolHandler = protocolHandler;
@@ -47,7 +50,7 @@ namespace Halibut.Transport
             listener.Prefixes.Add(endPoint);
             listener.Start();
 
-            log = logFactory.ForEndpoint(new Uri("ws://example.com"));
+            log = logFactory.ForPrefix(endPoint);
             log.Write(EventType.ListenerStarted, "Listener started");
             Task.Run(async () => await Accept());
         }
@@ -217,7 +220,7 @@ namespace Halibut.Transport
         public void Dispose()
         {
             cts.Cancel();
-            listener.Stop();
+            listener?.Stop();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }

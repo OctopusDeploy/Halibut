@@ -12,6 +12,7 @@ using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
+using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport
 {
@@ -197,6 +198,10 @@ namespace Halibut.Transport
             readonly Uri uri;
             public WebSocketProxy(ProxyDetails proxy)
             {
+                if (proxy.Type != ProxyType.HTTP)
+                    throw new ProxyException(string.Format("Unknown proxy type {0}.", proxy.Type.ToString()));
+
+                uri = new Uri($"http://{proxy.Host}:{proxy.Port}");
 
                 if (string.IsNullOrWhiteSpace(proxy.UserName) && string.IsNullOrEmpty(proxy.Password))
                     return;
