@@ -1,0 +1,48 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <VersionPrefix>0.0.0</VersionPrefix>
+    <TargetFramework>net45</TargetFramework>
+    <AssemblyName>Halibut.OctopusSample</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PackageId>Halibut.OctopusSample</PackageId>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Halibut\Halibut.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="OctopusForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="OctopusForm.Designer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="TentacleForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="TentacleForm.Designer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+
+</Project>

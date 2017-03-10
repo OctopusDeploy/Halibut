@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Halibut is a secure, RPC-based communication framework. Like WCF and similar frameworks, Halibut uses a simple request/response based programming model. However, unlike other request/response frameworks, the transport layer can be configured to allow either party to be a TCP listener or TCP client.</Description>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <VersionPrefix>0.0.0</VersionPrefix>
+    <Authors>Octopus Deploy</Authors>
+    <TargetFrameworks>netstandard1.5;net45</TargetFrameworks>
+    <AssemblyName>Halibut</AssemblyName>
+    <PackageId>Halibut</PackageId>
+    <PackageIconUrl>https://res.cloudinary.com/octopusdeploy/image/upload/v1422402724/halibut_f0zea8.png</PackageIconUrl>
+    <PackageProjectUrl>https://github.com/OctopusDeploy/Halibut/</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/OctopusDeploy/Halibut/blob/master/LICENSE</PackageLicenseUrl>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.DispatchProxy" Version="4.3.0" />
+    <PackageReference Include="System.Net.Security" Version="4.3.0" />
+    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="1.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="1.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+  </ItemGroup>
+  
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <PackageReference Include="Newtonsoft.Json" Version="[7.0.1, )" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
+    <DefineConstants>$(DefineConstants);HAS_DISPATCH_PROXY;HAS_ASYNC_LOCAL;LIBLOG_PORTABLE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
+    <DefineConstants>$(DefineConstants);NET40;HAS_REAL_PROXY;CAN_GET_SOCKET_HANDLE;HAS_SERIALIZABLE_EXCEPTIONS</DefineConstants>
+  </PropertyGroup>
+
+
+</Project>

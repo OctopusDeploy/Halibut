@@ -1,19 +1,19 @@
-﻿using Newtonsoft.Json;
-using NUnit.Framework;
+﻿using FluentAssertions;
+using Newtonsoft.Json;
+using Xunit;
 
 namespace Halibut.Tests
 {
-    [TestFixture]
     public class ServiceEndPointFixture
     {
-        [Test]
+        [Fact]
         public void IncompleteEndPointCanBeDeserialized()
         {
             var json = "{BaseUri: \"http://google.com\", RemoteThumbprint: \"AAAA\"}";
             var result = JsonConvert.DeserializeObject<ServiceEndPoint>(json);
 
-            Assert.AreEqual("google.com", result.BaseUri.Host);
-            Assert.AreEqual("AAAA", result.RemoteThumbprint);
+            result.BaseUri.Host.Should().Be("google.com");
+            result.RemoteThumbprint.Should().Be("AAAA");
             Assert.Null(result.Proxy);
         }
     }

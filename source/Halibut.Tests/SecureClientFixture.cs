@@ -1,23 +1,22 @@
 ﻿using System;
+using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NSubstitute;
-using NUnit.Framework;
+using Xunit;
 
 namespace Halibut.Tests
 {
-    [TestFixture]
-    public class SecureClientFixture
+    public class SecureClientFixture : IDisposable
     {
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
         ILog log;
 
-        [SetUp]
-        public void SetUp()
+        public SecureClientFixture()
         {
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
@@ -29,13 +28,12 @@ namespace Halibut.Tests
             HalibutLimits.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
         }
 
-        [TearDown]
-        public void TearDown()
+        public void Dispose()
         {
             tentacle.Dispose();
         }
 
-        [Test]
+        [Fact]
         public void SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
             var pool = new ConnectionPool<ServiceEndPoint, IConnection>();
@@ -63,7 +61,7 @@ namespace Halibut.Tests
             // The pool should be cleared after the second failure
             stream.Received(2).IdentifyAsClient();
             // And a new valid connection should then be made
-            Assert.AreEqual("Fred...", response.Result);
+            response.Result.Should().Be("Fred...");
         }
     }
 }

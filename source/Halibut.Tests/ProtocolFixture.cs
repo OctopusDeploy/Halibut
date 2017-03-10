@@ -3,29 +3,28 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using NSubstitute;
-using NUnit.Framework;
+using Xunit;
 
 namespace Halibut.Tests
 {
-    [TestFixture]
     public class ProtocolFixture
     {
         MessageExchangeProtocol protocol;
         DumpStream stream;
 
-        [SetUp]
-        public void SetUp()
+        public ProtocolFixture()
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
             protocol = new MessageExchangeProtocol(stream);
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsClient()
         {
             protocol.ExchangeAsClient(new RequestMessage());
@@ -37,7 +36,7 @@ namespace Halibut.Tests
 <-- ResponseMessage");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsServerOfClient()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
@@ -54,7 +53,7 @@ namespace Halibut.Tests
 <-- END");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsClientWithPooling()
         {
             // When connections are pooled (kept alive), we send HELLO and expect a PROCEED before each request, that way we can know whether
@@ -78,7 +77,7 @@ namespace Halibut.Tests
 <-- ResponseMessage");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsServerOfClientWithPooling()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
@@ -104,7 +103,7 @@ namespace Halibut.Tests
 <-- END");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsSubscriber()
         {
             stream.NextReadReturns(new RequestMessage());
@@ -136,7 +135,7 @@ namespace Halibut.Tests
 <-- PROCEED");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsServerOfSubscriber()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
@@ -161,7 +160,7 @@ namespace Halibut.Tests
 <-- END");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsServerOfSubscriberAsync()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
@@ -186,7 +185,7 @@ namespace Halibut.Tests
 <-- END");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsSubscriberWithPooling()
         {
             stream.NextReadReturns(new RequestMessage());
@@ -236,7 +235,7 @@ namespace Halibut.Tests
 <-- PROCEED");
         }
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsServerOfSubscriberWithPooling()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
@@ -274,7 +273,7 @@ namespace Halibut.Tests
         }
 
 
-        [Test]
+        [Fact]
         public void ShouldExchangeAsServerOfSubscriberWithPoolingAsync()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
@@ -314,7 +313,7 @@ namespace Halibut.Tests
         void AssertOutput(string expected)
         {
             Trace.WriteLine(stream.ToString());
-            Assert.That(stream.ToString().Replace("\r\n", "\n").Trim(), Is.EqualTo(expected.Replace("\r\n", "\n").Trim()));
+            stream.ToString().Replace("\r\n", "\n").Trim().Should().Be(expected.Replace("\r\n", "\n").Trim());
         }
 
         class DumpStream : IMessageExchangeStream

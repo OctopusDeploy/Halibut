@@ -1,63 +1,62 @@
 ﻿using System;
+using FluentAssertions;
 using Halibut.Transport;
-using NUnit.Framework;
+using Xunit;
 
 namespace Halibut.Tests
 {
-    [TestFixture]
     public class ConnectionPoolFixture
     {
         ConnectionPool<string, Connection> pool;
 
-        [SetUp]
-        public void SetUp()
+        public ConnectionPoolFixture()
         {
             pool = new ConnectionPool<string, Connection>();
         }
 
-        [Test]
+        [Fact]
         public void ShouldGetConnectionFromPool()
         {
             pool.Return("http://foo", new Connection());
             pool.Return("http://foo", new Connection());
             pool.Return("http://foo", new Connection());
-            Assert.That(pool.Take("http://foo"), Is.Not.Null);
-            Assert.That(pool.Take("http://foo"), Is.Not.Null);
-            Assert.That(pool.Take("http://foo"), Is.Not.Null);
-            Assert.That(pool.Take("http://foo"), Is.Null);
-            Assert.That(pool.Take("http://foo"), Is.Null);
-            Assert.That(pool.Take("http://foo"), Is.Null);
+            pool.Take("http://foo").Should().NotBeNull();
+            pool.Take("http://foo").Should().NotBeNull();
+            pool.Take("http://foo").Should().NotBeNull();
+            pool.Take("http://foo").Should().BeNull();
+            pool.Take("http://foo").Should().BeNull();
+            pool.Take("http://foo").Should().BeNull();
             pool.Return("http://foo", new Connection());
-            Assert.That(pool.Take("http://foo"), Is.Not.Null);
-            Assert.That(pool.Take("http://foo"), Is.Null);
+            pool.Take("http://foo").Should().NotBeNull();
+            pool.Take("http://foo").Should().BeNull();
         }
 
-        [Test]
+        [Fact]
         public void ShouldGetConnectionFromPoolByKey()
         {
             pool.Return("http://foo1", new Connection());
             pool.Return("http://foo2", new Connection());
-            Assert.That(pool.Take("http://foo1"), Is.Not.Null);
-            Assert.That(pool.Take("http://foo1"), Is.Null);
+            pool.Take("http://foo1").Should().NotBeNull();
+            pool.Take("http://foo1").Should().BeNull();
         }
 
-        [Test]
+        [Fact]
         public void ShouldLetConnectionsExpire()
         {
             var connection = new Connection();
 
             pool.Return("http://foo", connection);
-            Assert.That(connection.UsageCount, Is.EqualTo(1));
+            connection.UsageCount.Should().Be(1);
 
-            Assert.That(pool.Take("http://foo"), Is.EqualTo(connection));
+            pool.Take("http://foo").Should().Be(connection);
             pool.Return("http://foo", connection);
-            Assert.That(connection.UsageCount, Is.EqualTo(2));
+            connection.UsageCount.Should().Be(2);
             
-            Assert.That(pool.Take("http://foo"), Is.EqualTo(connection));
+            pool.Take("http://foo").Should().Be(connection);
             pool.Return("http://foo", connection);
-            Assert.That(connection.UsageCount, Is.EqualTo(3));
+            connection.UsageCount.Should().Be(3);
 
-            Assert.That(pool.Take("http://foo"), Is.Null);
+            pool.Take("http://foo").Should().BeNull();
         }
 
         class Connection : IPooledResource
