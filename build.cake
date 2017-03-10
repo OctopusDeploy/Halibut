@@ -69,12 +69,11 @@ Task("Build")
     .IsDependentOn("Clean")
     .Does(() =>
 {
-    MSBuild("./source/Halibut.sln", configurator =>
-        configurator.SetConfiguration(configuration)
-            .SetVerbosity(Verbosity.Minimal)
-            .UseToolVersion(MSBuildToolVersion.VS2017)
-            .WithProperty("VersionPrefix", gitVersionInfo.InformationalVersion)
-    );
+    DotNetCoreBuild("./source", new DotNetCoreBuildSettings
+    {
+        Configuration = configuration,
+        ArgumentCustomization = args => args.Append($"/p:Version={nugetVersion}")
+    });
 });
 
 Task("Test")
