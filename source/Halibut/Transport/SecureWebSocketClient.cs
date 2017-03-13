@@ -133,7 +133,7 @@ namespace Halibut.Transport
 
         ClientWebSocket CreateConnectedClient(ServiceEndPoint endPoint)
         {
-            if(!endPoint.BaseUri.Scheme.Equals("wss", StringComparison.OrdinalIgnoreCase))
+            if(!endPoint.IsWebSocketEndpoint)
                 throw new Exception("Only wss:// endpoints are supported");
 
             var connectionId = Guid.NewGuid().ToString();

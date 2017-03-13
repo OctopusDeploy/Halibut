@@ -19,7 +19,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly X509Certificate2 serverCertificate;
         readonly List<IDisposable> listeners = new List<IDisposable>();
-        readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase); 
+        readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
@@ -81,17 +81,21 @@ namespace Halibut
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
-            var client = new SecureClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
-        }
-
+            ISecureClient client;
+            if (endPoint.IsWebSocketEndpoint)
+            {
 #if HAS_SERVICE_POINT_MANAGER
-        public void PollWebSocket(Uri subscription, ServiceEndPoint endPoint)
-        {
-            var client = new SecureWebSocketClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
+                client = new SecureWebSocketClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
+#else
+                throw new NotImplementedException("Web Sockets are not available on this platform");
+#endif
+            }
+            else
+            {
+                client = new SecureClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
+            }
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
-#endif
 
         public ServiceEndPoint Discover(Uri uri)
         {

@@ -20,7 +20,7 @@ namespace Halibut
         [JsonConstructor]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy)
         {
-            if (baseUri.Scheme == "wss")
+            if (IsWebSocketAddress(baseUri))
             {
                 baseUriString = baseUri.AbsoluteUri;
                 BaseUri = baseUri;
@@ -34,13 +34,18 @@ namespace Halibut
             Proxy = proxy;
         }
 
+
         public Uri BaseUri { get; }
 
         public string RemoteThumbprint { get; }
 
         public ProxyDetails Proxy { get; }
 
+        public bool IsWebSocketEndpoint => IsWebSocketAddress(BaseUri);
+
         public override string ToString() => baseUriString;
+
+        public static bool IsWebSocketAddress(Uri baseUri) => baseUri.Scheme.Equals("wss", StringComparison.OrdinalIgnoreCase);
 
         public bool Equals(ServiceEndPoint other)
         {

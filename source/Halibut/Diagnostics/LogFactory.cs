@@ -28,7 +28,7 @@ namespace Halibut.Diagnostics
 
         static Uri NormalizeEndpoint(Uri endpoint)
         {
-            return endpoint.Scheme == "wss" 
+            return ServiceEndPoint.IsWebSocketAddress(endpoint)
                 ? new Uri(endpoint.AbsoluteUri.ToLowerInvariant()) 
                 : new Uri(endpoint.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).TrimEnd('/').ToLowerInvariant());
         }

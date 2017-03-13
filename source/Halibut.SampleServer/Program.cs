@@ -40,7 +40,7 @@ namespace Halibut.SampleServer
 
                 //Begin WebSocket Polling Setup
                 
-                server.PollWebSocket(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint));
+                server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint));
                 //End WebSocket Polling Setup
 
                 Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");

@@ -98,7 +98,7 @@ namespace Halibut.Tests
                     octopus.ListenWebSocket($"https://+:{octopusPort}/Halibut");
                     octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
 
-                    tentaclePolling.PollWebSocket(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{octopusPort}/Halibut"), Certificates.SslThumbprint));
+                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{octopusPort}/Halibut"), Certificates.SslThumbprint));
 
                     var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                     for (var i = 0; i < 2000; i++)
