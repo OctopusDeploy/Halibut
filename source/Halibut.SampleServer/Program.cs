@@ -9,6 +9,7 @@ namespace Halibut.SampleServer
 {
     class Program
     {
+        const string SslCertificateThumbprint = "6E5C6492129B75A4C83E1A23797AF6344092E5C2"; // For WebSockets. This is different to the internally configured thumbprint
         public static void Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
@@ -38,7 +39,8 @@ namespace Halibut.SampleServer
                 //End Polling Setup
 
                 //Begin WebSocket Polling Setup
-                server.PollWebSocket(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433"), "2074529C99D93D5955FEECA859AEAC6092741205"));
+                
+                server.PollWebSocket(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint));
                 //End WebSocket Polling Setup
 
                 Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");

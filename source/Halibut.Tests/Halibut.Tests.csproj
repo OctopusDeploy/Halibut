@@ -11,7 +11,7 @@
     <FrameworkFamily Condition="'$(TargetFramework)' == 'netcoreapp1.0'">NetCore</FrameworkFamily>
   </PropertyGroup>
   <ItemGroup>
-    <None Update="Certificates\Octopus.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
+    <None Update="Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="App.config" />
@@ -31,7 +31,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(FrameworkFamily)' == 'NetFramework' ">
-    <DefineConstants>$(DefineConstants);NET40</DefineConstants>
+    <DefineConstants>$(DefineConstants);NET40;HAS_SERVICE_POINT_MANAGER</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

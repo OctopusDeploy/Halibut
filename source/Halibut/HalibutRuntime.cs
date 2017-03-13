@@ -85,11 +85,13 @@ namespace Halibut
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
 
+#if HAS_SERVICE_POINT_MANAGER
         public void PollWebSocket(Uri subscription, ServiceEndPoint endPoint)
         {
             var client = new SecureWebSocketClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
+#endif
 
         public ServiceEndPoint Discover(Uri uri)
         {

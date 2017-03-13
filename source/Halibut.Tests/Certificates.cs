@@ -13,6 +13,8 @@ namespace Halibut.Tests
         public static string OctopusPublicThumbprint;
         public static X509Certificate2 TentaclePolling;
         public static string TentaclePollingPublicThumbprint;
+        public static X509Certificate2 Ssl;
+        public static string SslThumbprint;
 
         static Certificates()
         {
@@ -28,6 +30,8 @@ namespace Halibut.Tests
             OctopusPublicThumbprint = Octopus.Thumbprint;
             TentaclePolling = new X509Certificate2(Path.Combine(directory, "TentaclePolling.pfx"));
             TentaclePollingPublicThumbprint = TentaclePolling.Thumbprint;
+            Ssl = new X509Certificate2(Path.Combine(directory, "Ssl.pfx"), "password");
+            SslThumbprint = Ssl.Thumbprint;
         }
     }
 }

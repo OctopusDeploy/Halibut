@@ -1,4 +1,4 @@
-#if HAS_WEB_SOCKET_LISTENER
+#if HAS_SERVICE_POINT_MANAGER
 using System;
 using System.IO;
 using System.Net;
@@ -115,9 +115,7 @@ namespace Halibut.Transport
             {
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus");
                 webSocketStream = new WebSocketStream(webSocketContext.WebSocket);
-
-                //log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", listenerContext.SslProtocol.ToString());
-
+                
                 var req = await webSocketStream.ReadTextMessage(); // Initial message
                 if (string.IsNullOrEmpty(req))
                 {

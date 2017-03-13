@@ -1,3 +1,4 @@
+#if HAS_WEB_SOCKET_LISTENER
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -70,7 +71,7 @@ namespace Halibut.Transport
                 }
                 catch (WebSocketException wse) when (wse.Message == "Unable to connect to the remote server")
                 {
-                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
+                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running, or it's SSL certificate has not been configured correctly.");
                     lastError = wse;
                 }
                 catch (WebSocketException wse)
@@ -116,17 +117,7 @@ namespace Halibut.Transport
         SecureConnection EstablishNewConnection()
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
-#if NET40
-            var previous = ServicePointManager.ServerCertificateValidationCallback;
-            ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) =>
-            {
 
-                if (previous != null)
-                    return previous(sender, certificate, chain, errors);
-                return true;
-            };
-#endif 
-            var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = CreateConnectedClient(serviceEndpoint);
             
             log.Write(EventType.Diagnostic, "Connection established");
@@ -136,24 +127,38 @@ namespace Halibut.Transport
             log.Write(EventType.Security, "Performing handshake");
             stream.WriteTextMessage("MX");
 
-            //log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", serviceEndpoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
-
             var protocol = new MessageExchangeProtocol(stream, log);
             return new SecureConnection(client, stream, protocol);
         }
 
         ClientWebSocket CreateConnectedClient(ServiceEndPoint endPoint)
         {
+            if(!endPoint.BaseUri.Scheme.Equals("wss", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Only wss:// endpoints are supported");
+
+            var connectionId = Guid.NewGuid().ToString();
+
             var client = new ClientWebSocket();
             client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
             client.Options.AddSubProtocol("Octopus");
+            client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
             if (endPoint.Proxy != null)
                 client.Options.Proxy = new WebSocketProxy(endPoint.Proxy);
 
-            using (var cts = new CancellationTokenSource(HalibutLimits.TcpClientConnectTimeout))
-                client.ConnectAsync(endPoint.BaseUri, cts.Token)
-                    .ConfigureAwait(false).GetAwaiter().GetResult();
+            try
+            {
+                ServerCertificateInterceptor.Expect(connectionId);
+                using (var cts = new CancellationTokenSource(HalibutLimits.TcpClientConnectTimeout))
+                    client.ConnectAsync(endPoint.BaseUri, cts.Token)
+                        .ConfigureAwait(false).GetAwaiter().GetResult();
+                ServerCertificateInterceptor.Validate(connectionId, endPoint);
+            }
+            finally
+            {
+                ServerCertificateInterceptor.Remove(connectionId);
+            }
 
+            
             return client;
         }
 
@@ -188,12 +193,7 @@ namespace Halibut.Transport
             throw new HalibutClientException(error.ToString(), lastError);
         }
 
-        X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
-        {
-            return clientCertificate;
-        }
-
-        class WebSocketProxy : IWebProxy
+ class WebSocketProxy : IWebProxy
         {
             readonly Uri uri;
             public WebSocketProxy(ProxyDetails proxy)
@@ -217,3 +217,4 @@ namespace Halibut.Transport
         }
     }
 }
+#endif
