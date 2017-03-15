@@ -364,7 +364,7 @@ namespace Halibut.Tests
             {
                 Console.WriteLine(output);
                 Console.WriteLine(proc.StandardError.ReadToEnd());
-                throw new Exception("Could not bind cert to port");
+                throw new Exception("The system cannot find the file specified");
             }
         }
 #endif

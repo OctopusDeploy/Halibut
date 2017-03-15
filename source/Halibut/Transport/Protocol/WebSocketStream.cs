@@ -41,7 +41,7 @@ namespace Halibut.Transport.Protocol
         public async Task<string> ReadTextMessage()
         {
             var sb = new StringBuilder();
-            var buffer = new ArraySegment<byte>(new byte[1000]);
+            var buffer = new ArraySegment<byte>(new byte[10000]);
             while (true)
             {
                 var result = await context.ReceiveAsync(buffer, CancellationToken.None);

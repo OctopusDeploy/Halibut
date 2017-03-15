@@ -46,8 +46,12 @@ namespace Halibut.Transport
 
         public void Start()
         {
+            if (!endPoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                throw new Exception("Web socket listen prefixes must start with https://");
+
             listener = new HttpListener();
             listener.Prefixes.Add(endPoint);
+            listener.TimeoutManager.IdleConnection = HalibutLimits.TcpClientReceiveTimeout;
             listener.Start();
 
             log = logFactory.ForPrefix(endPoint);
@@ -74,7 +78,7 @@ namespace Halibut.Transport
                         else
                         {
                             log.Write(EventType.Error, $"Rejected connection from {context.Request.RemoteEndPoint} as it is not Web Socket request");
-                            SendFriendlyHtmlPage(context.Response.OutputStream);
+                            SendFriendlyHtmlPage(context.Response);
                             context.Response.Close();
                         }
 
@@ -154,22 +158,16 @@ namespace Halibut.Transport
         }
 
       
-        void SendFriendlyHtmlPage(Stream stream)
+        void SendFriendlyHtmlPage(HttpListenerResponse response)
         {
             var message = getFriendlyHtmlPageContent();
-
+            response.AddHeader("Content-Type", "text/html; charset=utf-8");
             // This could fail if the client terminates the connection and we attempt to write to it
             // Disposing the StreamWriter will close the stream - it owns the stream
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+            using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)))
             {
-                writer.WriteLine("HTTP/1.0 200 OK");
-                writer.WriteLine("Content-Type: text/html; charset=utf-8");
-                writer.WriteLine("Content-Length: " + message.Length);
-                writer.WriteLine();
                 writer.WriteLine(message);
-                writer.WriteLine();
                 writer.Flush();
-                stream.Flush();
             }
         }
 

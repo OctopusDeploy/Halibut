@@ -10,6 +10,9 @@ namespace Halibut
         int Listen();
         int Listen(int port);
         int Listen(IPEndPoint endpoint);
+#if HAS_WEB_SOCKET_LISTENER
+        void ListenWebSocket(string endpoint);
+#endif
         void Poll(Uri subscription, ServiceEndPoint endPoint);
         ServiceEndPoint Discover(Uri uri);
         ServiceEndPoint Discover(ServiceEndPoint endpoint);

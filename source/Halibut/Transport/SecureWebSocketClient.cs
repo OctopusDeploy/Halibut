@@ -46,7 +46,11 @@ namespace Halibut.Transport
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
-                if (i > 0) log.Write(EventType.Error, "Retry attempt {0}", i);
+                if (i > 0) 
+                {
+                    Thread.Sleep(retryInterval);
+                    log.Write(EventType.Error, "Retry attempt {0}", i);
+                }
 
                 try
                 {
@@ -95,13 +99,11 @@ namespace Halibut.Transport
                         pool.Clear(serviceEndpoint, log);
                     }
 
-                    Thread.Sleep(retryInterval);
                 }
                 catch (Exception ex)
                 {
                     log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
                     lastError = ex;
-                    Thread.Sleep(retryInterval);
                 }
             }
 
@@ -126,6 +128,8 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Performing handshake");
             stream.WriteTextMessage("MX");
+
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
             var protocol = new MessageExchangeProtocol(stream, log);
             return new SecureConnection(client, stream, protocol);
