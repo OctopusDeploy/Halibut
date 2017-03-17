@@ -15,7 +15,7 @@ namespace Halibut.Transport
 {
     public class SecureClient : ISecureClient
     {
-        public const int RetryCountLimit = 5; 
+        public const int RetryCountLimit = 5;
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
@@ -52,12 +52,21 @@ namespace Halibut.Transport
                 {
                     lastError = null;
 
-                    var connection = AcquireConnection();
+                    IConnection connection = null;
+                    try
+                    {
+                        connection = AcquireConnection();
 
-                    // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
-                    retryAllowed = false;
+                        // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
+                        retryAllowed = false;
 
-                    protocolHandler(connection.Protocol);
+                        protocolHandler(connection.Protocol);
+                    }
+                    catch
+                    {
+                        connection?.Dispose();
+                        throw;
+                    }
 
                     // Only return the connection to the pool if all went well
                     ReleaseConnection(connection);

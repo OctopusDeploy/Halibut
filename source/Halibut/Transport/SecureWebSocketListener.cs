@@ -85,7 +85,8 @@ namespace Halibut.Transport
                     }
                     catch (Exception ex)
                     {
-                        log.WriteException(EventType.Error, "Error accepting Web Socket client", ex);
+                        if(!cts.IsCancellationRequested)
+                            log.WriteException(EventType.Error, "Error accepting Web Socket client", ex);
                     }
                 }
             }

@@ -56,12 +56,21 @@ namespace Halibut.Transport
                 {
                     lastError = null;
 
-                    var connection = AcquireConnection();
+                    IConnection connection = null;
+                    try
+                    {
+                        connection = AcquireConnection();
 
-                    // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
-                    retryAllowed = false;
+                        // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
+                        retryAllowed = false;
 
-                    protocolHandler(connection.Protocol);
+                        protocolHandler(connection.Protocol);
+                    }
+                    catch
+                    {
+                        connection?.Dispose();
+                        throw;
+                    }
 
                     // Only return the connection to the pool if all went well
                     ReleaseConnection(connection);
