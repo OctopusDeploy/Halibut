@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace Halibut.Diagnostics
@@ -7,29 +8,40 @@ namespace Halibut.Diagnostics
     public class LogFactory : ILogFactory
     {
         readonly ConcurrentDictionary<string, InMemoryConnectionLog> events = new ConcurrentDictionary<string, InMemoryConnectionLog>();
-        readonly ConcurrentBag<Uri> endpoints = new ConcurrentBag<Uri>();
-        readonly ConcurrentBag<string> prefixes = new ConcurrentBag<string>();
+        readonly HashSet<Uri> endpoints = new HashSet<Uri>();
+        readonly HashSet<string> prefixes = new HashSet<string>();
 
-        public Uri[] GetEndpoints() => endpoints.ToArray();
-        public string[] GetPrefixes() => prefixes.ToArray();
+        public Uri[] GetEndpoints()
+        {
+            lock (endpoints)
+                return endpoints.ToArray();
+        }
+
+        public string[] GetPrefixes()
+        {
+            lock (prefixes)
+                return prefixes.ToArray();
+        }
 
         public ILog ForEndpoint(Uri endpoint)
         {
             endpoint = NormalizeEndpoint(endpoint);
-            endpoints.Add(endpoint);
+            lock (endpoints)
+                endpoints.Add(endpoint);
             return events.GetOrAdd(endpoint.ToString(), e => new InMemoryConnectionLog(endpoint.ToString()));
         }
 
         public ILog ForPrefix(string prefix)
         {
-            prefixes.Add(prefix);
+            lock (prefixes)
+                prefixes.Add(prefix);
             return events.GetOrAdd(prefix, e => new InMemoryConnectionLog(prefix));
         }
 
         static Uri NormalizeEndpoint(Uri endpoint)
         {
             return ServiceEndPoint.IsWebSocketAddress(endpoint)
-                ? new Uri(endpoint.AbsoluteUri.ToLowerInvariant()) 
+                ? new Uri(endpoint.AbsoluteUri.ToLowerInvariant())
                 : new Uri(endpoint.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).TrimEnd('/').ToLowerInvariant());
         }
     }
