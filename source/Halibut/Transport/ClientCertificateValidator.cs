@@ -15,7 +15,7 @@ namespace Halibut.Transport
 
         public bool Validate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
         {
-            var providedCert = new X509Certificate2(certificate.Export(X509ContentType.Cert));
+            var providedCert = new X509Certificate2(certificate.Export(X509ContentType.Cert)); // Copy the cert so that we can reference it later
             var providedThumbprint = providedCert.Thumbprint;
 
             if (providedThumbprint == endPoint.RemoteThumbprint)

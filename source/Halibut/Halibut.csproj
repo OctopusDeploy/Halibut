@@ -19,6 +19,7 @@
     <PackageReference Include="System.Reflection.DispatchProxy" Version="4.3.0" />
     <PackageReference Include="System.Net.Security" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+    <PackageReference Include="System.Net.WebSockets.Client" Version="4.3.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="1.0.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="1.0.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.0.2" />
@@ -37,7 +38,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <DefineConstants>$(DefineConstants);NET40;HAS_REAL_PROXY;CAN_GET_SOCKET_HANDLE;HAS_SERIALIZABLE_EXCEPTIONS</DefineConstants>
+    <DefineConstants>$(DefineConstants);NET40;HAS_REAL_PROXY;CAN_GET_SOCKET_HANDLE;HAS_SERIALIZABLE_EXCEPTIONS;HAS_WEB_SOCKET_LISTENER;HAS_SERVICE_POINT_MANAGER</DefineConstants>
   </PropertyGroup>
 
 

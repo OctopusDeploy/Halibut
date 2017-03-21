@@ -8,12 +8,12 @@ namespace Halibut.Transport
     public class PollingClient : IPollingClient
     {
         readonly Uri subscription;
-        readonly SecureClient secureClient;
+        readonly ISecureClient secureClient;
         readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
         readonly Thread thread;
         bool working;
 
-        public PollingClient(Uri subscription, SecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;

@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 #endif
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
@@ -82,6 +83,37 @@ namespace Halibut.Tests
             }
         }
 
+#if HAS_SERVICE_POINT_MANAGER
+        [Fact]
+        public void OctopusCanSendMessagesToWebSocketPollingTentacle()
+        {
+            const int octopusPort = 8450;
+            AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:" + octopusPort);
+
+            try
+            {
+                using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+                {
+                    octopus.ListenWebSocket($"https://+:{octopusPort}/Halibut");
+                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{octopusPort}/Halibut"), Certificates.SslThumbprint));
+
+                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                    for (var i = 0; i < 2000; i++)
+                    {
+                        echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                    }
+                }
+            }
+            finally
+            {
+                RemoveSslCertBindingFor("0.0.0.0:" + octopusPort);
+            }
+        }
+#endif
+
         [Fact]
         public void StreamsCanBeSentToListening()
         {
@@ -90,7 +122,7 @@ namespace Halibut.Tests
             {
                 var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-                
+
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
@@ -180,7 +212,7 @@ namespace Halibut.Tests
                 var data = new byte[1024 * 1024 * 16 + 15];
                 new Random().NextBytes(data);
                 var stream = new MemoryStream(data);
-                
+
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
 
                 var count = echo.CountBytes(DataStream.FromStream(stream, progressReported.Add));
@@ -203,13 +235,13 @@ namespace Halibut.Tests
             {
                 var listenPort = octopus.Listen();
                 var uri = uriFormat.Replace("{machine}", Environment.MachineName).Replace("{port}", listenPort.ToString());
-                
+
                 var result = DownloadStringIgnoringCertificateValidation(uri);
 
                 result.Should().Be("<html><body><p>Hello!</p></body></html>");
             }
         }
-        
+
         [Theory]
         [InlineData("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
         [InlineData("Simple text works too!", null)]
@@ -258,7 +290,7 @@ namespace Halibut.Tests
         static string DownloadStringIgnoringCertificateValidation(string uri)
         {
 #if NET40
-             using (var webClient = new WebClient())
+            using (var webClient = new WebClient())
             {
                 try
                 {
@@ -282,5 +314,59 @@ namespace Halibut.Tests
             }
 #endif
         }
+
+#if HAS_SERVICE_POINT_MANAGER
+        static void AddSslCertToLocalStoreAndRegisterFor(string address)
+        {
+            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadWrite);
+            store.Add(Certificates.Ssl);
+            store.Close();
+
+
+            var proc = new Process()
+            {
+                StartInfo = new ProcessStartInfo("netsh", $"http add sslcert ipport={address} certhash={Certificates.SslThumbprint} appid={{2e282bfb-fce9-40fc-a594-2136043e1c8f}}")
+                {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false
+                }
+            };
+            proc.Start();
+            proc.WaitForExit();
+            var output = proc.StandardOutput.ReadToEnd();
+
+            if (proc.ExitCode != 0 && !output.Contains("Cannot create a file when that file already exists"))
+            {
+                Console.WriteLine(output);
+                Console.WriteLine(proc.StandardError.ReadToEnd());
+                throw new Exception("Could not bind cert to port");
+            }
+        }
+
+        static void RemoveSslCertBindingFor(string address)
+        {
+            var proc = new Process()
+            {
+                StartInfo = new ProcessStartInfo("netsh", $"http delete sslcert ipport={address}")
+                {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false
+                }
+            };
+            proc.Start();
+            proc.WaitForExit();
+            var output = proc.StandardOutput.ReadToEnd();
+
+            if (proc.ExitCode != 0)
+            {
+                Console.WriteLine(output);
+                Console.WriteLine(proc.StandardError.ReadToEnd());
+                throw new Exception("The system cannot find the file specified");
+            }
+        }
+#endif
     }
 }

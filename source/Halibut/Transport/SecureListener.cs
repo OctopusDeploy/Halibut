@@ -22,7 +22,7 @@ namespace Halibut.Transport
         PROTECT_FROM_CLOSE = 2
     }
 
-    public class SecureListener
+    public class SecureListener : IDisposable
     {
 #if CAN_GET_SOCKET_HANDLE
         [DllImport("kernel32.dll", SetLastError = true)]

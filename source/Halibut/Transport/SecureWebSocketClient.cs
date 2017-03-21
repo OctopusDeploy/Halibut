@@ -1,8 +1,11 @@
+#if HAS_WEB_SOCKET_LISTENER
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -10,19 +13,19 @@ using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
+using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport
 {
-    public class SecureClient : ISecureClient
+    public class SecureWebSocketClient : ISecureClient
     {
         public const int RetryCountLimit = 5;
-        static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, IConnection> pool)
+        public SecureWebSocketClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, IConnection> pool)
         {
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
@@ -30,10 +33,7 @@ namespace Halibut.Transport
             this.pool = pool;
         }
 
-        public ServiceEndPoint ServiceEndpoint
-        {
-            get { return serviceEndpoint; }
-        }
+        public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
 
         public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
         {
@@ -46,7 +46,11 @@ namespace Halibut.Transport
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
-                if (i > 0) log.Write(EventType.Error, "Retry attempt {0}", i);
+                if (i > 0) 
+                {
+                    Thread.Sleep(retryInterval);
+                    log.Write(EventType.Error, "Retry attempt {0}", i);
+                }
 
                 try
                 {
@@ -78,20 +82,18 @@ namespace Halibut.Transport
                     retryAllowed = false;
                     break;
                 }
-                catch (SocketException cex) when (cex.SocketErrorCode == SocketError.ConnectionRefused)
+                catch (WebSocketException wse) when (wse.Message == "Unable to connect to the remote server")
                 {
-                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
-                    lastError = cex;
+                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running, or it's SSL certificate has not been configured correctly.");
+                    lastError = wse;
                 }
-                catch (SocketException sex)
+                catch (WebSocketException wse)
                 {
-                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", sex);
-                    lastError = sex;
+                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", wse);
+                    lastError = wse;
                     // When the host is not found an immediate retry isn't going to help
-                    if (sex.SocketErrorCode == SocketError.HostNotFound)
-                    {
+                    if (wse.InnerException?.Message.StartsWith("The remote name could not be resolved:") ?? false)
                         break;
-                    }
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
@@ -106,26 +108,11 @@ namespace Halibut.Transport
                         pool.Clear(serviceEndpoint, log);
                     }
 
-                    Thread.Sleep(retryInterval);
-                }
-                catch (IOException iox) when (iox.IsSocketConnectionReset())
-                {
-                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service was shut down.");
-                    lastError = iox;
-                    Thread.Sleep(retryInterval);
-                }
-                catch (IOException iox) when (iox.IsSocketConnectionTimeout())
-                {
-                    // Received on a polling client when the network connection is lost.
-                    log.Write(EventType.Error, $"The connection to the host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} timed out, there may be problems with the network, connection will be retried.");
-                    lastError = iox;
-                    Thread.Sleep(retryInterval);
                 }
                 catch (Exception ex)
                 {
                     log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
                     lastError = ex;
-                    Thread.Sleep(retryInterval);
                 }
             }
 
@@ -142,42 +129,52 @@ namespace Halibut.Transport
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
-            var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
-            var client = CreateConnectedTcpClient(serviceEndpoint);
+            var client = CreateConnectedClient(serviceEndpoint);
+            
             log.Write(EventType.Diagnostic, "Connection established");
+            
+            var stream = new WebSocketStream(client);
 
-            var stream = client.GetStream();
+            log.Write(EventType.Security, "Performing handshake");
+            stream.WriteTextMessage("MX");
 
-            log.Write(EventType.Security, "Performing TLS handshake");
-            var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
-            ssl.Write(MxLine, 0, MxLine.Length);
-            ssl.Flush();
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
-            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
-
-            var protocol = new MessageExchangeProtocol(ssl, log);
-            return new SecureConnection(client, ssl, protocol);
+            var protocol = new MessageExchangeProtocol(stream, log);
+            return new SecureConnection(client, stream, protocol);
         }
 
-        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
+        ClientWebSocket CreateConnectedClient(ServiceEndPoint endPoint)
         {
-            TcpClient client;
-            if (endPoint.Proxy == null)
+            if(!endPoint.IsWebSocketEndpoint)
+                throw new Exception("Only wss:// endpoints are supported");
+
+            var connectionId = Guid.NewGuid().ToString();
+
+            var client = new ClientWebSocket();
+            client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
+            client.Options.AddSubProtocol("Octopus");
+            client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
+            if (endPoint.Proxy != null)
+                client.Options.Proxy = new WebSocketProxy(endPoint.Proxy);
+
+            try
             {
-                client = CreateTcpClient();
-                client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
+                ServerCertificateInterceptor.Expect(connectionId);
+                using (var cts = new CancellationTokenSource(HalibutLimits.TcpClientConnectTimeout))
+                    client.ConnectAsync(endPoint.BaseUri, cts.Token)
+                        .ConfigureAwait(false).GetAwaiter().GetResult();
+                ServerCertificateInterceptor.Validate(connectionId, endPoint);
             }
-            else
+            finally
             {
-                log.Write(EventType.Diagnostic, "Creating a proxy client");
-                client = new ProxyClientFactory()
-                    .CreateProxyClient(log, endPoint.Proxy)
-                    .WithTcpClientFactory(CreateTcpClient)
-                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout);
+                ServerCertificateInterceptor.Remove(connectionId);
             }
+
+            
             return client;
         }
+
 
         void ReleaseConnection(IConnection connection)
         {
@@ -199,7 +196,7 @@ namespace Halibut.Transport
             var inner = lastError as SocketException;
             if (inner != null)
             {
-                if ((inner.SocketErrorCode == SocketError.ConnectionAborted  || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
+                if ((inner.SocketErrorCode == SocketError.ConnectionAborted || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
                 {
                     error.Append("The server aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '");
                     error.Append(clientCertificate.Thumbprint + "'.");
@@ -209,20 +206,28 @@ namespace Halibut.Transport
             throw new HalibutClientException(error.ToString(), lastError);
         }
 
-        static TcpClient CreateTcpClient()
+ class WebSocketProxy : IWebProxy
         {
-            var client = new TcpClient(AddressFamily.InterNetworkV6)
+            readonly Uri uri;
+            public WebSocketProxy(ProxyDetails proxy)
             {
-                SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
-                ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
-                Client = {DualMode = true}
-            };
-            return client;
-        }
+                if (proxy.Type != ProxyType.HTTP)
+                    throw new ProxyException(string.Format("Unknown proxy type {0}.", proxy.Type.ToString()));
 
-        X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
-        {
-            return clientCertificate;
+                uri = new Uri($"http://{proxy.Host}:{proxy.Port}");
+
+                if (string.IsNullOrWhiteSpace(proxy.UserName) && string.IsNullOrEmpty(proxy.Password))
+                    return;
+
+                Credentials = new NetworkCredential(proxy.UserName, proxy.Password);
+            }
+
+            public Uri GetProxy(Uri destination) => uri;
+
+            public bool IsBypassed(Uri host) => false;
+
+            public ICredentials Credentials { get; set; }
         }
     }
 }
+#endif

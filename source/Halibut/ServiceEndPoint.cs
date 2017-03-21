@@ -5,10 +5,7 @@ namespace Halibut
 {
     public class ServiceEndPoint : IEquatable<ServiceEndPoint>
     {
-        readonly Uri baseUri;
-        readonly string remoteThumbprint;
         readonly string baseUriString;
-        readonly ProxyDetails proxy;
 
         public ServiceEndPoint(string baseUri, string remoteThumbprint)
             : this(new Uri(baseUri), remoteThumbprint)
@@ -16,46 +13,45 @@ namespace Halibut
         }
 
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
+            : this(baseUri, remoteThumbprint, null)
         {
-            baseUriString = baseUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).ToLowerInvariant();
-            this.baseUri = new Uri(baseUriString);
-            this.remoteThumbprint = remoteThumbprint;
         }
 
         [JsonConstructor]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy)
         {
-            baseUriString = baseUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).ToLowerInvariant();
-            this.baseUri = new Uri(baseUriString);
-            this.remoteThumbprint = remoteThumbprint;
-            this.proxy = proxy;
+            if (IsWebSocketAddress(baseUri))
+            {
+                baseUriString = baseUri.AbsoluteUri;
+                BaseUri = baseUri;
+            }
+            else
+            {
+                baseUriString = baseUri.GetComponents(UriComponents.SchemeAndServer, UriFormat.Unescaped).ToLowerInvariant();
+                BaseUri = new Uri(baseUriString);
+            }
+            RemoteThumbprint = remoteThumbprint;
+            Proxy = proxy;
         }
 
-        public Uri BaseUri
-        {
-            get { return baseUri; }
-        }
 
-        public string RemoteThumbprint
-        {
-            get { return remoteThumbprint; }
-        }
+        public Uri BaseUri { get; }
 
-        public ProxyDetails Proxy
-        {
-            get { return proxy; }
-        }
+        public string RemoteThumbprint { get; }
 
-        public override string ToString()
-        {
-            return baseUriString;
-        }
+        public ProxyDetails Proxy { get; }
+
+        public bool IsWebSocketEndpoint => IsWebSocketAddress(BaseUri);
+
+        public override string ToString() => baseUriString;
+
+        public static bool IsWebSocketAddress(Uri baseUri) => baseUri.Scheme.Equals("wss", StringComparison.OrdinalIgnoreCase);
 
         public bool Equals(ServiceEndPoint other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(remoteThumbprint, other.remoteThumbprint) && string.Equals(baseUriString, other.baseUriString) && Equals(proxy, other.proxy);
+            return string.Equals(RemoteThumbprint, other.RemoteThumbprint) && string.Equals(baseUriString, other.baseUriString) && Equals(Proxy, other.Proxy);
         }
 
         public override bool Equals(object obj)
@@ -70,9 +66,9 @@ namespace Halibut
         {
             unchecked
             {
-                var hashCode = (remoteThumbprint != null ? remoteThumbprint.GetHashCode() : 0);
+                var hashCode = (RemoteThumbprint != null ? RemoteThumbprint.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (baseUriString != null ? baseUriString.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (proxy != null ? proxy.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (Proxy != null ? Proxy.GetHashCode() : 0);
                 return hashCode;
             }
         }
