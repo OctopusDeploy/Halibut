@@ -14,6 +14,7 @@ namespace Halibut.SampleServer
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.ColoredConsole()
+                .MinimumLevel.Warning()
                 .CreateLogger();
 
             Console.Title = "Halibut Server";
