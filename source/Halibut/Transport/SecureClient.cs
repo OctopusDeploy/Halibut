@@ -110,7 +110,7 @@ namespace Halibut.Transport
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionReset())
                 {
-                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service does not trust the thumbprint {serviceEndpoint?.RemoteThumbprint ?? "(Null Thumbprint)"} or was shut down.");
+                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
                     lastError = iox;
                     Thread.Sleep(retryInterval);
                 }
