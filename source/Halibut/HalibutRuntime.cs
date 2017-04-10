@@ -163,12 +163,31 @@ namespace Halibut
 
         public void Trust(string clientThumbprint)
         {
-            trustedThumbprints.Add(clientThumbprint);
+            lock (trustedThumbprints)
+                trustedThumbprints.Add(clientThumbprint);
+        }
+
+        public void RemoveTrust(string clientThumbprint)
+        {
+            lock (trustedThumbprints)
+                trustedThumbprints.Remove(clientThumbprint);
+        }
+
+
+        public void TrustOnly(IReadOnlyList<string> thumbprints)
+        {
+            lock (trustedThumbprints)
+            {
+                trustedThumbprints.Clear();
+                foreach(var thumbprint in thumbprints)
+                    trustedThumbprints.Add(thumbprint);
+            }
         }
 
         bool VerifyThumbprintOfIncomingClient(string remoteThumbprint)
         {
-            return trustedThumbprints.Contains(remoteThumbprint);
+            lock (trustedThumbprints)
+                return trustedThumbprints.Contains(remoteThumbprint);
         }
 
         public void Route(ServiceEndPoint to, ServiceEndPoint via)
