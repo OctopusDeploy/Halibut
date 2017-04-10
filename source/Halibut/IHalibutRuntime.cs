@@ -22,6 +22,8 @@ namespace Halibut
         void Trust(string clientThumbprint);
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);
+        bool IsTrusted(string remoteThumbprint);
+
         void Route(ServiceEndPoint to, ServiceEndPoint via);
         void SetFriendlyHtmlPageContent(string html);
     }

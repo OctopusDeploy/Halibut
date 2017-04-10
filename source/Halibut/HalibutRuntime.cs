@@ -59,14 +59,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs, () => friendlyHtmlPageContent);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent);
             listeners.Add(listener);
             return listener.Start();
         }
 #if HAS_WEB_SOCKET_LISTENER
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, VerifyThumbprintOfIncomingClient, logs, () => friendlyHtmlPageContent);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent);
             listeners.Add(listener);
             listener.Start();
         }
@@ -184,7 +184,7 @@ namespace Halibut
             }
         }
 
-        bool VerifyThumbprintOfIncomingClient(string remoteThumbprint)
+        public bool IsTrusted(string remoteThumbprint)
         {
             lock (trustedThumbprints)
                 return trustedThumbprints.Contains(remoteThumbprint);
