@@ -53,7 +53,6 @@ namespace Halibut.ServiceModel
             }
         }
 
-
         public RequestMessage Dequeue()
         {
             var pending = DequeueNext();
@@ -76,7 +75,7 @@ namespace Halibut.ServiceModel
 
         public async Task<RequestMessage> DequeueAsync()
         {
-            var pending = await DequeueNextAsync();
+            var pending = await DequeueNextAsync().ConfigureAwait(false);
             if (pending == null) return null;
             return pending.BeginTransfer() ? pending.Request : null;
         }
@@ -87,7 +86,7 @@ namespace Halibut.ServiceModel
             if (first != null)
                 return first;
 
-            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(HalibutLimits.PollingQueueWaitTimeout));
+            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(HalibutLimits.PollingQueueWaitTimeout)).ConfigureAwait(false);
             hasItems.Reset();
             return TakeFirst();
         }

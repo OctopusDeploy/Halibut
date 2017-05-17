@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
 
@@ -8,7 +9,7 @@ namespace Halibut
 {
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
-        readonly Action<Stream> writer;
+        readonly Func<Stream, Task> writer;
         IDataStreamReceiver receiver;
 
         [JsonConstructor]
@@ -16,7 +17,7 @@ namespace Halibut
         {
         }
 
-        public DataStream(long length, Action<Stream> writer)
+        public DataStream(long length, Func<Stream, Task> writer)
         {
             Length = length;
             Id = Guid.NewGuid();
@@ -39,8 +40,8 @@ namespace Halibut
             var maxMemoryStreamLength = int.MaxValue;
             if (Length >= maxMemoryStreamLength)
                 return new TemporaryFileDataStreamReceiver(writer);
-            else
-                return new InMemoryDataStreamReceiver(writer);
+
+            return new InMemoryDataStreamReceiver(writer);
         }
 
         public bool Equals(DataStream other)
@@ -75,7 +76,7 @@ namespace Halibut
 
         public static DataStream FromBytes(byte[] data)
         {
-            return new DataStream(data.Length, stream => stream.Write(data, 0, data.Length));
+            return new DataStream(data.Length, stream => stream.WriteAsync(data, 0, data.Length));
         }
 
         public static DataStream FromString(string text)
@@ -90,6 +91,7 @@ namespace Halibut
                 var writer = new StreamWriter(stream, encoding);
                 writer.Write(text);
                 writer.Flush();
+                return stream.FlushAsync();
             });
         }
 
@@ -104,6 +106,16 @@ namespace Halibut
             return FromStream(source, (progress) => { });
         }
 
+        Task IDataStreamInternal.Transmit(Stream stream)
+        {
+            return writer(stream);
+        }
+
+        void IDataStreamInternal.SetReceived(IDataStreamReceiver attachedReceiver)
+        {
+            receiver = attachedReceiver;
+        }
+
         class StreamingDataStream
         {
             const int BufferSize = 84000;
@@ -116,7 +128,7 @@ namespace Halibut
                 this.updateProgress = updateProgress;
             }
 
-            public void CopyAndReportProgress(Stream destination)
+            public async Task CopyAndReportProgress(Stream destination)
             {
                 var readBuffer = new byte[BufferSize];
                 var writeBuffer = new byte[BufferSize];
@@ -127,13 +139,12 @@ namespace Halibut
                 long copiedSoFar = 0;
                 source.Seek(0, SeekOrigin.Begin);
 
-                var count = source.Read(readBuffer, 0, BufferSize);
+                var count = await source.ReadAsync(readBuffer, 0, BufferSize).ConfigureAwait(false);
                 while (count > 0)
                 {
                     Swap(ref readBuffer, ref writeBuffer);
-                    var asyncResult = destination.WriteAsync(writeBuffer, 0, count);
-                    count = source.Read(readBuffer, 0, BufferSize);
-                    asyncResult.GetAwaiter().GetResult();
+                    await destination.WriteAsync(writeBuffer, 0, count).ConfigureAwait(false);
+                    count = await source.ReadAsync(readBuffer, 0, BufferSize).ConfigureAwait(false);
 
                     copiedSoFar += count;
 
@@ -147,7 +158,7 @@ namespace Halibut
                 if (progress != 100)
                     updateProgress(100);
 
-                destination.Flush();
+                await destination.FlushAsync().ConfigureAwait(false);
             }
 
             static void Swap<T>(ref T x, ref T y)
@@ -156,16 +167,6 @@ namespace Halibut
                 x = y;
                 y = tmp;
             }
-        }
-
-        void IDataStreamInternal.Transmit(Stream stream)
-        {
-            writer(stream);
-        }
-
-        void IDataStreamInternal.Received(IDataStreamReceiver attachedReceiver)
-        {
-            receiver = attachedReceiver;
         }
     }
 }

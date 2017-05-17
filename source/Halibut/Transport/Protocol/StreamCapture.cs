@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using Janitor;
 
 #if HAS_ASYNC_LOCAL
 #else
@@ -9,6 +10,7 @@ using System.Runtime.Remoting.Messaging;
 
 namespace Halibut.Transport.Protocol
 {
+    [SkipWeaving]
     public class StreamCapture : IDisposable
     {
         readonly HashSet<DataStream> serializedStreams = new HashSet<DataStream>();

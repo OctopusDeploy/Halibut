@@ -185,7 +185,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
+        public async Task<TcpClient> CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
         {
             try
             {
@@ -207,11 +207,11 @@ namespace Halibut.Transport.Proxy
 
                     // attempt to open the connection
                     log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
-                    TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout);
+                    await TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout).ConfigureAwait(false);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port
-                SendConnectionCommand(destinationHost, destinationPort);
+                await SendConnectionCommand(destinationHost, destinationPort).ConfigureAwait(false);
 
                 // return the open proxied tcp client object to the caller for normal use
                 return TcpClient;
@@ -231,17 +231,17 @@ namespace Halibut.Transport.Proxy
         }
 
 
-        void SendConnectionCommand(string host, int port)
+        async Task SendConnectionCommand(string host, int port)
         {
             var stream = TcpClient.GetStream();
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 
             // send the connect request
-            stream.Write(request, 0, request.Length);
+            await stream.WriteAsync(request, 0, request.Length).ConfigureAwait(false);
 
             // wait for the proxy server to respond
-            WaitForData(stream);
+            await WaitForData(stream).ConfigureAwait(false);
 
             // PROXY SERVER RESPONSE
             // =======================================================================
@@ -256,7 +256,7 @@ namespace Halibut.Transport.Proxy
 
             do
             {
-                var bytes = stream.Read(response, 0, TcpClient.ReceiveBufferSize);
+                var bytes = await stream.ReadAsync(response, 0, TcpClient.ReceiveBufferSize).ConfigureAwait(false);
                 sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
             } while (stream.DataAvailable);
 
@@ -274,12 +274,10 @@ namespace Halibut.Transport.Proxy
                 log.Write(EventType.Diagnostic, "Sending unauthorized server CONNECT command for {0}:{1} to proxy", host, port.ToString(CultureInfo.InvariantCulture));
                 return string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture));
             }
-            else
-            {
-                log.Write(EventType.Diagnostic, "Sending authorized server CONNECT command for {0}:{1} to proxy", host, port.ToString(CultureInfo.InvariantCulture));
-                var userNameAndPassword = EncodeTo64(ProxyUserName + ":" + ProxyPassword);
-                return string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_AUTH_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture), userNameAndPassword);
-            }
+
+            log.Write(EventType.Diagnostic, "Sending authorized server CONNECT command for {0}:{1} to proxy", host, port.ToString(CultureInfo.InvariantCulture));
+            var userNameAndPassword = EncodeTo64(ProxyUserName + ":" + ProxyPassword);
+            return string.Format(CultureInfo.InvariantCulture, HTTP_PROXY_AUTH_CONNECT_CMD, host, port.ToString(CultureInfo.InvariantCulture), userNameAndPassword);
         }
 
         static string EncodeTo64(string toEncode)
@@ -312,12 +310,12 @@ namespace Halibut.Transport.Proxy
             throw new ProxyException(msg);
         }
 
-        void WaitForData(NetworkStream stream)
+        async Task WaitForData(NetworkStream stream)
         {
             var sleepTime = 0;
             while (!stream.DataAvailable)
             {
-                Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
+                await Task.Delay(WAIT_FOR_DATA_INTERVAL).ConfigureAwait(false);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
                     throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)));

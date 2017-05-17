@@ -17,13 +17,13 @@ namespace Halibut
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
 
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
-        readonly X509Certificate2 serverCertificate;
-        readonly List<IDisposable> listeners = new List<IDisposable>();
+        X509Certificate2 serverCertificate;
+        readonly List<Stoppable> listeners = new List<Stoppable>();
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
-        readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
+        ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
 
@@ -63,6 +63,7 @@ namespace Halibut
             listeners.Add(listener);
             return listener.Start();
         }
+
 #if HAS_WEB_SOCKET_LISTENER
         public void ListenWebSocket(string endpoint)
         {
@@ -97,23 +98,23 @@ namespace Halibut
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
         }
 
-        public ServiceEndPoint Discover(Uri uri)
+        public Task<ServiceEndPoint> Discover(Uri uri)
         {
             return Discover(new ServiceEndPoint(uri, null));
         }
 
-        public ServiceEndPoint Discover(ServiceEndPoint endpoint)
+        public Task<ServiceEndPoint> Discover(ServiceEndPoint endpoint)
         {
             var client = new DiscoveryClient();
             return client.Discover(endpoint);
         }
 
-        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
+        public Task<TService> CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
         {
             return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint));
         }
 
-        public TService CreateClient<TService>(ServiceEndPoint endpoint)
+        public async Task<TService> CreateClient<TService>(ServiceEndPoint endpoint)
         {
 #if HAS_REAL_PROXY
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
@@ -124,29 +125,30 @@ namespace Halibut
 #endif
         }
 
-        ResponseMessage SendOutgoingRequest(RequestMessage request)
+        async Task<ResponseMessage> SendOutgoingRequest(RequestMessage request)
         {
             var endPoint = request.Destination;
 
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    return SendOutgoingHttpsRequest(request);
+                    return await SendOutgoingHttpsRequest(request).ConfigureAwait(false);
                 case "poll":
                     return SendOutgoingPollingRequest(request);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
 
-        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
+        async Task<ResponseMessage> SendOutgoingHttpsRequest(RequestMessage request)
         {
             var client = new SecureClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), pool);
 
             ResponseMessage response = null;
-            client.ExecuteTransaction(protocol =>
+            await client.ExecuteTransaction(async protocol =>
             {
-                response = protocol.ExchangeAsClient(request);
-            });
+                response = await protocol.ExchangeAsClient(request).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+
             return response;
         }
 
@@ -200,14 +202,19 @@ namespace Halibut
             friendlyHtmlPageContent = html ?? DefaultFriendlyHtmlPageContent;
         }
 
-        public void Dispose()
+        public async Task Stop()
         {
-            pollingClients.Dispose();
-            pool.Dispose();
+            await pollingClients.Stop().ConfigureAwait(false);
+
             foreach (var listener in listeners)
             {
-                listener.Dispose();
+                await listener.Stop().ConfigureAwait(false);
             }
+        }
+
+        public void Dispose()
+        {
+            // Injected by Fody.Janitor
         }
 
 #if HAS_WEB_SOCKET_LISTENER

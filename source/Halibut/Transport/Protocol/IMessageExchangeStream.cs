@@ -1,19 +1,18 @@
-using System;
 using System.Threading.Tasks;
 
 namespace Halibut.Transport.Protocol
 {
     public interface IMessageExchangeStream
     {
-        void IdentifyAsClient();
-        void SendNext();
-        void SendProceed();
-        bool ExpectNextOrEnd();
-        void ExpectProceeed();
-        void IdentifyAsSubscriber(string subscriptionId);
-        void IdentifyAsServer();
+        Task IdentifyAsClient();
+        Task SendNext();
+        Task SendProceed();
+        Task<bool> ExpectNextOrEnd();
+        Task ExpectProceeed();
+        Task IdentifyAsSubscriber(string subscriptionId);
+        Task IdentifyAsServer();
         RemoteIdentity ReadRemoteIdentity();
-        void Send<T>(T message);
-        T Receive<T>();
+        Task Send<T>(T message);
+        Task<T> Receive<T>();
     }
 }

@@ -7,6 +7,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NSubstitute;
 using Xunit;
 
@@ -345,47 +346,54 @@ namespace Halibut.Tests
 
             public List<object> Sent { get; set; } 
 
-            public void IdentifyAsClient()
+            public Task IdentifyAsClient()
             {
                 output.AppendLine("--> MX-CLIENT");
                 output.AppendLine("<-- MX-SERVER");
+
+                return TaskEx.CompletedTask;
             }
 
-            public void SendNext()
+            public Task SendNext()
             {
                 output.AppendLine("--> NEXT");
+                return TaskEx.CompletedTask;
             }
 
-            public void SendProceed()
+            public Task SendProceed()
             {
                 output.AppendLine("--> PROCEED");
+                return TaskEx.CompletedTask;
             }
 
-            public bool ExpectNextOrEnd()
+            public Task<bool> ExpectNextOrEnd()
             {
                 if (--numberOfReads == 0)
                 {
                     output.AppendLine("<-- END");
-                    return false;
+                    return Task.FromResult(false);
                 }
                 output.AppendLine("<-- NEXT");
-                return true;
+                return Task.FromResult(true);
             }
 
-            public void ExpectProceeed()
+            public Task ExpectProceeed()
             {
                 output.AppendLine("<-- PROCEED");
+                return TaskEx.CompletedTask;
             }
 
-            public void IdentifyAsSubscriber(string subscriptionId)
+            public Task IdentifyAsSubscriber(string subscriptionId)
             {
                 output.AppendLine("--> MX-SUBSCRIBE subscriptionId");
                 output.AppendLine("<-- MX-SERVER");
+                return TaskEx.CompletedTask;
             }
 
-            public void IdentifyAsServer()
+            public Task IdentifyAsServer()
             {
                 output.AppendLine("--> MX-SERVER");
+                return TaskEx.CompletedTask;
             }
 
             public RemoteIdentity ReadRemoteIdentity()
@@ -394,16 +402,18 @@ namespace Halibut.Tests
                 return remoteIdentity;
             }
 
-            public void Send<T>(T message)
+            public Task Send<T>(T message)
             {
                 output.AppendLine("--> " + typeof(T).Name);
                 Sent.Add(message);
+
+                return TaskEx.CompletedTask;
             }
 
-            public T Receive<T>()
+            public Task<T> Receive<T>()
             {
                 output.AppendLine("<-- " + typeof(T).Name);     
-                return (T) (nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+                return Task.FromResult((T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T)));
             }
 
             public override string ToString()

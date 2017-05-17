@@ -37,36 +37,36 @@ namespace Halibut.Transport.Protocol
         static int streamCount = 0;
         public static Func<JsonSerializer> Serializer = CreateDefault;
 
-        public void IdentifyAsClient()
+        public async Task IdentifyAsClient()
         {
             log.Write(EventType.Diagnostic, "Identifying as a client");
-            streamWriter.Write("MX-CLIENT ");
-            streamWriter.Write(currentVersion);
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            await streamWriter.WriteAsync("MX-CLIENT ").ConfigureAwait(false);
+            await streamWriter.WriteAsync(currentVersion.ToString()).ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.FlushAsync().ConfigureAwait(false);
             ExpectServerIdentity();
         }
 
-        public void SendNext()
+        public async Task SendNext()
         {
             SetShortTimeouts();
-            streamWriter.Write("NEXT");
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            await streamWriter.WriteAsync("NEXT").ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.FlushAsync().ConfigureAwait(false);
             SetNormalTimeouts();
         }
 
-        public void SendProceed()
+        public async Task SendProceed()
         {
-            streamWriter.Write("PROCEED");
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            await streamWriter.WriteAsync("PROCEED").ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.FlushAsync().ConfigureAwait(false);
         }
 
-        public bool ExpectNextOrEnd()
+        public async Task<bool> ExpectNextOrEnd()
         {
-            var line = ReadLine();
+            var line = await ReadLine().ConfigureAwait(false);
             switch (line)
             {
                 case "NEXT":
@@ -79,10 +79,10 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public void ExpectProceeed()
+        public async Task ExpectProceeed()
         {
             SetShortTimeouts();
-            var line = ReadLine();
+            var line = await ReadLine().ConfigureAwait(false);
             if (line == null)
                 throw new AuthenticationException("XYZ");
             if (line != "PROCEED")
@@ -90,37 +90,37 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
-        string ReadLine()
+        async Task<string> ReadLine()
         {
-            var line = streamReader.ReadLine();
+            var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
             while (line == string.Empty)
             {
-                line = streamReader.ReadLine();
+                line = await streamReader.ReadLineAsync().ConfigureAwait(false);
             }
 
             return line;
         }
 
-        public void IdentifyAsSubscriber(string subscriptionId)
+        public async Task IdentifyAsSubscriber(string subscriptionId)
         {
-            streamWriter.Write("MX-SUBSCRIBER ");
-            streamWriter.Write(currentVersion);
-            streamWriter.Write(" ");
-            streamWriter.Write(subscriptionId);
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            await streamWriter.WriteAsync("MX-SUBSCRIBER ").ConfigureAwait(false);
+            await streamWriter.WriteAsync(currentVersion.ToString()).ConfigureAwait(false);
+            await streamWriter.WriteAsync(" ").ConfigureAwait(false);
+            await streamWriter.WriteAsync(subscriptionId).ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.FlushAsync().ConfigureAwait(false);
 
             ExpectServerIdentity();
         }
 
-        public void IdentifyAsServer()
+        public async Task IdentifyAsServer()
         {
-            streamWriter.Write("MX-SERVER ");
-            streamWriter.Write(currentVersion.ToString());
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            await streamWriter.WriteAsync("MX-SERVER ").ConfigureAwait(false);
+            await streamWriter.WriteAsync(currentVersion.ToString()).ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.WriteLineAsync().ConfigureAwait(false);
+            await streamWriter.FlushAsync().ConfigureAwait(false);
         }
 
         public RemoteIdentity ReadRemoteIdentity()
@@ -138,23 +138,23 @@ namespace Halibut.Transport.Protocol
             return new RemoteIdentity(identityType);
         }
 
-        public void Send<T>(T message)
+        public async Task Send<T>(T message)
         {
             using (var capture = StreamCapture.New())
             {
                 WriteBsonMessage(message);
-                WriteEachStream(capture.SerializedStreams);
+                await WriteEachStream(capture.SerializedStreams).ConfigureAwait(false);
             }
 
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public T Receive<T>()
+        public async Task<T> Receive<T>()
         {
             using (var capture = StreamCapture.New())
             {
                 var result = ReadBsonMessage<T>();
-                ReadStreams(capture);
+                await ReadStreams(capture).ConfigureAwait(false);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
             }
@@ -203,33 +203,33 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        void ReadStreams(StreamCapture capture)
+        async Task ReadStreams(StreamCapture capture)
         {
             var expected = capture.DeserializedStreams.Count;
 
             for (var i = 0; i < expected; i++)
             {
-                ReadStream(capture);
+                await ReadStream(capture).ConfigureAwait(false);
             }
         }
 
-        void ReadStream(StreamCapture capture)
+        async Task ReadStream(StreamCapture capture)
         {
             var reader = new BinaryReader(stream);
             var id = new Guid(reader.ReadBytes(16));
             var length = reader.ReadInt64();
             var dataStream = FindStreamById(capture, id);
-            var tempFile = CopyStreamToFile(id, length, reader);
+            var tempFile = await CopyStreamToFile(id, length, reader).ConfigureAwait(false);
             var lengthAgain = reader.ReadInt64();
             if (lengthAgain != length)
             {
                 throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
             }
 
-            ((IDataStreamInternal)dataStream).Received(tempFile);
+            ((IDataStreamInternal)dataStream).SetReceived(tempFile);
         }
         
-        static TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
+        static async Task<TemporaryFileStream> CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
@@ -239,7 +239,7 @@ namespace Halibut.Transport.Protocol
                 {
                     var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, length));
                     length -= read;
-                    fileStream.Write(buffer, 0, read);
+                    await fileStream.WriteAsync(buffer, 0, read).ConfigureAwait(false);
                 }
             }
             return new TemporaryFileStream(path);
@@ -263,7 +263,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        void WriteEachStream(IEnumerable<DataStream> streams)
+        async Task WriteEachStream(IEnumerable<DataStream> streams)
         {
             foreach (var dataStream in streams)
             {
@@ -272,8 +272,8 @@ namespace Halibut.Transport.Protocol
                 writer.Write(dataStream.Length);
                 writer.Flush();
 
-                ((IDataStreamInternal)dataStream).Transmit(stream);
-                stream.Flush();
+                await ((IDataStreamInternal)dataStream).Transmit(stream).ConfigureAwait(false);
+                await stream.FlushAsync().ConfigureAwait(false);
 
                 writer.Write(dataStream.Length);
                 writer.Flush();

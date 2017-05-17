@@ -7,6 +7,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
@@ -35,7 +36,7 @@ namespace Halibut.Transport
             get { return serviceEndpoint; }
         }
 
-        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
+        public async Task ExecuteTransaction(Func<MessageExchangeProtocol, Task> protocolHandler)
         {
             var retryInterval = HalibutLimits.RetryListeningSleepInterval;
 
@@ -55,12 +56,12 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = AcquireConnection();
+                        connection = await AcquireConnection().ConfigureAwait(false);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
 
-                        protocolHandler(connection.Protocol);
+                        await protocolHandler(connection.Protocol).ConfigureAwait(false);
                     }
                     catch
                     {
@@ -106,53 +107,53 @@ namespace Halibut.Transport
                         pool.Clear(serviceEndpoint, log);
                     }
 
-                    Thread.Sleep(retryInterval);
+                    await Task.Delay(retryInterval).ConfigureAwait(false);
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionReset())
                 {
                     log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
                     lastError = iox;
-                    Thread.Sleep(retryInterval);
+                    await Task.Delay(retryInterval).ConfigureAwait(false);
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionTimeout())
                 {
                     // Received on a polling client when the network connection is lost.
                     log.Write(EventType.Error, $"The connection to the host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} timed out, there may be problems with the network, connection will be retried.");
                     lastError = iox;
-                    Thread.Sleep(retryInterval);
+                    await Task.Delay(retryInterval).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
                     lastError = ex;
-                    Thread.Sleep(retryInterval);
+                    await Task.Delay(retryInterval).ConfigureAwait(false);
                 }
             }
 
             HandleError(lastError, retryAllowed);
         }
 
-        IConnection AcquireConnection()
+        async Task<IConnection> AcquireConnection()
         {
             var connection = pool.Take(serviceEndpoint);
-            return connection ?? EstablishNewConnection();
+            return connection ?? await EstablishNewConnection().ConfigureAwait(false);
         }
 
-        SecureConnection EstablishNewConnection()
+        async Task<SecureConnection> EstablishNewConnection()
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
-            var client = CreateConnectedTcpClient(serviceEndpoint);
+            var client = await CreateConnectedTcpClient(serviceEndpoint).ConfigureAwait(false);
             log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
 
             log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
-            ssl.Write(MxLine, 0, MxLine.Length);
-            ssl.Flush();
+            await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+            await ssl.WriteAsync(MxLine, 0, MxLine.Length).ConfigureAwait(false);
+            await ssl.FlushAsync().ConfigureAwait(false);
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
 
@@ -160,22 +161,23 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
+        async Task<TcpClient> CreateConnectedTcpClient(ServiceEndPoint endPoint)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
             {
                 client = CreateTcpClient();
-                client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
+                await client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout).ConfigureAwait(false);
             }
             else
             {
                 log.Write(EventType.Diagnostic, "Creating a proxy client");
-                client = new ProxyClientFactory()
+                client = await new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
-                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout);
+                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout).ConfigureAwait(false);
             }
+
             return client;
         }
 
@@ -217,6 +219,7 @@ namespace Halibut.Transport
                 ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
                 Client = {DualMode = true}
             };
+
             return client;
         }
 

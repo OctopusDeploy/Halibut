@@ -32,6 +32,10 @@
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Janitor.Fody" Version="1.4.1" />
+  </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
     <DefineConstants>$(DefineConstants);HAS_DISPATCH_PROXY;HAS_ASYNC_LOCAL;LIBLOG_PORTABLE</DefineConstants>

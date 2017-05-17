@@ -28,12 +28,12 @@ namespace Halibut.Transport.Protocol
             this.stream = stream;
         }
 
-        public ResponseMessage ExchangeAsClient(RequestMessage request)
+        public async Task<ResponseMessage> ExchangeAsClient(RequestMessage request)
         {
-            PrepareExchangeAsClient();
+            await PrepareExchangeAsClient().ConfigureAwait(false);
 
-            stream.Send(request);
-            return stream.Receive<ResponseMessage>();
+            await stream.Send(request).ConfigureAwait(false);
+            return await stream.Receive<ResponseMessage>().ConfigureAwait(false);
         }
 
         public void StopAcceptingClientRequests()
@@ -41,19 +41,19 @@ namespace Halibut.Transport.Protocol
             acceptClientRequests = false;
         }
 
-        void PrepareExchangeAsClient()
+        async Task PrepareExchangeAsClient()
         {
             try
             {
                 if (!identified)
                 {
-                    stream.IdentifyAsClient();
+                    await stream.IdentifyAsClient().ConfigureAwait(false);
                     identified = true;
                 }
                 else
                 {
-                    stream.SendNext();
-                    stream.ExpectProceeed();
+                    await stream.SendNext().ConfigureAwait(false);
+                    await stream.ExpectProceeed().ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -62,44 +62,45 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public void ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, int maxAttempts = int.MaxValue)
+        public async Task ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, int maxAttempts = int.MaxValue)
         {
             if (!identified)
             {
-                stream.IdentifyAsSubscriber(subscriptionId.ToString());
+                await stream.IdentifyAsSubscriber(subscriptionId.ToString()).ConfigureAwait(false);
                 identified = true;
             }
 
             for (var i = 0; i < maxAttempts; i++)
             {
-                ReceiveAndProcessRequest(stream, incomingRequestProcessor);
+                await ReceiveAndProcessRequest(stream, incomingRequestProcessor).ConfigureAwait(false);
             }
         }
 
-        static void ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        static async Task ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            var request = stream.Receive<RequestMessage>();
+            var request = await stream.Receive<RequestMessage>().ConfigureAwait(false);
             if (request != null)
             {
                 var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
-                stream.Send(response);
+                await stream.Send(response).ConfigureAwait(false);
             }
 
-            stream.SendNext();
-            stream.ExpectProceeed();
+            await stream.SendNext().ConfigureAwait(false);
+            await stream.ExpectProceeed().ConfigureAwait(false);
         }
 
-        public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
+        public async Task ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
-            stream.IdentifyAsServer();
+            await stream.IdentifyAsServer().ConfigureAwait(false);
+
             switch (identity.IdentityType)
             {
                 case RemoteIdentityType.Client:
-                    ProcessClientRequests(incomingRequestProcessor);
+                    await ProcessClientRequests(incomingRequestProcessor).ConfigureAwait(false);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    ProcessSubscriber(pendingRequests(identity));
+                    await ProcessSubscriber(pendingRequests(identity)).ConfigureAwait(false);
                     break;
                 default:
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
@@ -109,25 +110,25 @@ namespace Halibut.Transport.Protocol
         public async Task ExchangeAsServerAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
-            stream.IdentifyAsServer();
+            await stream.IdentifyAsServer().ConfigureAwait(false);
             switch (identity.IdentityType)
             {
                 case RemoteIdentityType.Client:
-                    ProcessClientRequests(incomingRequestProcessor);
+                    await ProcessClientRequests(incomingRequestProcessor).ConfigureAwait(false);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    await ProcessSubscriberAsync(pendingRequests(identity));
+                    await ProcessSubscriberAsync(pendingRequests(identity)).ConfigureAwait(false);
                     break;
                 default:
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
             }
         }
 
-        void ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        async Task ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
             while (acceptClientRequests)
             {
-                var request = stream.Receive<RequestMessage>();
+                var request = await stream.Receive<RequestMessage>().ConfigureAwait(false);
                 if (request == null || !acceptClientRequests)
                     return;
 
@@ -136,11 +137,11 @@ namespace Halibut.Transport.Protocol
                 if (!acceptClientRequests)
                     return;
 
-                stream.Send(response);
+                await stream.Send(response).ConfigureAwait(false);
 
                 try
                 {
-                    if (!acceptClientRequests || !stream.ExpectNextOrEnd())
+                    if (!acceptClientRequests || !await stream.ExpectNextOrEnd().ConfigureAwait(false))
                         return;
                 }
                 catch (Exception ex) when (ex.IsSocketConnectionTimeout())
@@ -150,17 +151,17 @@ namespace Halibut.Transport.Protocol
                     log.Write(EventType.Diagnostic, "No messages received from client for timeout period. Connection closed and will be re-opened when required");
                     return;
                 }
-                stream.SendProceed();
+                await stream.SendProceed().ConfigureAwait(false);
             }
         }
 
-        void ProcessSubscriber(IPendingRequestQueue pendingRequests)
+        async Task ProcessSubscriber(IPendingRequestQueue pendingRequests)
         {
             while (true)
             {
-                var nextRequest = pendingRequests.Dequeue();
+                var nextRequest = await pendingRequests.DequeueAsync().ConfigureAwait(false);
 
-                var success = ProcessReceiverInternal(pendingRequests, nextRequest);
+                var success = await ProcessReceiverInternal(pendingRequests, nextRequest).ConfigureAwait(false);
                 if (!success)
                     return;
             }
@@ -170,22 +171,23 @@ namespace Halibut.Transport.Protocol
         {
             while (true)
             {
-                var nextRequest = await pendingRequests.DequeueAsync();
+                var nextRequest = await pendingRequests.DequeueAsync().ConfigureAwait(false);
 
-                var success = ProcessReceiverInternal(pendingRequests, nextRequest);
+                var success = await ProcessReceiverInternal(pendingRequests, nextRequest).ConfigureAwait(false);
+
                 if (!success)
                     return;
             }
         }
 
-        bool ProcessReceiverInternal(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
+        async Task<bool> ProcessReceiverInternal(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
         {
             try
             {
-                stream.Send(nextRequest);
+                await stream.Send(nextRequest).ConfigureAwait(false);
                 if (nextRequest != null)
                 {
-                    var response = stream.Receive<ResponseMessage>();
+                    var response = await stream.Receive<ResponseMessage>().ConfigureAwait(false);
                     pendingRequests.ApplyResponse(response);
                 }
             }
@@ -201,7 +203,7 @@ namespace Halibut.Transport.Protocol
 
             try
             {
-                if (!stream.ExpectNextOrEnd())
+                if (!await stream.ExpectNextOrEnd().ConfigureAwait(false))
                     return false;
             }
             catch (Exception ex) when (ex.IsSocketConnectionTimeout())
@@ -212,7 +214,8 @@ namespace Halibut.Transport.Protocol
                 log.Write(EventType.Error, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
                 return false;
             }
-            stream.SendProceed();
+            await stream.SendProceed().ConfigureAwait(false);
+
             return true;
         }
 

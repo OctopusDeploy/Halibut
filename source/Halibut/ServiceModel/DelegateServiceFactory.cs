@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Janitor;
 
 namespace Halibut.ServiceModel
 {
@@ -37,6 +38,7 @@ namespace Halibut.ServiceModel
 
         #region Nested type: Lease
 
+        [SkipWeaving]
         class Lease : IServiceLease
         {
             readonly object service;

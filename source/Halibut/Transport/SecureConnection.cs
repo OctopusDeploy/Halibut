@@ -4,9 +4,11 @@ using System.Net.Security;
 using System.Net.Sockets;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Janitor;
 
 namespace Halibut.Transport
 {
+    [SkipWeaving]
     public class SecureConnection : IConnection
     {
         readonly IDisposable client;
@@ -40,7 +42,7 @@ namespace Halibut.Transport
             {
                 protocol.StopAcceptingClientRequests();
                 stream.Dispose();
-                ((IDisposable)client).Dispose();
+                client.Dispose();
             }
             catch (SocketException)
             {

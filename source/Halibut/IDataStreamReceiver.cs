@@ -1,11 +1,12 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Halibut
 {
     public interface IDataStreamReceiver
     {
-        void SaveTo(string filePath);
-        void Read(Action<Stream> reader);
+        Task SaveTo(string filePath);
+        Task Read(Func<Stream, Task> reader);
     }
 }

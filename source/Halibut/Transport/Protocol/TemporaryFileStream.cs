@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
+using Halibut.Util;
 
 namespace Halibut.Transport.Protocol
 {
@@ -14,23 +16,31 @@ namespace Halibut.Transport.Protocol
             this.path = path;
         }
 
-        public void SaveTo(string filePath)
+        public Task SaveTo(string filePath)
         {
-            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+            if (moved)
+            {
+                throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+            }
 
             AttemptToDelete(filePath);
             File.Move(path, filePath);
             moved = true;
             GC.SuppressFinalize(this);
+
+            return TaskEx.CompletedTask;
         }
 
-        public void Read(Action<Stream> reader)
+        public async Task Read(Func<Stream, Task> reader)
         {
-            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+            if (moved)
+            {
+                throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+            }
 
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
-                reader(file);
+                await reader(file).ConfigureAwait(false);
             }
             AttemptToDelete(path);
             moved = true;

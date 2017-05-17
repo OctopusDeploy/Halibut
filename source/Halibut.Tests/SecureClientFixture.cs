@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -34,7 +35,7 @@ namespace Halibut.Tests
         }
 
         [Fact]
-        public void SecureClientClearsPoolWhenAllConnectionsCorrupt()
+        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
             var pool = new ConnectionPool<ServiceEndPoint, IConnection>();
             var stream = Substitute.For<IMessageExchangeStream>();
@@ -56,7 +57,7 @@ namespace Halibut.Tests
 
             var secureClient = new SecureClient(endpoint, Certificates.Octopus, log, pool);
             ResponseMessage response = null;
-            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
+            await secureClient.ExecuteTransaction(async (mep) => response = await mep.ExchangeAsClient(request).ConfigureAwait(false)).ConfigureAwait(false);
 
             // The pool should be cleared after the second failure
             stream.Received(2).IdentifyAsClient();

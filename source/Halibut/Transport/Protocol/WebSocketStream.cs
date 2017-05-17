@@ -4,9 +4,11 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Janitor;
 
 namespace Halibut.Transport.Protocol
 {
+    [SkipWeaving]
     public class WebSocketStream : Stream
     {
         readonly WebSocket context;

@@ -10,6 +10,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
@@ -20,6 +21,7 @@ namespace Halibut.Transport
     public class SecureWebSocketClient : ISecureClient
     {
         public const int RetryCountLimit = 5;
+
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
@@ -35,7 +37,7 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
 
-        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
+        public async Task ExecuteTransaction(Func<MessageExchangeProtocol, Task> protocolHandler)
         {
             var retryInterval = HalibutLimits.RetryListeningSleepInterval;
 
@@ -46,9 +48,9 @@ namespace Halibut.Transport
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
-                if (i > 0) 
+                if (i > 0)
                 {
-                    Thread.Sleep(retryInterval);
+                    await Task.Delay(retryInterval).ConfigureAwait(false);
                     log.Write(EventType.Error, "Retry attempt {0}", i);
                 }
 
@@ -59,12 +61,12 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = AcquireConnection();
+                        connection = await AcquireConnection().ConfigureAwait(false);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
 
-                        protocolHandler(connection.Protocol);
+                        await protocolHandler(connection.Protocol).ConfigureAwait(false);
                     }
                     catch
                     {
@@ -119,35 +121,38 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
-        IConnection AcquireConnection()
+        async Task<IConnection> AcquireConnection()
         {
             var connection = pool.Take(serviceEndpoint);
-            return connection ?? EstablishNewConnection();
+            return connection ?? await EstablishNewConnection().ConfigureAwait(false);
         }
 
-        SecureConnection EstablishNewConnection()
+        async Task<SecureConnection> EstablishNewConnection()
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
-            var client = CreateConnectedClient(serviceEndpoint);
+            var client = await CreateConnectedClient(serviceEndpoint).ConfigureAwait(false);
             
             log.Write(EventType.Diagnostic, "Connection established");
             
             var stream = new WebSocketStream(client);
 
             log.Write(EventType.Security, "Performing handshake");
-            stream.WriteTextMessage("MX");
+            await stream.WriteTextMessage("MX").ConfigureAwait(false);
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
             var protocol = new MessageExchangeProtocol(stream, log);
+
             return new SecureConnection(client, stream, protocol);
         }
 
-        ClientWebSocket CreateConnectedClient(ServiceEndPoint endPoint)
+        async Task<ClientWebSocket> CreateConnectedClient(ServiceEndPoint endPoint)
         {
-            if(!endPoint.IsWebSocketEndpoint)
+            if (!endPoint.IsWebSocketEndpoint)
+            {
                 throw new Exception("Only wss:// endpoints are supported");
+            }
 
             var connectionId = Guid.NewGuid().ToString();
 
@@ -156,14 +161,17 @@ namespace Halibut.Transport
             client.Options.AddSubProtocol("Octopus");
             client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
             if (endPoint.Proxy != null)
+            {
                 client.Options.Proxy = new WebSocketProxy(endPoint.Proxy);
+            }
 
             try
             {
                 ServerCertificateInterceptor.Expect(connectionId);
                 using (var cts = new CancellationTokenSource(HalibutLimits.TcpClientConnectTimeout))
-                    client.ConnectAsync(endPoint.BaseUri, cts.Token)
-                        .ConfigureAwait(false).GetAwaiter().GetResult();
+                {
+                    await client.ConnectAsync(endPoint.BaseUri, cts.Token).ConfigureAwait(false);
+                }
                 ServerCertificateInterceptor.Validate(connectionId, endPoint);
             }
             finally
@@ -206,7 +214,7 @@ namespace Halibut.Transport
             throw new HalibutClientException(error.ToString(), lastError);
         }
 
- class WebSocketProxy : IWebProxy
+        class WebSocketProxy : IWebProxy
         {
             readonly Uri uri;
             public WebSocketProxy(ProxyDetails proxy)

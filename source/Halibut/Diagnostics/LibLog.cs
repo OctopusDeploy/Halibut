@@ -39,6 +39,7 @@
 #pragma warning disable 1591
 
 using System.Diagnostics.CodeAnalysis;
+using Janitor;
 
 [assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Halibut.Logging")]
 [assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Halibut.Logging.Logger.#Invoke(Halibut.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
@@ -1979,9 +1980,10 @@ namespace Halibut.Logging.LogProviders
         }
     }
 
-    internal class DisposableAction : IDisposable
+    [SkipWeaving]
+    class DisposableAction : IDisposable
     {
-        private readonly Action _onDispose;
+        readonly Action _onDispose;
 
         public DisposableAction(Action onDispose = null)
         {
@@ -1990,10 +1992,7 @@ namespace Halibut.Logging.LogProviders
 
         public void Dispose()
         {
-            if (_onDispose != null)
-            {
-                _onDispose();
-            }
+            _onDispose?.Invoke();
         }
     }
 }

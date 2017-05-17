@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
@@ -7,13 +8,13 @@ namespace Halibut.Tests
     public class LocalDataStreamFixture
     {
         [Fact]
-        public void ShouldUseInMemoryReceiverLocallyToRead()
+        public async Task ShouldUseInMemoryReceiverLocallyToRead()
         {
             const string input = "Hello World!";
             var dataStream = DataStream.FromString(input);
 
             string result = null;
-            dataStream.Receiver().Read(stream => result = ReadStreamAsString(stream));
+            await dataStream.Receiver().Read(async stream => result = await ReadStreamAsString(stream).ConfigureAwait(false)).ConfigureAwait(false);
 
             result.Should().Be(input);
         }
@@ -37,11 +38,11 @@ namespace Halibut.Tests
             }
         }
 
-        private static string ReadStreamAsString(Stream stream)
+        static Task<string> ReadStreamAsString(Stream stream)
         {
             using (var reader = new StreamReader(stream))
             {
-                return reader.ReadToEnd();
+                return Task.FromResult(reader.ReadToEnd());
             }
         }
     }

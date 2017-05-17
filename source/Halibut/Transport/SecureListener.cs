@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -11,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -22,21 +25,23 @@ namespace Halibut.Transport
         PROTECT_FROM_CLOSE = 2
     }
 
-    public class SecureListener : IDisposable
+    public class SecureListener : IDisposable, Stoppable
     {
 #if CAN_GET_SOCKET_HANDLE
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
 #endif
         readonly IPEndPoint endPoint;
-        readonly X509Certificate2 serverCertificate;
+        X509Certificate2 serverCertificate;
         readonly Func<MessageExchangeProtocol, Task> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
-        readonly CancellationTokenSource cts = new CancellationTokenSource();
+        CancellationTokenSource cts = new CancellationTokenSource();
         ILog log;
         TcpListener listener;
+        readonly ConcurrentDictionary<Task, Task> runningReceiveTasks = new ConcurrentDictionary<Task, Task>();
+        Task acceptPumpTask;
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
             : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent)
@@ -72,8 +77,31 @@ namespace Halibut.Transport
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(async () => await Accept());
+            acceptPumpTask = Task.Run(Accept, CancellationToken.None);
+
             return ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+
+        public async Task Stop()
+        {
+            cts.Cancel();
+            listener.Stop();
+            
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
+            var allTasks = runningReceiveTasks.Values.Concat(new[]
+            {
+                acceptPumpTask
+            });
+            var finishedTask = await Task.WhenAny(Task.WhenAll(allTasks), timeoutTask).ConfigureAwait(false);
+
+            if (finishedTask.Equals(timeoutTask))
+            {
+                log.Write(EventType.Error, "The accept pump failed to stop within the time allowed(30s)");
+            }
+
+            runningReceiveTasks.Clear();
+
+            log.Write(EventType.ListenerStopped, "Listener stopped");
         }
 
         async Task Accept()
@@ -84,10 +112,17 @@ namespace Halibut.Transport
                 {
                     try
                     {
-                        var client = await listener.AcceptTcpClientAsync();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        HandleClient(client);
-#pragma warning restore CS4014
+                        var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                        var receiveTask = HandleClient(client);
+
+                        runningReceiveTasks.TryAdd(receiveTask, receiveTask);
+
+                        receiveTask.ContinueWith(t =>
+                        {
+                            Task toBeRemoved;
+                            runningReceiveTasks.TryRemove(receiveTask, out toBeRemoved);
+                        }, TaskContinuationOptions.ExecuteSynchronously)
+                        .Ignore();
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
@@ -99,7 +134,7 @@ namespace Halibut.Transport
                     {
                         log.WriteException(EventType.Error, "Error accepting TCP client", ex);
                         // Slow down the logs in case an exception is immediately encountered each AcceptTcpClientAsync
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000).ConfigureAwait(false);
                     }
                 }
             }
@@ -113,7 +148,7 @@ namespace Halibut.Transport
                 client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-                await ExecuteRequest(client);
+                await ExecuteRequest(client).ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
             {
@@ -137,11 +172,11 @@ namespace Halibut.Transport
                 try
                 {
                     log.Write(EventType.Security, "Performing TLS server handshake");
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
 
                     log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
-                    var req = ReadInitialRequest(ssl);
+                    var req = await ReadInitialRequest(ssl).ConfigureAwait(false);
                     if (string.IsNullOrEmpty(req))
                     {
                         log.Write(EventType.Diagnostic, "Ignoring empty request");
@@ -151,14 +186,14 @@ namespace Halibut.Transport
                     if (req.Substring(0, 2) != "MX")
                     {
                         log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
-                        SendFriendlyHtmlPage(ssl);
+                        await SendFriendlyHtmlPage(ssl).ConfigureAwait(false);
                         return;
                     }
 
                     if (Authorize(ssl, clientName))
                     {
                         // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                        await ExchangeMessages(ssl);
+                        await ExchangeMessages(ssl).ConfigureAwait(false);
 
                         // Mark the stream as delegated once everything has succeeded
                         keepStreamOpen = true;
@@ -189,7 +224,7 @@ namespace Halibut.Transport
             }
         }
 
-        void SendFriendlyHtmlPage(Stream stream)
+        async Task SendFriendlyHtmlPage(Stream stream)
         {
             var message = getFriendlyHtmlPageContent();
 
@@ -197,14 +232,14 @@ namespace Halibut.Transport
             // Disposing the StreamWriter will close the stream - it owns the stream
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
             {
-                writer.WriteLine("HTTP/1.0 200 OK");
-                writer.WriteLine("Content-Type: text/html; charset=utf-8");
-                writer.WriteLine("Content-Length: " + message.Length);
-                writer.WriteLine();
-                writer.WriteLine(message);
-                writer.WriteLine();
-                writer.Flush();
-                stream.Flush();
+                await writer.WriteLineAsync("HTTP/1.0 200 OK").ConfigureAwait(false);
+                await writer.WriteLineAsync("Content-Type: text/html; charset=utf-8").ConfigureAwait(false);
+                await writer.WriteLineAsync("Content-Length: " + message.Length).ConfigureAwait(false);
+                await writer.WriteLineAsync().ConfigureAwait(false);
+                await writer.WriteLineAsync(message).ConfigureAwait(false);
+                await writer.WriteLineAsync().ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
+                await stream.FlushAsync().ConfigureAwait(false);
             }
         }
 
@@ -244,6 +279,7 @@ namespace Halibut.Transport
         }
 
         // ReSharper disable once UnusedParameter.Local
+
         static void EnsureCertificateIsValidForListening(X509Certificate2 certificate)
         {
             if (certificate == null) throw new Exception("No certificate was provided.");
@@ -254,13 +290,20 @@ namespace Halibut.Transport
             }
         }
 
-        string ReadInitialRequest(Stream stream)
+        async Task<int> ReadByteAsync(Stream stream)
+        {
+            var buffer = new byte[1];
+            if ( await stream.ReadAsync(buffer, 0, 1).ConfigureAwait(false) == 0)
+                return -1;
+            return buffer[0];
+        }
+        async Task<string> ReadInitialRequest(Stream stream)
         {
             var builder = new StringBuilder();
             var lastWasNewline = false;
             while (builder.Length < 20000)
             {
-                var b = stream.ReadByte();
+                var b = await ReadByteAsync(stream).ConfigureAwait(false);
                 if (b == -1) return builder.ToString();
 
                 var c = (char)b;
@@ -268,7 +311,8 @@ namespace Halibut.Transport
                 {
                     continue;
                 }
-                else if (c == '\n')
+
+                if (c == '\n')
                 {
                     builder.AppendLine();
 
@@ -288,9 +332,7 @@ namespace Halibut.Transport
 
         public void Dispose()
         {
-            cts.Cancel();
-            listener.Stop();
-            log.Write(EventType.ListenerStopped, "Listener stopped");
+            // Injected by Fody.Janitor
         }
     }
 }

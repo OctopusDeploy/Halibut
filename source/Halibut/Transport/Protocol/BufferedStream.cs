@@ -8,6 +8,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Janitor;
 
 namespace Halibut.Transport.Protocol
 {
@@ -44,7 +45,8 @@ namespace Halibut.Transport.Protocol
     /// bytes cached (not yet written to the target stream or not yet consumed by the user) is never larger than the 
     /// actual specified buffer size.
     /// </summary>
-    internal sealed class BufferedStream : Stream
+    [SkipWeaving]
+    sealed class BufferedStream : Stream
     {
         static class SR
         {

@@ -10,7 +10,7 @@ namespace Halibut.Util.AsyncEx
         /// <summary>
         /// The cancellation token registration, if any. This is <c>null</c> if the registration was not necessary.
         /// </summary>
-        private readonly IDisposable _registration;
+        IDisposable _registration;
 
         /// <summary>
         /// Creates a task for the specified cancellation token, registering with the token if necessary.
@@ -38,7 +38,7 @@ namespace Halibut.Util.AsyncEx
         /// </summary>
         public void Dispose()
         {
-            _registration?.Dispose();
+            // Injected by Fody.Janitor
         }
     }
 }

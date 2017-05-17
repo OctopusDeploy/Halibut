@@ -2,22 +2,26 @@ using System;
 using System.Net.Sockets;
 using Halibut.Diagnostics;
 using System.Runtime.ExceptionServices;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
     public static class TcpClientExtensions
     {
-        public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
+        public static Task ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {
-            client.ConnectWithTimeout(remoteUri.Host, remoteUri.Port, timeout);
+            return client.ConnectWithTimeout(remoteUri.Host, remoteUri.Port, timeout);
         }
 
-        public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
+        public static async Task ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
             var connectResult = false;
             try
             {
-                connectResult = client.ConnectAsync(host, port).Wait(timeout);
+                var timeoutTask = Task.Delay(timeout);
+                var finishedTask = await Task.WhenAny(client.ConnectAsync(host, port), timeoutTask).ConfigureAwait(false);
+
+                connectResult = !finishedTask.Equals(timeoutTask);
             }
             catch (AggregateException aex) when (aex.IsSocketConnectionTimeout())
             {

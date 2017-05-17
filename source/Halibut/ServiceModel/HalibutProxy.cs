@@ -2,6 +2,7 @@
 using System.Reflection;
 
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
@@ -91,13 +92,13 @@ namespace Halibut.ServiceModel
 #else
     public class HalibutProxy : DispatchProxy
     {
-        Func<RequestMessage, ResponseMessage> messageRouter;
+        Func<RequestMessage, Task<ResponseMessage>> messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
 
-        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public void Configure(Func<RequestMessage, Task<ResponseMessage>> messageRouter, Type contractType, ServiceEndPoint endPoint)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
@@ -143,7 +144,7 @@ namespace Halibut.ServiceModel
             return request;
         }
 
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        Task<ResponseMessage> DispatchRequest(RequestMessage requestMessage)
         {
             return messageRouter(requestMessage);
         }

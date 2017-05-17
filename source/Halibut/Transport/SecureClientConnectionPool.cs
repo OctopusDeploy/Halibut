@@ -4,10 +4,12 @@ using System.Linq;
 using System.Runtime.Serialization;
 using Halibut.Diagnostics;
 using Halibut.Logging;
+using Janitor;
 
 namespace Halibut.Transport
 {
-    public class ConnectionPool<TKey, TPooledResource> 
+    [SkipWeaving]
+    public class ConnectionPool<TKey, TPooledResource>: IDisposable
         where TPooledResource : class, IPooledResource
     {
         readonly ConcurrentDictionary<TKey, ConcurrentBag<TPooledResource>> pool = new ConcurrentDictionary<TKey, ConcurrentBag<TPooledResource>>();

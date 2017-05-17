@@ -1,35 +1,36 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport.Protocol
 {
     public class TemporaryFileDataStreamReceiver : IDataStreamReceiver
     {
-        readonly Action<Stream> writer;
+        readonly Func<Stream, Task> writer;
 
-        public TemporaryFileDataStreamReceiver(Action<Stream> writer)
+        public TemporaryFileDataStreamReceiver(Func<Stream, Task> writer)
         {
             this.writer = writer;
         }
 
-        public void SaveTo(string filePath)
+        public Task SaveTo(string filePath)
         {
             using (var file = new FileStream(filePath, FileMode.Create))
             {
-                writer(file);
+                return writer(file);
             }
         }
 
-        public void Read(Action<Stream> reader)
+        public async Task Read(Func<Stream, Task> reader)
         {
             var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             try
             {
                 using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 65536))
                 {
-                    writer(fileStream);
+                    await writer(fileStream).ConfigureAwait(false);
                     fileStream.Seek(0, SeekOrigin.Begin);
-                    reader(fileStream);
+                    await reader(fileStream).ConfigureAwait(false);
                 }
             }
             finally

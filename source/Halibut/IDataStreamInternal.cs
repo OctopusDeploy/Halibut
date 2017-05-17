@@ -1,11 +1,12 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Halibut
 {
-    internal interface IDataStreamInternal
+    interface IDataStreamInternal
     {
-        void Received(IDataStreamReceiver receiver);
-        void Transmit(Stream stream);
+        void SetReceived(IDataStreamReceiver receiver);
+        Task Transmit(Stream stream);
     }
 }

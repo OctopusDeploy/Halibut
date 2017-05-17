@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 
 namespace Halibut
@@ -15,10 +16,10 @@ namespace Halibut
         void ListenWebSocket(string endpoint);
 #endif
         void Poll(Uri subscription, ServiceEndPoint endPoint);
-        ServiceEndPoint Discover(Uri uri);
-        ServiceEndPoint Discover(ServiceEndPoint endpoint);
-        TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint);
-        TService CreateClient<TService>(ServiceEndPoint endpoint);
+        Task<ServiceEndPoint> Discover(Uri uri);
+        Task<ServiceEndPoint> Discover(ServiceEndPoint endpoint);
+        Task<TService> CreateClient<TService>(string endpointBaseUri, string publicThumbprint);
+        Task<TService> CreateClient<TService>(ServiceEndPoint endpoint);
         void Trust(string clientThumbprint);
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);

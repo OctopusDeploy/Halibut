@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Halibut.Transport;
 
 namespace Halibut.ServiceModel
@@ -19,15 +20,22 @@ namespace Halibut.ServiceModel
             pollingClient.Start();
         }
 
-        public void Dispose()
+        public async Task Stop()
         {
+            IPollingClient[] pollingClientsCopy;
+
             lock (sync)
             {
-                foreach (var worker in pollingClients)
-                {
-                    worker.Dispose();
-                }
+                pollingClientsCopy = pollingClients.ToArray();
+            }
 
+            foreach (var worker in pollingClientsCopy)
+            {
+                await worker.Stop().ConfigureAwait(false);
+            }
+
+            lock (sync)
+            {
                 pollingClients.Clear();
             }
         }

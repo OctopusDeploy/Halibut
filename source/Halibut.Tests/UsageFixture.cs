@@ -31,14 +31,14 @@ namespace Halibut.Tests
         }
 
         [Fact]
-        public void OctopusCanDiscoverTentacle()
+        public async Task OctopusCanDiscoverTentacle()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
 
-                var info = octopus.Discover(new Uri("https://localhost:" + tentaclePort));
+                var info = await octopus.Discover(new Uri("https://localhost:" + tentaclePort)).ConfigureAwait(false);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 
@@ -10,46 +11,57 @@ namespace Halibut.Transport
         readonly Uri subscription;
         readonly ISecureClient secureClient;
         readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
-        readonly Thread thread;
-        bool working;
+        CancellationTokenSource tokenSource;
+        Task pollerTask;
 
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;
             this.handleIncomingRequest = handleIncomingRequest;
-            thread = new Thread(ExecutePollingLoop);
-            thread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
-            thread.IsBackground = true;
         }
 
         public void Start()
         {
-            working = true;
-            thread.Start();
+            tokenSource = new CancellationTokenSource();
+
+            var token = tokenSource.Token;
+
+            pollerTask = Task.Run(() => ExecutePollingLoop(token), CancellationToken.None);
         }
 
-        private void ExecutePollingLoop(object ignored)
+        public Task Stop()
         {
-            while (working)
+            tokenSource.Cancel();
+
+            return pollerTask;
+        }
+
+        async Task ExecutePollingLoop(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    secureClient.ExecuteTransaction(protocol =>
-                    {
-                        protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
-                    });
+                    await secureClient.ExecuteTransaction(protocol => protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest)).ConfigureAwait(false);
                 }
                 catch (Exception)
                 {
-                    Thread.Sleep(5000);
+                    try
+                    {
+                        await Task.Delay(5000, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // no-op
+                    }
                 }
             }
         }
 
         public void Dispose()
         {
-            working = false;
+            // Injected by Fody.Janitor
         }
     }
 }
