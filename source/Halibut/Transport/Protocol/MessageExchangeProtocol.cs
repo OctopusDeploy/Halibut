@@ -107,23 +107,6 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task ExchangeAsServerAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
-        {
-            var identity = stream.ReadRemoteIdentity();
-            await stream.IdentifyAsServer().ConfigureAwait(false);
-            switch (identity.IdentityType)
-            {
-                case RemoteIdentityType.Client:
-                    await ProcessClientRequests(incomingRequestProcessor).ConfigureAwait(false);
-                    break;
-                case RemoteIdentityType.Subscriber:
-                    await ProcessSubscriberAsync(pendingRequests(identity)).ConfigureAwait(false);
-                    break;
-                default:
-                    throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
-            }
-        }
-
         async Task ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
             while (acceptClientRequests)
@@ -162,19 +145,6 @@ namespace Halibut.Transport.Protocol
                 var nextRequest = await pendingRequests.DequeueAsync().ConfigureAwait(false);
 
                 var success = await ProcessReceiverInternal(pendingRequests, nextRequest).ConfigureAwait(false);
-                if (!success)
-                    return;
-            }
-        }
-
-        async Task ProcessSubscriberAsync(IPendingRequestQueue pendingRequests)
-        {
-            while (true)
-            {
-                var nextRequest = await pendingRequests.DequeueAsync().ConfigureAwait(false);
-
-                var success = await ProcessReceiverInternal(pendingRequests, nextRequest).ConfigureAwait(false);
-
                 if (!success)
                     return;
             }

@@ -51,7 +51,7 @@ namespace Halibut.Transport.Protocol
             var buffer = new ArraySegment<byte>(new byte[10000]);
             while (true)
             {
-                var result = await context.ReceiveAsync(buffer, cancel.Token);
+                var result = await context.ReceiveAsync(buffer, cancel.Token).ConfigureAwait(false);
                 if (result.MessageType != WebSocketMessageType.Text)
                     throw new Exception($"Encountered an unexpected message type {result.MessageType}");
                 sb.Append(Encoding.UTF8.GetString(buffer.Array, 0, result.Count));
