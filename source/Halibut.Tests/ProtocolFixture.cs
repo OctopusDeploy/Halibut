@@ -144,7 +144,7 @@ namespace Halibut.Tests
             var queue = new Queue<RequestMessage>();
             queue.Enqueue(new RequestMessage());
             queue.Enqueue(new RequestMessage());
-            requestQueue.Dequeue().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+            requestQueue.DequeueAsync().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
             await protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).ConfigureAwait(false);
@@ -242,7 +242,7 @@ namespace Halibut.Tests
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
             var queue = new Queue<RequestMessage>();
-            requestQueue.Dequeue().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+            requestQueue.DequeueAsync().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
 
             queue.Enqueue(new RequestMessage());
             queue.Enqueue(new RequestMessage());
