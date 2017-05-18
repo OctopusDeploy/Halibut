@@ -26,6 +26,7 @@ namespace Halibut
         ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
+        bool stopCalled;
 
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate)
         {
@@ -109,18 +110,25 @@ namespace Halibut
             return client.Discover(endpoint);
         }
 
-        public Task<TService> CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
         {
             return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint));
         }
 
-        public async Task<TService> CreateClient<TService>(ServiceEndPoint endpoint)
+        public TService CreateClient<TService>(ServiceEndPoint endpoint)
         {
 #if HAS_REAL_PROXY
-            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
+            return (TService)new HalibutProxy(request =>
+            {
+                // TODO: Make this async!
+                return SendOutgoingRequest(request).ConfigureAwait(false).GetAwaiter().GetResult();
+            }, typeof(TService), endpoint).GetTransparentProxy();
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
-            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint);
+            (proxy as HalibutProxy).Configure(request => {
+                // TODO: Make this async!
+                return SendOutgoingRequest(request).ConfigureAwait(false).GetAwaiter().GetResult();
+            }, typeof(TService), endpoint);
             return proxy;
 #endif
         }
@@ -134,6 +142,7 @@ namespace Halibut
                 case "https":
                     return await SendOutgoingHttpsRequest(request).ConfigureAwait(false);
                 case "poll":
+                    // TODO: Make this async!
                     return SendOutgoingPollingRequest(request);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
@@ -204,6 +213,7 @@ namespace Halibut
 
         public async Task Stop()
         {
+            stopCalled = true;
             await pollingClients.Stop().ConfigureAwait(false);
 
             foreach (var listener in listeners)
@@ -217,8 +227,16 @@ namespace Halibut
             // Injected by Fody.Janitor
         }
 
+        public void DisposeManaged()
+        {
+            if (!stopCalled)
+            {
+                throw new Exception("Call Stop!");
+            }
+        }
+
 #if HAS_WEB_SOCKET_LISTENER
         public static bool OSSupportsWebSockets => Environment.OSVersion.Version >= new Version(6, 2);
 #endif
-    }
+        }
 }

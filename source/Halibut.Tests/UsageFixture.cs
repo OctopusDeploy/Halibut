@@ -40,11 +40,14 @@ namespace Halibut.Tests
 
                 var info = await octopus.Discover(new Uri("https://localhost:" + tentaclePort)).ConfigureAwait(false);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
+
+                await octopus.Stop().ConfigureAwait(false);
+                await tentacleListening.Stop().ConfigureAwait(false);
             }
         }
 
         [Fact]
-        public void OctopusCanSendMessagesToListeningTentacle()
+        public async Task OctopusCanSendMessagesToListeningTentacle()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
@@ -61,11 +64,14 @@ namespace Halibut.Tests
                 }
 
                 Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
+
+                await octopus.Stop().ConfigureAwait(false);
+                await tentacleListening.Stop().ConfigureAwait(false);
             }
         }
 
         [Fact]
-        public void OctopusCanSendMessagesToPollingTentacle()
+        public async Task OctopusCanSendMessagesToPollingTentacle()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
@@ -80,12 +86,15 @@ namespace Halibut.Tests
                 {
                     echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
                 }
+
+                await octopus.Stop().ConfigureAwait(false);
+                await tentaclePolling.Stop().ConfigureAwait(false);
             }
         }
 
 #if HAS_SERVICE_POINT_MANAGER
         [Fact]
-        public void OctopusCanSendMessagesToWebSocketPollingTentacle()
+        public async Task OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
             const int octopusPort = 8450;
             AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:" + octopusPort);
@@ -105,6 +114,9 @@ namespace Halibut.Tests
                     {
                         echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
                     }
+
+                    await octopus.Stop().ConfigureAwait(false);
+                    await tentaclePolling.Stop().ConfigureAwait(false);
                 }
             }
             finally
@@ -115,7 +127,7 @@ namespace Halibut.Tests
 #endif
 
         [Fact]
-        public void StreamsCanBeSentToListening()
+        public async Task StreamsCanBeSentToListening()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
@@ -133,11 +145,14 @@ namespace Halibut.Tests
                     var count = echo.CountBytes(DataStream.FromBytes(data));
                     count.Should().Be(1024 * 1024 + 15);
                 }
+
+                await octopus.Stop().ConfigureAwait(false);
+                await tentacleListening.Stop().ConfigureAwait(false);
             }
         }
 
         [Fact]
-        public void StreamsCanBeSentToPolling()
+        public async Task StreamsCanBeSentToPolling()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
@@ -157,11 +172,14 @@ namespace Halibut.Tests
                     var count = echo.CountBytes(DataStream.FromBytes(data));
                     count.Should().Be(1024 * 1024 + 15);
                 }
+
+                await octopus.Stop().ConfigureAwait(false);
+                await tentaclePolling.Stop().ConfigureAwait(false);
             }
         }
 
         [Fact]
-        public void SupportsDifferentServiceContractMethods()
+        public async Task SupportsDifferentServiceContractMethods()
         {
             services.Register<ISupportedServices>(() => new SupportedServices());
             using (var octopus = new HalibutRuntime(Certificates.Octopus))
@@ -195,11 +213,14 @@ namespace Halibut.Tests
 
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
                 ex.Message.Should().Contain("Ambiguous");
+
+                await octopus.Stop().ConfigureAwait(false);
+                await tentacleListening.Stop().ConfigureAwait(false);
             }
         }
 
         [Fact]
-        public void StreamsCanBeSentToListeningWithProgressReporting()
+        public async Task StreamsCanBeSentToListeningWithProgressReporting()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
@@ -219,6 +240,9 @@ namespace Halibut.Tests
                 count.Should().Be(1024 * 1024 * 16 + 15);
 
                 progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
+
+                await octopus.Stop().ConfigureAwait(false);
+                await tentacleListening.Stop().ConfigureAwait(false);
             }
         }
 
@@ -229,7 +253,7 @@ namespace Halibut.Tests
         [InlineData("https://localhost:{port}/")]
         [InlineData("https://{machine}:{port}")]
         [InlineData("https://{machine}:{port}/")]
-        public void SupportsHttpsGet(string uriFormat)
+        public async Task SupportsHttpsGet(string uriFormat)
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
@@ -239,6 +263,8 @@ namespace Halibut.Tests
                 var result = DownloadStringIgnoringCertificateValidation(uri);
 
                 result.Should().Be("<html><body><p>Hello!</p></body></html>");
+
+                await octopus.Stop().ConfigureAwait(false);
             }
         }
 
@@ -247,7 +273,7 @@ namespace Halibut.Tests
         [InlineData("Simple text works too!", null)]
         [InlineData("", null)]
         [InlineData(null, "<html><body><p>Hello!</p></body></html>")]
-        public void CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
+        public async Task CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
         {
             expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
 
@@ -259,21 +285,26 @@ namespace Halibut.Tests
                 var result = DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
 
                 result.Should().Be(expectedResult);
+
+                await octopus.Stop().ConfigureAwait(false);
             }
         }
 
         [Fact]
         [Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
-        public void ConnectingOverHttpShouldFailQuickly()
+        public async Task ConnectingOverHttpShouldFailQuickly()
         {
-            var task = Task.Run(() => DoConnectingOverHttpShouldFailQuickly());
-            if (!task.Wait(5000))
+            var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+            
+            var finishedTask = await Task.WhenAny(DoConnectingOverHttpShouldFailQuickly(), timeoutTask).ConfigureAwait(false);
+
+            if (finishedTask.Equals(timeoutTask))
             {
                 Assert.True(false, "Test did not complete within timeout");
             }
         }
 
-        void DoConnectingOverHttpShouldFailQuickly()
+        async Task DoConnectingOverHttpShouldFailQuickly()
         {
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
@@ -284,6 +315,7 @@ namespace Halibut.Tests
                 Assert.Throws<HttpRequestException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
 #endif
 
+                await octopus.Stop().ConfigureAwait(false);
             }
         }
 

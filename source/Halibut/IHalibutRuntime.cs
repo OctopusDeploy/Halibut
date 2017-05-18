@@ -18,8 +18,8 @@ namespace Halibut
         void Poll(Uri subscription, ServiceEndPoint endPoint);
         Task<ServiceEndPoint> Discover(Uri uri);
         Task<ServiceEndPoint> Discover(ServiceEndPoint endpoint);
-        Task<TService> CreateClient<TService>(string endpointBaseUri, string publicThumbprint);
-        Task<TService> CreateClient<TService>(ServiceEndPoint endpoint);
+        TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint);
+        TService CreateClient<TService>(ServiceEndPoint endpoint);
         void Trust(string clientThumbprint);
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);

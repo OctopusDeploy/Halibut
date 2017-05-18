@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Reflection;
-
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Transport.Protocol;
@@ -42,7 +41,7 @@ namespace Halibut.ServiceModel
                 var result = response.Result;
 
                 var returnType = ((MethodInfo) methodCall.MethodBase).ReturnType;
-                if (result != null && returnType != typeof (void) && !returnType.IsAssignableFrom(result.GetType()))
+                if (result != null && returnType != typeof (void) && !returnType.IsInstanceOfType(result))
                 {
                     result = Convert.ChangeType(result, returnType);
                 }
@@ -92,13 +91,13 @@ namespace Halibut.ServiceModel
 #else
     public class HalibutProxy : DispatchProxy
     {
-        Func<RequestMessage, Task<ResponseMessage>> messageRouter;
+        Func<RequestMessage, ResponseMessage> messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
 
-        public void Configure(Func<RequestMessage, Task<ResponseMessage>> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
@@ -141,10 +140,11 @@ namespace Halibut.ServiceModel
                 ServiceName = contractType.Name,
                 Params = args
             };
+
             return request;
         }
 
-        Task<ResponseMessage> DispatchRequest(RequestMessage requestMessage)
+        ResponseMessage DispatchRequest(RequestMessage requestMessage)
         {
             return messageRouter(requestMessage);
         }
@@ -157,7 +157,7 @@ namespace Halibut.ServiceModel
             if (responseMessage.Error == null)
                 return;
 
-            var realException = responseMessage.Error.Details as string;
+            var realException = responseMessage.Error.Details;
             throw new HalibutClientException(responseMessage.Error.Message, realException);
         }
     }
