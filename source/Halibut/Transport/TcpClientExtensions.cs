@@ -16,26 +16,39 @@ namespace Halibut.Transport
         public static async Task ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
             var connectResult = false;
-            try
-            {
-                var timeoutTask = Task.Delay(timeout);
-                var finishedTask = await Task.WhenAny(client.ConnectAsync(host, port), timeoutTask).ConfigureAwait(false);
 
-                connectResult = !finishedTask.Equals(timeoutTask);
-            }
-            catch (AggregateException aex) when (aex.IsSocketConnectionTimeout())
-            {
-                // if timeout is > 20 seconds the underlying socket will timeout first
-            }
-            catch(AggregateException aex)
-            {
-                ExceptionDispatchInfo.Capture(aex.InnerException).Throw();
-            }
+            var timeoutTask = Task.Delay(timeout);
+            await Task.WhenAny(client.ConnectAsync(host, port), timeoutTask)
+                .ContinueWith(t =>
+                {
+                    var finishedTask = t.Result;
+                    if (!finishedTask.Equals(timeoutTask))
+                    {
+                        if (finishedTask.IsFaulted)
+                        {
+                            var aex = finishedTask.Exception;
+                            if (aex != null)
+                            {
+                                // if timeout is > 20 seconds the underlying socket will timeout first
+                                if (!aex.IsSocketConnectionTimeout())
+                                {
+                                    ExceptionDispatchInfo.Capture(aex.InnerException).Throw();
+                                }
+                            }
+
+                            return;
+                        }
+
+                        connectResult = true;
+                    }
+                })
+                .ConfigureAwait(false);
+
             if (!connectResult)
             {
                 try
                 {
-                    ((IDisposable)client).Dispose();
+                    ((IDisposable) client).Dispose();
                 }
                 catch (SocketException)
                 {
