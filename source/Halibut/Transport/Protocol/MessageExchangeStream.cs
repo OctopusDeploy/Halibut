@@ -64,9 +64,31 @@ namespace Halibut.Transport.Protocol
             streamWriter.Flush();
         }
 
+        public async Task SendProceedAsync()
+        {
+            await streamWriter.WriteAsync("PROCEED");
+            await streamWriter.WriteLineAsync();
+            await streamWriter.FlushAsync();
+        }
+
         public bool ExpectNextOrEnd()
         {
             var line = ReadLine();
+            switch (line)
+            {
+                case "NEXT":
+                    return true;
+                case null:
+                case "END":
+                    return false;
+                default:
+                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+            }
+        }
+
+        public async Task<bool> ExpectNextOrEndAsync()
+        {
+            var line = await ReadLineAsync();
             switch (line)
             {
                 case "NEXT":
@@ -96,6 +118,17 @@ namespace Halibut.Transport.Protocol
             while (line == string.Empty)
             {
                 line = streamReader.ReadLine();
+            }
+
+            return line;
+        }
+
+        async Task<string> ReadLineAsync()
+        {
+            var line = await streamReader.ReadLineAsync();
+            while (line == string.Empty)
+            {
+                line = await streamReader.ReadLineAsync();
             }
 
             return line;

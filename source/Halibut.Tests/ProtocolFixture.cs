@@ -361,6 +361,8 @@ namespace Halibut.Tests
                 output.AppendLine("--> PROCEED");
             }
 
+            public Task SendProceedAsync() => Task.Run(() => SendProceed());
+
             public bool ExpectNextOrEnd()
             {
                 if (--numberOfReads == 0)
@@ -371,6 +373,8 @@ namespace Halibut.Tests
                 output.AppendLine("<-- NEXT");
                 return true;
             }
+
+            public Task<bool> ExpectNextOrEndAsync() => Task.Run(() => ExpectNextOrEnd());
 
             public void ExpectProceeed()
             {

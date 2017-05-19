@@ -8,7 +8,9 @@ namespace Halibut.Transport.Protocol
         void IdentifyAsClient();
         void SendNext();
         void SendProceed();
+        Task SendProceedAsync();
         bool ExpectNextOrEnd();
+        Task<bool> ExpectNextOrEndAsync();
         void ExpectProceeed();
         void IdentifyAsSubscriber(string subscriptionId);
         void IdentifyAsServer();
