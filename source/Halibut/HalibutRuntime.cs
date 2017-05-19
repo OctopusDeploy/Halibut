@@ -117,20 +117,9 @@ namespace Halibut
 
         public TService CreateClient<TService>(ServiceEndPoint endpoint)
         {
-#if HAS_REAL_PROXY
-            return (TService)new HalibutProxy(request =>
-            {
-                // TODO: Make this async!
-                return SendOutgoingRequest(request).ConfigureAwait(false).GetAwaiter().GetResult();
-            }, typeof(TService), endpoint).GetTransparentProxy();
-#else
-            var proxy = DispatchProxy.Create<TService, HalibutProxy>();
-            (proxy as HalibutProxy).Configure(request => {
-                // TODO: Make this async!
-                return SendOutgoingRequest(request).ConfigureAwait(false).GetAwaiter().GetResult();
-            }, typeof(TService), endpoint);
+            var proxy = DispatchProxyAsync.Create<TService, HalibutProxy>();
+            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint);
             return proxy;
-#endif
         }
 
         async Task<ResponseMessage> SendOutgoingRequest(RequestMessage request)
@@ -166,7 +155,7 @@ namespace Halibut
             return queue.QueueAndWait(request);
         }
 
-        ResponseMessage HandleIncomingRequest(RequestMessage request)
+        Task<ResponseMessage> HandleIncomingRequest(RequestMessage request)
         {
             return invoker.Invoke(request);
         }

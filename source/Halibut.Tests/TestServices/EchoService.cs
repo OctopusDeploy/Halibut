@@ -1,14 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.Tests.TestServices
 {
     public class EchoService : IEchoService
     {
-        public string SayHello(string name)
+        public Task<string> SayHello(string name)
         {
-            return name + "...";
+            return Task.FromResult(name + "...");
         }
 
         public bool Crash()

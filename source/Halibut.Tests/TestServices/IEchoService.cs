@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Halibut.Tests.TestServices
 {
@@ -6,7 +7,7 @@ namespace Halibut.Tests.TestServices
     {
         int LongRunningOperation();
 
-        string SayHello(string name);
+        Task<string> SayHello(string name);
 
         bool Crash();
 

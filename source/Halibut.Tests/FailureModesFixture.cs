@@ -23,7 +23,7 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                var error = Assert.Throws<HalibutClientException>(() => echo.SayHello("Paul"));
+                var error = await Assert.ThrowsAsync<HalibutClientException>(() => echo.SayHello("Paul")).ConfigureAwait(false);
                 error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
 
                 await octopus.Stop().ConfigureAwait(false);
@@ -105,7 +105,7 @@ namespace Halibut.Tests
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
 
-                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+                await Assert.ThrowsAsync<HalibutClientException>(() => echo.SayHello("World")).ConfigureAwait(false);
 
                 await octopus.Stop().ConfigureAwait(false);
                 await tentacleListening.Stop().ConfigureAwait(false);
@@ -123,7 +123,7 @@ namespace Halibut.Tests
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentaclePollingPublicThumbprint);
 
-                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+                await Assert.ThrowsAsync<HalibutClientException>(() => echo.SayHello("World")).ConfigureAwait(false);
 
                 await octopus.Stop().ConfigureAwait(false);
                 await tentacleListening.Stop().ConfigureAwait(false);

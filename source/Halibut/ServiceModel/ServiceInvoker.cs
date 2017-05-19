@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using Halibut.Portability;
 using Halibut.Transport.Protocol;
 
@@ -17,20 +18,20 @@ namespace Halibut.ServiceModel
             this.factory = factory;
         }
 
-        public ResponseMessage Invoke(RequestMessage requestMessage)
+        public Task<ResponseMessage> Invoke(RequestMessage requestMessage)
         {
             using (var lease = factory.CreateService(requestMessage.ServiceName))
             {
                 var methods = lease.Service.GetType().GetMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (methods.Count == 0)
                 {
-                    return ResponseMessage.FromError(requestMessage, $"Service {lease.Service.GetType().FullName}::{requestMessage.MethodName} not found");
+                    return Task.FromResult(ResponseMessage.FromError(requestMessage, $"Service {lease.Service.GetType().FullName}::{requestMessage.MethodName} not found"));
                 }
 
                 var method = SelectMethod(methods, requestMessage);
                 var args = GetArguments(requestMessage, method);
                 var result = method.Invoke(lease.Service, args);
-                return ResponseMessage.FromResult(requestMessage, result);
+                return Task.FromResult(ResponseMessage.FromResult(requestMessage, result));
             }
         }
 

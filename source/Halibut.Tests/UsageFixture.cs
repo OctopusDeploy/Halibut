@@ -56,11 +56,14 @@ namespace Halibut.Tests
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+                var greeting = await echo.SayHello("Deploy package A").ConfigureAwait(false);
+
+                greeting.Should().Be("Deploy package A...");
                 var watch = Stopwatch.StartNew();
                 for (var i = 0; i < 2000; i++)
                 {
-                    echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+                    greeting = await echo.SayHello("Deploy package A").ConfigureAwait(false);
+                    greeting.Should().Be("Deploy package A...");
                 }
 
                 Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
@@ -84,7 +87,9 @@ namespace Halibut.Tests
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 for (var i = 0; i < 2000; i++)
                 {
-                    echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                    var greeting = await echo.SayHello("Deploy package A" + i).ConfigureAwait(false);
+
+                    greeting.Should().Be("Deploy package A" + i + "...");
                 }
 
                 await octopus.Stop().ConfigureAwait(false);
@@ -112,7 +117,8 @@ namespace Halibut.Tests
                     var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                     for (var i = 0; i < 2000; i++)
                     {
-                        echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                        var greeting = await echo.SayHello("Deploy package A" + i).ConfigureAwait(false);
+                        greeting.Should().Be("Deploy package A" + i + "...");
                     }
 
                     await octopus.Stop().ConfigureAwait(false);

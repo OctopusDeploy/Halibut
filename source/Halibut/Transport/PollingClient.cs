@@ -10,11 +10,11 @@ namespace Halibut.Transport
     {
         readonly Uri subscription;
         readonly ISecureClient secureClient;
-        readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
+        readonly Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequest;
         CancellationTokenSource tokenSource;
         Task pollerTask;
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequest)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;

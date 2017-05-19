@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Halibut.SampleContracts
 {
@@ -6,7 +7,7 @@ namespace Halibut.SampleContracts
     {
         int LongRunningOperation();
 
-        string SayHello(string name);
+        Task<string> SayHello(string name);
 
         bool Crash();
 

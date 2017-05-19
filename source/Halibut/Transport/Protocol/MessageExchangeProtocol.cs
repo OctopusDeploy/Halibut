@@ -62,7 +62,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, int maxAttempts = int.MaxValue)
+        public async Task ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, int maxAttempts = int.MaxValue)
         {
             if (!identified)
             {
@@ -76,12 +76,12 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        static async Task ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        static async Task ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
         {
             var request = await stream.Receive<RequestMessage>().ConfigureAwait(false);
             if (request != null)
             {
-                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                var response = await InvokeAndWrapAnyExceptions(request, incomingRequestProcessor).ConfigureAwait(false);
                 await stream.Send(response).ConfigureAwait(false);
             }
 
@@ -89,7 +89,7 @@ namespace Halibut.Transport.Protocol
             await stream.ExpectProceeed().ConfigureAwait(false);
         }
 
-        public async Task ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
+        public async Task ExchangeAsServer(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
             await stream.IdentifyAsServer().ConfigureAwait(false);
@@ -107,7 +107,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        async Task ProcessClientRequests(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
         {
             while (acceptClientRequests)
             {
@@ -115,7 +115,7 @@ namespace Halibut.Transport.Protocol
                 if (request == null || !acceptClientRequests)
                     return;
 
-                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                var response = await InvokeAndWrapAnyExceptions(request, incomingRequestProcessor).ConfigureAwait(false);
 
                 if (!acceptClientRequests)
                     return;
@@ -136,6 +136,11 @@ namespace Halibut.Transport.Protocol
                 }
                 await stream.SendProceed().ConfigureAwait(false);
             }
+        }
+
+        private Task InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        {
+            throw new NotImplementedException();
         }
 
         async Task ProcessSubscriber(IPendingRequestQueue pendingRequests)
@@ -189,7 +194,7 @@ namespace Halibut.Transport.Protocol
             return true;
         }
 
-        static ResponseMessage InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        static Task<ResponseMessage> InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
         {
             try
             {
@@ -197,7 +202,7 @@ namespace Halibut.Transport.Protocol
             }
             catch (Exception ex)
             {
-                return ResponseMessage.FromException(request, ex);
+                return Task.FromResult(ResponseMessage.FromException(request, ex));
             }
         }
     }
