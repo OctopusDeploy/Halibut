@@ -195,8 +195,8 @@ namespace Halibut.Transport.Protocol
 
         async Task<T> ReadBsonMessage<T>()
         {
-            //using (var buffer = new BufferedStream(stream, 8192, true))
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+            using (var buffer = new BufferedStream(stream, 8192, true))
+            using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
             using (var bson = new BsonReader(zip) { CloseInput = false })
             {
                 T result = (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
@@ -256,8 +256,8 @@ namespace Halibut.Transport.Protocol
 
         async Task WriteBsonMessage<T>(T messages)
         {
-            //using (var buffer = new BufferedStream(stream, 4096, true))
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+            using (var buffer = new BufferedStream(stream, 4096, true))
+            using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
             using (var bson = new BsonWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
