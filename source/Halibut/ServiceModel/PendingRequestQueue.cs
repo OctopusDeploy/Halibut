@@ -1,7 +1,6 @@
 using System;
-using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Util.AsyncEx;
@@ -10,10 +9,8 @@ namespace Halibut.ServiceModel
 {
     public class PendingRequestQueue : IPendingRequestQueue
     {
-        readonly List<PendingRequest> queue = new List<PendingRequest>();
-        readonly Dictionary<string, PendingRequest> inProgress = new Dictionary<string, PendingRequest>();
-        readonly object sync = new object();
-        readonly AsyncManualResetEvent hasItems = new AsyncManualResetEvent();
+        readonly BufferBlock<PendingRequest> queue = new BufferBlock<PendingRequest>();
+
         readonly ILog log;
 
         public PendingRequestQueue(ILog log)
@@ -21,132 +18,87 @@ namespace Halibut.ServiceModel
             this.log = log;
         }
 
-        public ResponseMessage QueueAndWait(RequestMessage request)
+        public async Task<ResponseMessage> QueueAndWait(RequestMessage request)
         {
             var pending = new PendingRequest(request, log);
 
-            lock (sync)
-            {
-                queue.Add(pending);
-                inProgress.Add(request.Id, pending);
-                hasItems.Set();
-            }
+            await queue.SendAsync(pending).ConfigureAwait(false);
 
-            pending.WaitUntilComplete();
-
-            lock (sync)
-            {
-                inProgress.Remove(request.Id);
-            }
+            await pending.WaitUntilComplete().ConfigureAwait(false);
 
             return pending.Response;
         }
 
-        public bool IsEmpty
+        public Task<RequestMessage> DequeueAsync()
         {
-            get
-            {
-                lock (sync)
+            return queue.ReceiveAsync(HalibutLimits.PollingQueueWaitTimeout)
+                .ContinueWith(task =>
                 {
-                    return queue.Count == 0;
-                }
-            }
-        }
+                    if (task.IsCompleted)
+                    {
+                        if (task.Result.BeginTransfer())
+                        {
+                            return task.Result.Request;
+                        }
+                    }
 
-        public async Task<RequestMessage> DequeueAsync()
-        {
-            var pending = await DequeueNextAsync().ConfigureAwait(false);
-            if (pending == null) return null;
-            return pending.BeginTransfer() ? pending.Request : null;
-        }
-
-        async Task<PendingRequest> DequeueNextAsync()
-        {
-            var first = TakeFirst();
-            if (first != null)
-                return first;
-
-            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(HalibutLimits.PollingQueueWaitTimeout)).ConfigureAwait(false);
-            hasItems.Reset();
-            return TakeFirst();
-        }
-
-        PendingRequest TakeFirst()
-        {
-            lock (sync)
-            {
-                if (queue.Count == 0)
                     return null;
-
-                var first = queue[0];
-                queue.RemoveAt(0);
-                return first;
-            }
+                });
         }
-
-        public void ApplyResponse(ResponseMessage response)
-        {
-            if (response == null)
-                return;
-
-            lock (sync)
-            {
-                PendingRequest pending;
-                if (inProgress.TryGetValue(response.Id, out pending))
-                {
-                    pending.SetResponse(response);
-                }
-            }
-        }
-
+        
         class PendingRequest
         {
             readonly RequestMessage request;
             readonly ILog log;
-            readonly ManualResetEventSlim waiter;
-            readonly object sync = new object();
+            readonly AsyncManualResetEvent waiter;
             bool transferBegun;
             bool completed;
 
             public PendingRequest(RequestMessage request, ILog log)
             {
                 this.request = request;
+                this.request.ResponseArrived = ResponseArrived;
                 this.log = log;
-                waiter = new ManualResetEventSlim(false);
+                waiter = new AsyncManualResetEvent(false);
             }
 
-            public RequestMessage Request
+            void ResponseArrived(ResponseMessage responseMessage)
             {
-                get { return request; }
+                SetResponse(responseMessage);
             }
 
-            public void WaitUntilComplete()
+            public RequestMessage Request => request;
+
+            public async Task WaitUntilComplete()
             {
                 log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-                var success = waiter.Wait(HalibutLimits.PollingRequestQueueTimeout);
+                var timeoutTask = Task.Delay(HalibutLimits.PollingRequestQueueTimeout);
+                var success = await Task.WhenAny(waiter.WaitAsync(), timeoutTask)
+                    .ContinueWith(t =>
+                    {
+                        var finishedTask = t.Result;
+                        return !finishedTask.Equals(timeoutTask);
+                    })
+                    .ConfigureAwait(false);
+
                 if (success)
                 {
                     log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
                     return;
                 }
 
-                var waitForTransferToComplete = false;
-                lock (sync)
+                if (transferBegun)
                 {
-                    if (transferBegun)
-                    {
-                        waitForTransferToComplete = true;
-                    }
-                    else
-                    {
-                        completed = true;
-                    }
-                }
+                    timeoutTask = Task.Delay(HalibutLimits.PollingRequestMaximumMessageProcessingTimeout);
+                    success = await Task.WhenAny(waiter.WaitAsync(), timeoutTask)
+                        .ContinueWith(t =>
+                        {
+                            var finishedTask = t.Result;
+                            return !finishedTask.Equals(timeoutTask);
+                        })
+                        .ConfigureAwait(false);
 
-                if (waitForTransferToComplete)
-                {
-                    success = waiter.Wait(HalibutLimits.PollingRequestMaximumMessageProcessingTimeout);
                     if (success)
                     {
                         log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
@@ -158,29 +110,31 @@ namespace Halibut.ServiceModel
                 }
                 else
                 {
+                    completed = true;
+
                     log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
                     SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", HalibutLimits.PollingRequestQueueTimeout))));
                 }
             }
 
-            public bool BeginTransfer()
-            {
-                lock (sync)
-                {
-                    if (completed)
-                        return false;
-
-                    transferBegun = true;
-                    return true;
-                }
-            }
-
             public ResponseMessage Response { get; private set; }
 
-            public void SetResponse(ResponseMessage response)
+            void SetResponse(ResponseMessage response)
             {
                 Response = response;
                 waiter.Set();
+            }
+
+            public bool BeginTransfer()
+            {
+                if (completed)
+                {
+                    return false;
+                }
+
+                transferBegun = true;
+
+                return true;
             }
         }
     }

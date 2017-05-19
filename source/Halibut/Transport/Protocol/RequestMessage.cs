@@ -27,5 +27,12 @@ namespace Halibut.Transport.Protocol
         {
             return Id;
         }
+
+        internal Action<ResponseMessage> ResponseArrived = _ => { };
+        
+        internal void SetResponse(ResponseMessage response)
+        {
+            ResponseArrived(response);
+        }
     }
 }

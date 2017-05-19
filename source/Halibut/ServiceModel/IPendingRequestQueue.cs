@@ -6,8 +6,6 @@ namespace Halibut.ServiceModel
 {
     public interface IPendingRequestQueue
     {
-        bool IsEmpty { get; }
-        void ApplyResponse(ResponseMessage response);
         Task<RequestMessage> DequeueAsync();
     }
 }

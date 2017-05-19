@@ -142,8 +142,7 @@ namespace Halibut
                 case "https":
                     return await SendOutgoingHttpsRequest(request).ConfigureAwait(false);
                 case "poll":
-                    // TODO: Make this async!
-                    return SendOutgoingPollingRequest(request);
+                    return await SendOutgoingPollingRequest(request).ConfigureAwait(false);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
@@ -161,7 +160,7 @@ namespace Halibut
             return response;
         }
 
-        ResponseMessage SendOutgoingPollingRequest(RequestMessage request)
+        Task<ResponseMessage> SendOutgoingPollingRequest(RequestMessage request)
         {
             var queue = GetQueue(request.Destination.BaseUri);
             return queue.QueueAndWait(request);

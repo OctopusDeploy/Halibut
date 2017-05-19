@@ -24,7 +24,7 @@ namespace Halibut.ServiceModel
                 var methods = lease.Service.GetType().GetMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (methods.Count == 0)
                 {
-                    return ResponseMessage.FromError(requestMessage, string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
+                    return ResponseMessage.FromError(requestMessage, $"Service {lease.Service.GetType().FullName}::{requestMessage.MethodName} not found");
                 }
 
                 var method = SelectMethod(methods, requestMessage);
@@ -36,7 +36,7 @@ namespace Halibut.ServiceModel
 
         static MethodInfo SelectMethod(IList<MethodInfo> methods, RequestMessage requestMessage)
         {
-            var argumentTypes = requestMessage.Params.Select(s => s == null ? null : s.GetType()).ToList();
+            var argumentTypes = requestMessage.Params.Select(s => s?.GetType()).ToList();
 
             var matches = new List<MethodInfo>();
 
