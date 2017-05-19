@@ -40,7 +40,7 @@ namespace Halibut.Tests
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var ex = await Assert.ThrowsAsync<HalibutClientException>(() => echo.Crash()).ConfigureAwait(false);
                 ex.Message.Should().Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contain("divide by zero");
 
                 await octopus.Stop().ConfigureAwait(false);
@@ -60,7 +60,7 @@ namespace Halibut.Tests
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
 
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var ex = await Assert.ThrowsAsync<HalibutClientException>(() => echo.Crash()).ConfigureAwait(false);
                 ex.Message.Should().Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contain("divide by zero");
 
                 await octopus.Stop().ConfigureAwait(false);
@@ -74,7 +74,7 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var ex = await Assert.ThrowsAsync<HalibutClientException>(() => echo.Crash()).ConfigureAwait(false);
                 ex.Message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request").And.Contain("No such host is known");
 
                 await octopus.Stop().ConfigureAwait(false);
@@ -87,7 +87,7 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var echo = octopus.CreateClient<IEchoService>("https://google.com:88", Certificates.TentacleListeningPublicThumbprint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var ex = await Assert.ThrowsAsync<HalibutClientException>(() => echo.Crash()).ConfigureAwait(false);
                 ex.Message.Should().Contain("when sending a request to 'https://google.com:88/', before the request");
 
                 await octopus.Stop().ConfigureAwait(false);

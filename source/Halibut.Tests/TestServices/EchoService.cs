@@ -12,26 +12,27 @@ namespace Halibut.Tests.TestServices
             return Task.FromResult(name + "...");
         }
 
-        public bool Crash()
+        public Task<bool> Crash()
         {
             throw new DivideByZeroException();
         }
 
         public static Action OnLongRunningOperation { get; set; }
 
-        public int LongRunningOperation()
+        public async Task<int> LongRunningOperation()
         {
             OnLongRunningOperation();
-            Thread.Sleep(10000);
+            await Task.Delay(10000).ConfigureAwait(false);
             return 12;
         }
 
-        public int CountBytes(DataStream stream)
+        public async Task<int> CountBytes(DataStream stream)
         {
             var tempFile = Path.GetFullPath(Guid.NewGuid().ToString());
-            stream.Receiver().SaveTo(tempFile);
+            await stream.Receiver().SaveTo(tempFile).ConfigureAwait(false);
             var length = (int) new FileInfo(tempFile).Length;
             File.Delete(tempFile);
+
             return length;
         }
     }

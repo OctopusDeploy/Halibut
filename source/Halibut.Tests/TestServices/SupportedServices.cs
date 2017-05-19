@@ -1,96 +1,98 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace Halibut.Tests.TestServices
 {
     public class SupportedServices : ISupportedServices
     {
-        public void MethodReturningVoid(long a, long b)
+        public Task MethodReturningVoid(long a, long b)
         {
+            return Task.FromResult(0);
         }
 
-        public long Add(long a, long b)
+        public Task<long> Add(long a, long b)
         {
-            return a + b;
+           return Task.FromResult(a + b);
         }
 
-        public double Add(double a, double b)
+        public Task<double> Add(double a, double b)
         {
-            return a + b;
+            return Task.FromResult(a + b);
         }
 
-        public decimal Add(decimal a, decimal b)
+        public Task<decimal> Add(decimal a, decimal b)
         {
-            return a + b;
+            return Task.FromResult(a + b);
         }
 
-        public string Hello()
+        public Task<string> Hello()
         {
-            return "Hello";
+            return Task.FromResult("Hello");
         }
 
-        public string Hello(string a)
+        public Task<string> Hello(string a)
         {
-            return "Hello " + a;
+            return Task.FromResult("Hello " + a);
         }
 
-        public string Hello(string a, string b)
+        public Task<string> Hello(string a, string b)
         {
-            return "Hello " + string.Join(" ", a, b);
+            return Task.FromResult("Hello " + string.Join(" ", a, b));
         }
 
-        public string Hello(string a, string b, string c)
+        public Task<string> Hello(string a, string b, string c)
         {
-            return "Hello " + string.Join(" ", a, b, c);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c));
         }
 
-        public string Hello(string a, string b, string c, string d)
+        public Task<string> Hello(string a, string b, string c, string d)
         {
-            return "Hello " + string.Join(" ", a, b, c, d);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d));
         }
 
-        public string Hello(string a, string b, string c, string d, string e)
+        public Task<string> Hello(string a, string b, string c, string d, string e)
         {
-            return "Hello " + string.Join(" ", a, b, c, d, e);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d, e));
         }
 
-        public string Hello(string a, string b, string c, string d, string e, string f)
+        public Task<string> Hello(string a, string b, string c, string d, string e, string f)
         {
-            return "Hello " + string.Join(" ", a, b, c, d, e, f);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d, e, f));
         }
 
-        public string Hello(string a, string b, string c, string d, string e, string f, string g)
+        public Task<string> Hello(string a, string b, string c, string d, string e, string f, string g)
         {
-            return "Hello " + string.Join(" ", a, b, c, d, e, f, g);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d, e, f, g));
         }
 
-        public string Hello(string a, string b, string c, string d, string e, string f, string g, string h)
+        public Task<string> Hello(string a, string b, string c, string d, string e, string f, string g, string h)
         {
-            return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d, e, f, g, h));
         }
 
-        public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i)
+        public Task<string> Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i)
         {
-            return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i));
         }
 
-        public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j)
+        public Task<string> Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j)
         {
-            return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j));
         }
 
-        public string Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j, string k)
+        public Task<string> Hello(string a, string b, string c, string d, string e, string f, string g, string h, string i, string j, string k)
         {
-            return "Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j, k);
+            return Task.FromResult("Hello " + string.Join(" ", a, b, c, d, e, f, g, h, i, j, k));
         }
 
-        public string Ambiguous(string a, string b)
+        public Task<string> Ambiguous(string a, string b)
         {
-            return "Hello string";
+            return Task.FromResult("Hello string");
         }
 
-        public string Ambiguous(string a, Tuple<string, string> b)
+        public Task<string> Ambiguous(string a, Tuple<string, string> b)
         {
-            return "Hello tuple";
+            return Task.FromResult("Hello tuple");
         }
     }
 }

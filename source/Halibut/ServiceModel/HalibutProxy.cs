@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Logging.LogProviders;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
@@ -36,18 +35,15 @@ namespace Halibut.ServiceModel
         public override async Task<T> InvokeAsyncT<T>(MethodInfo targetMethod, object[] args)
         {
             var response = await InvokeInternal(targetMethod, args).ConfigureAwait(false);
-            var rr = response.Result.GetType().Name;
+            var result = response.Result;
 
-            Console.Out.WriteLine(rr);
-            var result = await ((Task<T>)response.Result).ConfigureAwait(false);
+            var returnType = typeof(T);
+            if (result != null && !returnType.IsInstanceOfType(result))
+            {
+                result = Convert.ChangeType(result, returnType);
+            }
 
-            //var returnType = targetMethod.ReturnType;
-            //if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
-            //{
-            //    result = Convert.ChangeType(result, returnType);
-            //}
-
-            return result;
+            return (T) result;
         }
 
         async Task<ResponseMessage> InvokeInternal(MethodInfo targetMethod, object[] args)

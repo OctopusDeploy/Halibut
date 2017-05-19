@@ -1,16 +1,15 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace Halibut.Tests.TestServices
 {
     public interface IEchoService
     {
-        int LongRunningOperation();
+        Task<int> LongRunningOperation();
 
         Task<string> SayHello(string name);
 
-        bool Crash();
+        Task<bool> Crash();
 
-        int CountBytes(DataStream stream);
+        Task<int> CountBytes(DataStream stream);
     }
 }

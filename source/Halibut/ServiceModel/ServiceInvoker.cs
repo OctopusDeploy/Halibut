@@ -18,21 +18,29 @@ namespace Halibut.ServiceModel
             this.factory = factory;
         }
 
-        public Task<ResponseMessage> Invoke(RequestMessage requestMessage)
+        public async Task<ResponseMessage> Invoke(RequestMessage requestMessage)
         {
             using (var lease = factory.CreateService(requestMessage.ServiceName))
             {
                 var methods = lease.Service.GetType().GetMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (methods.Count == 0)
                 {
-                    return Task.FromResult(ResponseMessage.FromError(requestMessage, $"Service {lease.Service.GetType().FullName}::{requestMessage.MethodName} not found"));
+                    return ResponseMessage.FromError(requestMessage, $"Service {lease.Service.GetType().FullName}::{requestMessage.MethodName} not found");
                 }
 
                 var method = SelectMethod(methods, requestMessage);
                 var args = GetArguments(requestMessage, method);
-                var result = method.Invoke(lease.Service, args);
-                return Task.FromResult(ResponseMessage.FromResult(requestMessage, result));
+                var result = await InvokeAsync(method, lease.Service, args).ConfigureAwait(false);
+                return ResponseMessage.FromResult(requestMessage, result);
             }
+        }
+
+        static async Task<object> InvokeAsync(MethodBase methodBase, object obj, params object[] parameters)
+        {
+            var task = (Task)methodBase.Invoke(obj, parameters);
+            await task.ConfigureAwait(false);
+            var resultProperty = task.GetType().GetProperty("Result");
+            return resultProperty.GetValue(task);
         }
 
         static MethodInfo SelectMethod(IList<MethodInfo> methods, RequestMessage requestMessage)

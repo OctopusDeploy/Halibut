@@ -148,7 +148,7 @@ namespace Halibut.Tests
 
                 for (var i = 0; i < 100; i++)
                 {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
+                    var count = await echo.CountBytes(DataStream.FromBytes(data)).ConfigureAwait(false);
                     count.Should().Be(1024 * 1024 + 15);
                 }
 
@@ -175,7 +175,7 @@ namespace Halibut.Tests
 
                 for (var i = 0; i < 100; i++)
                 {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
+                    var count = await echo.CountBytes(DataStream.FromBytes(data)).ConfigureAwait(false);
                     count.Should().Be(1024 * 1024 + 15);
                 }
 
@@ -195,29 +195,29 @@ namespace Halibut.Tests
                 var tentaclePort = tentacleListening.Listen();
 
                 var echo = octopus.CreateClient<ISupportedServices>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                echo.MethodReturningVoid(12, 14);
+                await echo.MethodReturningVoid(12, 14).ConfigureAwait(false);
 
-                echo.Hello().Should().Be("Hello");
-                echo.Hello("a").Should().Be("Hello a");
-                echo.Hello("a", "b").Should().Be("Hello a b");
-                echo.Hello("a", "b", "c").Should().Be("Hello a b c");
-                echo.Hello("a", "b", "c", "d").Should().Be("Hello a b c d");
-                echo.Hello("a", "b", "c", "d", "e").Should().Be("Hello a b c d e");
-                echo.Hello("a", "b", "c", "d", "e", "f").Should().Be("Hello a b c d e f");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g").Should().Be("Hello a b c d e f g");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h").Should().Be("Hello a b c d e f g h");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i").Should().Be("Hello a b c d e f g h i");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j").Should().Be("Hello a b c d e f g h i j");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k").Should().Be("Hello a b c d e f g h i j k");
+                Assert.Equal("Hello", await echo.Hello().ConfigureAwait(false));
+                Assert.Equal("Hello a", await echo.Hello("a").ConfigureAwait(false));
+                Assert.Equal("Hello a b", await echo.Hello("a", "b").ConfigureAwait(false));
+                Assert.Equal("Hello a b c", await echo.Hello("a", "b", "c").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d", await echo.Hello("a", "b", "c", "d").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d e", await echo.Hello("a", "b", "c", "d", "e").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d e f", await echo.Hello("a", "b", "c", "d", "e", "f").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d e f g", await echo.Hello("a", "b", "c", "d", "e", "f", "g").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d e f g h", await echo.Hello("a", "b", "c", "d", "e", "f", "g", "h").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d e f g h i", await echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d e f g h i j", await echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j").ConfigureAwait(false));
+                Assert.Equal("Hello a b c d e f g h i j k", await echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k").ConfigureAwait(false));
 
-                echo.Add(1, 2).Should().Be(3);
-                echo.Add(1.00, 2.00).Should().Be(3.00);
-                echo.Add(1.10M, 2.10M).Should().Be(3.20M);
+                Assert.Equal(3, await echo.Add(1, 2).ConfigureAwait(false));
+                Assert.Equal(3.00, await echo.Add(1.00, 2.00).ConfigureAwait(false));
+                Assert.Equal(3.20M, await echo.Add(1.10M, 2.10M).ConfigureAwait(false));
 
-                echo.Ambiguous("a", "b").Should().Be("Hello string");
-                echo.Ambiguous("a", new Tuple<string, string>("a", "b")).Should().Be("Hello tuple");
+                Assert.Equal("Hello string", await echo.Ambiguous("a", "b").ConfigureAwait(false));
+                Assert.Equal("Hello tuple", await echo.Ambiguous("a", new Tuple<string, string>("a", "b")).ConfigureAwait(false));
 
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
+                var ex = await Assert.ThrowsAsync<HalibutClientException>(() => echo.Ambiguous("a", (string)null)).ConfigureAwait(false);
                 ex.Message.Should().Contain("Ambiguous");
 
                 await octopus.Stop().ConfigureAwait(false);
@@ -242,7 +242,7 @@ namespace Halibut.Tests
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
 
-                var count = echo.CountBytes(DataStream.FromStream(stream, progressReported.Add));
+                var count = await echo.CountBytes(DataStream.FromStream(stream, progressReported.Add)).ConfigureAwait(false);
                 count.Should().Be(1024 * 1024 * 16 + 15);
 
                 progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));

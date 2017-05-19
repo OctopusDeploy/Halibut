@@ -142,7 +142,7 @@ namespace Halibut.Transport.Protocol
         {
             using (var capture = StreamCapture.New())
             {
-                WriteBsonMessage(message);
+                await WriteBsonMessage(message).ConfigureAwait(false);
                 await WriteEachStream(capture.SerializedStreams).ConfigureAwait(false);
             }
 
@@ -153,7 +153,7 @@ namespace Halibut.Transport.Protocol
         {
             using (var capture = StreamCapture.New())
             {
-                var result = ReadBsonMessage<T>();
+                var result = await ReadBsonMessage<T>().ConfigureAwait(false);
                 await ReadStreams(capture).ConfigureAwait(false);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
@@ -193,13 +193,15 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
         }
 
-        T ReadBsonMessage<T>()
+        async Task<T> ReadBsonMessage<T>()
         {
-            using (var buffer = new BufferedStream(stream, 8192, true))
-            using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
+            //using (var buffer = new BufferedStream(stream, 8192, true))
+            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
             using (var bson = new BsonReader(zip) { CloseInput = false })
             {
-                return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
+                T result = (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
+                await stream.FlushAsync().ConfigureAwait(false);
+                return result;
             }
         }
 
@@ -252,14 +254,14 @@ namespace Halibut.Transport.Protocol
             return dataStream;
         }
 
-        void WriteBsonMessage<T>(T messages)
+        async Task WriteBsonMessage<T>(T messages)
         {
-            using (var buffer = new BufferedStream(stream, 4096, true))
-            using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
+            //using (var buffer = new BufferedStream(stream, 4096, true))
+            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
             using (var bson = new BsonWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
-                bson.Flush();
+                await stream.FlushAsync().ConfigureAwait(false);
             }
         }
 
