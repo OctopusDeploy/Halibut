@@ -23,7 +23,7 @@ namespace Halibut.SampleLoadTest
         const int ClientsPerServer = 1;
         const int RequestsPerClient = 10;
 
-        static void Main(string[] args)
+        static void Main()
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.ColoredConsole()
@@ -31,20 +31,20 @@ namespace Halibut.SampleLoadTest
 
             Console.Title = "Halibut Load Test";
 
-            var servers = new List<int>();
-            for (int i = 0; i < Servers; i++)
+            var servers = new List<Tuple<HalibutRuntime, int>>();
+            for (var i = 0; i < Servers; i++)
             {
                 servers.Add(RunServer());
             }
 
             var tasks = new List<Action>();
-            foreach (var port in servers)
+            foreach (var data in servers)
             {
-                for (int i = 0; i < ClientsPerServer; i++)
+                for (var i = 0; i < ClientsPerServer; i++)
                 {
-                    tasks.Add(() =>
+                    tasks.Add(async () =>
                     {
-                        RunClient(port);
+                        await RunClient(data.Item2).ConfigureAwait(false);
                     });
                 }
             }
@@ -55,7 +55,7 @@ namespace Halibut.SampleLoadTest
             Console.ReadKey();
         }
 
-        static int RunServer()
+        static Tuple<HalibutRuntime, int> RunServer()
         {
             var services = new DelegateServiceFactory();
             services.Register<ICalculatorService>(() => new CalculatorService());
@@ -63,10 +63,10 @@ namespace Halibut.SampleLoadTest
             var server = new HalibutRuntime(services, ServerCertificate);
             server.Trust("2074529C99D93D5955FEECA859AEAC6092741205");
             var port = server.Listen();
-            return port;
+            return Tuple.Create(server, port);
         }
 
-        static void RunClient(int port)
+        static async Task RunClient(int port)
         {
             using (var runtime = new HalibutRuntime(ClientCertificate))
             {
@@ -77,6 +77,8 @@ namespace Halibut.SampleLoadTest
                     var result = calculator.Add(12, 18);
                     Debug.Assert(result == 30);
                 }
+
+                await runtime.Stop().ConfigureAwait(false);
             }
         }
     }
