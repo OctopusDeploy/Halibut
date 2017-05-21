@@ -86,12 +86,11 @@ namespace Halibut
 
         public static DataStream FromString(string text, Encoding encoding)
         {
-            return new DataStream(encoding.GetByteCount(text), stream =>
+            return new DataStream(encoding.GetByteCount(text), async stream =>
             {
                 var writer = new StreamWriter(stream, encoding);
-                writer.Write(text);
-                writer.Flush();
-                return stream.FlushAsync();
+                await writer.WriteAsync(text).ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
             });
         }
 

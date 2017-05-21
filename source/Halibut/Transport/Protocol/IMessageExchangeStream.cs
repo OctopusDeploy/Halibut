@@ -11,7 +11,7 @@ namespace Halibut.Transport.Protocol
         Task ExpectProceeed();
         Task IdentifyAsSubscriber(string subscriptionId);
         Task IdentifyAsServer();
-        RemoteIdentity ReadRemoteIdentity();
+        Task<RemoteIdentity> ReadRemoteIdentity();
         Task Send<T>(T message);
         Task<T> Receive<T>();
     }

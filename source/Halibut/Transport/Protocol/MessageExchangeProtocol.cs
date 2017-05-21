@@ -91,7 +91,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task ExchangeAsServer(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
-            var identity = stream.ReadRemoteIdentity();
+            var identity = await stream.ReadRemoteIdentity().ConfigureAwait(false);
             await stream.IdentifyAsServer().ConfigureAwait(false);
 
             switch (identity.IdentityType)

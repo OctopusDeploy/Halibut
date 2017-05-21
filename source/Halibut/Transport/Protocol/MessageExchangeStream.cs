@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
@@ -21,7 +20,6 @@ namespace Halibut.Transport.Protocol
         readonly ILog log;
         readonly StreamWriter streamWriter;
         readonly StreamReader streamReader;
-        readonly JsonSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
         public MessageExchangeStream(Stream stream, ILog log)
@@ -30,12 +28,11 @@ namespace Halibut.Transport.Protocol
             this.log = log;
             streamWriter = new StreamWriter(stream, new UTF8Encoding(false));
             streamReader = new StreamReader(stream, new UTF8Encoding(false));
-            serializer = Serializer();
             SetNormalTimeouts();
         }
 
-        static int streamCount = 0;
-        public static Func<JsonSerializer> Serializer = CreateDefault;
+        static int streamCount;
+        static JsonSerializerSettings serializerSettings = CreateDefault();
 
         public async Task IdentifyAsClient()
         {
@@ -45,7 +42,7 @@ namespace Halibut.Transport.Protocol
             await streamWriter.WriteLineAsync().ConfigureAwait(false);
             await streamWriter.WriteLineAsync().ConfigureAwait(false);
             await streamWriter.FlushAsync().ConfigureAwait(false);
-            ExpectServerIdentity();
+            await ExpectServerIdentity().ConfigureAwait(false);
         }
 
         public async Task SendNext()
@@ -111,7 +108,7 @@ namespace Halibut.Transport.Protocol
             await streamWriter.WriteLineAsync().ConfigureAwait(false);
             await streamWriter.FlushAsync().ConfigureAwait(false);
 
-            ExpectServerIdentity();
+            await ExpectServerIdentity().ConfigureAwait(false);
         }
 
         public async Task IdentifyAsServer()
@@ -123,9 +120,9 @@ namespace Halibut.Transport.Protocol
             await streamWriter.FlushAsync().ConfigureAwait(false);
         }
 
-        public RemoteIdentity ReadRemoteIdentity()
+        public async Task<RemoteIdentity> ReadRemoteIdentity()
         {
-            var line = streamReader.ReadLine();
+            var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             var identityType = ParseIdentityType(parts[0]);
@@ -160,15 +157,17 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        static JsonSerializer CreateDefault()
+        static JsonSerializerSettings CreateDefault()
         {
-            var serializer = JsonSerializer.Create();
-            serializer.Formatting = Formatting.None;
-            serializer.ContractResolver = new HalibutContractResolver();
-            serializer.TypeNameHandling = TypeNameHandling.Auto;
-            serializer.TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple;
-            serializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
-            return serializer;
+            var settings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.None,
+                ContractResolver = new HalibutContractResolver(),
+                TypeNameHandling = TypeNameHandling.Auto,
+                TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
+                DateFormatHandling = DateFormatHandling.IsoDateFormat
+            };
+            return settings;
         }
 
         static RemoteIdentityType ParseIdentityType(string identityType)
@@ -186,21 +185,26 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        void ExpectServerIdentity()
+        async Task ExpectServerIdentity()
         {
-            var identity = ReadRemoteIdentity();
+            var identity = await ReadRemoteIdentity().ConfigureAwait(false);
             if (identity.IdentityType != RemoteIdentityType.Server)
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
         }
 
         async Task<T> ReadBsonMessage<T>()
         {
-            using (var buffer = new BufferedStream(stream, 8192, true))
+            var buffer = new BufferedStream(stream, 8192, true);
             using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
-            using (var bson = new BsonReader(zip) { CloseInput = false })
+            using (var bson = new BsonDataReader(zip) {CloseInput = false})
             {
-                T result = (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
-                await stream.FlushAsync().ConfigureAwait(false);
+                await bson.ReadAsync().ConfigureAwait(false); // StartObject
+                await bson.ReadAsync().ConfigureAwait(false); // PropertyName
+                await bson.ReadAsync().ConfigureAwait(false); // Message
+                var data = bson.Value as string;
+                await bson.ReadAsync().ConfigureAwait(false); // EndObject
+
+                var result = (T) JsonConvert.DeserializeObject<MessageEnvelope>(data, serializerSettings).Message;
                 return result;
             }
         }
@@ -256,12 +260,16 @@ namespace Halibut.Transport.Protocol
 
         async Task WriteBsonMessage<T>(T messages)
         {
-            using (var buffer = new BufferedStream(stream, 4096, true))
+            var buffer = new BufferedStream(stream, 4096, true);
             using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
-            using (var bson = new BsonWriter(zip) { CloseOutput = false })
+            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
-                serializer.Serialize(bson, new MessageEnvelope { Message = messages });
-                await stream.FlushAsync().ConfigureAwait(false);
+                var data = JsonConvert.SerializeObject(messages, serializerSettings);
+                await bson.WriteStartObjectAsync().ConfigureAwait(false);
+                await bson.WritePropertyNameAsync("Message").ConfigureAwait(false);
+                await bson.WriteValueAsync(data).ConfigureAwait(false);
+                await bson.WriteEndObjectAsync().ConfigureAwait(false);
+                await bson.FlushAsync().ConfigureAwait(false);
             }
         }
 
@@ -272,13 +280,13 @@ namespace Halibut.Transport.Protocol
                 var writer = new BinaryWriter(stream);
                 writer.Write(dataStream.Id.ToByteArray());
                 writer.Write(dataStream.Length);
-                writer.Flush();
+                await stream.FlushAsync().ConfigureAwait(false);
 
                 await ((IDataStreamInternal)dataStream).Transmit(stream).ConfigureAwait(false);
                 await stream.FlushAsync().ConfigureAwait(false);
 
                 writer.Write(dataStream.Length);
-                writer.Flush();
+                await stream.FlushAsync().ConfigureAwait(false);
             }
         }
 

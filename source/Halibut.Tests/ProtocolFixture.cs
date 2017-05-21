@@ -396,10 +396,10 @@ namespace Halibut.Tests
                 return TaskEx.CompletedTask;
             }
 
-            public RemoteIdentity ReadRemoteIdentity()
+            public Task<RemoteIdentity> ReadRemoteIdentity()
             {
                 output.AppendLine("<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId");
-                return remoteIdentity;
+                return Task.FromResult(remoteIdentity);
             }
 
             public Task Send<T>(T message)

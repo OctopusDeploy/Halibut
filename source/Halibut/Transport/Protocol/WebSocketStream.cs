@@ -4,6 +4,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Util;
 using Janitor;
 
 namespace Halibut.Transport.Protocol
@@ -20,6 +21,10 @@ namespace Halibut.Transport.Protocol
             this.context = context;
         }
 
+        public override Task FlushAsync(CancellationToken cancellationToken)
+        {
+            return TaskEx.CompletedTask;
+        }
 
         public override void Flush()
         {
@@ -35,13 +40,17 @@ namespace Halibut.Transport.Protocol
             throw new NotImplementedException();
         }
 
-        public override int Read(byte[] buffer, int offset, int count)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             AssertCanReadOrWrite();
             var segment = new ArraySegment<byte>(buffer, offset, count);
-            var recieveResult = context.ReceiveAsync(segment, CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            var recieveResult = await context.ReceiveAsync(segment, cancellationToken).ConfigureAwait(false);
             return recieveResult.Count;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<string> ReadTextMessage()
@@ -61,11 +70,15 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public override void Write(byte[] buffer, int offset, int count)
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             AssertCanReadOrWrite();
-            context.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, false, CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            return context.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, false, cancellationToken);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
         }
 
         public Task WriteTextMessage(string message)

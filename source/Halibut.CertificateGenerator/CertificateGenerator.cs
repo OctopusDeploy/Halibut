@@ -70,7 +70,6 @@ namespace Halibut.CertificateGenerator
             certGen.AddExtension(X509Extensions.BasicConstraints, true, new BasicConstraints(false));
             certGen.AddExtension(X509Extensions.AuthorityKeyIdentifier, true, new AuthorityKeyIdentifier(SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(cerKp.Public)));
             var x509 = certGen.Generate(cerKp.Private);
-
             var x509Certificate = DotNetUtilities.ToX509Certificate(x509);
             return new X509Certificate2(x509Certificate)
                    {
