@@ -19,9 +19,9 @@ namespace Halibut.SampleLoadTest
         static X509Certificate2 ClientCertificate = new X509Certificate2("HalibutClient.pfx");
         static X509Certificate2 ServerCertificate = new X509Certificate2("HalibutServer.pfx");
 
-        const int Servers = 10;
+        const int Servers = 1;
         const int ClientsPerServer = 1;
-        const int RequestsPerClient = 10;
+        const int RequestsPerClient = 1;
 
         static void Main()
         {
@@ -37,20 +37,27 @@ namespace Halibut.SampleLoadTest
                 servers.Add(RunServer());
             }
 
-            var tasks = new List<Action>();
+            var watch = Stopwatch.StartNew();
+            var tasks = new List<Task>();
             foreach (var data in servers)
             {
                 for (var i = 0; i < ClientsPerServer; i++)
                 {
-                    tasks.Add(async () =>
-                    {
-                        await RunClient(data.Item2).ConfigureAwait(false);
-                    });
+                    tasks.Add(RunClient(data.Item2));
                 }
             }
 
-            var watch = Stopwatch.StartNew();
-            Parallel.ForEach(tasks, t => t());
+            
+            Task.WaitAll(tasks.ToArray());
+
+            tasks = new List<Task>(servers.Count);
+            foreach (var data in servers)
+            {
+                tasks.Add(data.Item1.Stop());
+            }
+
+            Task.WaitAll(tasks.ToArray());
+
             Console.WriteLine("Done in: {0:n0}ms", watch.ElapsedMilliseconds);
             Console.ReadKey();
         }
@@ -72,9 +79,9 @@ namespace Halibut.SampleLoadTest
             {
                 var calculator = runtime.CreateClient<ICalculatorService>("https://localhost:" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
 
-                for (int i = 0; i < RequestsPerClient; i++)
+                for (var i = 0; i < RequestsPerClient; i++)
                 {
-                    var result = calculator.Add(12, 18);
+                    var result = await calculator.Add(12, 18).ConfigureAwait(false);
                     Debug.Assert(result == 30);
                 }
 

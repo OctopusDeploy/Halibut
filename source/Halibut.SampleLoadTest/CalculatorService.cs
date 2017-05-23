@@ -1,17 +1,18 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Halibut.SampleLoadTest
 {
     public class CalculatorService : ICalculatorService
     {
-        public long Add(long a, long b)
+        public Task<long> Add(long a, long b)
         {
-            return a + b;
+            return Task.FromResult(a + b);
         }
 
-        public long Subtract(long a, long b)
+        public Task<long> Subtract(long a, long b)
         {
-            return a - b;
+            return Task.FromResult(a - b);
         }
     }
 }

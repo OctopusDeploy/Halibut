@@ -202,6 +202,7 @@ namespace Halibut
         public async Task Stop()
         {
             stopCalled = true;
+           
             await pollingClients.Stop().ConfigureAwait(false);
 
             foreach (var listener in listeners)

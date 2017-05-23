@@ -85,7 +85,6 @@ namespace Halibut.Transport
         public async Task Stop()
         {
             cts.Cancel();
-            listener.Stop();
             
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
             var allTasks = runningReceiveTasks.Values.Concat(new[]
@@ -101,6 +100,8 @@ namespace Halibut.Transport
 
             runningReceiveTasks.Clear();
 
+            listener.Stop();
+
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
 
@@ -108,34 +109,39 @@ namespace Halibut.Transport
         {
             while (!cts.IsCancellationRequested)
             {
-                using (cts.Token.Register(listener.Stop))
+                try
                 {
-                    try
+                    var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                    
+                    if (cts.IsCancellationRequested)
                     {
-                        var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
-                        var receiveTask = HandleClient(client);
+                        return;
+                    }
 
-                        runningReceiveTasks.TryAdd(receiveTask, receiveTask);
+                    var receiveTask = HandleClient(client);
 
-                        receiveTask.ContinueWith(t =>
+                    runningReceiveTasks.TryAdd(receiveTask, receiveTask);
+                    log.Write(EventType.Error, "added task");
+
+                    receiveTask.ContinueWith(t =>
                         {
                             Task toBeRemoved;
                             runningReceiveTasks.TryRemove(receiveTask, out toBeRemoved);
+                            log.Write(EventType.Error, "removed task");
                         }, TaskContinuationOptions.ExecuteSynchronously)
                         .Ignore();
-                    }
-                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
-                    {
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                    }
-                    catch (Exception ex)
-                    {
-                        log.WriteException(EventType.Error, "Error accepting TCP client", ex);
-                        // Slow down the logs in case an exception is immediately encountered each AcceptTcpClientAsync
-                        await Task.Delay(1000).ConfigureAwait(false);
-                    }
+                }
+                catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
+                {
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                catch (Exception ex)
+                {
+                    log.WriteException(EventType.Error, "Error accepting TCP client", ex);
+                    // Slow down the logs in case an exception is immediately encountered each AcceptTcpClientAsync
+                    await Task.Delay(1000).ConfigureAwait(false);
                 }
             }
         }
