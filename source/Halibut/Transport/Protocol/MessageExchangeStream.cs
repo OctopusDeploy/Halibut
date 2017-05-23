@@ -210,7 +210,6 @@ namespace Halibut.Transport.Protocol
                 await bson.ReadAsync().ConfigureAwait(false); // PropertyName
                 await bson.ReadAsync().ConfigureAwait(false); // Message
                 var data = bson.Value as string;
-                log.Write(EventType.Diagnostic, data);
                 await bson.ReadAsync().ConfigureAwait(false); // EndObject
 
                 var result = JsonConvert.DeserializeObject<T>(data, serializerSettings);
@@ -228,9 +227,9 @@ namespace Halibut.Transport.Protocol
 
         async Task ReadStream(IDataStreamInternal dataStream)
         {
-            var reader = new BinaryReader(stream);
-            var id = new Guid(reader.ReadBytes(16));
-            var length = reader.ReadInt64();
+            var reader = new Util.AsyncBinaryReader(stream);
+            var id = new Guid(await reader.ReadBytesAsync(16, CancellationToken.None).ConfigureAwait(false));
+            var length = await reader.ReadInt64Async(CancellationToken.None).ConfigureAwait(false);
             var tempFile = await CopyStreamToFile(id, length, reader).ConfigureAwait(false);
             var lengthAgain = reader.ReadInt64();
             if (lengthAgain != length)
@@ -241,7 +240,7 @@ namespace Halibut.Transport.Protocol
             dataStream.SetReceived(tempFile);
         }
         
-        static async Task<TemporaryFileStream> CopyStreamToFile(Guid id, long length, BinaryReader reader)
+        static async Task<TemporaryFileStream> CopyStreamToFile(Guid id, long length, Util.AsyncBinaryReader reader)
         {
             var path = Path.Combine(Path.GetTempPath(), $"{id}_{Interlocked.Increment(ref streamCount)}");
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
@@ -249,7 +248,7 @@ namespace Halibut.Transport.Protocol
                 var buffer = new byte[1024 * 128];
                 while (length > 0)
                 {
-                    var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, length));
+                    var read = await reader.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, length), CancellationToken.None).ConfigureAwait(false);
                     length -= read;
                     await fileStream.WriteAsync(buffer, 0, read).ConfigureAwait(false);
                 }
@@ -276,15 +275,15 @@ namespace Halibut.Transport.Protocol
         {
             foreach (var dataStream in streams)
             {
-                var writer = new BinaryWriter(stream);
-                writer.Write(dataStream.Id.ToByteArray());
-                writer.Write(dataStream.Length);
+                var writer = new Util.AsyncBinaryWriter(stream);
+                await writer.WriteAsync(dataStream.Id.ToByteArray(), CancellationToken.None).ConfigureAwait(false);
+                await writer.WriteAsync(dataStream.Length, CancellationToken.None).ConfigureAwait(false);
                 await stream.FlushAsync().ConfigureAwait(false);
 
                 await ((IDataStreamInternal)dataStream).Transmit(stream).ConfigureAwait(false);
                 await stream.FlushAsync().ConfigureAwait(false);
 
-                writer.Write(dataStream.Length);
+                await writer.WriteAsync(dataStream.Length, CancellationToken.None).ConfigureAwait(false);
                 await stream.FlushAsync().ConfigureAwait(false);
             }
         }
