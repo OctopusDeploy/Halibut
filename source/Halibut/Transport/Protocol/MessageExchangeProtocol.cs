@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -136,11 +135,6 @@ namespace Halibut.Transport.Protocol
                 }
                 await stream.SendProceed().ConfigureAwait(false);
             }
-        }
-
-        private Task InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
-        {
-            throw new NotImplementedException();
         }
 
         async Task ProcessSubscriber(IPendingRequestQueue pendingRequests)

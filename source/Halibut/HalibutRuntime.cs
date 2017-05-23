@@ -219,7 +219,9 @@ namespace Halibut
         {
             if (!stopCalled)
             {
+#if !DEBUG
                 throw new Exception("Call Stop!");
+#endif
             }
         }
 

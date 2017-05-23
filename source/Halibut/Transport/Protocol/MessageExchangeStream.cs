@@ -32,7 +32,7 @@ namespace Halibut.Transport.Protocol
         }
 
         static int streamCount;
-        static JsonSerializerSettings serializerSettings = CreateDefault();
+        static readonly JsonSerializerSettings serializerSettings = CreateDefault();
 
         public async Task IdentifyAsClient()
         {
@@ -137,10 +137,14 @@ namespace Halibut.Transport.Protocol
 
         public async Task Send<T>(T message)
         {
-            using (var capture = StreamCapture.New())
+            await WriteBsonMessage(message).ConfigureAwait(false);
+
+            var requestMessage = message as RequestMessage;
+
+            if (requestMessage != null)
             {
-                await WriteBsonMessage(message).ConfigureAwait(false);
-                await WriteEachStream(capture.SerializedStreams).ConfigureAwait(false);
+                var dataStreams = requestMessage.Params.Where(i=> i is DataStream).Cast<DataStream>();
+                await WriteEachStream(dataStreams).ConfigureAwait(false);
             }
 
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
@@ -148,13 +152,18 @@ namespace Halibut.Transport.Protocol
 
         public async Task<T> Receive<T>()
         {
-            using (var capture = StreamCapture.New())
+            var result = await ReadBsonMessage<T>().ConfigureAwait(false);
+
+            var requestMessage = result as RequestMessage;
+
+            if (requestMessage != null)
             {
-                var result = await ReadBsonMessage<T>().ConfigureAwait(false);
-                await ReadStreams(capture).ConfigureAwait(false);
-                log.Write(EventType.Diagnostic, "Received: {0}", result);
-                return result;
+                var dataStreams = requestMessage.Params.Where(i => i is DataStream).Cast<DataStream>();
+                await ReadStreams(dataStreams).ConfigureAwait(false);
             }
+                
+            log.Write(EventType.Diagnostic, "Received: {0}", result);
+            return result;
         }
 
         static JsonSerializerSettings CreateDefault()
@@ -162,7 +171,6 @@ namespace Halibut.Transport.Protocol
             var settings = new JsonSerializerSettings
             {
                 Formatting = Formatting.None,
-                ContractResolver = new HalibutContractResolver(),
                 TypeNameHandling = TypeNameHandling.Auto,
                 TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
                 DateFormatHandling = DateFormatHandling.IsoDateFormat
@@ -195,36 +203,34 @@ namespace Halibut.Transport.Protocol
         async Task<T> ReadBsonMessage<T>()
         {
             var buffer = new BufferedStream(stream, 8192, true);
-            using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
-            using (var bson = new BsonDataReader(zip) {CloseInput = false})
+            //using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
+            using (var bson = new BsonDataReader(buffer) {CloseInput = false})
             {
                 await bson.ReadAsync().ConfigureAwait(false); // StartObject
                 await bson.ReadAsync().ConfigureAwait(false); // PropertyName
                 await bson.ReadAsync().ConfigureAwait(false); // Message
                 var data = bson.Value as string;
+                log.Write(EventType.Diagnostic, data);
                 await bson.ReadAsync().ConfigureAwait(false); // EndObject
 
-                var result = (T) JsonConvert.DeserializeObject<MessageEnvelope>(data, serializerSettings).Message;
+                var result = JsonConvert.DeserializeObject<T>(data, serializerSettings);
                 return result;
             }
         }
 
-        async Task ReadStreams(StreamCapture capture)
+        async Task ReadStreams(IEnumerable<DataStream> dataStreams)
         {
-            var expected = capture.DeserializedStreams.Count;
-
-            for (var i = 0; i < expected; i++)
+            foreach (var dataStream in dataStreams)
             {
-                await ReadStream(capture).ConfigureAwait(false);
+                await ReadStream(dataStream).ConfigureAwait(false);
             }
         }
 
-        async Task ReadStream(StreamCapture capture)
+        async Task ReadStream(IDataStreamInternal dataStream)
         {
             var reader = new BinaryReader(stream);
             var id = new Guid(reader.ReadBytes(16));
             var length = reader.ReadInt64();
-            var dataStream = FindStreamById(capture, id);
             var tempFile = await CopyStreamToFile(id, length, reader).ConfigureAwait(false);
             var lengthAgain = reader.ReadInt64();
             if (lengthAgain != length)
@@ -232,12 +238,12 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
             }
 
-            ((IDataStreamInternal)dataStream).SetReceived(tempFile);
+            dataStream.SetReceived(tempFile);
         }
         
         static async Task<TemporaryFileStream> CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
-            var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
+            var path = Path.Combine(Path.GetTempPath(), $"{id}_{Interlocked.Increment(ref streamCount)}");
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
                 var buffer = new byte[1024 * 128];
@@ -251,18 +257,11 @@ namespace Halibut.Transport.Protocol
             return new TemporaryFileStream(path);
         }
 
-        static DataStream FindStreamById(StreamCapture capture, Guid id)
-        {
-            var dataStream = capture.DeserializedStreams.FirstOrDefault(d => d.Id == id);
-            if (dataStream == null) throw new Exception("Unexpected stream!");
-            return dataStream;
-        }
-
         async Task WriteBsonMessage<T>(T messages)
         {
             var buffer = new BufferedStream(stream, 4096, true);
-            using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
-            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+            //using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
+            using (var bson = new BsonDataWriter(buffer) { CloseOutput = false })
             {
                 var data = JsonConvert.SerializeObject(messages, serializerSettings);
                 await bson.WriteStartObjectAsync().ConfigureAwait(false);
@@ -288,11 +287,6 @@ namespace Halibut.Transport.Protocol
                 writer.Write(dataStream.Length);
                 await stream.FlushAsync().ConfigureAwait(false);
             }
-        }
-
-        class MessageEnvelope
-        {
-            public object Message { get; set; }
         }
 
         void SetNormalTimeouts()
