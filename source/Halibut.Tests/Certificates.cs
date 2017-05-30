@@ -7,14 +7,14 @@ namespace Halibut.Tests
 {
     public class Certificates
     {
-        public static X509Certificate2 TentacleListening;
-        public static string TentacleListeningPublicThumbprint;
-        public static X509Certificate2 Octopus;
-        public static string OctopusPublicThumbprint;
-        public static X509Certificate2 TentaclePolling;
-        public static string TentaclePollingPublicThumbprint;
-        public static X509Certificate2 Ssl;
-        public static string SslThumbprint;
+        public static readonly X509Certificate2 TentacleListening;
+        public static readonly string TentacleListeningPublicThumbprint;
+        public static readonly X509Certificate2 Octopus;
+        public static readonly string OctopusPublicThumbprint;
+        public static readonly X509Certificate2 TentaclePolling;
+        public static readonly string TentaclePollingPublicThumbprint;
+        public static readonly X509Certificate2 Ssl;
+        public static readonly string SslThumbprint;
 
         static Certificates()
         {

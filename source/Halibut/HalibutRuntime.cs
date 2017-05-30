@@ -10,6 +10,7 @@ using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
+using Janitor;
 
 namespace Halibut
 {
@@ -18,7 +19,7 @@ namespace Halibut
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
 
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
-        X509Certificate2 serverCertificate;
+        [SkipWeaving] readonly X509Certificate2 serverCertificate;
         readonly List<Stoppable> listeners = new List<Stoppable>();
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();

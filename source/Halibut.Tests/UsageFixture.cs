@@ -24,13 +24,11 @@ namespace Halibut.Tests
 {
     public class UsageFixture
     {
-        readonly ITestOutputHelper output;
         DelegateServiceFactory services;
 
         public UsageFixture(ITestOutputHelper output)
         {
             LogProvider.SetCurrentLogProvider(new XunitLogProvider(output));
-            this.output = output;
             services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
         }
@@ -96,7 +94,6 @@ namespace Halibut.Tests
 
                     greeting.Should().Be("Deploy package A" + i + "...");
                 }
-                output.WriteLine("Calling stop");
                 await octopus.Stop().ConfigureAwait(false);
                 await tentaclePolling.Stop().ConfigureAwait(false);
             }
@@ -271,7 +268,7 @@ namespace Halibut.Tests
                 var listenPort = octopus.Listen();
                 var uri = uriFormat.Replace("{machine}", Environment.MachineName).Replace("{port}", listenPort.ToString());
 
-                var result = DownloadStringIgnoringCertificateValidation(uri);
+                var result = await DownloadStringIgnoringCertificateValidation(uri).ConfigureAwait(false);
 
                 result.Should().Be("<html><body><p>Hello!</p></body></html>");
 
@@ -293,7 +290,7 @@ namespace Halibut.Tests
                 octopus.SetFriendlyHtmlPageContent(html);
                 var listenPort = octopus.Listen();
 
-                var result = DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
+                var result = await DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort).ConfigureAwait(false);
 
                 result.Should().Be(expectedResult);
 
@@ -321,17 +318,19 @@ namespace Halibut.Tests
             {
                 var listenPort = octopus.Listen();
 #if NET40
-                Assert.Throws<WebException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
+                await Assert.ThrowsAsync<WebException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort)).ConfigureAwait(false);
 #else
-                Assert.Throws<HttpRequestException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
+                await Assert.ThrowsAsync<HttpRequestException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort)).ConfigureAwait(false);
 #endif
 
                 await octopus.Stop().ConfigureAwait(false);
             }
         }
 
-        static string DownloadStringIgnoringCertificateValidation(string uri)
+        static async Task<string> DownloadStringIgnoringCertificateValidation(string uri)
         {
+            string data;
+
 #if NET40
             using (var webClient = new WebClient())
             {
@@ -339,7 +338,7 @@ namespace Halibut.Tests
                 {
                     // We need to ignore server certificate validation errors - the server certificate is self-signed
                     ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
-                    return webClient.DownloadString(uri);
+                    data =  await webClient.DownloadStringTaskAsync(uri).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -348,14 +347,16 @@ namespace Halibut.Tests
                 }
             }
 #else
-            var handler = new HttpClientHandler();
-            // We need to ignore server certificate validation errors - the server certificate is self-signed
-            handler.ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) => true;
-            using (var webClient = new HttpClient(handler))
+            using (var handler = new HttpClientHandler())
             {
-                return webClient.GetStringAsync(uri).GetAwaiter().GetResult();
+                handler.ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) => true;
+                using (var webClient = new HttpClient(handler))
+                {
+                    data = await webClient.GetStringAsync(uri).ConfigureAwait(false);
+                }
             }
 #endif
+            return data;
         }
 
 #if HAS_SERVICE_POINT_MANAGER
