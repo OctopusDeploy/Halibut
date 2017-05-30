@@ -13,7 +13,7 @@ namespace Halibut.OctopusSample
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(Execute.MainForm = new OctopusForm());
+            Application.Run(new OctopusForm());
         }
     }
 }

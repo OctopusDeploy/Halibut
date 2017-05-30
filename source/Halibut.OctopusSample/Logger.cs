@@ -14,11 +14,8 @@ namespace Halibut.OctopusSample
 
         public void WriteLine(string message)
         {
-            Execute.Foreground(delegate
-            {
-                text.AppendText(message);
-                text.AppendText(Environment.NewLine);
-            });
+            text.AppendText(message);
+            text.AppendText(Environment.NewLine);
         }
     }
 }

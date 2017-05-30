@@ -85,7 +85,8 @@ namespace Halibut.Transport
         public async Task Stop()
         {
             cts.Cancel();
-            
+            listener.Stop();
+
             var timeoutTask = Task.Delay(TimeSpan.FromSeconds(30));
             var allTasks = runningReceiveTasks.Values.Concat(new[]
             {
@@ -99,8 +100,6 @@ namespace Halibut.Transport
             }
 
             runningReceiveTasks.Clear();
-
-            listener.Stop();
 
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
@@ -117,17 +116,15 @@ namespace Halibut.Transport
                     {
                         return;
                     }
-
+                    
                     var receiveTask = HandleClient(client);
 
                     runningReceiveTasks.TryAdd(receiveTask, receiveTask);
-                    log.Write(EventType.Error, "added task");
 
                     receiveTask.ContinueWith(t =>
                         {
                             Task toBeRemoved;
-                            runningReceiveTasks.TryRemove(receiveTask, out toBeRemoved);
-                            log.Write(EventType.Error, "removed task");
+                            runningReceiveTasks.TryRemove(t, out toBeRemoved);
                         }, TaskContinuationOptions.ExecuteSynchronously)
                         .Ignore();
                 }
@@ -150,11 +147,12 @@ namespace Halibut.Transport
         {
             try
             {
-                client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                    client.SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                    client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
-                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-                await ExecuteRequest(client).ConfigureAwait(false);
+                    log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
+                    await ExecuteRequest(client).ConfigureAwait(false);
+                
             }
             catch (ObjectDisposedException)
             {
@@ -173,61 +171,73 @@ namespace Halibut.Transport
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
 
-            using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
+            using (cts.Token.Register(() =>
             {
-                try
+                log.Write(EventType.Diagnostic, "Listener shutting down.");
+                CloseConnection(client, stream);
+            }))
+            {
+                using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
                 {
-                    log.Write(EventType.Security, "Performing TLS server handshake");
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
-
-                    log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
-
-                    var req = await ReadInitialRequest(ssl).ConfigureAwait(false);
-                    if (string.IsNullOrEmpty(req))
+                    try
                     {
-                        log.Write(EventType.Diagnostic, "Ignoring empty request");
-                        return;
+                        log.Write(EventType.Security, "Performing TLS server handshake");
+                        await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+
+                        log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
+
+                        var req = await ReadInitialRequest(ssl).ConfigureAwait(false);
+                        if (string.IsNullOrEmpty(req))
+                        {
+                            log.Write(EventType.Diagnostic, "Ignoring empty request");
+                            return;
+                        }
+
+                        if (req.Substring(0, 2) != "MX")
+                        {
+                            log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
+                            await SendFriendlyHtmlPage(ssl).ConfigureAwait(false);
+                            return;
+                        }
+
+                        if (Authorize(ssl, clientName))
+                        {
+                            // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
+                            await ExchangeMessages(ssl).ConfigureAwait(false);
+
+                            // Mark the stream as delegated once everything has succeeded
+                            keepStreamOpen = true;
+                        }
                     }
-
-                    if (req.Substring(0, 2) != "MX")
+                    catch (AuthenticationException ex)
                     {
-                        log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
-                        await SendFriendlyHtmlPage(ssl).ConfigureAwait(false);
-                        return;
+                        log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
                     }
-
-                    if (Authorize(ssl, clientName))
+                    catch (Exception ex)
                     {
-                        // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                        await ExchangeMessages(ssl).ConfigureAwait(false);
-
-                        // Mark the stream as delegated once everything has succeeded
-                        keepStreamOpen = true;
+                        log.WriteException(EventType.Error, "Unhandled error when handling request from client: {0}", ex, clientName);
                     }
-                }
-                catch (AuthenticationException ex)
-                {
-                    log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
-                }
-                catch (Exception ex)
-                {
-                    log.WriteException(EventType.Error, "Unhandled error when handling request from client: {0}", ex, clientName);
-                }
-                finally
-                {
-                    if (!keepStreamOpen)
+                    finally
                     {
-                        // Closing an already closed stream or client is safe, better not to leak
-#if NET40
-                        stream.Close();
-                        client.Close();
-#else
-                        stream.Dispose();
-                        client.Dispose();
-#endif
+                        if (!keepStreamOpen)
+                        {
+                            // Closing an already closed stream or client is safe, better not to leak
+                            CloseConnection(client, stream);
+                        }
                     }
                 }
             }
+        }
+
+        static void CloseConnection(TcpClient client, Stream stream)
+        {
+#if NET40
+            stream.Close();
+            client.Close();
+#else
+            stream.Dispose();
+            client.Dispose();
+#endif
         }
 
         async Task SendFriendlyHtmlPage(Stream stream)

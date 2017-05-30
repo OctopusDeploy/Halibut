@@ -89,10 +89,26 @@ namespace Halibut.Transport.Protocol
 
         async Task<string> ReadLine()
         {
-            var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
-            while (line == string.Empty)
+            string line;
+
+            try
             {
                 line = await streamReader.ReadLineAsync().ConfigureAwait(false);
+                while (line == string.Empty)
+                {
+                    line = await streamReader.ReadLineAsync().ConfigureAwait(false);
+                }
+            }
+            catch (IOException ex)
+            {
+                if (ex.GetBaseException() is ObjectDisposedException)
+                {
+                    line = null;
+                }
+                else
+                {
+                    throw;
+                }
             }
 
             return line;

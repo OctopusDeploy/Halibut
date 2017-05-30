@@ -6,10 +6,12 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
+using Newtonsoft.Json;
 
 namespace Halibut.Transport
 {
@@ -30,12 +32,9 @@ namespace Halibut.Transport
             this.pool = pool;
         }
 
-        public ServiceEndPoint ServiceEndpoint
-        {
-            get { return serviceEndpoint; }
-        }
+        public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
 
-        public async Task ExecuteTransaction(Func<MessageExchangeProtocol, Task> protocolHandler)
+        public async Task ExecuteTransaction(Func<MessageExchangeProtocol, Task> protocolHandler, CancellationToken token)
         {
             var retryInterval = HalibutLimits.RetryListeningSleepInterval;
 
@@ -121,8 +120,18 @@ namespace Halibut.Transport
                     lastError = iox;
                     await Task.Delay(retryInterval).ConfigureAwait(false);
                 }
+                catch (JsonReaderException ex)
+                {
+                    //log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
+                    //lastError = ex;
+                }
                 catch (Exception ex)
                 {
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
                     lastError = ex;
                     await Task.Delay(retryInterval).ConfigureAwait(false);

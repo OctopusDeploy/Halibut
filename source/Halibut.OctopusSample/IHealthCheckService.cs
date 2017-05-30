@@ -1,9 +1,10 @@
 using System;
+using System.Threading.Tasks;
 
 namespace Halibut.OctopusSample
 {
     public interface IHealthCheckService
     {
-        bool IsOnline();
+        Task<bool> IsOnline();
     }
 }

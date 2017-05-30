@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -26,7 +27,7 @@ namespace Halibut
         ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
-        bool stopCalled;
+        CancellationTokenSource cts = new CancellationTokenSource();
 
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate)
         {
@@ -78,7 +79,7 @@ namespace Halibut
         {
             return obj.ExchangeAsServer(
                 HandleIncomingRequest,
-                id => GetQueue(id.SubscriptionId));
+                id => GetQueue(id.SubscriptionId), cts.Token);
         }
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
@@ -144,7 +145,7 @@ namespace Halibut
             await client.ExecuteTransaction(async protocol =>
             {
                 response = await protocol.ExchangeAsClient(request).ConfigureAwait(false);
-            }).ConfigureAwait(false);
+            }, cts.Token).ConfigureAwait(false);
 
             return response;
         }
@@ -201,7 +202,7 @@ namespace Halibut
 
         public async Task Stop()
         {
-            stopCalled = true;
+            cts.Cancel();
            
             await pollingClients.Stop().ConfigureAwait(false);
 
@@ -214,16 +215,6 @@ namespace Halibut
         public void Dispose()
         {
             // Injected by Fody.Janitor
-        }
-
-        public void DisposeManaged()
-        {
-            if (!stopCalled)
-            {
-#if !DEBUG
-                throw new Exception("Call Stop!");
-#endif
-            }
         }
 
 #if HAS_WEB_SOCKET_LISTENER

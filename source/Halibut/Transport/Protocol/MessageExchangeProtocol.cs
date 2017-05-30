@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -14,7 +15,6 @@ namespace Halibut.Transport.Protocol
         readonly IMessageExchangeStream stream;
         readonly ILog log;
         bool identified;
-        volatile bool acceptClientRequests = true;
 
         public MessageExchangeProtocol(Stream stream, ILog log)
         {
@@ -33,11 +33,6 @@ namespace Halibut.Transport.Protocol
 
             await stream.Send(request).ConfigureAwait(false);
             return await stream.Receive<ResponseMessage>().ConfigureAwait(false);
-        }
-
-        public void StopAcceptingClientRequests()
-        {
-            acceptClientRequests = false;
         }
 
         async Task PrepareExchangeAsClient()
@@ -88,7 +83,7 @@ namespace Halibut.Transport.Protocol
             await stream.ExpectProceeed().ConfigureAwait(false);
         }
 
-        public async Task ExchangeAsServer(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
+        public async Task ExchangeAsServer(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken token)
         {
             var identity = await stream.ReadRemoteIdentity().ConfigureAwait(false);
             await stream.IdentifyAsServer().ConfigureAwait(false);
@@ -99,7 +94,7 @@ namespace Halibut.Transport.Protocol
                     await ProcessClientRequests(incomingRequestProcessor).ConfigureAwait(false);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    await ProcessSubscriber(pendingRequests(identity)).ConfigureAwait(false);
+                    await ProcessSubscriber(pendingRequests(identity), token).ConfigureAwait(false);
                     break;
                 default:
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
@@ -108,23 +103,20 @@ namespace Halibut.Transport.Protocol
 
         async Task ProcessClientRequests(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
         {
-            while (acceptClientRequests)
+            while (true)
             {
                 var request = await stream.Receive<RequestMessage>().ConfigureAwait(false);
-                if (request == null || !acceptClientRequests)
-                    return;
+                if (request == null)
+                    continue;
 
                 var response = await InvokeAndWrapAnyExceptions(request, incomingRequestProcessor).ConfigureAwait(false);
-
-                if (!acceptClientRequests)
-                    return;
 
                 await stream.Send(response).ConfigureAwait(false);
 
                 try
                 {
-                    if (!acceptClientRequests || !await stream.ExpectNextOrEnd().ConfigureAwait(false))
-                        return;
+                    if (!await stream.ExpectNextOrEnd().ConfigureAwait(false))
+                        break;
                 }
                 catch (Exception ex) when (ex.IsSocketConnectionTimeout())
                 {
@@ -137,15 +129,21 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task ProcessSubscriber(IPendingRequestQueue pendingRequests)
+        async Task ProcessSubscriber(IPendingRequestQueue pendingRequests, CancellationToken token)
         {
-            while (true)
+            while (!token.IsCancellationRequested)
             {
                 var nextRequest = await pendingRequests.DequeueAsync().ConfigureAwait(false);
 
-                var success = await ProcessReceiverInternal(nextRequest).ConfigureAwait(false);
-                if (!success)
-                    return;
+                if (nextRequest != null)
+                {
+                    var success = await ProcessReceiverInternal(nextRequest).ConfigureAwait(false);
+
+                    if (!success)
+                    {
+                        return;
+                    }
+                }
             }
         }
 
@@ -192,7 +190,16 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                return incomingRequestProcessor(request);
+                return incomingRequestProcessor(request)
+                    .ContinueWith(t =>
+                    {
+                        if (t.IsFaulted)
+                        {
+                            return ResponseMessage.FromException(request, t.Exception);
+                        }
+
+                        return t.Result;
+                    }, TaskContinuationOptions.ExecuteSynchronously);
             }
             catch (Exception ex)
             {

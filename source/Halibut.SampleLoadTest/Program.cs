@@ -31,6 +31,20 @@ namespace Halibut.SampleLoadTest
 
             Console.Title = "Halibut Load Test";
 
+#if NET45
+            int minThreads;
+            int minPortThreads;
+            ThreadPool.GetMinThreads(out minThreads, out minPortThreads);
+
+            Console.Out.WriteLine($"Minimum Worker threads = {minThreads}");
+            Console.Out.WriteLine($"Minimum Completion Port threads = {minPortThreads}");
+
+            ThreadPool.GetMaxThreads(out minThreads, out minPortThreads);
+            
+            Console.Out.WriteLine($"Maximum Worker threads = {minThreads}");
+            Console.Out.WriteLine($"Maximum Completion Port threads = {minPortThreads}");
+#endif
+
             var servers = new List<Tuple<HalibutRuntime, int>>();
             for (var i = 0; i < Servers; i++)
             {

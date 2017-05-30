@@ -1,9 +1,11 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Halibut.Tests
 {
@@ -11,8 +13,9 @@ namespace Halibut.Tests
     {
         DelegateServiceFactory services;
 
-        public FailureModesFixture()
+        public FailureModesFixture(ITestOutputHelper output)
         {
+            LogProvider.SetCurrentLogProvider(new XunitLogProvider(output));
             services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Halibut.ServiceModel;
 
@@ -44,10 +45,10 @@ namespace Halibut.OctopusSample
                 this.logger = logger;
             }
 
-            public bool IsOnline()
+            public Task<bool> IsOnline()
             {
                 logger.WriteLine("Health check received");
-                return true;
+                return Task.FromResult(true);
             }
         }
     }

@@ -37,7 +37,7 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
 
-        public async Task ExecuteTransaction(Func<MessageExchangeProtocol, Task> protocolHandler)
+        public async Task ExecuteTransaction(Func<MessageExchangeProtocol, Task> protocolHandler, CancellationToken token)
         {
             var retryInterval = HalibutLimits.RetryListeningSleepInterval;
 

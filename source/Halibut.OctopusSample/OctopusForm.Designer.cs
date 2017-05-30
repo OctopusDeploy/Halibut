@@ -59,6 +59,7 @@
             this.button2.TabIndex = 1;
             this.button2.Text = "Add Polling Tentacle";
             this.button2.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.AddPollingTentacleClicked);
             // 
             // groupBox1
             // 

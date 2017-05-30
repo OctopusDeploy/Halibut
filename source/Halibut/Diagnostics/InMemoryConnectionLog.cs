@@ -10,7 +10,8 @@ namespace Halibut.Diagnostics
     {
         readonly string endpoint;
         readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
-        
+        readonly Logging.ILog logger = LogProvider.GetLogger("Halibut");
+
         public InMemoryConnectionLog(string endpoint)
         {
             this.endpoint = endpoint;
@@ -43,7 +44,6 @@ namespace Halibut.Diagnostics
 
         void SendToTrace(LogEvent logEvent, LogLevel level)
         {
-            var logger = LogProvider.GetLogger("Halibut");
             logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
         }
     }

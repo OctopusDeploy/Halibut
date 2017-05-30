@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using Halibut.SampleContracts;
 using Serilog;
 
@@ -12,6 +13,11 @@ namespace Halibut.SampleClient
     class Program
     {
         public static void Main(string[] args)
+        {
+            MainAsync(args).GetAwaiter().GetResult();
+        }
+
+        static async Task MainAsync(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.ColoredConsole()
@@ -29,22 +35,22 @@ namespace Halibut.SampleClient
                 //End make request of Listening server
 
                 //Begin make request of Polling server
-                //var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
-                //runtime.Listen(endPoint);
-                //runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                //var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
+                var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
+                runtime.Listen(endPoint);
+                runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
                 //End make request of Polling server
 
                 //Begin make request of WebSocket Polling server
-                AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8433");
-                runtime.ListenWebSocket("https://+:8433/Halibut");
-                runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
+                //AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8433");
+                //runtime.ListenWebSocket("https://+:8433/Halibut");
+                //runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                //var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
                 //End make request of WebSocket Polling server
 
                 while (true)
                 {
-                    var result = calculator.Add(12, 18);
+                    var result = await calculator.Add(12, 18).ConfigureAwait(false);
 
                     Console.WriteLine("12 + 18 = " + result);
                     Console.ReadKey();

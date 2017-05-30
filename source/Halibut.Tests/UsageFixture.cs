@@ -13,19 +13,24 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Newtonsoft.Json.Bson;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Halibut.Tests
 {
     public class UsageFixture
     {
+        readonly ITestOutputHelper output;
         DelegateServiceFactory services;
 
-        public UsageFixture()
+        public UsageFixture(ITestOutputHelper output)
         {
+            LogProvider.SetCurrentLogProvider(new XunitLogProvider(output));
+            this.output = output;
             services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
         }
@@ -91,7 +96,7 @@ namespace Halibut.Tests
 
                     greeting.Should().Be("Deploy package A" + i + "...");
                 }
-
+                output.WriteLine("Calling stop");
                 await octopus.Stop().ConfigureAwait(false);
                 await tentaclePolling.Stop().ConfigureAwait(false);
             }

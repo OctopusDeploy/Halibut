@@ -43,7 +43,7 @@ namespace Halibut.Transport
             {
                 try
                 {
-                    await secureClient.ExecuteTransaction(protocol => protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest)).ConfigureAwait(false);
+                    await secureClient.ExecuteTransaction(protocol => protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest), tokenSource.Token).ConfigureAwait(false);
                 }
                 catch (Exception)
                 {

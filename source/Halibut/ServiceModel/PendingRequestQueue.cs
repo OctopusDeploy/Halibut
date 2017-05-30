@@ -34,6 +34,13 @@ namespace Halibut.ServiceModel
             return queue.ReceiveAsync(HalibutLimits.PollingQueueWaitTimeout)
                 .ContinueWith(task =>
                 {
+                    if (task.IsFaulted)
+                    {
+                        task.Exception.Handle(e => true);
+
+                        return null;
+                    }
+
                     if (task.IsCompleted)
                     {
                         if (task.Result.BeginTransfer())

@@ -20,7 +20,7 @@ namespace Halibut.Tests
         }
 
         [Fact]
-        public void ShouldUseInMemoryReceiverLocallyToSaveToFile()
+        public async Task ShouldUseInMemoryReceiverLocallyToSaveToFile()
         {
             const string input = "We all live in a yellow submarine";
             var dataStream = DataStream.FromString(input);
@@ -28,7 +28,7 @@ namespace Halibut.Tests
 
             try
             {
-                dataStream.Receiver().SaveTo(filePath);
+                await dataStream.Receiver().SaveTo(filePath).ConfigureAwait(false);
 
                 File.ReadAllText(filePath).Should().Be(input);
             }

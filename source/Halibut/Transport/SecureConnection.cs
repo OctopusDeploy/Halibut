@@ -1,18 +1,15 @@
 using System;
 using System.IO;
-using System.Net.Security;
-using System.Net.Sockets;
+using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
-using Janitor;
 
 namespace Halibut.Transport
 {
-    [SkipWeaving]
     public class SecureConnection : IConnection
     {
-        readonly IDisposable client;
-        readonly Stream stream;
+        IDisposable client;
+        Stream stream;
         readonly MessageExchangeProtocol protocol;
         DateTimeOffset lastUsed;
 
@@ -24,7 +21,7 @@ namespace Halibut.Transport
             lastUsed = DateTimeOffset.UtcNow;
         }
 
-        public MessageExchangeProtocol Protocol { get { return protocol; } }
+        public MessageExchangeProtocol Protocol => protocol;
 
         public void NotifyUsed()
         {
@@ -38,18 +35,7 @@ namespace Halibut.Transport
 
         public void Dispose()
         {
-            try
-            {
-                protocol.StopAcceptingClientRequests();
-                stream.Dispose();
-                client.Dispose();
-            }
-            catch (SocketException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
+            // Injected by Janitor
         }
     }
 }

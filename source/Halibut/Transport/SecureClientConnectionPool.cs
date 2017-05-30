@@ -77,7 +77,7 @@ namespace Halibut.Transport
                         generator.GetId(connection, out firstTime);
                         if (!firstTime)
                         {
-                            log.Write(EventType.Error, "Duplicate connection found in conenction pool");
+                            log.Write(EventType.Error, "Duplicate connection found in connection pool");
                         }
                     }
 #endif
