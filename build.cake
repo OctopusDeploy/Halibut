@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 #tool "nuget:?package=GitVersion.CommandLine&version=4.0.0-beta0007"
 #addin "Cake.FileHelpers"
+#tool "nuget:?package=vswhere"
 
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
@@ -18,7 +19,7 @@ var localPackagesDir = "../LocalPackages";
 
 GitVersion gitVersionInfo;
 string nugetVersion;
-
+string latestMSBuildPath;
 
 ///////////////////////////////////////////////////////////////////////////////
 // SETUP / TEARDOWN
@@ -34,6 +35,8 @@ Setup(context =>
 
     nugetVersion = gitVersionInfo.NuGetVersion;
 
+	latestMSBuildPath = VSWhereLatest() + "/MSBuild/15.0/Bin/MSBuild.exe";
+	Information("Latest MSBuild Path = {0}", latestMSBuildPath);
     Information("Building Halibut v{0}", nugetVersion);
     Information("Informational Version {0}", gitVersionInfo.InformationalVersion);
 });
@@ -68,10 +71,11 @@ Task("Build")
     .IsDependentOn("Clean")
     .Does(() =>
 {
-	MSBuild("./source/Halibut.sln", new MSBuildSettings()
-			.UseToolVersion(MSBuildToolVersion.VS2017)
+	var settings = new MSBuildSettings()
 			.SetConfiguration(configuration)
-			.WithProperty("Version", nugetVersion));
+			.WithProperty("Version", nugetVersion);
+	settings.ToolPath = latestMSBuildPath;
+	MSBuild("./source/Halibut.sln", settings);
 });
 
 Task("Test")
