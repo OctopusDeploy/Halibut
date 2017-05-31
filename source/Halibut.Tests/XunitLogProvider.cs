@@ -30,13 +30,18 @@ namespace Halibut.Tests
             {
                 message += $"{Environment.NewLine}{exception}";
             }
-
+#if DEBUG
             output.WriteLine(message);
-           
+#endif
             return true;
         }
 
         public IDisposable OpenNestedContext(string message)
+        {
+            return new NoOpDisposable();
+        }
+
+        public IDisposable OpenMappedContext(string key, string value)
         {
             return new NoOpDisposable();
         }
@@ -46,11 +51,6 @@ namespace Halibut.Tests
             public void Dispose()
             {
             }
-        }
-
-        public IDisposable OpenMappedContext(string key, string value)
-        {
-            return new NoOpDisposable();
         }
     }
 }
