@@ -35,7 +35,7 @@ Setup(context =>
 
     nugetVersion = gitVersionInfo.NuGetVersion;
 
-	latestMSBuildPath = VSWhereLatest() + "/MSBuild/15.0/Bin/MSBuild.exe";
+	latestMSBuildPath = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe";
 	Information("Latest MSBuild Path = {0}", latestMSBuildPath);
     Information("Building Halibut v{0}", nugetVersion);
     Information("Informational Version {0}", gitVersionInfo.InformationalVersion);
