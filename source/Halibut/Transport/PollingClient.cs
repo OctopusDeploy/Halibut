@@ -15,6 +15,12 @@ namespace Halibut.Transport
         readonly Thread thread;
         bool working;
 
+        [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
+            : this(subscription, secureClient, handleIncomingRequest, null)
+        {
+        }
+
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
         {
             this.subscription = subscription;
@@ -45,7 +51,7 @@ namespace Halibut.Transport
                 }
                 catch (Exception ex)
                 {
-                    log.WriteException(EventType.Error, "Exception in the polling loop, sleeping for 5 seconds. This may be cause by a network error and usually rectifies itself. Disregard this message unless you are having communication problems.", ex);
+                    log?.WriteException(EventType.Error, "Exception in the polling loop, sleeping for 5 seconds. This may be cause by a network error and usually rectifies itself. Disregard this message unless you are having communication problems.", ex);
                     Thread.Sleep(5000);
                 }
             }
