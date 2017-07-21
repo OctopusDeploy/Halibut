@@ -212,6 +212,8 @@ namespace Halibut
 
 #if HAS_WEB_SOCKET_LISTENER
         public static bool OSSupportsWebSockets => Environment.OSVersion.Version >= new Version(6, 2);
+#else
+        public static bool OSSupportsWebSockets => false;
 #endif
     }
 }

@@ -41,6 +41,7 @@ namespace Halibut
         public HalibutRuntime(X509Certificate2 serverCertificate) { }
         public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate) { }
         public Halibut.Diagnostics.LogFactory Logs { get; }
+        public static bool OSSupportsWebSockets { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
