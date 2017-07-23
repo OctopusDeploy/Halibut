@@ -15,6 +15,7 @@ namespace Halibut.Transport
 {
     public class SecureClient : ISecureClient
     {
+        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")]
         public const int RetryCountLimit = 5;
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
         readonly ServiceEndPoint serviceEndpoint;
@@ -44,7 +45,7 @@ namespace Halibut.Transport
             // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
             var watch = Stopwatch.StartNew();
-            for (var i = 0; i < RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
+            for (var i = 0; i < HalibutLimits.RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
                 if (i > 0) log.Write(EventType.Error, "Retry attempt {0}", i);
 

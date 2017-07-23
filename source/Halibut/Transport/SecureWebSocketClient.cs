@@ -19,6 +19,7 @@ namespace Halibut.Transport
 {
     public class SecureWebSocketClient : ISecureClient
     {
+        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")]
         public const int RetryCountLimit = 5;
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
@@ -44,7 +45,7 @@ namespace Halibut.Transport
             // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
             var watch = Stopwatch.StartNew();
-            for (var i = 0; i < RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
+            for (var i = 0; i < HalibutLimits.RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
                 if (i > 0) 
                 {

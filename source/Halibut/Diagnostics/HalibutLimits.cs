@@ -38,7 +38,7 @@ namespace Halibut.Diagnostics
             {
                 var value = halibutConfig["Halibut:" + field.Name];
                 if (string.IsNullOrWhiteSpace(value)) continue;
-                var time = TimeSpan.Parse(value);
+                var time = field.FieldType == typeof(int) ? (object) int.Parse(value) : TimeSpan.Parse(value);
                 field.SetValue(null, time);
             }
 #endif
@@ -48,6 +48,7 @@ namespace Halibut.Diagnostics
         public static TimeSpan PollingRequestQueueTimeout = TimeSpan.FromMinutes(2);
         public static TimeSpan PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromMinutes(10);
         public static TimeSpan RetryListeningSleepInterval = TimeSpan.FromSeconds(1);
+        public static int RetryCountLimit = 5;
         public static TimeSpan ConnectionErrorRetryTimeout = TimeSpan.FromMinutes(5);
         public static TimeSpan TcpClientSendTimeout = TimeSpan.FromMinutes(10);
         public static TimeSpan TcpClientReceiveTimeout = TimeSpan.FromMinutes(10);
