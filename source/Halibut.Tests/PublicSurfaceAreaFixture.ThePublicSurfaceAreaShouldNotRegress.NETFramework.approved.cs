@@ -321,6 +321,7 @@ namespace Halibut.Transport
     public class PollingClient : Halibut.ServiceModel.IPollingClient, IDisposable
     {
         public PollingClient(Uri subscription, Halibut.Transport.ISecureClient secureClient, Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> handleIncomingRequest) { }
+        public PollingClient(Uri subscription, Halibut.Transport.ISecureClient secureClient, Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> handleIncomingRequest, Halibut.Diagnostics.ILog log) { }
         public void Dispose() { }
         public void Start() { }
     }

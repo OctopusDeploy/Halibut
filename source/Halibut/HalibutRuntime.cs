@@ -82,19 +82,20 @@ namespace Halibut
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
             ISecureClient client;
+            var log = logs.ForEndpoint(endPoint.BaseUri);
             if (endPoint.IsWebSocketEndpoint)
             {
 #if HAS_SERVICE_POINT_MANAGER
-                client = new SecureWebSocketClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
+                client = new SecureWebSocketClient(endPoint, serverCertificate, log, pool);
 #else
                 throw new NotImplementedException("Web Sockets are not available on this platform");
 #endif
             }
             else
             {
-                client = new SecureClient(endPoint, serverCertificate, logs.ForEndpoint(endPoint.BaseUri), pool);
+                client = new SecureClient(endPoint, serverCertificate, log, pool);
             }
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest));
+            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log));
         }
 
         public ServiceEndPoint Discover(Uri uri)
