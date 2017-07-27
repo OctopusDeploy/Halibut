@@ -39,7 +39,7 @@ namespace Halibut.Tests
             var pool = new ConnectionPool<ServiceEndPoint, IConnection>();
             var stream = Substitute.For<IMessageExchangeStream>();
             stream.When(x => x.IdentifyAsClient()).Do(x => { throw new ConnectionInitializationFailedException(""); });
-            for (int i = 0; i < SecureClient.RetryCountLimit; i++)
+            for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
                 connection.Protocol.Returns(new MessageExchangeProtocol(stream));
