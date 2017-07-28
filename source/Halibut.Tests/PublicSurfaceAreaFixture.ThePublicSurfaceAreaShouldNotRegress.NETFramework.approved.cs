@@ -384,6 +384,7 @@ namespace Halibut.Transport.Protocol
     public interface IMessageExchangeStream
     {
         public bool ExpectNextOrEnd() { }
+        public Task<bool> ExpectNextOrEndAsync() { }
         public void ExpectProceeed() { }
         public void IdentifyAsClient() { }
         public void IdentifyAsServer() { }
@@ -393,6 +394,7 @@ namespace Halibut.Transport.Protocol
         public void Send<T>(T message) { }
         public void SendNext() { }
         public void SendProceed() { }
+        public Task SendProceedAsync() { }
     }
     public class InMemoryDataStreamReceiver : Halibut.IDataStreamReceiver
     {
@@ -415,6 +417,7 @@ namespace Halibut.Transport.Protocol
         public static Func<Newtonsoft.Json.JsonSerializer> Serializer;
         public MessageExchangeStream(Stream stream, Halibut.Diagnostics.ILog log) { }
         public bool ExpectNextOrEnd() { }
+        public Task<bool> ExpectNextOrEndAsync() { }
         public void ExpectProceeed() { }
         public void IdentifyAsClient() { }
         public void IdentifyAsServer() { }
@@ -424,6 +427,7 @@ namespace Halibut.Transport.Protocol
         public void Send<T>(T message) { }
         public void SendNext() { }
         public void SendProceed() { }
+        public Task SendProceedAsync() { }
     }
     public class ProtocolException : Exception, ISerializable, _Exception
     {
