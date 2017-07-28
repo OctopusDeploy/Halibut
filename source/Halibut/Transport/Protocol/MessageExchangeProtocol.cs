@@ -172,7 +172,7 @@ namespace Halibut.Transport.Protocol
             {
                 var nextRequest = await pendingRequests.DequeueAsync();
 
-                var success = ProcessReceiverInternal(pendingRequests, nextRequest);
+                var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest);
                 if (!success)
                     return;
             }
@@ -213,6 +213,44 @@ namespace Halibut.Transport.Protocol
                 return false;
             }
             stream.SendProceed();
+            return true;
+        }
+
+        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
+        {
+            try
+            {
+                stream.Send(nextRequest);
+                if (nextRequest != null)
+                {
+                    var response = stream.Receive<ResponseMessage>();
+                    pendingRequests.ApplyResponse(response);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (nextRequest != null)
+                {
+                    var response = ResponseMessage.FromException(nextRequest, ex);
+                    pendingRequests.ApplyResponse(response);
+                }
+                return false;
+            }
+
+            try
+            {
+                if (!await stream.ExpectNextOrEndAsync())
+                    return false;
+            }
+            catch (Exception ex) when (ex.IsSocketConnectionTimeout())
+            {
+                // We get socket timeout on the server when the network connection to a polling client drops
+                // (in Octopus this is the server for a Polling Tentacle)
+                // In normal operation a client will poll more often than the timeout so we shouldn't see this.
+                log.Write(EventType.Error, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
+                return false;
+            }
+            await stream.SendProceedAsync();
             return true;
         }
 
