@@ -82,8 +82,7 @@ Task("Test")
     DotNetCoreTest("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCoreTestSettings
     {
         Configuration = configuration,
-        NoBuild = true,
-        ArgumentCustomization = args => args.Append("-l trx")
+        NoBuild = true
     });
 });
 
