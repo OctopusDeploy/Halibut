@@ -29,7 +29,7 @@ namespace Halibut
         public int GetHashCode() { }
         public Halibut.IDataStreamReceiver Receiver() { }
     }
-    public class HalibutClientException : Exception
+    public class HalibutClientException : Exception, ISerializable
     {
         public HalibutClientException(string message) { }
         public HalibutClientException(string message, Exception inner) { }
@@ -197,7 +197,7 @@ namespace Halibut.Logging
         public IDisposable OpenMappedContext(string key, string value) { }
         public IDisposable OpenNestedContext(string message) { }
     }
-    public sealed class Logger : MulticastDelegate
+    public sealed class Logger : MulticastDelegate, ICloneable, ISerializable
     {
         public Logger(Object @object, IntPtr method) { }
         public IAsyncResult BeginInvoke(Halibut.Logging.LogLevel logLevel, Func<string> messageFunc, Exception exception, Object[] formatParameters, AsyncCallback callback, Object @object) { }
@@ -360,7 +360,7 @@ namespace Halibut.Transport
 }
 namespace Halibut.Transport.Protocol
 {
-    public class ConnectionInitializationFailedException : Exception
+    public class ConnectionInitializationFailedException : Exception, ISerializable
     {
         public ConnectionInitializationFailedException(string message) { }
         public ConnectionInitializationFailedException(string message, Exception innerException) { }
@@ -419,7 +419,7 @@ namespace Halibut.Transport.Protocol
         public void SendProceed() { }
         public Task SendProceedAsync() { }
     }
-    public class ProtocolException : Exception
+    public class ProtocolException : Exception, ISerializable
     {
         public ProtocolException(string message) { }
     }
@@ -543,7 +543,7 @@ namespace Halibut.Transport.Proxy
 }
 namespace Halibut.Transport.Proxy.Exceptions
 {
-    public class ProxyException : Exception
+    public class ProxyException : Exception, ISerializable
     {
         public ProxyException() { }
         public ProxyException(string message) { }
