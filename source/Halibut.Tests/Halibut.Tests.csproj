@@ -29,6 +29,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="1.1.2" />
     <PackageReference Include="NSubstitute" Version="2.0.3" />
+    <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.3" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(FrameworkFamily)' == 'NetFramework' ">
