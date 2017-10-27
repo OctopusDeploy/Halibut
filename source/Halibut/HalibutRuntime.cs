@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
@@ -15,7 +16,6 @@ namespace Halibut
     public class HalibutRuntime : IHalibutRuntime
     {
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
-
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly X509Certificate2 serverCertificate;
         readonly List<IDisposable> listeners = new List<IDisposable>();
@@ -26,6 +26,7 @@ namespace Halibut
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
+        Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
 
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate)
         {
@@ -59,14 +60,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
             listeners.Add(listener);
             return listener.Start();
         }
 #if HAS_WEB_SOCKET_LISTENER
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
             listeners.Add(listener);
             listener.Start();
         }
@@ -199,6 +200,11 @@ namespace Halibut
         public void SetFriendlyHtmlPageContent(string html)
         {
             friendlyHtmlPageContent = html ?? DefaultFriendlyHtmlPageContent;
+        }
+
+        public void SetFriendlyHtmlPageHeaders(IEnumerable<KeyValuePair<string, string>> headers)
+        {
+            friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
         }
 
         public void Dispose()

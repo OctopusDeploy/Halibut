@@ -55,6 +55,7 @@ namespace Halibut
         public void RemoveTrust(string clientThumbprint) { }
         public void Route(Halibut.ServiceEndPoint to, Halibut.ServiceEndPoint via) { }
         public void SetFriendlyHtmlPageContent(string html) { }
+        public void SetFriendlyHtmlPageHeaders(IEnumerable<KeyValuePair<string, string>> headers) { }
         public void Trust(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
@@ -348,7 +349,9 @@ namespace Halibut.Transport
     public class SecureListener : IDisposable
     {
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public void Dispose() { }
         public int Start() { }
     }
