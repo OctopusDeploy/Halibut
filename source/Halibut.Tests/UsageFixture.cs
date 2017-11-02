@@ -263,6 +263,21 @@ namespace Halibut.Tests
         }
 
         [Fact]
+        public void CanSetCustomFriendlyHtmlPageHeaders()
+        {
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            {
+                octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> {{"X-Content-Type-Options", "nosniff"}, {"X-Frame-Options", "DENY"}});
+                var listenPort = octopus.Listen();
+
+                var result = GetHeadersIgnoringCertificateValidation("https://localhost:" + listenPort).ToList();
+
+                result.Should().Contain(x => x.Key == "X-Content-Type-Options" && x.Value == "nosniff");
+                result.Should().Contain(x => x.Key == "X-Frame-Options" && x.Value == "DENY");
+            }
+        }
+
+        [Fact]
         [Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
         public void ConnectingOverHttpShouldFailQuickly()
         {
@@ -311,6 +326,39 @@ namespace Halibut.Tests
             using (var webClient = new HttpClient(handler))
             {
                 return webClient.GetStringAsync(uri).GetAwaiter().GetResult();
+            }
+#endif
+        }
+
+        static IEnumerable<KeyValuePair<string, string>> GetHeadersIgnoringCertificateValidation(string uri)
+        {
+#if NET40
+            using (var webClient = new WebClient())
+            {
+                try
+                {
+                    // We need to ignore server certificate validation errors - the server certificate is self-signed
+                    ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+                    var response = webClient.DownloadString(uri);
+                    foreach (string key in webClient.ResponseHeaders)
+                    {
+                        yield return new KeyValuePair<string, string>(key, webClient.ResponseHeaders[key]);
+                    }
+                }
+                finally
+                {
+                    // And restore it back to default behaviour
+                    ServicePointManager.ServerCertificateValidationCallback = null;
+                }
+            }
+#else
+            var handler = new HttpClientHandler();
+            // We need to ignore server certificate validation errors - the server certificate is self-signed
+            handler.ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) => true;
+            using (var webClient = new HttpClient(handler))
+            {
+                var response = webClient.GetAsync(uri).GetAwaiter().GetResult();
+                return response.Headers.Select(x => new KeyValuePair<string, string>(x.Key, string.Join(";", x.Value)));
             }
 #endif
         }

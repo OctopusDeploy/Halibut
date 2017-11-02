@@ -1,5 +1,6 @@
 #if HAS_SERVICE_POINT_MANAGER
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
@@ -20,17 +21,29 @@ namespace Halibut.Transport
         readonly Predicate<string> verifyClientThumbprint;
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
+        readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         ILog log;
         HttpListener listener;
 
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent)
+            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+
+        {
+        }
+
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
+            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
 
         {
         }
 
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
+            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+        {
+        }
+
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
         {
             if (!endPoint.EndsWith("/"))
                 endPoint += "/";
@@ -41,6 +54,7 @@ namespace Halibut.Transport
             this.verifyClientThumbprint = verifyClientThumbprint;
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
+            this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -162,7 +176,11 @@ namespace Halibut.Transport
         void SendFriendlyHtmlPage(HttpListenerResponse response)
         {
             var message = getFriendlyHtmlPageContent();
+            var headers = getFriendlyHtmlPageHeaders();
             response.AddHeader("Content-Type", "text/html; charset=utf-8");
+            foreach(var header in headers)
+                response.AddHeader(header.Key, header.Value);
+
             // This could fail if the client terminates the connection and we attempt to write to it
             // Disposing the StreamWriter will close the stream - it owns the stream
             using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)))
