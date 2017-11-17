@@ -150,7 +150,7 @@ namespace Halibut.Transport
             var stream = client.GetStream();
 
             log.Write(EventType.Security, "I feel sleepy ... Going to sleep");
-            Thread.Sleep(100000);
+            Thread.Sleep(3000);
             log.Write(EventType.Security, "Hi Matt, did your source load for you ???");
 
             log.Write(EventType.Security, "Performing TLS handshake");
