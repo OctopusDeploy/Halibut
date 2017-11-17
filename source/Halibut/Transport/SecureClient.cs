@@ -100,7 +100,7 @@ namespace Halibut.Transport
                     lastError = cex;
                     retryAllowed = true;
 
-                    // If this is the second failure, clear the pooled connections as a precaution 
+                    // If this is the second failure, clear the pooled connections as a precaution
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
@@ -148,6 +148,10 @@ namespace Halibut.Transport
             log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
+
+            log.Write(EventType.Security, "I feel sleepy ... Going to sleep");
+            Thread.Sleep(100000);
+            log.Write(EventType.Security, "Hi Matt, did your source load for you ???");
 
             log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);

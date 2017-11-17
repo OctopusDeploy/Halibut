@@ -15,6 +15,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <Optimize>True</Optimize>
+    <DebugType>pdbonly</DebugType>
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
@@ -44,5 +45,14 @@
     <DefineConstants>$(DefineConstants);NET40;HAS_REAL_PROXY;CAN_GET_SOCKET_HANDLE;HAS_SERIALIZABLE_EXCEPTIONS;HAS_WEB_SOCKET_LISTENER;HAS_SERVICE_POINT_MANAGER</DefineConstants>
   </PropertyGroup>
 
-
+  <ItemGroup>
+    <Content Include="$(OutputPath)\net45\Halibut.pdb">
+      <Pack>true</Pack>
+      <PackagePath>lib\net45\</PackagePath>
+    </Content>
+    <Content Include="$(OutputPath)\netstandard1.5\Halibut.pdb">
+      <Pack>true</Pack>
+      <PackagePath>lib\netstandard1.5\</PackagePath>
+    </Content>
+  </ItemGroup>
 </Project>
