@@ -49,6 +49,9 @@ ipch/
 *.vsp
 *.vspx
 
+# VS Code
+.vscode
+
 # Guidance Automation Toolkit
 *.gpState
 
@@ -62,7 +65,7 @@ _ReSharper*
 # CodeRush
 .cr/
 
-# Installshield output folder 
+# Installshield output folder
 [Ee]xpress
 
 # DocProject is a documentation generator add-in
