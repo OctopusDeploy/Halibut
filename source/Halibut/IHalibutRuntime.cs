@@ -7,7 +7,7 @@ namespace Halibut
 {
     public interface IHalibutRuntime : IDisposable
     {
-        LogFactory Logs { get; }
+        ILogFactory Logs { get; }
         int Listen();
         int Listen(int port);
         int Listen(IPEndPoint endpoint);

@@ -22,7 +22,7 @@ namespace Halibut
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
-        readonly LogFactory logs = new LogFactory();
+        readonly ILogFactory logs = LogFactoryContext.CurrentLogFactory;
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
@@ -38,7 +38,7 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
         }
 
-        public LogFactory Logs
+        public ILogFactory Logs
         {
             get { return logs; }
         }
