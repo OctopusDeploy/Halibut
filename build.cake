@@ -88,7 +88,7 @@ Task("Test")
 });
 
 Task("Pack")
-    .IsDependentOn("Build")  // lets skip the tests for while I get the symbols sorted
+    .IsDependentOn("Test")
     .Does(() =>
 {
     GitLink3("./source/Halibut/bin/Release/net45/Halibut.pdb");
