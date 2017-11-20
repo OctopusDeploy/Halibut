@@ -63,9 +63,16 @@ namespace Halibut.Transport
 
                         protocolHandler(connection.Protocol);
                     }
-                    catch
+                    catch(Exception ex)
                     {
                         connection?.Dispose();
+
+                        switch(ex)
+                        {
+                            case AggregateException agg:
+                            throw agg.Flatten().InnerException;
+                        }
+
                         throw;
                     }
 
@@ -100,7 +107,7 @@ namespace Halibut.Transport
                     lastError = cex;
                     retryAllowed = true;
 
-                    // If this is the second failure, clear the pooled connections as a precaution 
+                    // If this is the second failure, clear the pooled connections as a precaution
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
@@ -151,7 +158,16 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).GetAwaiter().GetResult();
+            var task = ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+
+            if(!task.Wait(HalibutLimits.AuthenticateTimeout))
+            {
+                // Authentication timed out.
+                // If we don't timeout, AuthenticateAsClientAsync() can block indefinitely.  Maybe retry from ExecuteTransaction().
+
+                throw new HalibutClientException("The client was unable to authenticate within " + HalibutLimits.AuthenticateTimeout);
+            }
+
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
 

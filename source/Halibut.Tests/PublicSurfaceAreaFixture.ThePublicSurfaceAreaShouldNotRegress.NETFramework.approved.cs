@@ -137,6 +137,7 @@ namespace Halibut.Diagnostics
     }
     public class HalibutLimits
     {
+        public static TimeSpan AuthenticateTimeout;
         public static TimeSpan ConnectionErrorRetryTimeout;
         public static TimeSpan PollingQueueWaitTimeout;
         public static TimeSpan PollingRequestMaximumMessageProcessingTimeout;

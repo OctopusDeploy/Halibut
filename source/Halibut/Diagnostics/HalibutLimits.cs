@@ -57,6 +57,7 @@ namespace Halibut.Diagnostics
         public static TimeSpan TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan TcpClientConnectTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan PollingQueueWaitTimeout = TimeSpan.FromSeconds(30);
+        public static TimeSpan AuthenticateTimeout = TimeSpan.FromSeconds(60);
 
         // After a client/server message exchange is complete, the client returns
         // the connection to the pool but the server continues to block and reads
