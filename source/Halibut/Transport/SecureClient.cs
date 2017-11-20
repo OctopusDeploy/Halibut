@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -70,7 +71,8 @@ namespace Halibut.Transport
                         switch(ex)
                         {
                             case AggregateException agg:
-                            throw agg.Flatten().InnerException;
+                            ExceptionDispatchInfo.Capture(agg.Flatten().InnerException).Throw();
+                            break;
                         }
 
                         throw;
