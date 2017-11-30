@@ -83,6 +83,7 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
                     lastError = cex;
+                    Thread.Sleep(retryInterval);
                 }
                 catch (SocketException sex)
                 {
@@ -100,7 +101,7 @@ namespace Halibut.Transport
                     lastError = cex;
                     retryAllowed = true;
 
-                    // If this is the second failure, clear the pooled connections as a precaution 
+                    // If this is the second failure, clear the pooled connections as a precaution
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
