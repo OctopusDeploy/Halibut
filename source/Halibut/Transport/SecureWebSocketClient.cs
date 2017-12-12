@@ -1,4 +1,3 @@
-#if HAS_WEB_SOCKET_LISTENER
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -231,4 +230,3 @@ namespace Halibut.Transport
         }
     }
 }
-#endif

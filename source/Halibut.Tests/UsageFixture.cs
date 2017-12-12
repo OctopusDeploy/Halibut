@@ -83,7 +83,6 @@ namespace Halibut.Tests
             }
         }
 
-#if HAS_SERVICE_POINT_MANAGER
         [Fact]
         public void OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
@@ -112,7 +111,6 @@ namespace Halibut.Tests
                 RemoveSslCertBindingFor("0.0.0.0:" + octopusPort);
             }
         }
-#endif
 
         [Fact]
         public void StreamsCanBeSentToListening()
@@ -363,7 +361,6 @@ namespace Halibut.Tests
 #endif
         }
 
-#if HAS_SERVICE_POINT_MANAGER
         static void AddSslCertToLocalStoreAndRegisterFor(string address)
         {
             var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
@@ -415,6 +412,5 @@ namespace Halibut.Tests
                 throw new Exception("The system cannot find the file specified");
             }
         }
-#endif
     }
 }
