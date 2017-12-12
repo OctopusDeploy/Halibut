@@ -188,13 +188,8 @@ namespace Halibut.Transport
                     if (!keepStreamOpen)
                     {
                         // Closing an already closed stream or client is safe, better not to leak
-#if NET40
                         stream.Close();
                         client.Close();
-#else
-                        stream.Dispose();
-                        client.Dispose();
-#endif
                     }
                 }
             }
