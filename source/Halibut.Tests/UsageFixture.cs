@@ -6,9 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-#if !NET40
 using System.Net.Http;
-#endif
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -291,18 +289,12 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var listenPort = octopus.Listen();
-#if NET40
                 Assert.Throws<WebException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
-#else
-                Assert.Throws<HttpRequestException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
-#endif
-
             }
         }
 
         static string DownloadStringIgnoringCertificateValidation(string uri)
         {
-#if NET40
             using (var webClient = new WebClient())
             {
                 try
@@ -317,20 +309,10 @@ namespace Halibut.Tests
                     ServicePointManager.ServerCertificateValidationCallback = null;
                 }
             }
-#else
-            var handler = new HttpClientHandler();
-            // We need to ignore server certificate validation errors - the server certificate is self-signed
-            handler.ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) => true;
-            using (var webClient = new HttpClient(handler))
-            {
-                return webClient.GetStringAsync(uri).GetAwaiter().GetResult();
-            }
-#endif
         }
 
         static IEnumerable<KeyValuePair<string, string>> GetHeadersIgnoringCertificateValidation(string uri)
         {
-#if NET40
             using (var webClient = new WebClient())
             {
                 try
@@ -349,16 +331,6 @@ namespace Halibut.Tests
                     ServicePointManager.ServerCertificateValidationCallback = null;
                 }
             }
-#else
-            var handler = new HttpClientHandler();
-            // We need to ignore server certificate validation errors - the server certificate is self-signed
-            handler.ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) => true;
-            using (var webClient = new HttpClient(handler))
-            {
-                var response = webClient.GetAsync(uri).GetAwaiter().GetResult();
-                return response.Headers.Select(x => new KeyValuePair<string, string>(x.Key, string.Join(";", x.Value)));
-            }
-#endif
         }
 
         static void AddSslCertToLocalStoreAndRegisterFor(string address)

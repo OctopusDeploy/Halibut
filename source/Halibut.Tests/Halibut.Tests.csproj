@@ -7,8 +7,6 @@
     <PackageId>Halibut.Tests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <FrameworkFamily Condition="'$(TargetFramework)' == 'net452'">NetFramework</FrameworkFamily>
-    <FrameworkFamily Condition="'$(TargetFramework)' == 'netcoreapp2.0'">NetCore</FrameworkFamily>
   </PropertyGroup>
   <ItemGroup>
     <None Update="Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
@@ -31,10 +29,6 @@
     <PackageReference Include="NSubstitute" Version="2.0.3" />
     <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.3" />
   </ItemGroup>
-
-  <PropertyGroup Condition=" '$(FrameworkFamily)' == 'NetFramework' ">
-    <DefineConstants>$(DefineConstants);NET40;HAS_SERVICE_POINT_MANAGER</DefineConstants>
-  </PropertyGroup>
 
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
