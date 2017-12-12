@@ -1,9 +1,4 @@
-#if NET40
-#else
-using Microsoft.Extensions.Configuration;
-#endif
 using System;
-using System.IO;
 using System.Reflection;
 
 namespace Halibut.Diagnostics
@@ -12,7 +7,6 @@ namespace Halibut.Diagnostics
     {
         static HalibutLimits()
         {
-#if NET40
             var settings = System.Configuration.ConfigurationManager.AppSettings;
 
             var fields = typeof (HalibutLimits).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
@@ -23,26 +17,6 @@ namespace Halibut.Diagnostics
                 var time = TimeSpan.Parse(value);
                 field.SetValue(null, time);
             }
-#else
-            // should be able to use Directory.GetCurrentDirectory()
-            // to get the working path, but the nunit test runner
-            // runs from another directory. Go with dll location for now.
-            var directory = Path.GetDirectoryName(new Uri(typeof(HalibutLimits).GetTypeInfo().Assembly.CodeBase).LocalPath);
-            var builder = new ConfigurationBuilder();
-            builder.SetBasePath(directory);
-            builder.AddJsonFile("appsettings.json", optional: true);
-            var halibutConfig = builder.Build();
-
-            var fields = typeof(HalibutLimits).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
-            foreach (var field in fields)
-            {
-                var value = halibutConfig["Halibut:" + field.Name];
-                if (string.IsNullOrWhiteSpace(value)) continue;
-                var time = field.FieldType == typeof(int) ? (object) int.Parse(value) : TimeSpan.Parse(value);
-                field.SetValue(null, time);
-            }
-#endif
-
         }
 
         public static TimeSpan PollingRequestQueueTimeout = TimeSpan.FromMinutes(2);
