@@ -104,6 +104,10 @@ namespace Halibut.Tests
                     }
                 }
             }
+            catch(NotSupportedException nse) when (nse.Message == "The netstandard build of this library cannot act as the client in a WebSocket polling setup")
+            {
+                
+            }
             finally
             {
                 RemoveSslCertBindingFor("0.0.0.0:" + octopusPort);

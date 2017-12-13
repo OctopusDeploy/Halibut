@@ -64,6 +64,7 @@ namespace Halibut
             listeners.Add(listener);
             return listener.Start();
         }
+
         public void ListenWebSocket(string endpoint)
         {
             var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
@@ -84,7 +85,11 @@ namespace Halibut
             var log = logs.ForEndpoint(endPoint.BaseUri);
             if (endPoint.IsWebSocketEndpoint)
             {
+#if SUPPORTS_WEB_SOCKET_CLIENT
                 client = new SecureWebSocketClient(endPoint, serverCertificate, log, pool);
+#else 
+                throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
+#endif
             }
             else
             {
@@ -213,5 +218,6 @@ namespace Halibut
 
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                                     Environment.OSVersion.Version >= new Version(6, 2);
+
     }
 }
