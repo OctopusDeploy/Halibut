@@ -6,7 +6,7 @@ using Halibut.Tests.TestServices;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NSubstitute;
-using Xunit;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
@@ -16,7 +16,8 @@ namespace Halibut.Tests
         HalibutRuntime tentacle;
         ILog log;
 
-        public SecureClientFixture()
+        [SetUp]
+        public SetUp()
         {
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
@@ -33,7 +34,7 @@ namespace Halibut.Tests
             tentacle.Dispose();
         }
 
-        [Fact]
+        [Test]
         public void SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
             var pool = new ConnectionPool<ServiceEndPoint, IConnection>();

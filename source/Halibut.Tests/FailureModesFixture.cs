@@ -2,23 +2,23 @@ using System;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
-using Xunit;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class FailureModesFixture
     {
-        DelegateServiceFactory services;
-
-        public FailureModesFixture()
+        static DelegateServiceFactory GetStubDelegateServiceFactory()
         {
-            services = new DelegateServiceFactory();
+            var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
+            return services;
         }
 
-        [Fact]
+        [Test]
         public void FailsWhenSendingToPollingMachineButNothingPicksItUp()
         {
+            var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
@@ -27,9 +27,11 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+
+        [Test]
         public void FailWhenServerThrowsAnException()
         {
+            var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
@@ -42,9 +44,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void FailWhenServerThrowsAnExceptionOnPolling()
         {
+            var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
@@ -59,9 +62,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void FailOnInvalidHostname()
         {
+            var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
@@ -70,9 +74,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void FailOnInvalidPort()
         {
+            var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var echo = octopus.CreateClient<IEchoService>("https://google.com:88", Certificates.TentacleListeningPublicThumbprint);
@@ -81,9 +86,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void FailWhenListeningClientPresentsWrongCertificate()
         {
+            var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.TentaclePolling))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
@@ -96,9 +102,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void FailWhenListeningServerPresentsWrongCertificate()
         {
+            var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
