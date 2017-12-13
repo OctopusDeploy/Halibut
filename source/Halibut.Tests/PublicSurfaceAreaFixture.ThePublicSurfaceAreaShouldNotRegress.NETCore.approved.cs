@@ -357,13 +357,6 @@ namespace Halibut.Transport
         public void Dispose() { }
         public int Start() { }
     }
-    public class SecureWebSocketClient : Halibut.Transport.ISecureClient
-    {
-        public static int RetryCountLimit;
-        public SecureWebSocketClient(Halibut.ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, Halibut.Diagnostics.ILog log, Halibut.Transport.ConnectionPool<Halibut.ServiceEndPoint, Halibut.Transport.IConnection> pool) { }
-        public Halibut.ServiceEndPoint ServiceEndpoint { get; }
-        public void ExecuteTransaction(Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler) { }
-    }
     public class SecureWebSocketListener : IDisposable
     {
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }

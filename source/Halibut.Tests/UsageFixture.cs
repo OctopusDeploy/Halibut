@@ -110,7 +110,7 @@ namespace Halibut.Tests
             }
             catch(NotSupportedException nse) when (nse.Message == "The netstandard build of this library cannot act as the client in a WebSocket polling setup")
             {
-                
+                Assert.Inconclusive("This test cannot run on the netstandard build");
             }
             finally
             {

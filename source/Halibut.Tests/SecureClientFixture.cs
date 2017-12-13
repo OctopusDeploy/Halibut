@@ -17,7 +17,7 @@ namespace Halibut.Tests
         ILog log;
 
         [SetUp]
-        public SetUp()
+        public void SetUp()
         {
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
