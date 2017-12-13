@@ -1,22 +1,17 @@
 ﻿using System;
 using FluentAssertions;
 using Halibut.Transport;
-using Xunit;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class ConnectionPoolFixture
     {
-        ConnectionPool<string, Connection> pool;
 
-        public ConnectionPoolFixture()
-        {
-            pool = new ConnectionPool<string, Connection>();
-        }
-
-        [Fact]
+        [Test]
         public void ShouldGetConnectionFromPool()
         {
+            var pool = new ConnectionPool<string, Connection>();
             pool.Return("http://foo", new Connection());
             pool.Return("http://foo", new Connection());
             pool.Return("http://foo", new Connection());
@@ -31,18 +26,20 @@ namespace Halibut.Tests
             pool.Take("http://foo").Should().BeNull();
         }
 
-        [Fact]
+        [Test]
         public void ShouldGetConnectionFromPoolByKey()
         {
+            var pool = new ConnectionPool<string, Connection>();
             pool.Return("http://foo1", new Connection());
             pool.Return("http://foo2", new Connection());
             pool.Take("http://foo1").Should().NotBeNull();
             pool.Take("http://foo1").Should().BeNull();
         }
 
-        [Fact]
+        [Test]
         public void ShouldLetConnectionsExpire()
         {
+            var pool = new ConnectionPool<string, Connection>();
             var connection = new Connection();
 
             pool.Return("http://foo", connection);

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -16,23 +15,24 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Newtonsoft.Json.Bson;
-using Xunit;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class UsageFixture
     {
-        DelegateServiceFactory services;
-
-        public UsageFixture()
+      
+        static DelegateServiceFactory GetDelegateServiceFactory()
         {
-            services = new DelegateServiceFactory();
+            var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
+            return services;
         }
 
-        [Fact]
+        [Test]
         public void OctopusCanDiscoverTentacle()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
@@ -42,10 +42,12 @@ namespace Halibut.Tests
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }
+       
 
-        [Fact]
+        [Test]
         public void OctopusCanSendMessagesToListeningTentacle()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
@@ -64,9 +66,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void OctopusCanSendMessagesToPollingTentacle()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
@@ -84,9 +87,10 @@ namespace Halibut.Tests
         }
 
 #if HAS_SERVICE_POINT_MANAGER
-        [Fact]
+        [Test]
         public void OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
+            var services = GetDelegateServiceFactory();
             const int octopusPort = 8450;
             AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:" + octopusPort);
 
@@ -114,9 +118,10 @@ namespace Halibut.Tests
         }
 #endif
 
-        [Fact]
+        [Test]
         public void StreamsCanBeSentToListening()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
@@ -136,9 +141,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void StreamsCanBeSentToPolling()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
@@ -160,9 +166,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void SupportsDifferentServiceContractMethods()
         {
+            var services = GetDelegateServiceFactory();
             services.Register<ISupportedServices>(() => new SupportedServices());
             using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
@@ -198,9 +205,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void StreamsCanBeSentToListeningWithProgressReporting()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
@@ -222,15 +230,15 @@ namespace Halibut.Tests
             }
         }
 
-        [Theory]
-        [InlineData("https://127.0.0.1:{port}")]
-        [InlineData("https://127.0.0.1:{port}/")]
-        [InlineData("https://localhost:{port}")]
-        [InlineData("https://localhost:{port}/")]
-        [InlineData("https://{machine}:{port}")]
-        [InlineData("https://{machine}:{port}/")]
+        [TestCase("https://127.0.0.1:{port}")]
+        [TestCase("https://127.0.0.1:{port}/")]
+        [TestCase("https://localhost:{port}")]
+        [TestCase("https://localhost:{port}/")]
+        [TestCase("https://{machine}:{port}")]
+        [TestCase("https://{machine}:{port}/")]
         public void SupportsHttpsGet(string uriFormat)
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var listenPort = octopus.Listen();
@@ -242,13 +250,13 @@ namespace Halibut.Tests
             }
         }
 
-        [Theory]
-        [InlineData("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
-        [InlineData("Simple text works too!", null)]
-        [InlineData("", null)]
-        [InlineData(null, "<html><body><p>Hello!</p></body></html>")]
+        [TestCase("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
+        [TestCase("Simple text works too!", null)]
+        [TestCase("", null)]
+        [TestCase(null, "<html><body><p>Hello!</p></body></html>")]
         public void CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
         {
+            var services = GetDelegateServiceFactory();
             expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
 
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -262,9 +270,10 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void CanSetCustomFriendlyHtmlPageHeaders()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> {{"X-Content-Type-Options", "nosniff"}, {"X-Frame-Options", "DENY"}});
@@ -277,8 +286,8 @@ namespace Halibut.Tests
             }
         }
 
-        [Fact]
-        [Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
+        [Test]
+        [System.ComponentModel.Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
         public void ConnectingOverHttpShouldFailQuickly()
         {
             var task = Task.Run(() => DoConnectingOverHttpShouldFailQuickly());
@@ -290,6 +299,7 @@ namespace Halibut.Tests
 
         void DoConnectingOverHttpShouldFailQuickly()
         {
+            var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var listenPort = octopus.Listen();

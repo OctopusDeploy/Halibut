@@ -1,12 +1,12 @@
 ﻿using System.IO;
 using FluentAssertions;
-using Xunit;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class LocalDataStreamFixture
     {
-        [Fact]
+        [Test]
         public void ShouldUseInMemoryReceiverLocallyToRead()
         {
             const string input = "Hello World!";
@@ -18,7 +18,7 @@ namespace Halibut.Tests
             result.Should().Be(input);
         }
 
-        [Fact]
+        [Test]
         public void ShouldUseInMemoryReceiverLocallyToSaveToFile()
         {
             const string input = "We all live in a yellow submarine";

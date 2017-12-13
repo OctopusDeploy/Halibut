@@ -1,12 +1,12 @@
 ﻿using FluentAssertions;
 using Newtonsoft.Json;
-using Xunit;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class ServiceEndPointFixture
     {
-        [Fact]
+        [Test]
         public void IncompleteEndPointCanBeDeserialized()
         {
             var json = "{BaseUri: \"http://google.com\", RemoteThumbprint: \"AAAA\"}";

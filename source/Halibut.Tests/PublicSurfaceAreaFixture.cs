@@ -6,13 +6,13 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Assent;
 using Assent.Namers;
-using Xunit;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class PublicSurfaceAreaFixture
     {
-        string[] commonNamespaces = {
+        static readonly string[] commonNamespaces = {
             "System",
             "System.Collections.Generic",
             "System.IO",
@@ -27,7 +27,7 @@ namespace Halibut.Tests
             "System.Threading.Tasks"
         };
 
-        [Fact]
+        [Test]
         public void ThePublicSurfaceAreaShouldNotRegress()
         {
             var usings = commonNamespaces.Select(ns => $"using {ns};").Concat("".InArray());
