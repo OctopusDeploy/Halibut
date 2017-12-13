@@ -24,9 +24,7 @@ namespace Halibut.Transport
                     {
                         using (var ssl = new SslStream(stream, false, ValidateCertificate))
                         {
-                            ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false)
-                                .GetAwaiter()
-                                .GetResult();
+                            ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
                             ssl.Write(HelloLine, 0, HelloLine.Length);
                             ssl.Flush();
 
