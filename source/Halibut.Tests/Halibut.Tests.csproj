@@ -22,14 +22,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Assent" Version="1.0.0" />
-    <PackageReference Include="FluentAssertions" Version="4.19.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0" />
-    <PackageReference Include="NUnit" Version="3.8.1" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.8.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="1.1.2" />
-    <PackageReference Include="NSubstitute" Version="2.0.3" />
-    <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.3" />
+    <PackageReference Include="Assent" Version="1.2.1" />
+    <PackageReference Include="FluentAssertions" Version="4.19.4" />
+    <PackageReference Include="NSubstitute" Version="3.1.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
+    <PackageReference Include="NUnit" Version="3.9.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.9.0" />
+    <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.6" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(FrameworkFamily)' == 'NetFramework' ">
