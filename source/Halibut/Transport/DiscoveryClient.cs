@@ -12,7 +12,7 @@ namespace Halibut.Transport
     public class DiscoveryClient
     {
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
-        readonly LogFactory logs = new LogFactory();
+        readonly ILogFactory logs = LogFactoryContext.CurrentLogFactory;
 
         public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint)
         {
