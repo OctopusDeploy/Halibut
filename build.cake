@@ -2,6 +2,7 @@
 // TOOLS
 //////////////////////////////////////////////////////////////////////
 #tool "nuget:?package=GitVersion.CommandLine&version=4.0.0-beta0007"
+#tool "nuget:?package=gitlink"
 #addin "Cake.FileHelpers"
 
 //////////////////////////////////////////////////////////////////////
@@ -90,11 +91,14 @@ Task("Pack")
     .IsDependentOn("Test")
     .Does(() =>
 {
+    GitLink3("./source/Halibut/bin/Release/net45/Halibut.pdb");
+    GitLink3("./source/Halibut/bin/Release/netstandard1.5/Halibut.pdb");
     DotNetCorePack("./source/Halibut", new DotNetCorePackSettings
     {
         Configuration = configuration,
         OutputDirectory = artifactsDir,
         NoBuild = true,
+        IncludeSource = false,
         ArgumentCustomization = args => args.Append($"/p:Version={nugetVersion}")
     });
 
