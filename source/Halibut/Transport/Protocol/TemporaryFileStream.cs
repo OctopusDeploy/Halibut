@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.AccessControl;
 using System.Threading;
 
 namespace Halibut.Transport.Protocol
@@ -20,6 +21,13 @@ namespace Halibut.Transport.Protocol
 
             AttemptToDelete(filePath);
             File.Move(path, filePath);
+
+            //Update the permission on the file to match inherited permission of the new location.
+            var fileInfo = new FileInfo(filePath);
+            var fileSecurity = fileInfo.GetAccessControl();
+            fileSecurity.SetAccessRuleProtection(false, false);
+            fileInfo.SetAccessControl(fileSecurity);
+
             moved = true;
             GC.SuppressFinalize(this);
         }

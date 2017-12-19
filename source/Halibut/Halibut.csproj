@@ -37,6 +37,12 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.5'">
+    <PackageReference Include="System.IO.FileSystem.AccessControl">
+      <Version>4.4.0</Version>
+    </PackageReference>
+  </ItemGroup>
+
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
     <DefineConstants>$(DefineConstants);HAS_DISPATCH_PROXY;HAS_ASYNC_LOCAL;LIBLOG_PORTABLE</DefineConstants>
   </PropertyGroup>
