@@ -60,15 +60,12 @@ namespace Halibut.Transport
             // We are returning to 1 in Dec 2016 and will monitor. Are
             // we disposing a connection that is in use somehow? Adding the same connection
             // twice?
-#if NET40
             var generator = new ObjectIDGenerator();
-#endif
             while (connections.Count > 1)
             {
                 TPooledResource connection;
                 if (connections.TryTake(out connection))
                 {
-#if NET40
                     if (log != null)
                     {
                         bool firstTime;
@@ -78,7 +75,6 @@ namespace Halibut.Transport
                             log.Write(EventType.Error, "Duplicate connection found in conenction pool");
                         }
                     }
-#endif
                     connection.Dispose();
                 }
             }

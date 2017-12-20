@@ -25,10 +25,9 @@ namespace Halibut.Transport
 
     public class SecureListener : IDisposable
     {
-#if CAN_GET_SOCKET_HANDLE
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
-#endif
+
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
         readonly Func<MessageExchangeProtocol, Task> protocolHandler;
@@ -78,11 +77,12 @@ namespace Halibut.Transport
             }
             listener.Start();
 
-#if CAN_GET_SOCKET_HANDLE
-            // set socket handle as not inherited so that when tentacle runs powershell
-            // with System.Diagnostics.Process those scripts don't lock the socket
-            SetHandleInformation(listener.Server.Handle, HANDLE_FLAGS.INHERIT, HANDLE_FLAGS.None);
-#endif
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                // set socket handle as not inherited so that when tentacle runs powershell
+                // with System.Diagnostics.Process those scripts don't lock the socket
+                SetHandleInformation(listener.Server.Handle, HANDLE_FLAGS.INHERIT, HANDLE_FLAGS.None);
+            }
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
@@ -191,13 +191,8 @@ namespace Halibut.Transport
                     if (!keepStreamOpen)
                     {
                         // Closing an already closed stream or client is safe, better not to leak
-#if NET40
                         stream.Close();
                         client.Close();
-#else
-                        stream.Dispose();
-                        client.Dispose();
-#endif
                     }
                 }
             }

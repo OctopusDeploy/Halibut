@@ -51,6 +51,7 @@ namespace Halibut
         public int Listen() { }
         public int Listen(int port) { }
         public int Listen(IPEndPoint endpoint) { }
+        public void ListenWebSocket(string endpoint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint) { }
         public void RemoveTrust(string clientThumbprint) { }
         public void Route(Halibut.ServiceEndPoint to, Halibut.ServiceEndPoint via) { }
@@ -75,6 +76,7 @@ namespace Halibut
         public int Listen() { }
         public int Listen(int port) { }
         public int Listen(IPEndPoint endpoint) { }
+        public void ListenWebSocket(string endpoint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint) { }
         public void RemoveTrust(string clientThumbprint) { }
         public void Route(Halibut.ServiceEndPoint to, Halibut.ServiceEndPoint via) { }
@@ -355,6 +357,15 @@ namespace Halibut.Transport
         public void Dispose() { }
         public int Start() { }
     }
+    public class SecureWebSocketListener : IDisposable
+    {
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
+        public void Dispose() { }
+        public void Start() { }
+    }
     public static class TcpClientExtensions
     {
         public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout) { }
@@ -551,12 +562,6 @@ namespace Halibut.Transport.Proxy.Exceptions
         public ProxyException() { }
         public ProxyException(string message) { }
         public ProxyException(string message, Exception innerException) { }
-    }
-}
-namespace Halibut.Util.AsyncEx
-{
-    public static class TaskCompletionSourceExtensions
-    {
-        public static TaskCompletionSource<TResult> CreateAsyncTaskSource<TResult>() { }
+        protected ProxyException(SerializationInfo info, StreamingContext context) { }
     }
 }

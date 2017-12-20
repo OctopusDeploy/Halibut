@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization.Formatters;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading;
@@ -199,7 +197,7 @@ namespace Halibut.Transport.Protocol
             serializer.Formatting = Formatting.None;
             serializer.ContractResolver = new HalibutContractResolver();
             serializer.TypeNameHandling = TypeNameHandling.Auto;
-            serializer.TypeNameAssemblyFormat = FormatterAssemblyStyle.Simple;
+            serializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
             serializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
             return serializer;
         }
@@ -230,7 +228,7 @@ namespace Halibut.Transport.Protocol
         {
             using (var buffer = new BufferedStream(stream, 8192, true))
             using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
-            using (var bson = new BsonReader(zip) { CloseInput = false })
+            using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
                 return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
             }
@@ -289,7 +287,7 @@ namespace Halibut.Transport.Protocol
         {
             using (var buffer = new BufferedStream(stream, 4096, true))
             using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
-            using (var bson = new BsonWriter(zip) { CloseOutput = false })
+            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
                 bson.Flush();

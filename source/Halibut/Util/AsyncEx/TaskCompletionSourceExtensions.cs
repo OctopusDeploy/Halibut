@@ -1,5 +1,4 @@
-﻿#if NET40
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace Halibut.Util.AsyncEx
@@ -22,4 +21,3 @@ namespace Halibut.Util.AsyncEx
 
     }
 }
-#endif

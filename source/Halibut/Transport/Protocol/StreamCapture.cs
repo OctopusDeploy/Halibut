@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-#if HAS_ASYNC_LOCAL
-#else
+#if !HAS_ASYNC_LOCAL
 using System.Runtime.Remoting.Messaging;
 #endif
 

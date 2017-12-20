@@ -1,12 +1,10 @@
-﻿#if !NET40
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Halibut.Util.AsyncEx
 {
-
     /// <summary>
     /// An async-compatible manual-reset event.
     /// </summary>
@@ -17,14 +15,13 @@ namespace Halibut.Util.AsyncEx
         /// <summary>
         /// The object used for synchronization.
         /// </summary>
-        private readonly object _mutex;
+        private readonly object _sync;
 
         /// <summary>
         /// The current state of the event.
         /// </summary>
-        private TaskCompletionSource<object> _tcs;
+        private TaskCompletionSource _tcs;
 
-     
         [DebuggerNonUserCode]
         private bool GetStateForDebugger
         {
@@ -40,10 +37,17 @@ namespace Halibut.Util.AsyncEx
         /// <param name="set">Whether the manual-reset event is initially set or unset.</param>
         public AsyncManualResetEvent(bool set)
         {
-            _mutex = new object();
-            _tcs = TaskCompletionSourceExtensions.CreateAsyncTaskSource<object>();
+            _sync = new object();
+            _tcs = new TaskCompletionSource();
             if (set)
-                _tcs.TrySetResult(null);
+            {
+                //Enlightenment.Trace.AsyncManualResetEvent_Set(this, _tcs.Task);
+                _tcs.SetResult();
+            }
+            else
+            {
+                //Enlightenment.Trace.AsyncManualResetEvent_Reset(this, _tcs.Task);
+            }
         }
 
         /// <summary>
@@ -54,12 +58,14 @@ namespace Halibut.Util.AsyncEx
         {
         }
 
+      
+
         /// <summary>
         /// Whether this event is currently set. This member is seldom used; code using this member has a high possibility of race conditions.
         /// </summary>
         public bool IsSet
         {
-            get { lock (_mutex) return _tcs.Task.IsCompleted; }
+            get { lock (_sync) return _tcs.Task.IsCompleted; }
         }
 
         /// <summary>
@@ -67,22 +73,12 @@ namespace Halibut.Util.AsyncEx
         /// </summary>
         public Task WaitAsync()
         {
-            lock (_mutex)
+            lock (_sync)
             {
-                return _tcs.Task;
+                var ret = _tcs.Task;
+                //Enlightenment.Trace.AsyncManualResetEvent_Wait(this, ret);
+                return ret;
             }
-        }
-
-        /// <summary>
-        /// Asynchronously waits for this event to be set or for the wait to be canceled.
-        /// </summary>
-        /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this token is already canceled, this method will first check whether the event is set.</param>
-        public Task WaitAsync(CancellationToken cancellationToken)
-        {
-            var waitTask = WaitAsync();
-            if (waitTask.IsCompleted)
-                return waitTask;
-            return waitTask.WaitAsync(cancellationToken);
         }
 
         /// <summary>
@@ -90,7 +86,7 @@ namespace Halibut.Util.AsyncEx
         /// </summary>
         public void Wait()
         {
-            WaitAsync().WaitAndUnwrapException();
+            WaitAsync().Wait();
         }
 
         /// <summary>
@@ -102,17 +98,18 @@ namespace Halibut.Util.AsyncEx
             var ret = WaitAsync();
             if (ret.IsCompleted)
                 return;
-            ret.WaitAndUnwrapException(cancellationToken);
+            ret.Wait(cancellationToken);
         }
 
         /// <summary>
-        /// Sets the event, atomically completing every task returned by <see cref="O:Nito.AsyncEx.AsyncManualResetEvent.WaitAsync"/>. If the event is already set, this method does nothing.
+        /// Sets the event, atomically completing every task returned by <see cref="WaitAsync"/>. If the event is already set, this method does nothing.
         /// </summary>
         public void Set()
         {
-            lock (_mutex)
+            lock (_sync)
             {
-                _tcs.TrySetResult(null);
+                //Enlightenment.Trace.AsyncManualResetEvent_Set(this, _tcs.Task);
+                _tcs.TrySetResultWithBackgroundContinuations();
             }
         }
 
@@ -121,10 +118,11 @@ namespace Halibut.Util.AsyncEx
         /// </summary>
         public void Reset()
         {
-            lock (_mutex)
+            lock (_sync)
             {
                 if (_tcs.Task.IsCompleted)
-                    _tcs = TaskCompletionSourceExtensions.CreateAsyncTaskSource<object>();
+                    _tcs = new TaskCompletionSource();
+                //Enlightenment.Trace.AsyncManualResetEvent_Reset(this, _tcs.Task);
             }
         }
 
@@ -139,6 +137,7 @@ namespace Halibut.Util.AsyncEx
                 _mre = mre;
             }
 
+
             public bool IsSet { get { return _mre.GetStateForDebugger; } }
 
             public Task CurrentTask { get { return _mre._tcs.Task; } }
@@ -146,4 +145,3 @@ namespace Halibut.Util.AsyncEx
         // ReSharper restore UnusedMember.Local
     }
 }
-#endif
