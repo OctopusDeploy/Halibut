@@ -77,9 +77,12 @@ namespace Halibut.Transport
             }
             listener.Start();
 
-            // set socket handle as not inherited so that when tentacle runs powershell
-            // with System.Diagnostics.Process those scripts don't lock the socket
-            SetHandleInformation(listener.Server.Handle, HANDLE_FLAGS.INHERIT, HANDLE_FLAGS.None);
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                // set socket handle as not inherited so that when tentacle runs powershell
+                // with System.Diagnostics.Process those scripts don't lock the socket
+                SetHandleInformation(listener.Server.Handle, HANDLE_FLAGS.INHERIT, HANDLE_FLAGS.None);
+            }
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
