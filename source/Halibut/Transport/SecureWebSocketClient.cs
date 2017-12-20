@@ -1,4 +1,9 @@
-#if HAS_WEB_SOCKET_LISTENER
+// WebSocketClient on .NET Core does not yet support the validation (or bypass) of the remote certificate. It does
+// not use the ServicePointManager callback, nor has an option to specify a callback.
+// This means we cannot validate the remote is presenting the correct certificate
+// See https://github.com/dotnet/corefx/issues/12038
+
+#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -19,8 +24,7 @@ namespace Halibut.Transport
 {
     public class SecureWebSocketClient : ISecureClient
     {
-        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")]
-        public const int RetryCountLimit = 5;
+        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
@@ -47,7 +51,7 @@ namespace Halibut.Transport
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < HalibutLimits.RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
             {
-                if (i > 0) 
+                if (i > 0)
                 {
                     Thread.Sleep(retryInterval);
                     log.Write(EventType.Error, "Retry attempt {0}", i);
@@ -131,9 +135,9 @@ namespace Halibut.Transport
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
             var client = CreateConnectedClient(serviceEndpoint);
-            
+
             log.Write(EventType.Diagnostic, "Connection established");
-            
+
             var stream = new WebSocketStream(client);
 
             log.Write(EventType.Security, "Performing handshake");
@@ -147,7 +151,7 @@ namespace Halibut.Transport
 
         ClientWebSocket CreateConnectedClient(ServiceEndPoint endPoint)
         {
-            if(!endPoint.IsWebSocketEndpoint)
+            if (!endPoint.IsWebSocketEndpoint)
                 throw new Exception("Only wss:// endpoints are supported");
 
             var connectionId = Guid.NewGuid().ToString();
@@ -172,7 +176,7 @@ namespace Halibut.Transport
                 ServerCertificateInterceptor.Remove(connectionId);
             }
 
-            
+
             return client;
         }
 
@@ -207,9 +211,10 @@ namespace Halibut.Transport
             throw new HalibutClientException(error.ToString(), lastError);
         }
 
- class WebSocketProxy : IWebProxy
+        class WebSocketProxy : IWebProxy
         {
             readonly Uri uri;
+
             public WebSocketProxy(ProxyDetails proxy)
             {
                 if (proxy.Type != ProxyType.HTTP)

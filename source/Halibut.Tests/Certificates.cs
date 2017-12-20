@@ -19,11 +19,7 @@ namespace Halibut.Tests
         static Certificates()
         {
             //jump through hoops to find certs because the nunit test runner is messing with directories
-#if NET40
-                var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).Assembly.CodeBase).LocalPath), "Certificates");
-#else
-                var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).GetTypeInfo().Assembly.CodeBase).LocalPath), "Certificates");
-#endif
+            var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).Assembly.CodeBase).LocalPath), "Certificates");
             TentacleListening = new X509Certificate2(Path.Combine(directory, "TentacleListening.pfx"));
             TentacleListeningPublicThumbprint = TentacleListening.Thumbprint;
             Octopus = new X509Certificate2(Path.Combine(directory, "Octopus.pfx"));

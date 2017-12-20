@@ -1,4 +1,3 @@
-#if HAS_SERVICE_POINT_MANAGER
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -240,4 +239,3 @@ namespace Halibut.Transport
         }
     }
 }
-#endif

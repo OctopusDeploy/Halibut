@@ -32,9 +32,7 @@ namespace Halibut.Transport.Proxy.Exceptions
     /// <summary>
     /// This exception is thrown when a general, unexpected proxy error.   
     /// </summary>
-#if HAS_SERIALIZABLE_EXCEPTIONS
     [Serializable()]
-#endif
     public class ProxyException : Exception
     {
         /// <summary>
@@ -64,7 +62,6 @@ namespace Halibut.Transport.Proxy.Exceptions
         {
         }
 
-#if HAS_SERIALIZABLE_EXCEPTIONS
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -74,7 +71,6 @@ namespace Halibut.Transport.Proxy.Exceptions
             : base(info, context)
         {
         }
-#endif
     }
 
 }

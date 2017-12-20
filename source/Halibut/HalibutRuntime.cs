@@ -64,14 +64,13 @@ namespace Halibut
             listeners.Add(listener);
             return listener.Start();
         }
-#if HAS_WEB_SOCKET_LISTENER
+
         public void ListenWebSocket(string endpoint)
         {
             var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
             listeners.Add(listener);
             listener.Start();
         }
-#endif
 
         Task ListenerHandler(MessageExchangeProtocol obj)
         {
@@ -86,10 +85,10 @@ namespace Halibut
             var log = logs.ForEndpoint(endPoint.BaseUri);
             if (endPoint.IsWebSocketEndpoint)
             {
-#if HAS_SERVICE_POINT_MANAGER
+#if SUPPORTS_WEB_SOCKET_CLIENT
                 client = new SecureWebSocketClient(endPoint, serverCertificate, log, pool);
-#else
-                throw new NotImplementedException("Web Sockets are not available on this platform");
+#else 
+                throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
 #endif
             }
             else
@@ -217,10 +216,8 @@ namespace Halibut
             }
         }
 
-#if HAS_WEB_SOCKET_LISTENER
-        public static bool OSSupportsWebSockets => Environment.OSVersion.Version >= new Version(6, 2);
-#else
-        public static bool OSSupportsWebSockets => false;
-#endif
+        public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
+                                                    Environment.OSVersion.Version >= new Version(6, 2);
+
     }
 }

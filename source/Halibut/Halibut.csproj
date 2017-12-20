@@ -5,7 +5,7 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <VersionPrefix>0.0.0</VersionPrefix>
     <Authors>Octopus Deploy</Authors>
-    <TargetFrameworks>netstandard1.5;net45</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
     <AssemblyName>Halibut</AssemblyName>
     <PackageId>Halibut</PackageId>
     <PackageIconUrl>https://res.cloudinary.com/octopusdeploy/image/upload/v1422402724/halibut_f0zea8.png</PackageIconUrl>
@@ -18,31 +18,27 @@
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
-    <PackageReference Include="System.Reflection.DispatchProxy" Version="4.3.0" />
-    <PackageReference Include="System.Net.Security" Version="4.3.0" />
-    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-    <PackageReference Include="System.Net.WebSockets.Client" Version="4.3.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="1.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="1.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="1.0.2" />
-    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+    <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.4.1" />
+    <PackageReference Include="System.Reflection.DispatchProxy" Version="4.4.0" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <PackageReference Include="Newtonsoft.Json" Version="[7.0.1, )" />
     <Reference Include="System.Configuration" />
-    <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard1.5' ">
-    <DefineConstants>$(DefineConstants);HAS_DISPATCH_PROXY;HAS_ASYNC_LOCAL;LIBLOG_PORTABLE</DefineConstants>
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <DefineConstants>$(DefineConstants);HAS_ASYNC_LOCAL;LIBLOG_PORTABLE</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <DefineConstants>$(DefineConstants);NET40;HAS_REAL_PROXY;CAN_GET_SOCKET_HANDLE;HAS_SERIALIZABLE_EXCEPTIONS;HAS_WEB_SOCKET_LISTENER;HAS_SERVICE_POINT_MANAGER</DefineConstants>
+    <DefineConstants>$(DefineConstants);NET40;HAS_REAL_PROXY;SUPPORTS_WEB_SOCKET_CLIENT</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
