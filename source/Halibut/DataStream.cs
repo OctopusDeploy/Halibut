@@ -131,9 +131,9 @@ namespace Halibut
                 while (count > 0)
                 {
                     Swap(ref readBuffer, ref writeBuffer);
-                    var asyncResult = destination.WriteAsync(writeBuffer, 0, count);
+                    var asyncResult = destination.BeginWrite(writeBuffer, 0, count, null, null);
                     count = source.Read(readBuffer, 0, BufferSize);
-                    asyncResult.GetAwaiter().GetResult();
+                    destination.EndWrite(asyncResult);
 
                     copiedSoFar += count;
 
