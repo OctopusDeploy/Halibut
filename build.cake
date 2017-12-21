@@ -91,8 +91,12 @@ Task("Pack")
     .IsDependentOn("Test")
     .Does(() =>
 {
-    GitLink3("./source/Halibut/bin/Release/net45/Halibut.pdb");
-    GitLink3("./source/Halibut/bin/Release/netstandard1.5/Halibut.pdb");
+    var pdbs = GetFiles($"./source/Halibut/bin/{configuration}/**/Halibut.pdb");
+    foreach(var pdb in pdbs)
+    {
+        GitLink3(pdb);
+    }
+
     DotNetCorePack("./source/Halibut", new DotNetCorePackSettings
     {
         Configuration = configuration,

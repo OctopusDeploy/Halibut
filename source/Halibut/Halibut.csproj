@@ -12,6 +12,7 @@
     <PackageProjectUrl>https://github.com/OctopusDeploy/Halibut/</PackageProjectUrl>
     <PackageLicenseUrl>https://github.com/OctopusDeploy/Halibut/blob/master/LICENSE</PackageLicenseUrl>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <Optimize>True</Optimize>
@@ -40,16 +41,5 @@
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);NET40;HAS_REAL_PROXY;SUPPORTS_WEB_SOCKET_CLIENT</DefineConstants>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Include="$(OutputPath)\net45\Halibut.pdb">
-      <Pack>true</Pack>
-      <PackagePath>lib\net45\</PackagePath>
-    </Content>
-    <Content Include="$(OutputPath)\netstandard1.5\Halibut.pdb">
-      <Pack>true</Pack>
-      <PackagePath>lib\netstandard1.5\</PackagePath>
-    </Content>
-  </ItemGroup>
 
 </Project>
