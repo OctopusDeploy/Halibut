@@ -25,7 +25,7 @@ namespace Halibut.Transport.Protocol
             GC.SuppressFinalize(this);
         }
 
-        public void SetFilePermissionsToInheritFromParent(string filePath)
+        void SetFilePermissionsToInheritFromParent(string filePath)
         {
             var fileInfo = new FileInfo(filePath);
             var fileSecurity = fileInfo.GetAccessControl();
