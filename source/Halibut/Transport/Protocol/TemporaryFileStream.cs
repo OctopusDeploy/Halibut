@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.AccessControl;
 using System.Threading;
 
 namespace Halibut.Transport.Protocol
@@ -21,15 +20,20 @@ namespace Halibut.Transport.Protocol
 
             AttemptToDelete(filePath);
             File.Move(path, filePath);
-
-            //Update the permission on the file to match inherited permission of the new location.
-            var fileInfo = new FileInfo(filePath);
-            var fileSecurity = fileInfo.GetAccessControl();
-            fileSecurity.SetAccessRuleProtection(false, false);
-            fileInfo.SetAccessControl(fileSecurity);
-
+            SetFilePermissionsToInheritFromParent(filePath);
             moved = true;
             GC.SuppressFinalize(this);
+        }
+
+        public void SetFilePermissionsToInheritFromParent(string filePath)
+        {
+            var fileInfo = new FileInfo(filePath);
+            var fileSecurity = fileInfo.GetAccessControl();
+
+            //When isProtected (first param) is false, SetAccessRuleProtection changes the permissions of the file to allow inherited permissions. 
+            //preserveInheritance (second param) is ignored when isProtected is false.
+            fileSecurity.SetAccessRuleProtection(false, false);
+            fileInfo.SetAccessControl(fileSecurity);
         }
 
         public void Read(Action<Stream> reader)
