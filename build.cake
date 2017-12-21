@@ -92,7 +92,7 @@ Task("Pack")
     .Does(() =>
 {
     GitLink3("./source/Halibut/bin/Release/net45/Halibut.pdb");
-    GitLink3("./source/Halibut/bin/Release/netstandard1.5/Halibut.pdb");
+    GitLink3("./source/Halibut/bin/Release/netstandard2.0/Halibut.pdb");
     DotNetCorePack("./source/Halibut", new DotNetCorePackSettings
     {
         Configuration = configuration,
