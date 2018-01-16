@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
-    <DefineConstants>$(DefineConstants);HAS_ASYNC_LOCAL;LIBLOG_PORTABLE</DefineConstants>
+    <DefineConstants>$(DefineConstants);HAS_ASYNC_LOCAL;LIBLOG_PORTABLE;LIBLOG_PUBLIC</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
