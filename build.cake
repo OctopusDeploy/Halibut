@@ -119,18 +119,18 @@ Task("CopyToLocalPackages")
 });
 
 Task("Publish")
-    .IsDependentOn("CopyToLocalPackages")
+    .IsDependentOn("Pack")
     .WithCriteria(BuildSystem.IsRunningOnTeamCity)
     .Does(() =>
 {
-	NuGetPush($"{artifactsDir}/Halibut.{nugetVersion}.nupkg", new NuGetPushSettings {
+	NuGetPush($"{artifactsDir}Halibut.{nugetVersion}.nupkg", new NuGetPushSettings {
 		Source = "https://octopus.myget.org/F/octopus-dependencies/api/v3/index.json",
 		ApiKey = EnvironmentVariable("MyGetApiKey")
 	});
 
     if (gitVersionInfo.PreReleaseTag == "")
     {
-          NuGetPush($"{artifactsDir}/Halibut.{nugetVersion}.nupkg", new NuGetPushSettings {
+          NuGetPush($"{artifactsDir}Halibut.{nugetVersion}.nupkg", new NuGetPushSettings {
             Source = "https://www.nuget.org/api/v2/package",
             ApiKey = EnvironmentVariable("NuGetApiKey")
         });
@@ -138,6 +138,7 @@ Task("Publish")
 });
 
 Task("Default")
+    .IsDependentOn("CopyToLocalPackages")
     .IsDependentOn("Publish");
 
 //////////////////////////////////////////////////////////////////////
