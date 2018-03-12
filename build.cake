@@ -128,7 +128,7 @@ Task("Publish")
 		ApiKey = EnvironmentVariable("MyGetApiKey")
 	});
 
-    if (gitVersionInfo.PreReleaseTag == "")
+    if (gitVersionInfo.NuGetPreReleaseTag == "")
     {
           NuGetPush($"{artifactsDir}Halibut.{nugetVersion}.nupkg", new NuGetPushSettings {
             Source = "https://www.nuget.org/api/v2/package",
