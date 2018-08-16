@@ -9,6 +9,7 @@ namespace Halibut.Transport.Protocol
         void SendNext();
         void SendProceed();
         Task SendProceedAsync();
+        void SendEnd();
         bool ExpectNextOrEnd();
         Task<bool> ExpectNextOrEndAsync();
         void ExpectProceeed();

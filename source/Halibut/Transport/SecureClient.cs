@@ -18,23 +18,19 @@ namespace Halibut.Transport
         [Obsolete("Replaced by HalibutLimits.RetryCountLimit")]
         public const int RetryCountLimit = 5;
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
-        readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool;
 
         public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, IConnection> pool)
         {
-            this.serviceEndpoint = serviceEndpoint;
+            this.ServiceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
             this.log = log;
             this.pool = pool;
         }
 
-        public ServiceEndPoint ServiceEndpoint
-        {
-            get { return serviceEndpoint; }
-        }
+        public ServiceEndPoint ServiceEndpoint { get; }
 
         public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
         {
@@ -74,20 +70,20 @@ namespace Halibut.Transport
                 }
                 catch (AuthenticationException aex)
                 {
-                    log.WriteException(EventType.Error, $"Authentication failed while setting up connection to {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", aex);
+                    log.WriteException(EventType.Error, $"Authentication failed while setting up connection to {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())}", aex);
                     lastError = aex;
                     retryAllowed = false;
                     break;
                 }
                 catch (SocketException cex) when (cex.SocketErrorCode == SocketError.ConnectionRefused)
                 {
-                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
+                    log.Write(EventType.Error, $"The remote host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
                     lastError = cex;
                     Thread.Sleep(retryInterval);
                 }
                 catch (SocketException sex)
                 {
-                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", sex);
+                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())}", sex);
                     lastError = sex;
                     // When the host is not found an immediate retry isn't going to help
                     if (sex.SocketErrorCode == SocketError.HostNotFound)
@@ -97,7 +93,7 @@ namespace Halibut.Transport
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", cex);
+                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())}", cex);
                     lastError = cex;
                     retryAllowed = true;
 
@@ -105,21 +101,21 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        pool.Clear(serviceEndpoint, log);
+                        pool.Clear(ServiceEndpoint, log);
                     }
 
                     Thread.Sleep(retryInterval);
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionReset())
                 {
-                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
+                    log.Write(EventType.Error, $"The remote host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
                     lastError = iox;
                     Thread.Sleep(retryInterval);
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionTimeout())
                 {
                     // Received on a polling client when the network connection is lost.
-                    log.Write(EventType.Error, $"The connection to the host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} timed out, there may be problems with the network, connection will be retried.");
+                    log.Write(EventType.Error, $"The connection to the host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} timed out, there may be problems with the network, connection will be retried.");
                     lastError = iox;
                     Thread.Sleep(retryInterval);
                 }
@@ -136,7 +132,7 @@ namespace Halibut.Transport
 
         IConnection AcquireConnection()
         {
-            var connection = pool.Take(serviceEndpoint);
+            var connection = pool.Take(ServiceEndpoint);
             return connection ?? EstablishNewConnection();
         }
 
@@ -144,19 +140,19 @@ namespace Halibut.Transport
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
-            var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
-            var client = CreateConnectedTcpClient(serviceEndpoint);
+            var certificateValidator = new ClientCertificateValidator(ServiceEndpoint);
+            var client = CreateConnectedTcpClient(ServiceEndpoint);
             log.Write(EventType.Diagnostic, "Connection established");
 
             var stream = client.GetStream();
 
             log.Write(EventType.Security, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+            ssl.AuthenticateAsClient(ServiceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
 
-            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, ServiceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
 
             var protocol = new MessageExchangeProtocol(ssl, log);
             return new SecureConnection(client, ssl, protocol);
@@ -183,7 +179,7 @@ namespace Halibut.Transport
 
         void ReleaseConnection(IConnection connection)
         {
-            pool.Return(serviceEndpoint, connection);
+            pool.Return(ServiceEndpoint, connection);
         }
 
         void HandleError(Exception lastError, bool retryAllowed)
@@ -194,14 +190,14 @@ namespace Halibut.Transport
             lastError = lastError.UnpackFromContainers();
 
             var error = new StringBuilder();
-            error.Append("An error occurred when sending a request to '").Append(serviceEndpoint.BaseUri).Append("', ");
+            error.Append("An error occurred when sending a request to '").Append(ServiceEndpoint.BaseUri).Append("', ");
             error.Append(retryAllowed ? "before the request could begin: " : "after the request began: ");
             error.Append(lastError.Message);
 
             var inner = lastError as SocketException;
             if (inner != null)
             {
-                if ((inner.SocketErrorCode == SocketError.ConnectionAborted  || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
+                if ((inner.SocketErrorCode == SocketError.ConnectionAborted || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
                 {
                     error.Append("The server aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '");
                     error.Append(clientCertificate.Thumbprint + "'.");
@@ -215,9 +211,9 @@ namespace Halibut.Transport
         {
             var client = new TcpClient(AddressFamily.InterNetworkV6)
             {
-                SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
-                ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
-                Client = {DualMode = true}
+                SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
+                ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
+                Client = { DualMode = true }
             };
             return client;
         }

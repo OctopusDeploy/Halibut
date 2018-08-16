@@ -39,6 +39,7 @@ namespace Halibut.Transport
             try
             {
                 protocol.StopAcceptingClientRequests();
+                protocol.EndCommunicationWithServer();
                 stream.Dispose();
                 ((IDisposable)client).Dispose();
             }
