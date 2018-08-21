@@ -9,11 +9,12 @@ namespace Halibut.Diagnostics
     public class InMemoryConnectionLog : ILog
     {
         readonly string endpoint;
-        readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
-        
-        public InMemoryConnectionLog(string endpoint)
+        readonly LogEventStorage logEventStorage;
+
+        public InMemoryConnectionLog(string endpoint, LogEventStorage logEventStorage)
         {
             this.endpoint = endpoint;
+            this.logEventStorage = logEventStorage;
         }
 
         public void Write(EventType type, string message, params object[] args)
@@ -28,17 +29,14 @@ namespace Halibut.Diagnostics
 
         public IList<LogEvent> GetLogs()
         {
-            return events.ToArray();
+            return logEventStorage.GetLogs(endpoint);
         }
 
         void WriteInternal(LogEvent logEvent)
         {
             SendToTrace(logEvent, logEvent.Type == EventType.Diagnostic ? LogLevel.Trace : LogLevel.Info);
 
-            events.Enqueue(logEvent);
-
-            LogEvent ignore;
-            while (events.Count > 100 && events.TryDequeue(out ignore)) { }
+            logEventStorage.AddLog(endpoint, logEvent);
         }
 
         void SendToTrace(LogEvent logEvent, LogLevel level)

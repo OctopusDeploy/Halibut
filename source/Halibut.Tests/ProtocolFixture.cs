@@ -44,7 +44,7 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x", new LogEventStorage())));
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -86,7 +86,7 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x", new LogEventStorage())));
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -110,9 +110,9 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
-            
+
             protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
-            
+
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
@@ -344,7 +344,7 @@ namespace Halibut.Tests
                 numberOfReads = reads;
             }
 
-            public List<object> Sent { get; set; } 
+            public List<object> Sent { get; set; }
 
             public void IdentifyAsClient()
             {
@@ -407,8 +407,8 @@ namespace Halibut.Tests
 
             public T Receive<T>()
             {
-                output.AppendLine("<-- " + typeof(T).Name);     
-                return (T) (nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+                output.AppendLine("<-- " + typeof(T).Name);
+                return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
             }
 
             public override string ToString()

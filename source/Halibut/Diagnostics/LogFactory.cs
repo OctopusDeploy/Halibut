@@ -7,6 +7,7 @@ namespace Halibut.Diagnostics
 {
     public class LogFactory : ILogFactory
     {
+        readonly LogEventStorage logEventStorage = new LogEventStorage();
         readonly ConcurrentDictionary<string, InMemoryConnectionLog> events = new ConcurrentDictionary<string, InMemoryConnectionLog>();
         readonly HashSet<Uri> endpoints = new HashSet<Uri>();
         readonly HashSet<string> prefixes = new HashSet<string>();
@@ -28,14 +29,14 @@ namespace Halibut.Diagnostics
             endpoint = NormalizeEndpoint(endpoint);
             lock (endpoints)
                 endpoints.Add(endpoint);
-            return events.GetOrAdd(endpoint.ToString(), e => new InMemoryConnectionLog(endpoint.ToString()));
+            return events.GetOrAdd(endpoint.ToString(), e => new InMemoryConnectionLog(endpoint.ToString(), logEventStorage));
         }
 
         public ILog ForPrefix(string prefix)
         {
             lock (prefixes)
                 prefixes.Add(prefix);
-            return events.GetOrAdd(prefix, e => new InMemoryConnectionLog(prefix));
+            return events.GetOrAdd(prefix, e => new InMemoryConnectionLog(prefix, logEventStorage));
         }
 
         static Uri NormalizeEndpoint(Uri endpoint)

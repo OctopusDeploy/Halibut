@@ -9,13 +9,16 @@ namespace Halibut.Diagnostics
         {
             var settings = System.Configuration.ConfigurationManager.AppSettings;
 
-            var fields = typeof (HalibutLimits).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            var fields = typeof(HalibutLimits).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
             foreach (var field in fields)
             {
                 var value = settings.Get("Halibut." + field.Name);
                 if (string.IsNullOrWhiteSpace(value)) continue;
-                var time = TimeSpan.Parse(value);
-                field.SetValue(null, time);
+
+                if (TimeSpan.TryParse(value, out var time))
+                    field.SetValue(null, time);
+                else if (Int32.TryParse(value, out var number))
+                    field.SetValue(null, number);
             }
         }
 
@@ -31,6 +34,7 @@ namespace Halibut.Diagnostics
         public static TimeSpan TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan TcpClientConnectTimeout = TimeSpan.FromSeconds(60);
         public static TimeSpan PollingQueueWaitTimeout = TimeSpan.FromSeconds(30);
+        public static int LogStorageLimit = 5000;
 
         // After a client/server message exchange is complete, the client returns
         // the connection to the pool but the server continues to block and reads
