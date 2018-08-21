@@ -25,7 +25,7 @@ namespace Halibut.Tests
             var tentaclePort = tentacle.Listen();
             tentacle.Trust(Certificates.OctopusPublicThumbprint);
             endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-            log = new InMemoryConnectionLog(endpoint.ToString());
+            log = new InMemoryConnectionLog(endpoint.ToString(), new LogEventStorage());
             HalibutLimits.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
         }
 

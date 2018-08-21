@@ -138,6 +138,7 @@ namespace Halibut.Diagnostics
     public class HalibutLimits
     {
         public static TimeSpan ConnectionErrorRetryTimeout;
+        public static int LogStorageLimit;
         public static TimeSpan PollingQueueWaitTimeout;
         public static TimeSpan PollingRequestMaximumMessageProcessingTimeout;
         public static TimeSpan PollingRequestQueueTimeout;
@@ -167,7 +168,7 @@ namespace Halibut.Diagnostics
     }
     public class InMemoryConnectionLog : Halibut.Diagnostics.ILog
     {
-        public InMemoryConnectionLog(string endpoint) { }
+        public InMemoryConnectionLog(string endpoint, Halibut.Diagnostics.LogEventStorage logEventStorage) { }
         public IList<Halibut.Diagnostics.LogEvent> GetLogs() { }
         public void Write(Halibut.Diagnostics.EventType type, string message, Object[] args) { }
         public void WriteException(Halibut.Diagnostics.EventType type, string message, Exception ex, Object[] args) { }
@@ -182,6 +183,12 @@ namespace Halibut.Diagnostics
         public DateTimeOffset Time { get; }
         public Halibut.Diagnostics.EventType Type { get; }
         public string ToString() { }
+    }
+    public class LogEventStorage
+    {
+        public LogEventStorage() { }
+        public void AddLog(string endpoint, Halibut.Diagnostics.LogEvent logEvent) { }
+        public IList<Halibut.Diagnostics.LogEvent> GetLogs(string endpoint) { }
     }
     public class LogFactory : Halibut.Diagnostics.ILogFactory
     {
