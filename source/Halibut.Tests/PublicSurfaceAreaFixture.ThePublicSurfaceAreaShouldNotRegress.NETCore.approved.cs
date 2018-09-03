@@ -40,7 +40,7 @@ namespace Halibut
         public static string DefaultFriendlyHtmlPageContent;
         public HalibutRuntime(X509Certificate2 serverCertificate) { }
         public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate) { }
-        public Halibut.Diagnostics.LogFactory Logs { get; }
+        public Halibut.Diagnostics.ILogFactory Logs { get; }
         public static bool OSSupportsWebSockets { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
@@ -67,7 +67,7 @@ namespace Halibut
     }
     public interface IHalibutRuntime : IDisposable
     {
-        public Halibut.Diagnostics.LogFactory Logs { get; }
+        public Halibut.Diagnostics.ILogFactory Logs { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
@@ -165,18 +165,10 @@ namespace Halibut.Diagnostics
         public Uri[] GetEndpoints() { }
         public String[] GetPrefixes() { }
     }
-    public class InMemoryConnectionLog : Halibut.Diagnostics.ILog
-    {
-        public InMemoryConnectionLog(string endpoint) { }
-        public IList<Halibut.Diagnostics.LogEvent> GetLogs() { }
-        public void Write(Halibut.Diagnostics.EventType type, string message, Object[] args) { }
-        public void WriteException(Halibut.Diagnostics.EventType type, string message, Exception ex, Object[] args) { }
-    }
     public class LogEvent
     {
         public LogEvent(Halibut.Diagnostics.EventType type, string message, Exception error, Object[] formatArguments) { }
         public Exception Error { get; }
-        public Object[] FormatArguments { get; }
         public string FormattedMessage { get; }
         public string Message { get; }
         public DateTimeOffset Time { get; }
