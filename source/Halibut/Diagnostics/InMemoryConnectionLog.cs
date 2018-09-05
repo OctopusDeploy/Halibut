@@ -6,11 +6,11 @@ using Halibut.Logging;
 
 namespace Halibut.Diagnostics
 {
-    public class InMemoryConnectionLog : ILog
+    internal class InMemoryConnectionLog : ILog
     {
         readonly string endpoint;
         readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
-        
+
         public InMemoryConnectionLog(string endpoint)
         {
             this.endpoint = endpoint;

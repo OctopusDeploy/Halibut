@@ -38,7 +38,7 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
         }
 
-        public LogFactory Logs
+        public ILogFactory Logs
         {
             get { return logs; }
         }
@@ -87,7 +87,7 @@ namespace Halibut
             {
 #if SUPPORTS_WEB_SOCKET_CLIENT
                 client = new SecureWebSocketClient(endPoint, serverCertificate, log, pool);
-#else 
+#else
                 throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
 #endif
             }
@@ -180,7 +180,7 @@ namespace Halibut
             lock (trustedThumbprints)
             {
                 trustedThumbprints.Clear();
-                foreach(var thumbprint in thumbprints)
+                foreach (var thumbprint in thumbprints)
                     trustedThumbprints.Add(thumbprint);
             }
         }
