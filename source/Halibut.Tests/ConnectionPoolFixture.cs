@@ -48,12 +48,27 @@ namespace Halibut.Tests
             pool.Take("http://foo").Should().Be(connection);
             pool.Return("http://foo", connection);
             connection.UsageCount.Should().Be(2);
-            
+
             pool.Take("http://foo").Should().Be(connection);
             pool.Return("http://foo", connection);
             connection.UsageCount.Should().Be(3);
 
             pool.Take("http://foo").Should().BeNull();
+        }
+
+        [Test]
+        public void ShouldNotAllowMultipleReturnsOfSameConnection()
+        {
+            var pool = new ConnectionPool<string, Connection>();
+            var connection = new Connection();
+
+            pool.GetTotalConnectionCount().Should().Be(0);
+
+            pool.Return("http://foo", connection);
+            pool.GetTotalConnectionCount().Should().Be(1);
+
+            pool.Return("http://foo", connection);
+            pool.GetTotalConnectionCount().Should().Be(1);
         }
 
         class Connection : IPooledResource

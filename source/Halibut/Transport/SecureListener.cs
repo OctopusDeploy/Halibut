@@ -52,7 +52,7 @@ namespace Halibut.Transport
         }
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
         {
         }
 
@@ -86,7 +86,7 @@ namespace Halibut.Transport
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(async () => await Accept());
+            Task.Run(Accept);
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
@@ -182,6 +182,14 @@ namespace Halibut.Transport
                 {
                     log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
                 }
+                catch (IOException ex) when (ex.InnerException is SocketException)
+                {
+                    log.WriteException(EventType.Error, "Socket IO exception: {0}", ex.InnerException, clientName);
+                }
+                catch (SocketException ex)
+                {
+                    log.WriteException(EventType.Error, "Socket exception: {0}", ex, clientName);
+                }
                 catch (Exception ex)
                 {
                     log.WriteException(EventType.Error, "Unhandled error when handling request from client: {0}", ex, clientName);
@@ -210,7 +218,7 @@ namespace Halibut.Transport
                 writer.WriteLine("HTTP/1.0 200 OK");
                 writer.WriteLine("Content-Type: text/html; charset=utf-8");
                 writer.WriteLine("Content-Length: " + message.Length);
-                foreach(var header in headers)
+                foreach (var header in headers)
                     writer.WriteLine($"{header.Key}: {header.Value}");
                 writer.WriteLine();
                 writer.WriteLine(message);

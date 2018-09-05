@@ -396,6 +396,7 @@ namespace Halibut.Transport.Protocol
         public Halibut.Transport.Protocol.RemoteIdentity ReadRemoteIdentity() { }
         public T Receive<T>() { }
         public void Send<T>(T message) { }
+        public void SendEnd() { }
         public void SendNext() { }
         public void SendProceed() { }
         public Task SendProceedAsync() { }
@@ -410,6 +411,7 @@ namespace Halibut.Transport.Protocol
     {
         public MessageExchangeProtocol(Stream stream, Halibut.Diagnostics.ILog log) { }
         public MessageExchangeProtocol(Halibut.Transport.Protocol.IMessageExchangeStream stream) { }
+        public void EndCommunicationWithServer() { }
         public Halibut.Transport.Protocol.ResponseMessage ExchangeAsClient(Halibut.Transport.Protocol.RequestMessage request) { }
         public void ExchangeAsServer(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> incomingRequestProcessor, Func<Halibut.Transport.Protocol.RemoteIdentity, Halibut.ServiceModel.IPendingRequestQueue> pendingRequests) { }
         public Task ExchangeAsServerAsync(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> incomingRequestProcessor, Func<Halibut.Transport.Protocol.RemoteIdentity, Halibut.ServiceModel.IPendingRequestQueue> pendingRequests) { }
@@ -429,6 +431,7 @@ namespace Halibut.Transport.Protocol
         public Halibut.Transport.Protocol.RemoteIdentity ReadRemoteIdentity() { }
         public T Receive<T>() { }
         public void Send<T>(T message) { }
+        public void SendEnd() { }
         public void SendNext() { }
         public void SendProceed() { }
         public Task SendProceedAsync() { }

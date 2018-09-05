@@ -8,7 +8,7 @@ using Halibut.ServiceModel;
 namespace Halibut.Transport.Protocol
 {
     /// <summary>
-    /// Implements the core message exchange protocol for both the client and server. 
+    /// Implements the core message exchange protocol for both the client and server.
     /// </summary>
     public class MessageExchangeProtocol
     {
@@ -39,6 +39,11 @@ namespace Halibut.Transport.Protocol
         public void StopAcceptingClientRequests()
         {
             acceptClientRequests = false;
+        }
+
+        public void EndCommunicationWithServer()
+        {
+            stream.SendEnd();
         }
 
         void PrepareExchangeAsClient()

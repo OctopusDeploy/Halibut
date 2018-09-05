@@ -69,6 +69,15 @@ namespace Halibut.Transport.Protocol
             await streamWriter.FlushAsync();
         }
 
+        public void SendEnd()
+        {
+            SetShortTimeouts();
+            streamWriter.Write("END");
+            streamWriter.WriteLine();
+            streamWriter.Flush();
+            SetNormalTimeouts();
+        }
+
         public bool ExpectNextOrEnd()
         {
             var line = ReadLine();
@@ -259,7 +268,7 @@ namespace Halibut.Transport.Protocol
 
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
-        
+
         static TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
@@ -321,8 +330,8 @@ namespace Halibut.Transport.Protocol
             if (!stream.CanTimeout)
                 return;
 
-            stream.WriteTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+            stream.WriteTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
         }
 
         void SetShortTimeouts()
