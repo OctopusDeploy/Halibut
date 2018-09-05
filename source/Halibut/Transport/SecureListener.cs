@@ -113,7 +113,7 @@ namespace Halibut.Transport
                     {
                         log.WriteException(EventType.Error, "Error accepting TCP client", ex);
                         // Slow down the logs in case an exception is immediately encountered each AcceptTcpClientAsync
-                        await Task.Delay(1000);
+                        Thread.Sleep(1000);
                     }
                 }
             }
