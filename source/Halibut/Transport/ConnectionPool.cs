@@ -63,6 +63,8 @@ namespace Halibut.Transport
                 {
                     DestroyConnection(connection, log);
                 }
+
+                connections.Clear();
             }
         }
 

@@ -296,7 +296,7 @@ namespace Halibut.Transport
         public void Clear(TKey key, Halibut.Diagnostics.ILog log) { }
         public void Dispose() { }
         public int GetTotalConnectionCount() { }
-        public void Return(TKey key, TPooledResource resource) { }
+        public void Return(TKey endPoint, TPooledResource resource) { }
         public TPooledResource Take(TKey endPoint) { }
     }
     public class DiscoveryClient
