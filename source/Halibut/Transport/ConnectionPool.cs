@@ -1,89 +1,114 @@
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Runtime.Serialization;
 using Halibut.Diagnostics;
-using Halibut.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Halibut.Transport
 {
     public class ConnectionPool<TKey, TPooledResource>
         where TPooledResource : class, IPooledResource
     {
-        readonly ConcurrentDictionary<TKey, ConcurrentDictionary<TPooledResource, byte>> pool = new ConcurrentDictionary<TKey, ConcurrentDictionary<TPooledResource, byte>>();
+        readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new Dictionary<TKey, HashSet<TPooledResource>>();
 
         public int GetTotalConnectionCount()
         {
-            return pool.Values.Sum(v => v.Count);
+            lock (pool)
+            {
+                return pool.Values.Sum(v => v.Count);
+            }
         }
 
         public TPooledResource Take(TKey endPoint)
         {
-            while (true)
+            lock (pool)
             {
-                var connections = pool.GetOrAdd(endPoint, i => new ConcurrentDictionary<TPooledResource, byte>());
-                AtomicTake(connections, out var connection);
+                var connections = GetOrAdd(endPoint);
 
-                if (connection == null || !connection.HasExpired())
-                    return connection;
-
-                connection.Dispose();
-            }
-        }
-
-
-
-        public void Return(TKey key, TPooledResource resource)
-        {
-            var resources = pool.GetOrAdd(key, i => new ConcurrentDictionary<TPooledResource, byte>());
-            resources.TryAdd(resource, 0);
-            resource.NotifyUsed();
-
-            while (resources.Count > 5)
-            {
-                if (AtomicTake(resources, out var dispose))
+                while (true)
                 {
-                    dispose.Dispose();
+                    var connection = Take(connections);
+
+                    if (connection == null || !connection.HasExpired())
+                        return connection;
+
+                    DestroyConnection(connection, null);
                 }
             }
         }
 
-        public void Clear(TKey key, Diagnostics.ILog log = null)
+        public void Return(TKey endPoint, TPooledResource resource)
         {
-            if (!pool.TryRemove(key, out var connections))
-                return;
-
-            foreach (var connection in connections.Keys)
+            lock (pool)
             {
-                connection.Dispose();
+                var connections = GetOrAdd(endPoint);
+                connections.Add(resource);
+                resource.NotifyUsed();
+
+                while (connections.Count > 5)
+                {
+                    var connection = Take(connections);
+                    DestroyConnection(connection, null);
+                }
+            }
+        }
+
+        public void Clear(TKey key, ILog log = null)
+        {
+            lock (pool)
+            {
+                if (!pool.TryGetValue(key, out var connections))
+                    return;
+
+                foreach (var connection in connections)
+                {
+                    DestroyConnection(connection, log);
+                }
             }
         }
 
         public void Dispose()
         {
-            foreach (var key in pool.Keys)
+            lock (pool)
             {
-                Clear(key);
+                foreach (var connection in pool.SelectMany(kv => kv.Value))
+                {
+                    DestroyConnection(connection, null);
+                }
+
+                pool.Clear();
             }
         }
 
-        private bool AtomicTake(ConcurrentDictionary<TPooledResource, byte> connections, out TPooledResource resource)
+        private TPooledResource Take(HashSet<TPooledResource> connections)
         {
-            lock (connections)
-            {
-                resource = null;
-                if (connections.Count == 0)
-                {
-                    return false;
-                }
+            if (connections.Count == 0)
+                return null;
 
-                var key = connections.Keys.First();
-                var result = connections.TryRemove(key, out var ignore);
-                if (result)
-                {
-                    resource = key;
-                }
-                return result;
+            var connection = connections.First();
+            connections.Remove(connection);
+            return connection;
+        }
+
+        private HashSet<TPooledResource> GetOrAdd(TKey endPoint)
+        {
+            if (!pool.TryGetValue(endPoint, out var connections))
+            {
+                connections = new HashSet<TPooledResource>();
+                pool.Add(endPoint, connections);
+            }
+
+            return connections;
+        }
+
+        private void DestroyConnection(TPooledResource connection, ILog log)
+        {
+            try
+            {
+                connection?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                log?.WriteException(EventType.Error, "Exception disposing connection from pool", ex);
             }
         }
     }
