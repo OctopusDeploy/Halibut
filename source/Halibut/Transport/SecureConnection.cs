@@ -39,7 +39,14 @@ namespace Halibut.Transport
             try
             {
                 protocol.StopAcceptingClientRequests();
-                protocol.EndCommunicationWithServer();
+                try
+                {
+                    protocol.EndCommunicationWithServer();
+                }
+                catch (IOException ioe) when ((ioe.InnerException as SocketException) != null)
+                {
+                    // The stream might have already disconnected, so don't worry about it.
+                }
                 stream.Dispose();
                 ((IDisposable)client).Dispose();
             }
