@@ -26,7 +26,7 @@ namespace Halibut.Transport.Protocol
         {
             this.stream = stream;
             this.log = log;
-            streamWriter = new StreamWriter(stream, new UTF8Encoding(false));
+            streamWriter = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             streamReader = new StreamReader(stream, new UTF8Encoding(false));
             serializer = Serializer();
             SetNormalTimeouts();
