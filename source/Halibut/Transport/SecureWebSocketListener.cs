@@ -182,7 +182,7 @@ namespace Halibut.Transport
 
             // This could fail if the client terminates the connection and we attempt to write to it
             // Disposing the StreamWriter will close the stream - it owns the stream
-            using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)))
+            using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)){ NewLine = "\r\n" })
             {
                 writer.WriteLine(message);
                 writer.Flush();

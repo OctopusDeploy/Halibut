@@ -52,6 +52,9 @@ ipch/
 # VS Code
 .vscode
 
+# Rider
+.idea
+
 # Guidance Automation Toolkit
 *.gpState
 
