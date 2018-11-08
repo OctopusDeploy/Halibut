@@ -33,7 +33,12 @@ namespace Halibut.Diagnostics
 
         void WriteInternal(LogEvent logEvent)
         {
-            SendToTrace(logEvent, logEvent.Type == EventType.Diagnostic ? LogLevel.Trace : LogLevel.Info);
+            var logLevel = logEvent.Type == EventType.Diagnostic ||
+                           logEvent.Type == EventType.SecurityNegotiation ||
+                           logEvent.Type == EventType.MessageExchange
+                ? LogLevel.Trace 
+                : LogLevel.Info;
+            SendToTrace(logEvent, logLevel);
 
             events.Enqueue(logEvent);
 

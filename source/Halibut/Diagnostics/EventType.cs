@@ -6,6 +6,7 @@ namespace Halibut.Diagnostics
     {
         OpeningNewConnection,
         UsingExistingConnectionFromPool,
+        SecurityNegotiation,
         Security,
         MessageExchange,
         Diagnostic,
