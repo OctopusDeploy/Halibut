@@ -120,7 +120,7 @@ namespace Halibut.Transport
                         {
                             var millisecondsTimeout = Math.Max(0, Math.Min(numberOfFailedAttemptsInRow - 3, 100)) * 10;
                             log.Write(
-                                EventType.Diagnostic,
+                                EventType.Error,
                                 $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
                             );
                             Thread.Sleep(millisecondsTimeout);
