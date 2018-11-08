@@ -97,6 +97,7 @@ namespace Halibut.Transport
 
         void Accept()
         {
+            var numberOfFailedAttemptsInRow = 0;
             using (cts.Token.Register(listener.Stop))
             {
                 while (!cts.IsCancellationRequested)
@@ -107,6 +108,7 @@ namespace Halibut.Transport
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                         HandleClient(client);
 #pragma warning restore CS4014
+                        numberOfFailedAttemptsInRow = 0;
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
@@ -116,9 +118,18 @@ namespace Halibut.Transport
                     }
                     catch (Exception ex)
                     {
-                        log.WriteException(EventType.Error, "Error accepting TCP client", ex);
-                        // Slow down the logs in case an exception is immediately encountered each AcceptTcpClientAsync
-                        Thread.Sleep(1000);
+                        numberOfFailedAttemptsInRow++;
+                        log.WriteException(EventType.Error, $"Error accepting TCP client", ex);
+                        // Slow down the logs in case an exception is immediately encountered after 3 failed AcceptTcpClientAsync calls
+                        if (numberOfFailedAttemptsInRow >= 3)
+                        {
+                            var millisecondsTimeout = Math.Max(0, Math.Min(numberOfFailedAttemptsInRow - 3, 100)) * 10;
+                            log.Write(
+                                EventType.Error,
+                                $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
+                            );
+                            Thread.Sleep(millisecondsTimeout);
+                        }
                     }
                 }
             }
@@ -155,10 +166,10 @@ namespace Halibut.Transport
             {
                 try
                 {
-                    log.Write(EventType.Security, "Performing TLS server handshake");
+                    log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
                     await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 
-                    log.Write(EventType.Security, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
+                    log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
                     var req = ReadInitialRequest(ssl);
                     if (string.IsNullOrEmpty(req))

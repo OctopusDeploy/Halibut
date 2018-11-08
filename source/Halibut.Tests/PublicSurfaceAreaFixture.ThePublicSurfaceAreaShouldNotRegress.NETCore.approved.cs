@@ -126,7 +126,8 @@ namespace Halibut.Diagnostics
         Error = 6,
         ListenerStarted = 7,
         ListenerAcceptedClient = 8,
-        ListenerStopped = 9
+        ListenerStopped = 9,
+        SecurityNegotiation = 10
     }
     public static class ExceptionExtensions
     {
