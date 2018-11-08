@@ -146,7 +146,7 @@ namespace Halibut.Transport
 
             var stream = client.GetStream();
 
-            log.Write(EventType.Security, "Performing TLS handshake");
+            log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
             ssl.AuthenticateAsClient(ServiceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
             ssl.Write(MxLine, 0, MxLine.Length);

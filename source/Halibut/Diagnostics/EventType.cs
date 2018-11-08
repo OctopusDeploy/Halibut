@@ -13,6 +13,7 @@ namespace Halibut.Diagnostics
         Error,
         ListenerStarted,
         ListenerAcceptedClient,
-        ListenerStopped
+        ListenerStopped,
+        SecurityNegotiation
     }
 }
