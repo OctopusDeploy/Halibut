@@ -86,19 +86,24 @@ namespace Halibut.Transport
 
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(Accept);
-            return ((IPEndPoint)listener.LocalEndpoint).Port;
+
+            new Thread(Accept)
+            {
+                Name = "Accept connections on " + listener.LocalEndpoint
+            }.Start();
+
+            return ((IPEndPoint) listener.LocalEndpoint).Port;
         }
 
-        async Task Accept()
+        void Accept()
         {
-            while (!cts.IsCancellationRequested)
+            using (cts.Token.Register(listener.Stop))
             {
-                using (cts.Token.Register(listener.Stop))
+                while (!cts.IsCancellationRequested)
                 {
                     try
                     {
-                        var client = await listener.AcceptTcpClientAsync();
+                        var client = listener.AcceptTcpClient();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                         HandleClient(client);
 #pragma warning restore CS4014
@@ -123,8 +128,8 @@ namespace Halibut.Transport
         {
             try
             {
-                client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                client.SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
                 await ExecuteRequest(client);
@@ -213,7 +218,7 @@ namespace Halibut.Transport
 
             // This could fail if the client terminates the connection and we attempt to write to it
             // Disposing the StreamWriter will close the stream - it owns the stream
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)){ NewLine="\r\n" })
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) {NewLine = "\r\n"})
             {
                 writer.WriteLine("HTTP/1.0 200 OK");
                 writer.WriteLine("Content-Type: text/html; charset=utf-8");
@@ -283,7 +288,7 @@ namespace Halibut.Transport
                 var b = stream.ReadByte();
                 if (b == -1) return builder.ToString();
 
-                var c = (char)b;
+                var c = (char) b;
                 if (c == '\r')
                 {
                     continue;
