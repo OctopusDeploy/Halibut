@@ -6,7 +6,6 @@ namespace Halibut.Diagnostics
     {
         OpeningNewConnection,
         UsingExistingConnectionFromPool,
-        SecurityNegotiation,
         Security,
         MessageExchange,
         Diagnostic,
@@ -14,6 +13,7 @@ namespace Halibut.Diagnostics
         Error,
         ListenerStarted,
         ListenerAcceptedClient,
-        ListenerStopped
+        ListenerStopped,
+        SecurityNegotiation
     }
 }
