@@ -10,7 +10,7 @@
     <PackageId>Halibut</PackageId>
     <PackageIconUrl>https://res.cloudinary.com/octopusdeploy/image/upload/v1422402724/halibut_f0zea8.png</PackageIconUrl>
     <PackageProjectUrl>https://github.com/OctopusDeploy/Halibut/</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/OctopusDeploy/Halibut/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageLicenseUrl>https://github.com/OctopusDeploy/Halibut/blob/master/LICENSE.txt</PackageLicenseUrl>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
