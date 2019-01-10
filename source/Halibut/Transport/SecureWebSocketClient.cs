@@ -40,7 +40,7 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
 
-        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
+        public void ExecuteTransaction(Func<MessageExchangeProtocol, bool> protocolHandler)
         {
             var retryInterval = HalibutLimits.RetryListeningSleepInterval;
 
@@ -61,6 +61,7 @@ namespace Halibut.Transport
                 {
                     lastError = null;
 
+                    var keepConnection = false;
                     IConnection connection = null;
                     try
                     {
@@ -69,16 +70,15 @@ namespace Halibut.Transport
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
 
-                        protocolHandler(connection.Protocol);
+                        keepConnection = protocolHandler(connection.Protocol);
                     }
-                    catch
+                    finally 
                     {
-                        connection?.Dispose();
-                        throw;
+                        if(keepConnection)
+                            ReleaseConnection(connection);
+                        else
+                            connection?.Dispose();
                     }
-
-                    // Only return the connection to the pool if all went well
-                    ReleaseConnection(connection);
                 }
                 catch (AuthenticationException aex)
                 {

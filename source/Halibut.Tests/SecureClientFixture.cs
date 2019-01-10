@@ -57,7 +57,11 @@ namespace Halibut.Tests
 
             var secureClient = new SecureClient(endpoint, Certificates.Octopus, log, pool);
             ResponseMessage response = null;
-            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
+            secureClient.ExecuteTransaction((mep) =>
+            {
+                response = mep.ExchangeAsClient(request);
+                return true;
+            });
 
             // The pool should be cleared after the second failure
             stream.Received(2).IdentifyAsClient();

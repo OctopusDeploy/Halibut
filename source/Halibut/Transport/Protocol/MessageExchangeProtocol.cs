@@ -16,6 +16,7 @@ namespace Halibut.Transport.Protocol
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
+        volatile bool stopExchangeAsSubscriberOnceNoMessagesAreLeft;
 
         public MessageExchangeProtocol(Stream stream, ILog log)
         {
@@ -26,6 +27,12 @@ namespace Halibut.Transport.Protocol
         public MessageExchangeProtocol(IMessageExchangeStream stream)
         {
             this.stream = stream;
+        }
+
+        public bool StopExchangeAsSubscriberOnceNoMessagesAreLeft
+        {
+            get { return stopExchangeAsSubscriberOnceNoMessagesAreLeft; }
+            set { stopExchangeAsSubscriberOnceNoMessagesAreLeft = value; }
         }
 
         public ResponseMessage ExchangeAsClient(RequestMessage request)
@@ -67,7 +74,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public void ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, int maxAttempts = int.MaxValue)
+        public bool ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Action longTransferCallback, int maxAttempts = int.MaxValue)
         {
             if (!identified)
             {
@@ -77,21 +84,33 @@ namespace Halibut.Transport.Protocol
 
             for (var i = 0; i < maxAttempts; i++)
             {
-                ReceiveAndProcessRequest(stream, incomingRequestProcessor);
+                var stopExchange = ReceiveAndProcessRequest(incomingRequestProcessor, longTransferCallback);
+                if (stopExchange)
+                    return false;
             }
+
+            return true;
         }
 
-        static void ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        bool ReceiveAndProcessRequest(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Action longTransferCallback)
         {
-            var request = stream.Receive<RequestMessage>();
+            var request = stream.Receive<RequestMessage>(longTransferCallback);
             if (request != null)
             {
                 var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
                 stream.Send(response);
             }
 
-            stream.SendNext();
-            stream.ExpectProceeed();
+            var stopExchange = request == null && stopExchangeAsSubscriberOnceNoMessagesAreLeft;
+
+            if (!stopExchange)
+            {
+                stream.SendNext();
+                stream.ExpectProceeed();
+            }
+            // The END is sent when this connection is disposed in the Secure*Client 
+            
+            return stopExchange;
         }
 
         public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)

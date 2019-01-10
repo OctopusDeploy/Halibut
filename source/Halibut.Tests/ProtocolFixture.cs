@@ -111,7 +111,7 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), () => { }, 5);
 
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
@@ -192,11 +192,11 @@ namespace Halibut.Tests
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), () => { }, 5);
 
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), () => { }, 5);
 
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
@@ -410,10 +410,10 @@ namespace Halibut.Tests
                 Sent.Add(message);
             }
 
-            public T Receive<T>()
+            public T Receive<T>(Action longTransferCallback = null)
             {
                 output.AppendLine("<-- " + typeof(T).Name);
-                return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+                return (T) (nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
             }
 
             public override string ToString()

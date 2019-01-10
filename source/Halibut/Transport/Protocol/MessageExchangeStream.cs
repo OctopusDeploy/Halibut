@@ -189,12 +189,15 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public T Receive<T>()
+        public T Receive<T>(Action longTransferCallback = null)
         {
             using (var capture = StreamCapture.New())
             {
                 var result = ReadBsonMessage<T>();
-                ReadStreams(capture);
+                
+                using(longTransferCallback == null ? null : new Timer(_ => longTransferCallback(), null, TimeSpan.FromSeconds(5), TimeSpan.Zero))
+                    ReadStreams(capture);
+                
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
             }
