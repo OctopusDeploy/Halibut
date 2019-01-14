@@ -103,9 +103,15 @@ namespace Halibut
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint) { }
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint, Halibut.ProxyDetails proxy) { }
         public Uri BaseUri { get; }
+        public TimeSpan ConnectionErrorRetryTimeout { get; set; }
         public bool IsWebSocketEndpoint { get; }
+        public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; }
+        public TimeSpan PollingRequestQueueTimeout { get; set; }
         public Halibut.ProxyDetails Proxy { get; }
         public string RemoteThumbprint { get; }
+        public int RetryCountLimit { get; set; }
+        public TimeSpan RetryListeningSleepInterval { get; set; }
+        public TimeSpan TcpClientConnectTimeout { get; set; }
         public bool Equals(Halibut.ServiceEndPoint other) { }
         public bool Equals(Object obj) { }
         public int GetHashCode() { }
