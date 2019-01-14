@@ -42,14 +42,14 @@ namespace Halibut.Transport
 
         public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
         {
-            var retryInterval = HalibutLimits.RetryListeningSleepInterval;
+            var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
 
             Exception lastError = null;
 
             // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
             var watch = Stopwatch.StartNew();
-            for (var i = 0; i < HalibutLimits.RetryCountLimit && retryAllowed && watch.Elapsed < HalibutLimits.ConnectionErrorRetryTimeout; i++)
+            for (var i = 0; i < ServiceEndpoint.RetryCountLimit && retryAllowed && watch.Elapsed < ServiceEndpoint.ConnectionErrorRetryTimeout; i++)
             {
                 if (i > 0)
                 {
@@ -166,7 +166,7 @@ namespace Halibut.Transport
             try
             {
                 ServerCertificateInterceptor.Expect(connectionId);
-                using (var cts = new CancellationTokenSource(HalibutLimits.TcpClientConnectTimeout))
+                using (var cts = new CancellationTokenSource(endPoint.TcpClientConnectTimeout))
                     client.ConnectAsync(endPoint.BaseUri, cts.Token)
                         .ConfigureAwait(false).GetAwaiter().GetResult();
                 ServerCertificateInterceptor.Validate(connectionId, endPoint);

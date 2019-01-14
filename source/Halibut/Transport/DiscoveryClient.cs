@@ -53,7 +53,7 @@ namespace Halibut.Transport
             if (endPoint.Proxy == null)
             {
                 client = CreateTcpClient();
-                client.ConnectWithTimeout(endPoint.BaseUri, HalibutLimits.TcpClientConnectTimeout);
+                client.ConnectWithTimeout(endPoint.BaseUri, endPoint.TcpClientConnectTimeout);
             }
             else
             {
@@ -62,7 +62,7 @@ namespace Halibut.Transport
                 client = new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
-                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, HalibutLimits.TcpClientConnectTimeout);
+                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout);
             }
             return client;
         }

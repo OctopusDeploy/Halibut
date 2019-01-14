@@ -40,7 +40,7 @@ namespace Halibut.Transport
                 {
                 }
 
-                throw new HalibutClientException("The client was unable to establish the initial connection within " + HalibutLimits.TcpClientConnectTimeout);
+                throw new HalibutClientException("The client was unable to establish the initial connection within " + timeout);
             }
         }
     }

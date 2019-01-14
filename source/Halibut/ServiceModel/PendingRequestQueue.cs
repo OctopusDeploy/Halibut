@@ -145,7 +145,7 @@ namespace Halibut.ServiceModel
             {
                 log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-                var success = waiter.Wait(HalibutLimits.PollingRequestQueueTimeout);
+                var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout);
                 if (success)
                 {
                     log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
@@ -167,7 +167,7 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    success = waiter.Wait(HalibutLimits.PollingRequestMaximumMessageProcessingTimeout);
+                    success = waiter.Wait(request.Destination.PollingRequestMaximumMessageProcessingTimeout);
                     if (success)
                     {
                         log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
