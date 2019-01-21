@@ -72,7 +72,7 @@ namespace Halibut.Diagnostics
         
         /// <summary>
         /// The amount of time client will wait for a message to be added to the polling request queue
-        /// before returning a null response to the server
+        /// before returning a null response to the server. This does not generate an error and the server would immediate re-request.
         /// </summary>
         public static TimeSpan PollingQueueWaitTimeout = TimeSpan.FromSeconds(30);
 
