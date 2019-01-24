@@ -1,4 +1,5 @@
 using System;
+using Halibut.Diagnostics;
 using Newtonsoft.Json;
 
 namespace Halibut
@@ -34,7 +35,39 @@ namespace Halibut
             Proxy = proxy;
         }
 
-
+        /// <summary>
+        /// The amount of time the client will wait for the server to collect a message from the
+        /// polling request queue before raising a TimeoutException
+        /// </summary>
+        public TimeSpan PollingRequestQueueTimeout { get; set; } = HalibutLimits.PollingRequestQueueTimeout;
+        
+        /// <summary>
+        /// The amount of time the client will wait for the server to process a message collected
+        /// from the polling request queue before it raises a TimeoutException
+        /// </summary>
+        public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; } = HalibutLimits.PollingRequestMaximumMessageProcessingTimeout;
+        
+        /// <summary>
+        /// The amount of time to wait between connection requests to the remote endpoint (applies
+        /// to both polling and listening connections)
+        /// </summary>
+        public TimeSpan RetryListeningSleepInterval { get; set; } = HalibutLimits.RetryListeningSleepInterval;
+        
+        /// <summary>
+        /// The number of times to try and connect to the remote endpoint
+        /// </summary>
+        public int RetryCountLimit { get; set; } = HalibutLimits.RetryCountLimit;
+        
+        /// <summary>
+        /// Stops connection retries if this time period has been exceeded from the initial connection attempt
+        /// </summary>
+        public TimeSpan ConnectionErrorRetryTimeout { get; set; } = HalibutLimits.ConnectionErrorRetryTimeout;
+        
+        /// <summary>
+        /// Amount of time to wait for a successful TCP or WSS connection
+        /// </summary>
+        public TimeSpan TcpClientConnectTimeout { get; set; } = HalibutLimits.TcpClientConnectTimeout;
+        
         public Uri BaseUri { get; }
 
         public string RemoteThumbprint { get; }

@@ -145,7 +145,7 @@ namespace Halibut.ServiceModel
             {
                 log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-                var success = waiter.Wait(HalibutLimits.PollingRequestQueueTimeout);
+                var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout);
                 if (success)
                 {
                     log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
@@ -167,20 +167,20 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    success = waiter.Wait(HalibutLimits.PollingRequestMaximumMessageProcessingTimeout);
+                    success = waiter.Wait(request.Destination.PollingRequestMaximumMessageProcessingTimeout);
                     if (success)
                     {
                         log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
                     }
                     else
                     {
-                        SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", HalibutLimits.PollingRequestMaximumMessageProcessingTimeout))));
+                        SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestMaximumMessageProcessingTimeout))));
                     }
                 }
                 else
                 {
                     log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
-                    SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", HalibutLimits.PollingRequestQueueTimeout))));
+                    SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestQueueTimeout))));
                 }
             }
 
