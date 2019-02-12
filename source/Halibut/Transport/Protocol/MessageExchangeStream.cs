@@ -239,7 +239,7 @@ namespace Halibut.Transport.Protocol
             using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
-                return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
+                return (T)serializer.Deserialize<MessageEnvelope>(bson)?.Message;
             }
         }
 
