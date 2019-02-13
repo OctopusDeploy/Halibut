@@ -2,6 +2,7 @@ using System;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -70,7 +71,8 @@ namespace Halibut.Tests
             {
                 var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                ex.Message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request").And.Contain("No such host is known");
+                ex.Message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request")
+                    .And.Contain(Platform.IsRunningOnWindows ? "No such host is known" : "No such device or address");
             }
         }
 
