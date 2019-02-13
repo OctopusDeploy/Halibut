@@ -14,6 +14,7 @@ namespace Halibut.Diagnostics
         ListenerStarted,
         ListenerAcceptedClient,
         ListenerStopped,
-        SecurityNegotiation
+        SecurityNegotiation,
+        FileTransfer
     }
 }

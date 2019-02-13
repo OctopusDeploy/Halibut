@@ -269,7 +269,7 @@ namespace Halibut.Transport.Protocol
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
 
-        static TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
+        TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
@@ -282,7 +282,7 @@ namespace Halibut.Transport.Protocol
                     fileStream.Write(buffer, 0, read);
                 }
             }
-            return new TemporaryFileStream(path);
+            return new TemporaryFileStream(path, log);
         }
 
         static DataStream FindStreamById(StreamCapture capture, Guid id)

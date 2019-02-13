@@ -1,17 +1,20 @@
 using System;
 using System.IO;
 using System.Threading;
+using Halibut.Diagnostics;
 
 namespace Halibut.Transport.Protocol
 {
     public class TemporaryFileStream : IDataStreamReceiver
     {
         readonly string path;
+        readonly ILog log;
         bool moved;
 
-        public TemporaryFileStream(string path)
+        public TemporaryFileStream(string path, ILog log)
         {
             this.path = path;
+            this.log = log;
         }
 
         public void SaveTo(string filePath)
@@ -27,13 +30,21 @@ namespace Halibut.Transport.Protocol
 
         void SetFilePermissionsToInheritFromParent(string filePath)
         {
-            var fileInfo = new FileInfo(filePath);
-            var fileSecurity = fileInfo.GetAccessControl();
+            try
+            {
+                var fileInfo = new FileInfo(filePath);
+                var fileSecurity = fileInfo.GetAccessControl();
 
-            //When isProtected (first param) is false, SetAccessRuleProtection changes the permissions of the file to allow inherited permissions. 
-            //preserveInheritance (second param) is ignored when isProtected is false.
-            fileSecurity.SetAccessRuleProtection(false, false);
-            fileInfo.SetAccessControl(fileSecurity);
+                //When isProtected (first param) is false, SetAccessRuleProtection changes the permissions of the file to allow inherited permissions. 
+                //preserveInheritance (second param) is ignored when isProtected is false.
+                fileSecurity.SetAccessRuleProtection(false, false);
+                fileInfo.SetAccessControl(fileSecurity);
+            }
+            catch (PlatformNotSupportedException)
+            {
+                log.Write(EventType.FileTransfer, 
+                    "Access Control List (ACL) APIs are part of resource management on Windows and are not supported on this platform.");
+            }
         }
 
         public void Read(Action<Stream> reader)
