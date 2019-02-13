@@ -133,7 +133,8 @@ namespace Halibut.Diagnostics
         ListenerStarted = 7,
         ListenerAcceptedClient = 8,
         ListenerStopped = 9,
-        SecurityNegotiation = 10
+        SecurityNegotiation = 10,
+        FileTransfer = 11
     }
     public static class ExceptionExtensions
     {
@@ -497,7 +498,7 @@ namespace Halibut.Transport.Protocol
     }
     public class TemporaryFileStream : Halibut.IDataStreamReceiver
     {
-        public TemporaryFileStream(string path) { }
+        public TemporaryFileStream(string path, Halibut.Diagnostics.ILog log) { }
         protected void Finalize() { }
         public void Read(Action<Stream> reader) { }
         public void SaveTo(string filePath) { }
