@@ -51,7 +51,7 @@ namespace Halibut.Tests
         {
             return $"namespace {name}".InArray()
                 .Concat("{".InArray())
-                .Concat(types.OrderBy(t => t.Name).SelectMany(FormatType).Select(l => "    " + l))
+                .Concat(types.OrderBy(t => t.Name.ToLowerInvariant()).SelectMany(FormatType).Select(l => "    " + l))
                 .Concat("}".InArray());
         }
 
