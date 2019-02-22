@@ -216,8 +216,9 @@ namespace Halibut
             }
         }
 
+#pragma warning disable DE0009 // API is deprecated
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                                     Environment.OSVersion.Version >= new Version(6, 2);
-
+#pragma warning restore DE0009 // API is deprecated
     }
 }

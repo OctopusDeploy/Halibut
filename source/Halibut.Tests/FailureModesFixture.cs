@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
@@ -72,7 +73,7 @@ namespace Halibut.Tests
                 var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
                 ex.Message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request")
-                    .And.Contain(Platform.IsRunningOnWindows ? "No such host is known" : "No such device or address");
+                    .And.Contain(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "No such host is known" : "No such device or address");
             }
         }
 

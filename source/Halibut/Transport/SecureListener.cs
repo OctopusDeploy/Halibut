@@ -26,7 +26,9 @@ namespace Halibut.Transport
     public class SecureListener : IDisposable
     {
         [DllImport("kernel32.dll", SetLastError = true)]
+#pragma warning disable PC003 // Native API not available in UWP
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
+#pragma warning restore PC003 // Native API not available in UWP
 
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
@@ -77,7 +79,11 @@ namespace Halibut.Transport
             }
             listener.Start();
 
+#if !NETSTANDARD2_0
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+#else
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+#endif
             {
                 // set socket handle as not inherited so that when tentacle runs powershell
                 // with System.Diagnostics.Process those scripts don't lock the socket

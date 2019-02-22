@@ -1,3 +1,4 @@
+#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -68,3 +69,4 @@ namespace Halibut.Transport
         }
     }
 }
+#endif
