@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -12,8 +13,8 @@ namespace Halibut.Transport
         readonly ISecureClient secureClient;
         readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
         readonly ILog log;
-        readonly Thread thread;
-        bool working;
+        readonly CancellationTokenSource cts = new CancellationTokenSource();
+        Task backgroundTask;
 
         [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
@@ -27,20 +28,16 @@ namespace Halibut.Transport
             this.secureClient = secureClient;
             this.handleIncomingRequest = handleIncomingRequest;
             this.log = log;
-            thread = new Thread(ExecutePollingLoop);
-            thread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
-            thread.IsBackground = true;
         }
 
         public void Start()
         {
-            working = true;
-            thread.Start();
+            backgroundTask = Task.Run(ExecutePollingLoop, CancellationToken.None);
         }
 
-        private void ExecutePollingLoop(object ignored)
+        async Task ExecutePollingLoop()
         {
-            while (working)
+            while (!cts.IsCancellationRequested)
             {
                 try
                 {
@@ -52,14 +49,17 @@ namespace Halibut.Transport
                 catch (Exception ex)
                 {
                     log?.WriteException(EventType.Error, "Exception in the polling loop, sleeping for 5 seconds. This may be cause by a network error and usually rectifies itself. Disregard this message unless you are having communication problems.", ex);
-                    Thread.Sleep(5000);
+                    await Task.Delay(5000, cts.Token).ContinueWith(_ => {}).ConfigureAwait(false); // Empty continuation so it does not throw TaskCanceledException
                 }
             }
         }
 
         public void Dispose()
         {
-            working = false;
+            cts.Cancel();
+            backgroundTask?.Wait();
+            backgroundTask?.Dispose();
+            cts.Dispose();
         }
     }
 }

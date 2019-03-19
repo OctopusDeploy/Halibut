@@ -40,6 +40,7 @@ namespace Halibut.Transport
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         ILog log;
         TcpListener listener;
+        Task acceptTask;
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
             : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
@@ -93,15 +94,12 @@ namespace Halibut.Transport
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
 
-            new Thread(Accept)
-            {
-                Name = "Accept connections on " + listener.LocalEndpoint
-            }.Start();
-
+            acceptTask = Task.Run(Accept, CancellationToken.None);
+            
             return ((IPEndPoint) listener.LocalEndpoint).Port;
         }
 
-        void Accept()
+        async Task Accept()
         {
             var numberOfFailedAttemptsInRow = 0;
             using (cts.Token.Register(listener.Stop))
@@ -110,10 +108,8 @@ namespace Halibut.Transport
                 {
                     try
                     {
-                        var client = listener.AcceptTcpClient();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        HandleClient(client);
-#pragma warning restore CS4014
+                        var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                        await HandleClient(client).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
@@ -125,7 +121,7 @@ namespace Halibut.Transport
                     catch (Exception ex)
                     {
                         numberOfFailedAttemptsInRow++;
-                        log.WriteException(EventType.Error, $"Error accepting TCP client", ex);
+                        log.WriteException(EventType.Error, "Error accepting TCP client", ex);
                         // Slow down the logs in case an exception is immediately encountered after 3 failed AcceptTcpClientAsync calls
                         if (numberOfFailedAttemptsInRow >= 3)
                         {
@@ -134,7 +130,8 @@ namespace Halibut.Transport
                                 EventType.Error,
                                 $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
                             );
-                            Thread.Sleep(millisecondsTimeout);
+
+                            await Task.Delay(millisecondsTimeout, cts.Token).ContinueWith(_ => {}).ConfigureAwait(false); // Empty continuation so it does not throw TaskCanceledException
                         }
                     }
                 }
@@ -149,7 +146,7 @@ namespace Halibut.Transport
                 client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-                await ExecuteRequest(client);
+                await ExecuteRequest(client).ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
             {
@@ -173,7 +170,7 @@ namespace Halibut.Transport
                 try
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -194,7 +191,7 @@ namespace Halibut.Transport
                     if (Authorize(ssl, clientName))
                     {
                         // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                        await ExchangeMessages(ssl);
+                        await ExchangeMessages(ssl).ConfigureAwait(false);
 
                         // Mark the stream as delegated once everything has succeeded
                         keepStreamOpen = true;
@@ -310,7 +307,7 @@ namespace Halibut.Transport
                 {
                     continue;
                 }
-                else if (c == '\n')
+                if (c == '\n')
                 {
                     builder.AppendLine();
 
@@ -330,8 +327,11 @@ namespace Halibut.Transport
 
         public void Dispose()
         {
+            log.Write(EventType.Diagnostic, "Stopping Listener");
             cts.Cancel();
-            listener.Stop();
+            acceptTask?.Wait();
+            acceptTask?.Dispose();
+            cts.Dispose();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
