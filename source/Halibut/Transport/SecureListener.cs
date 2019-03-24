@@ -40,6 +40,7 @@ namespace Halibut.Transport
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         ILog log;
         TcpListener listener;
+        Thread backgroundThread;
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
             : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
@@ -93,10 +94,11 @@ namespace Halibut.Transport
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
 
-            new Thread(Accept)
+            backgroundThread = new Thread(Accept)
             {
                 Name = "Accept connections on " + listener.LocalEndpoint
-            }.Start();
+            };
+            backgroundThread.Start();
 
             return ((IPEndPoint) listener.LocalEndpoint).Port;
         }
@@ -109,7 +111,7 @@ namespace Halibut.Transport
             {
                 try
                 {
-                    SpinWait.SpinUntil(() => listener.Pending() || cts.IsCancellationRequested);
+                    SpinWait.SpinUntil(() => cts.IsCancellationRequested || listener.Pending());
 
                     if(cts.IsCancellationRequested)
                     {
@@ -336,7 +338,9 @@ namespace Halibut.Transport
         public void Dispose()
         {
             cts.Cancel();
+            backgroundThread?.Join();
             listener.Stop();
+            cts.Dispose();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
