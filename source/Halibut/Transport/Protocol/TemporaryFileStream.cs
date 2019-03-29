@@ -39,15 +39,22 @@ namespace Halibut.Transport.Protocol
 
         void SetFilePermissionsToInheritFromParent(string filePath)
         {
-            var fileInfo = new FileInfo(filePath);
+            try
+            {
+                var fileInfo = new FileInfo(filePath);
 #pragma warning disable PC001 // API not supported on all platforms
-            var fileSecurity = fileInfo.GetAccessControl();
+                var fileSecurity = fileInfo.GetAccessControl();
 
-            //When isProtected (first param) is false, SetAccessRuleProtection changes the permissions of the file to allow inherited permissions. 
-            //preserveInheritance (second param) is ignored when isProtected is false.
-            fileSecurity.SetAccessRuleProtection(false, false);
-            fileInfo.SetAccessControl(fileSecurity);
+                //When isProtected (first param) is false, SetAccessRuleProtection changes the permissions of the file to allow inherited permissions. 
+                //preserveInheritance (second param) is ignored when isProtected is false.
+                fileSecurity.SetAccessRuleProtection(false, false);
+                fileInfo.SetAccessControl(fileSecurity);
 #pragma warning restore PC001 // API not supported on all platforms
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // ignored, user has likely disallowed full control over their artifact directory 
+            }
         }
 
         public void Read(Action<Stream> reader)
