@@ -51,9 +51,9 @@ namespace Halibut.Transport.Protocol
                 fileInfo.SetAccessControl(fileSecurity);
 #pragma warning restore PC001 // API not supported on all platforms
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
-                // ignored, user has likely disallowed full control over their artifact directory 
+                log.Write(EventType.Security, $"Ignoring an unauthorized access issue: {ex.Message}. {nameof(TemporaryFileStream)} assumes that filesystem permissions allow full control to the executing user for {filePath}. Update those permissions to remove this log.");
             }
         }
 
