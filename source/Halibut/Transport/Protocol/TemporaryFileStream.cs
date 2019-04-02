@@ -53,7 +53,7 @@ namespace Halibut.Transport.Protocol
             }
             catch (UnauthorizedAccessException ex)
             {
-                log.Write(EventType.Security, $"Ignoring an unauthorized access issue: {ex.Message}. {nameof(TemporaryFileStream)} assumes that filesystem permissions allow full control to the executing user for {filePath}. Update those permissions to remove this log.");
+                log?.Write(EventType.Security, $"Ignoring an unauthorized access issue: {ex.Message}. {nameof(TemporaryFileStream)} assumes that filesystem permissions allow full control to the executing user for {filePath}. Update those permissions to remove this log.");
             }
         }
 
