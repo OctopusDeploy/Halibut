@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Halibut.ServiceModel
 {
-    internal class DefaultTrustProvider : ITrustProvider
+    public class DefaultTrustProvider : ITrustProvider
     {
         readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         public void Add(string clientThumbprint)
