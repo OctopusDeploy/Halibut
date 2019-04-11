@@ -19,7 +19,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly X509Certificate2 serverCertificate;
         readonly List<IDisposable> listeners = new List<IDisposable>();
-        readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        readonly ITrustProvider trustProvider; 
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
@@ -28,13 +28,18 @@ namespace Halibut
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
 
-        public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate)
+        public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
         {
         }
 
-        public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate)
+        public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate) : this(serviceFactory, serverCertificate, new DefaultTrustProvider())
+        {
+        }
+
+        public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider)
         {
             this.serverCertificate = serverCertificate;
+            this.trustProvider = trustProvider;
             invoker = new ServiceInvoker(serviceFactory);
         }
 
@@ -164,31 +169,23 @@ namespace Halibut
 
         public void Trust(string clientThumbprint)
         {
-            lock (trustedThumbprints)
-                trustedThumbprints.Add(clientThumbprint);
+            trustProvider.Add(clientThumbprint);
         }
 
         public void RemoveTrust(string clientThumbprint)
         {
-            lock (trustedThumbprints)
-                trustedThumbprints.Remove(clientThumbprint);
+            trustProvider.Remove(clientThumbprint);
         }
 
 
         public void TrustOnly(IReadOnlyList<string> thumbprints)
         {
-            lock (trustedThumbprints)
-            {
-                trustedThumbprints.Clear();
-                foreach (var thumbprint in thumbprints)
-                    trustedThumbprints.Add(thumbprint);
-            }
+            trustProvider.TrustOnly(thumbprints);
         }
 
         public bool IsTrusted(string remoteThumbprint)
         {
-            lock (trustedThumbprints)
-                return trustedThumbprints.Contains(remoteThumbprint);
+            return trustProvider.IsTrusted(remoteThumbprint);
         }
 
         public void Route(ServiceEndPoint to, ServiceEndPoint via)
