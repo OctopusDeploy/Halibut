@@ -40,6 +40,7 @@ namespace Halibut
         public static string DefaultFriendlyHtmlPageContent;
         public HalibutRuntime(X509Certificate2 serverCertificate) { }
         public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate) { }
+        public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate, Halibut.ServiceModel.ITrustProvider trustProvider) { }
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public static bool OSSupportsWebSockets { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
@@ -263,6 +264,13 @@ namespace Halibut.ServiceModel
     public interface IServiceLease : IDisposable
     {
         public Object Service { get; }
+    }
+    public interface ITrustProvider
+    {
+        public void Add(string clientThumbprint) { }
+        public bool IsTrusted(string clientThumbprint) { }
+        public void Remove(string clientThumbprint) { }
+        public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
     public class NullServiceFactory : Halibut.ServiceModel.IServiceFactory
     {
