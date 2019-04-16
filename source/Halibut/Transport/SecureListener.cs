@@ -34,6 +34,7 @@ namespace Halibut.Transport
         readonly X509Certificate2 serverCertificate;
         readonly Func<MessageExchangeProtocol, Task> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
+        readonly Action<string, string> unauthorizedClientConnect;
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
@@ -42,29 +43,30 @@ namespace Halibut.Transport
         TcpListener listener;
         Thread backgroundThread;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Action<string, string> unauthorizedClientConnect, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
+            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, unauthorizedClientConnect, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
 
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Action<string, string> unauthorizedClientConnect, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
+            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, unauthorizedClientConnect, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
 
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Action<string, string> unauthorizedClientConnect, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
+            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, unauthorizedClientConnect, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Action<string, string> unauthorizedClientConnect, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
             this.protocolHandler = protocolHandler;
             this.verifyClientThumbprint = verifyClientThumbprint;
+            this.unauthorizedClientConnect = unauthorizedClientConnect;
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
@@ -273,6 +275,7 @@ namespace Halibut.Transport
             if (!isAuthorized)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", clientName, thumbprint);
+                unauthorizedClientConnect(clientName.ToString(), thumbprint);
                 return false;
             }
 

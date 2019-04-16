@@ -43,6 +43,9 @@ namespace Halibut
             get { return logs; }
         }
 
+        public Action<string, string> UnAuthorizedClientConnect { get; set; }
+
+
         PendingRequestQueue GetQueue(Uri target)
         {
             return queues.GetOrAdd(target, u => new PendingRequestQueue(logs.ForEndpoint(target)));
@@ -60,14 +63,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, NotifyUnAuthorizedClientConnect, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, NotifyUnAuthorizedClientConnect, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
             listeners.Add(listener);
             listener.Start();
         }
@@ -206,6 +209,7 @@ namespace Halibut
             friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
         }
 
+
         public void Dispose()
         {
             pollingClients.Dispose();
@@ -214,6 +218,11 @@ namespace Halibut
             {
                 listener.Dispose();
             }
+        }
+
+        protected void NotifyUnAuthorizedClientConnect(string clientName, string thumbPrint)
+        {
+            this.UnAuthorizedClientConnect?.Invoke(clientName, thumbPrint);
         }
 
 #pragma warning disable DE0009 // API is deprecated
