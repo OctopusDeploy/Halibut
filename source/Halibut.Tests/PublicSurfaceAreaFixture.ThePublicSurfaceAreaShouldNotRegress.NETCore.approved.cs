@@ -44,6 +44,7 @@ namespace Halibut
         public static bool OSSupportsWebSockets { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
+        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
         public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
         public void Dispose() { }
@@ -70,6 +71,7 @@ namespace Halibut
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
+        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
         public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
         public bool IsTrusted(string remoteThumbprint) { }

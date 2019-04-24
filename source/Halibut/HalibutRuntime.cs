@@ -174,7 +174,6 @@ namespace Halibut
                 trustedThumbprints.Remove(clientThumbprint);
         }
 
-
         public void TrustOnly(IReadOnlyList<string> thumbprints)
         {
             lock (trustedThumbprints)
@@ -204,6 +203,12 @@ namespace Halibut
         public void SetFriendlyHtmlPageHeaders(IEnumerable<KeyValuePair<string, string>> headers)
         {
             friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
+        }
+
+        public void Disconnect(ServiceEndPoint endpoint)
+        {
+            var log = logs.ForEndpoint(endpoint.BaseUri);
+            pool.Clear(endpoint, log);
         }
 
         public void Dispose()
