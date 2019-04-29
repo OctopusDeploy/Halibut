@@ -6,6 +6,6 @@ namespace Halibut.Transport
     public interface ISecureClient
     {
         ServiceEndPoint ServiceEndpoint { get; }
-        void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler);
+        void ExecuteTransaction(Func<MessageExchangeProtocol, bool> protocolHandler);
     }
 }

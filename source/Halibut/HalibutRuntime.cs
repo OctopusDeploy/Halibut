@@ -147,6 +147,7 @@ namespace Halibut
             client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
+                return true;
             });
             return response;
         }
