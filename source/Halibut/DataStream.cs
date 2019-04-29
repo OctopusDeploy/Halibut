@@ -95,7 +95,7 @@ namespace Halibut
 
         public static DataStream FromStream(Stream source, Action<int> updateProgress)
         {
-            var streamer = new StreamingDataStream(source, updateProgress);
+            var streamer = new StreamingDataStream(source, updateProgress ?? ((progress) => { }));
             return new DataStream(source.Length, streamer.CopyAndReportProgress);
         }
 
