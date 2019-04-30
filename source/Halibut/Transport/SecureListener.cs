@@ -207,10 +207,9 @@ namespace Halibut.Transport
                         {
                             if (weakSSL.IsAlive)
                                 ((IDisposable)weakSSL.Target).Dispose();
-                        }, true);
+                        });
 
                         // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                        //await Task.WhenAny(cts.Token.WhenCanceled(), ExchangeMessages(ssl));
                         await ExchangeMessages(ssl);
 
                         // Mark the stream as delegated once everything has succeeded
