@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
-using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -29,7 +28,6 @@ namespace Halibut.Tests
                 error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
             }
         }
-
 
         [Test]
         public void FailWhenServerThrowsAnException()
