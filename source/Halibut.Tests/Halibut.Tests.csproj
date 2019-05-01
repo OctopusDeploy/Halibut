@@ -43,7 +43,9 @@
 
   <ItemGroup>
     <Compile Remove="**/*.approved.cs" />
-    <None Include="**/*.approved.cs" />
+    <None Include="**/*.approved.cs">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
