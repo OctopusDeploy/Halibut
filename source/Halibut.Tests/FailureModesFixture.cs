@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using FluentAssertions;
 using Halibut.ServiceModel;
@@ -72,8 +73,18 @@ namespace Halibut.Tests
             {
                 var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                ex.Message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request")
-                    .And.Contain(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "No such host is known" : "No such device or address");
+                var message = ex.Message;
+
+                message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request");
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    message.Should().Contain("No such host is known");
+                }
+                else
+                {
+                    new [] {"No such device or address", "Resource temporarily unavailable"}.Any(message.Contains).Should().BeTrue();
+                }
             }
         }
 
