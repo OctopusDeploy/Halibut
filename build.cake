@@ -1,9 +1,9 @@
 //////////////////////////////////////////////////////////////////////
 // TOOLS
 //////////////////////////////////////////////////////////////////////
-#tool "nuget:?package=GitVersion.CommandLine&version=4.0.0-beta0007"
-#tool "nuget:?package=gitlink"
-#addin "Cake.FileHelpers"
+#tool "nuget:?package=GitVersion.CommandLine&version=4.0.0"
+#tool "nuget:?package=gitlink&version=3.1.0"
+#addin "Cake.FileHelpers&version=3.2.0"
 
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
@@ -87,8 +87,21 @@ Task("Test")
     });
 });
 
-Task("Pack")
+Task("PublishLinuxTests")
     .IsDependentOn("Test")
+    .Does(() =>
+{
+    DotNetCorePublish("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCorePublishSettings
+    {
+        Configuration = configuration,
+        Framework = "netcoreapp2.2",
+        Runtime = "linux-x64",
+        OutputDirectory = new DirectoryPath($"{artifactsDir}publish/linux-x64")
+    });
+});
+
+Task("Pack")
+    .IsDependentOn("PublishLinuxTests")
     .Does(() =>
 {
     var pdbs = GetFiles($"./source/Halibut/bin/{configuration}/**/Halibut.pdb");
