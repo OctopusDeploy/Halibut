@@ -2,24 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
-using Newtonsoft.Json.Bson;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class UsageFixture
     {
-      
         static DelegateServiceFactory GetDelegateServiceFactory()
         {
             var services = new DelegateServiceFactory();
@@ -85,6 +81,7 @@ namespace Halibut.Tests
         }
 
         [Test]
+        [WindowsTestAttribute]
         public void OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
             var services = GetDelegateServiceFactory();
@@ -236,7 +233,7 @@ namespace Halibut.Tests
         [TestCase("https://localhost:{port}/")]
         [TestCase("https://{machine}:{port}")]
         [TestCase("https://{machine}:{port}/")]
-        public void SupportsHttpsGet(string uriFormat)
+        public async Task SupportsHttpsGet(string uriFormat)
         {
             var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -244,7 +241,7 @@ namespace Halibut.Tests
                 var listenPort = octopus.Listen();
                 var uri = uriFormat.Replace("{machine}", Environment.MachineName).Replace("{port}", listenPort.ToString());
 
-                var result = DownloadStringIgnoringCertificateValidation(uri);
+                var result = await DownloadStringIgnoringCertificateValidation(uri);
 
                 result.Should().Be("<html><body><p>Hello!</p></body></html>");
             }
@@ -254,7 +251,7 @@ namespace Halibut.Tests
         [TestCase("Simple text works too!", null)]
         [TestCase("", null)]
         [TestCase(null, "<html><body><p>Hello!</p></body></html>")]
-        public void CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
+        public async Task CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
         {
             var services = GetDelegateServiceFactory();
             expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
@@ -264,14 +261,14 @@ namespace Halibut.Tests
                 octopus.SetFriendlyHtmlPageContent(html);
                 var listenPort = octopus.Listen();
 
-                var result = DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
+                var result = await DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
 
                 result.Should().Be(expectedResult);
             }
         }
 
         [Test]
-        public void CanSetCustomFriendlyHtmlPageHeaders()
+        public async Task CanSetCustomFriendlyHtmlPageHeaders()
         {
             var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
@@ -279,7 +276,7 @@ namespace Halibut.Tests
                 octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> {{"X-Content-Type-Options", "nosniff"}, {"X-Frame-Options", "DENY"}});
                 var listenPort = octopus.Listen();
 
-                var result = GetHeadersIgnoringCertificateValidation("https://localhost:" + listenPort).ToList();
+                var result = await GetHeadersIgnoringCertificateValidation("https://localhost:" + listenPort);
 
                 result.Should().Contain(x => x.Key == "X-Content-Type-Options" && x.Value == "nosniff");
                 result.Should().Contain(x => x.Key == "X-Frame-Options" && x.Value == "DENY");
@@ -293,7 +290,7 @@ namespace Halibut.Tests
             var task = Task.Run(() => DoConnectingOverHttpShouldFailQuickly());
             if (!task.Wait(5000))
             {
-                Assert.True(false, "Test did not complete within timeout");
+                Assert.Fail("Test did not complete within timeout");
             }
         }
 
@@ -303,46 +300,47 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var listenPort = octopus.Listen();
-                Assert.Throws<WebException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
+                Assert.ThrowsAsync<HttpRequestException>(() => DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort));
             }
         }
 
-        static string DownloadStringIgnoringCertificateValidation(string uri)
+        static async Task<string> DownloadStringIgnoringCertificateValidation(string uri)
         {
-            using (var webClient = new WebClient())
+            using (var httpClientHandler = new HttpClientHandler())
             {
-                try
+                httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
+                using (var client = new HttpClient(httpClientHandler))
                 {
-                    // We need to ignore server certificate validation errors - the server certificate is self-signed
-                    ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
-                    return webClient.DownloadString(uri);
-                }
-                finally
-                {
-                    // And restore it back to default behaviour
-                    ServicePointManager.ServerCertificateValidationCallback = null;
+                    return await client.GetStringAsync(uri);
                 }
             }
         }
 
-        static IEnumerable<KeyValuePair<string, string>> GetHeadersIgnoringCertificateValidation(string uri)
+        static async Task<List<KeyValuePair<string, string>>> GetHeadersIgnoringCertificateValidation(string uri)
         {
-            using (var webClient = new WebClient())
+            using (var httpClientHandler = new HttpClientHandler())
             {
-                try
+                httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
+                using (var client = new HttpClient(httpClientHandler))
                 {
-                    // We need to ignore server certificate validation errors - the server certificate is self-signed
-                    ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
-                    var response = webClient.DownloadString(uri);
-                    foreach (string key in webClient.ResponseHeaders)
+                    var headers = new List<KeyValuePair<string, string>>();
+                    try
                     {
-                        yield return new KeyValuePair<string, string>(key, webClient.ResponseHeaders[key]);
+                        // We need to ignore server certificate validation errors - the server certificate is self-signed
+                        ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+                        var response = await client.GetAsync(uri);
+                        foreach (var key in response.Headers)
+                        {
+                            headers.Add(new KeyValuePair<string, string>(key.Key, key.Value.First()));
+                        }
                     }
-                }
-                finally
-                {
-                    // And restore it back to default behaviour
-                    ServicePointManager.ServerCertificateValidationCallback = null;
+                    finally
+                    {
+                        // And restore it back to default behaviour
+                        ServicePointManager.ServerCertificateValidationCallback = null;
+                    }
+
+                    return headers;
                 }
             }
         }
