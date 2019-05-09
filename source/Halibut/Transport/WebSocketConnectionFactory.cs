@@ -20,7 +20,7 @@ namespace Halibut.Transport
             this.clientCertificate = clientCertificate;
         }
 
-        public SecureConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log)
+        public IConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log)
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 

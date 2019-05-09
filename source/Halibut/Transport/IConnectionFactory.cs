@@ -4,6 +4,6 @@ namespace Halibut.Transport
 {
     public interface IConnectionFactory
     {
-        SecureConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log);
+        IConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log);
     }
 }

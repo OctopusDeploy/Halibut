@@ -21,7 +21,7 @@ namespace Halibut.Transport
             this.clientCertificate = clientCertificate;
         }
 
-        public SecureConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log)
+        public IConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log)
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
@@ -43,7 +43,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
+        static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
         {
             TcpClient client;
             if (endPoint.Proxy == null)

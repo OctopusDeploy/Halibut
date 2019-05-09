@@ -1,9 +1,11 @@
-﻿using Halibut.Transport.Protocol;
+﻿using System;
+using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
     public interface IConnection : IPooledResource
     {
-        MessageExchangeProtocol Protocol { get; } 
+        MessageExchangeProtocol Protocol { get; }
+        event EventHandler OnDisposed;
     }
 }
