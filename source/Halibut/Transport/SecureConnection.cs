@@ -22,7 +22,7 @@ namespace Halibut.Transport
             lastUsed = DateTimeOffset.UtcNow;
         }
 
-        public MessageExchangeProtocol Protocol { get { return protocol; } }
+        internal MessageExchangeProtocol Protocol { get { return protocol; } }
         public event EventHandler OnDisposed;
 
         public void NotifyUsed()
