@@ -24,5 +24,6 @@ namespace Halibut
 
         void Route(ServiceEndPoint to, ServiceEndPoint via);
         void SetFriendlyHtmlPageContent(string html);
+        Func<string, string, bool> UnAuthorizedClientConnect { get; set; }
     }
 }
