@@ -13,6 +13,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut
 {
+
     public class HalibutRuntime : IHalibutRuntime
     {
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
@@ -43,7 +44,7 @@ namespace Halibut
             get { return logs; }
         }
 
-        public Func<string, string, bool> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
 
 
         PendingRequestQueue GetQueue(Uri target)
@@ -222,7 +223,16 @@ namespace Halibut
 
         protected bool NotifyUnAuthorizedClientConnect(string clientName, string thumbPrint)
         {
-            return this.UnAuthorizedClientConnect != null ? this.UnAuthorizedClientConnect(clientName, thumbPrint) : false;
+            var result = this.UnAuthorizedClientConnect == null ? HandleUnAuthorizedClientMode.BlockConnection : this.UnAuthorizedClientConnect(clientName, thumbPrint);
+            switch(result)
+            {
+                case HandleUnAuthorizedClientMode.BlockConnection:
+                    return false;
+                case HandleUnAuthorizedClientMode.TrustAndAllowConnection:
+                    this.Trust(thumbPrint);
+                    return true;
+            }
+            return false;
         }
 
 #pragma warning disable DE0009 // API is deprecated

@@ -42,7 +42,7 @@ namespace Halibut
         public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate) { }
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public static bool OSSupportsWebSockets { get; }
-        public Func<string, string, bool> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, Halibut.HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
@@ -62,6 +62,11 @@ namespace Halibut
         public void Trust(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
+    public enum HandleUnAuthorizedClientMode
+    {
+        BlockConnection = 0,
+        TrustAndAllowConnection = 1
+    }
     public interface IDataStreamReceiver
     {
         public void Read(Action<Stream> reader) { }
@@ -70,7 +75,7 @@ namespace Halibut
     public interface IHalibutRuntime : IDisposable
     {
         public Halibut.Diagnostics.ILogFactory Logs { get; }
-        public Func<string, string, bool> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, Halibut.HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }

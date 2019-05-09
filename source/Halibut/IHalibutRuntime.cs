@@ -5,6 +5,12 @@ using Halibut.Diagnostics;
 
 namespace Halibut
 {
+    public enum HandleUnAuthorizedClientMode
+    {
+        BlockConnection,
+        TrustAndAllowConnection
+    }
+
     public interface IHalibutRuntime : IDisposable
     {
         ILogFactory Logs { get; }
@@ -24,6 +30,6 @@ namespace Halibut
 
         void Route(ServiceEndPoint to, ServiceEndPoint via);
         void SetFriendlyHtmlPageContent(string html);
-        Func<string, string, bool> UnAuthorizedClientConnect { get; set; }
+        Func<string, string, HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
     }
 }
