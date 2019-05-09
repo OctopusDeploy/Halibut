@@ -43,7 +43,7 @@ namespace Halibut
             get { return logs; }
         }
 
-        public Action<string, string> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, bool> UnAuthorizedClientConnect { get; set; }
 
 
         PendingRequestQueue GetQueue(Uri target)
@@ -63,14 +63,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, NotifyUnAuthorizedClientConnect, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnAuthorizedClientConnect);
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, NotifyUnAuthorizedClientConnect, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnAuthorizedClientConnect);
             listeners.Add(listener);
             listener.Start();
         }
@@ -220,9 +220,9 @@ namespace Halibut
             }
         }
 
-        protected void NotifyUnAuthorizedClientConnect(string clientName, string thumbPrint)
+        protected bool NotifyUnAuthorizedClientConnect(string clientName, string thumbPrint)
         {
-            this.UnAuthorizedClientConnect?.Invoke(clientName, thumbPrint);
+            return this.UnAuthorizedClientConnect != null ? this.UnAuthorizedClientConnect(clientName, thumbPrint) : false;
         }
 
 #pragma warning disable DE0009 // API is deprecated
