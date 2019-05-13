@@ -236,8 +236,7 @@ namespace Halibut.Transport.Protocol
         T ReadBsonMessage<T>()
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var buffer = new BufferedStream(zip, 8192))
-            using (var bson = new BsonDataReader(buffer) { CloseInput = false })
+            using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
                 return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
             }
@@ -295,7 +294,7 @@ namespace Halibut.Transport.Protocol
         void WriteBsonMessage<T>(T messages)
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var buffer = new BufferedStream(zip, 4096))
+            using (var buffer = new BufferedStream(zip, 4096)) // We want to buffer writes, see http://faithlife.codes/blog/2012/06/always-wrap-gzipstream-with-bufferedstream/
             using (var bson = new BsonDataWriter(buffer) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
