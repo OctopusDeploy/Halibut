@@ -6,6 +6,5 @@ namespace Halibut.Transport
     public interface IConnection : IPooledResource
     {
         MessageExchangeProtocol Protocol { get; }
-        event EventHandler OnDisposed;
     }
 }

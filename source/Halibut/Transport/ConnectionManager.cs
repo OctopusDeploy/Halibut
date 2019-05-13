@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Diagnostics;
+using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
@@ -9,6 +10,36 @@ namespace Halibut.Transport
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new Dictionary<ServiceEndPoint, HashSet<IConnection>>();
+
+        class DisposableNotifierConnection : IConnection
+        {
+            readonly IConnection connectionImplementation;
+            readonly Action<IConnection> onDisposed;
+
+            public DisposableNotifierConnection(IConnection connectionImplementation, Action<IConnection> onDisposed)
+            {
+                this.connectionImplementation = connectionImplementation;
+                this.onDisposed = onDisposed;
+            }
+
+            public void Dispose()
+            {
+                connectionImplementation.Dispose();
+                onDisposed(connectionImplementation);
+            }
+
+            public void NotifyUsed()
+            {
+                connectionImplementation.NotifyUsed();
+            }
+
+            public bool HasExpired()
+            {
+                return connectionImplementation.HasExpired();
+            }
+
+            public MessageExchangeProtocol Protocol => connectionImplementation.Protocol;
+        }
 
         public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
@@ -26,8 +57,7 @@ namespace Halibut.Transport
             var connection = pool.Take(serviceEndpoint);
             if (connection == null)
             {
-                connection = connectionFactory.EstablishNewConnection(serviceEndpoint, log);
-                connection.OnDisposed += OnConnectionDisposed;
+                connection = new DisposableNotifierConnection(connectionFactory.EstablishNewConnection(serviceEndpoint, log), OnConnectionDisposed);
             }
 
             return connection;
@@ -102,12 +132,10 @@ namespace Halibut.Transport
             }
         }
 
-        void OnConnectionDisposed(object sender, EventArgs e)
+        void OnConnectionDisposed(IConnection connection)
         {
             lock (activeConnections)
             {
-                var connection = sender as IConnection;
-
                 var setsContainingConnection = activeConnections.Where(c => c.Value.Contains(connection)).ToList();
                 var setsToRemoveCompletely = setsContainingConnection.Where(c => c.Value.Count == 1).ToList();
                 foreach (var setContainingConnection in setsContainingConnection.Except(setsToRemoveCompletely))
