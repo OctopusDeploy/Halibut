@@ -236,7 +236,7 @@ namespace Halibut.Transport.Protocol
         T ReadBsonMessage<T>()
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var buffer = new BufferedStream(new NonDisposableStreamWrapper(zip), 8192))
+            using (var buffer = new BufferedStream(zip, 8192))
             using (var bson = new BsonDataReader(buffer) { CloseInput = false })
             {
                 return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
@@ -295,65 +295,11 @@ namespace Halibut.Transport.Protocol
         void WriteBsonMessage<T>(T messages)
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var buffer = new BufferedStream(new NonDisposableStreamWrapper(zip), 4096))
+            using (var buffer = new BufferedStream(zip, 4096))
             using (var bson = new BsonDataWriter(buffer) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
                 bson.Flush();
-            }
-        }
-
-        class NonDisposableStreamWrapper : Stream
-        {
-            readonly Stream innerStream;
-
-            public NonDisposableStreamWrapper(Stream innerStream)
-            {
-                this.innerStream = innerStream;
-            }
-
-            protected override void Dispose(bool disposing)
-            {
-                // Do nothing
-            }
-
-            public override void Flush()
-            {
-                innerStream.Flush();
-            }
-
-            public override int Read(byte[] buffer, int offset, int count)
-            {
-                return innerStream.Read(buffer, offset, count);
-            }
-
-            public override long Seek(long offset, SeekOrigin origin)
-            {
-                return innerStream.Seek(offset, origin);
-            }
-
-            public override void SetLength(long value)
-            {
-                innerStream.SetLength(value);
-            }
-
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                innerStream.Write(buffer, offset, count);
-            }
-
-            public override bool CanRead => innerStream.CanRead;
-
-            public override bool CanSeek => innerStream.CanSeek;
-
-            public override bool CanWrite => innerStream.CanWrite;
-
-            public override long Length => innerStream.Length;
-
-            public override long Position
-            {
-                get => innerStream.Position;
-                set => innerStream.Position = value;
             }
         }
 
