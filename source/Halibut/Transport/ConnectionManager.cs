@@ -14,21 +14,17 @@ namespace Halibut.Transport
         {
             lock (activeConnections)
             {
-                var connection = GetFromPoolOrCreateConnection(connectionFactory, serviceEndpoint, log);
+                var connection = pool.Take(serviceEndpoint) ?? CreateConnection(connectionFactory, serviceEndpoint, log);
                 AddConnectionToActiveConnections(serviceEndpoint, connection);
 
                 return connection;
             }
         }
 
-        IConnection GetFromPoolOrCreateConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
+        IConnection CreateConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
-            var connection = pool.Take(serviceEndpoint);
-            if (connection == null)
-            {
-                connection = connectionFactory.EstablishNewConnection(serviceEndpoint, log);
-                connection.OnDisposed += OnConnectionDisposed;
-            }
+            var connection = connectionFactory.EstablishNewConnection(serviceEndpoint, log);
+            connection.OnDisposed += OnConnectionDisposed;
 
             return connection;
         }
