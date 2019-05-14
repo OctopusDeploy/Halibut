@@ -23,7 +23,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
-        readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
+        readonly ConnectionManager connectionManager = new ConnectionManager();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
@@ -38,10 +38,7 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
         }
 
-        public ILogFactory Logs
-        {
-            get { return logs; }
-        }
+        public ILogFactory Logs => logs;
 
         public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
 
@@ -88,14 +85,14 @@ namespace Halibut
             if (endPoint.IsWebSocketEndpoint)
             {
 #if SUPPORTS_WEB_SOCKET_CLIENT
-                client = new SecureWebSocketClient(endPoint, serverCertificate, log, pool);
+                client = new SecureWebSocketClient(endPoint, serverCertificate, log, connectionManager);
 #else
                 throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
 #endif
             }
             else
             {
-                client = new SecureClient(endPoint, serverCertificate, log, pool);
+                client = new SecureClient(endPoint, serverCertificate, log, connectionManager);
             }
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log));
         }
@@ -143,7 +140,7 @@ namespace Halibut
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
         {
-            var client = new SecureClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), pool);
+            var client = new SecureClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -176,7 +173,6 @@ namespace Halibut
                 trustedThumbprints.Remove(clientThumbprint);
         }
 
-
         public void TrustOnly(IReadOnlyList<string> thumbprints)
         {
             lock (trustedThumbprints)
@@ -208,10 +204,16 @@ namespace Halibut
             friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
         }
 
+        public void Disconnect(ServiceEndPoint endpoint)
+        {
+            var log = logs.ForEndpoint(endpoint.BaseUri);
+            connectionManager.Disconnect(endpoint, log);
+        }
+
         public void Dispose()
         {
             pollingClients.Dispose();
-            pool.Dispose();
+            connectionManager.Dispose();
             foreach (var listener in listeners)
             {
                 listener.Dispose();
