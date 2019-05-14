@@ -41,20 +41,20 @@ namespace Halibut
         public HalibutRuntime(X509Certificate2 serverCertificate) { }
         public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate) { }
         public Halibut.Diagnostics.ILogFactory Logs { get; }
+        public Func<string, string, Halibut.UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
         public static bool OSSupportsWebSockets { get; }
-        public Func<string, string, Halibut.HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
         public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
         public void Dispose() { }
+        protected Halibut.UnauthorizedClientConnectResponse HandleUnauthorizedClientConnect(string clientName, string thumbPrint) { }
         public bool IsTrusted(string remoteThumbprint) { }
         public int Listen() { }
         public int Listen(int port) { }
         public int Listen(IPEndPoint endpoint) { }
         public void ListenWebSocket(string endpoint) { }
-        protected Halibut.HandleUnauthorizedClientMode OnUnauthorizedClientConnect(string clientName, string thumbPrint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint) { }
         public void RemoveTrust(string clientThumbprint) { }
         public void Route(Halibut.ServiceEndPoint to, Halibut.ServiceEndPoint via) { }
@@ -62,11 +62,6 @@ namespace Halibut
         public void SetFriendlyHtmlPageHeaders(IEnumerable<KeyValuePair<string, string>> headers) { }
         public void Trust(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
-    }
-    public enum HandleUnauthorizedClientMode
-    {
-        BlockConnection = 0,
-        TrustAndAllowConnection = 1
     }
     public interface IDataStreamReceiver
     {
@@ -76,7 +71,7 @@ namespace Halibut
     public interface IHalibutRuntime : IDisposable
     {
         public Halibut.Diagnostics.ILogFactory Logs { get; }
-        public Func<string, string, Halibut.HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
+        public Func<string, string, Halibut.UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
@@ -127,6 +122,11 @@ namespace Halibut
         public int GetHashCode() { }
         public static bool IsWebSocketAddress(Uri baseUri) { }
         public string ToString() { }
+    }
+    public enum UnauthorizedClientConnectResponse
+    {
+        BlockConnection = 0,
+        TrustAndAllowConnection = 1
     }
 }
 namespace Halibut.Diagnostics
@@ -372,7 +372,7 @@ namespace Halibut.Transport
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.HandleUnauthorizedClientMode> unauthorizedClientConnect) { }
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.UnauthorizedClientConnectResponse> unauthorizedClientConnect) { }
         public void Dispose() { }
         public int Start() { }
     }
@@ -389,7 +389,7 @@ namespace Halibut.Transport
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.HandleUnauthorizedClientMode> unauthorizedClientConnect) { }
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.UnauthorizedClientConnectResponse> unauthorizedClientConnect) { }
         public void Dispose() { }
         public void Start() { }
     }

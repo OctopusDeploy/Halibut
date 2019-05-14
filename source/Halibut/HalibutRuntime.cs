@@ -40,7 +40,7 @@ namespace Halibut
 
         public ILogFactory Logs => logs;
 
-        public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
+        public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
 
         PendingRequestQueue GetQueue(Uri target)
         {
@@ -59,14 +59,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, OnUnauthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, OnUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             listeners.Add(listener);
             listener.Start();
         }
@@ -220,12 +220,12 @@ namespace Halibut
             }
         }
 
-        protected HandleUnauthorizedClientMode OnUnauthorizedClientConnect(string clientName, string thumbPrint)
+        protected UnauthorizedClientConnectResponse HandleUnauthorizedClientConnect(string clientName, string thumbPrint)
         {
-            var result = this.UnauthorizedClientConnect == null ? HandleUnauthorizedClientMode.BlockConnection : this.UnauthorizedClientConnect(clientName, thumbPrint);
-            if (result == HandleUnauthorizedClientMode.TrustAndAllowConnection)
+            var result = OnUnauthorizedClientConnect?.Invoke(clientName, thumbPrint) ?? UnauthorizedClientConnectResponse.BlockConnection;
+            if (result == UnauthorizedClientConnectResponse.TrustAndAllowConnection)
             {
-                this.Trust(thumbPrint);
+                Trust(thumbPrint);
             }
             return result;
         }
