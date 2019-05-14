@@ -78,7 +78,6 @@ namespace Halibut.Transport
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
-
         public int Start()
         {
             listener = new TcpListener(endPoint);
