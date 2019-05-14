@@ -44,7 +44,7 @@ namespace Halibut
             get { return logs; }
         }
 
-        public Func<string, string, HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
 
 
         PendingRequestQueue GetQueue(Uri target)
@@ -64,14 +64,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnAuthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnauthorizedClientConnect);
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnAuthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnauthorizedClientConnect);
             listeners.Add(listener);
             listener.Start();
         }
@@ -220,14 +220,14 @@ namespace Halibut
             }
         }
 
-        protected bool NotifyUnAuthorizedClientConnect(string clientName, string thumbPrint)
+        protected bool NotifyUnauthorizedClientConnect(string clientName, string thumbPrint)
         {
-            var result = this.UnAuthorizedClientConnect == null ? HandleUnAuthorizedClientMode.BlockConnection : this.UnAuthorizedClientConnect(clientName, thumbPrint);
+            var result = this.UnauthorizedClientConnect == null ? HandleUnauthorizedClientMode.BlockConnection : this.UnauthorizedClientConnect(clientName, thumbPrint);
             switch(result)
             {
-                case HandleUnAuthorizedClientMode.BlockConnection:
+                case HandleUnauthorizedClientMode.BlockConnection:
                     return false;
-                case HandleUnAuthorizedClientMode.TrustAndAllowConnection:
+                case HandleUnauthorizedClientMode.TrustAndAllowConnection:
                     this.Trust(thumbPrint);
                     return true;
             }

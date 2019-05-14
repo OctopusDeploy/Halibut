@@ -59,9 +59,9 @@ namespace Halibut
         public void SetFriendlyHtmlPageHeaders(IEnumerable<KeyValuePair<string, string>> headers) { }
         public void Trust(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
-        public Func<string, string, HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
     }
-    public enum HandleUnAuthorizedClientMode
+    public enum HandleUnauthorizedClientMode
     {
         BlockConnection = 0,
         TrustAndAllowConnection = 1
@@ -74,7 +74,7 @@ namespace Halibut
     public interface IHalibutRuntime : IDisposable
     {
         public Halibut.Diagnostics.ILogFactory Logs { get; }
-        public Func<string, string, HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }

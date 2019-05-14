@@ -42,7 +42,7 @@ namespace Halibut
         public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate) { }
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public static bool OSSupportsWebSockets { get; }
-        public Func<string, string, Halibut.HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, Halibut.HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
@@ -53,7 +53,7 @@ namespace Halibut
         public int Listen(int port) { }
         public int Listen(IPEndPoint endpoint) { }
         public void ListenWebSocket(string endpoint) { }
-        protected bool NotifyUnAuthorizedClientConnect(string clientName, string thumbPrint) { }
+        protected bool NotifyUnauthorizedClientConnect(string clientName, string thumbPrint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint) { }
         public void RemoveTrust(string clientThumbprint) { }
         public void Route(Halibut.ServiceEndPoint to, Halibut.ServiceEndPoint via) { }
@@ -62,7 +62,7 @@ namespace Halibut
         public void Trust(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
-    public enum HandleUnAuthorizedClientMode
+    public enum HandleUnauthorizedClientMode
     {
         BlockConnection = 0,
         TrustAndAllowConnection = 1
@@ -75,7 +75,7 @@ namespace Halibut
     public interface IHalibutRuntime : IDisposable
     {
         public Halibut.Diagnostics.ILogFactory Logs { get; }
-        public Func<string, string, Halibut.HandleUnAuthorizedClientMode> UnAuthorizedClientConnect { get; set; }
+        public Func<string, string, Halibut.HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
