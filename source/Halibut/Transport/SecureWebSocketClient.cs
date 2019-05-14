@@ -6,9 +6,6 @@
 #if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Net.Security;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Security.Authentication;
@@ -17,8 +14,6 @@ using System.Text;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
-using Halibut.Transport.Proxy;
-using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport
 {
@@ -28,14 +23,14 @@ namespace Halibut.Transport
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
-        readonly ConnectionPool<ServiceEndPoint, IConnection> pool;
+        readonly ConnectionManager connectionManager;
 
-        public SecureWebSocketClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, IConnection> pool)
+        public SecureWebSocketClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
         {
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
             this.log = log;
-            this.pool = pool;
+            this.connectionManager = connectionManager;
         }
 
         public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
@@ -64,7 +59,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = AcquireConnection();
+                        connection = connectionManager.AcquireConnection(new WebSocketConnectionFactory(clientCertificate), serviceEndpoint, log);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
@@ -78,7 +73,7 @@ namespace Halibut.Transport
                     }
 
                     // Only return the connection to the pool if all went well
-                    ReleaseConnection(connection);
+                    connectionManager.ReleaseConnection(serviceEndpoint, connection);
                 }
                 catch (AuthenticationException aex)
                 {
@@ -110,7 +105,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        pool.Clear(serviceEndpoint, log);
+                        connectionManager.ClearPooledConnections(serviceEndpoint, log);
                     }
 
                 }
@@ -122,68 +117,6 @@ namespace Halibut.Transport
             }
 
             HandleError(lastError, retryAllowed);
-        }
-
-        IConnection AcquireConnection()
-        {
-            var connection = pool.Take(serviceEndpoint);
-            return connection ?? EstablishNewConnection();
-        }
-
-        SecureConnection EstablishNewConnection()
-        {
-            log.Write(EventType.OpeningNewConnection, "Opening a new connection");
-
-            var client = CreateConnectedClient(serviceEndpoint);
-
-            log.Write(EventType.Diagnostic, "Connection established");
-
-            var stream = new WebSocketStream(client);
-
-            log.Write(EventType.Security, "Performing handshake");
-            stream.WriteTextMessage("MX");
-
-            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
-
-            var protocol = new MessageExchangeProtocol(stream, log);
-            return new SecureConnection(client, stream, protocol);
-        }
-
-        ClientWebSocket CreateConnectedClient(ServiceEndPoint endPoint)
-        {
-            if (!endPoint.IsWebSocketEndpoint)
-                throw new Exception("Only wss:// endpoints are supported");
-
-            var connectionId = Guid.NewGuid().ToString();
-
-            var client = new ClientWebSocket();
-            client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
-            client.Options.AddSubProtocol("Octopus");
-            client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
-            if (endPoint.Proxy != null)
-                client.Options.Proxy = new WebSocketProxy(endPoint.Proxy);
-
-            try
-            {
-                ServerCertificateInterceptor.Expect(connectionId);
-                using (var cts = new CancellationTokenSource(endPoint.TcpClientConnectTimeout))
-                    client.ConnectAsync(endPoint.BaseUri, cts.Token)
-                        .ConfigureAwait(false).GetAwaiter().GetResult();
-                ServerCertificateInterceptor.Validate(connectionId, endPoint);
-            }
-            finally
-            {
-                ServerCertificateInterceptor.Remove(connectionId);
-            }
-
-
-            return client;
-        }
-
-
-        void ReleaseConnection(IConnection connection)
-        {
-            pool.Return(serviceEndpoint, connection);
         }
 
         void HandleError(Exception lastError, bool retryAllowed)
@@ -209,30 +142,6 @@ namespace Halibut.Transport
             }
 
             throw new HalibutClientException(error.ToString(), lastError);
-        }
-
-        class WebSocketProxy : IWebProxy
-        {
-            readonly Uri uri;
-
-            public WebSocketProxy(ProxyDetails proxy)
-            {
-                if (proxy.Type != ProxyType.HTTP)
-                    throw new ProxyException(string.Format("Unknown proxy type {0}.", proxy.Type.ToString()));
-
-                uri = new Uri($"http://{proxy.Host}:{proxy.Port}");
-
-                if (string.IsNullOrWhiteSpace(proxy.UserName) && string.IsNullOrEmpty(proxy.Password))
-                    return;
-
-                Credentials = new NetworkCredential(proxy.UserName, proxy.Password);
-            }
-
-            public Uri GetProxy(Uri destination) => uri;
-
-            public bool IsBypassed(Uri host) => false;
-
-            public ICredentials Credentials { get; set; }
         }
     }
 }
