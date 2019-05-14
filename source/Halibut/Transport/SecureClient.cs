@@ -15,19 +15,17 @@ namespace Halibut.Transport
 {
     public class SecureClient : ISecureClient
     {
-        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")]
-        public const int RetryCountLimit = 5;
-        static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
-        readonly X509Certificate2 clientCertificate;
+        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ILog log;
-        readonly ConnectionPool<ServiceEndPoint, IConnection> pool;
+        readonly ConnectionManager connectionManager;
+        readonly X509Certificate2 clientCertificate;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionPool<ServiceEndPoint, IConnection> pool)
+        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
         {
             this.ServiceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
             this.log = log;
-            this.pool = pool;
+            this.connectionManager = connectionManager;
         }
 
         public ServiceEndPoint ServiceEndpoint { get; }
@@ -52,7 +50,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = AcquireConnection();
+                        connection = connectionManager.AcquireConnection(new TcpConnectionFactory(clientCertificate), ServiceEndpoint, log);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
@@ -66,7 +64,7 @@ namespace Halibut.Transport
                     }
 
                     // Only return the connection to the pool if all went well
-                    ReleaseConnection(connection);
+                    connectionManager.ReleaseConnection(ServiceEndpoint, connection);
                 }
                 catch (AuthenticationException aex)
                 {
@@ -101,7 +99,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        pool.Clear(ServiceEndpoint, log);
+                        connectionManager.ClearPooledConnections(ServiceEndpoint, log);
                     }
 
                     Thread.Sleep(retryInterval);
@@ -130,58 +128,6 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
-        IConnection AcquireConnection()
-        {
-            var connection = pool.Take(ServiceEndpoint);
-            return connection ?? EstablishNewConnection();
-        }
-
-        SecureConnection EstablishNewConnection()
-        {
-            log.Write(EventType.OpeningNewConnection, "Opening a new connection");
-
-            var certificateValidator = new ClientCertificateValidator(ServiceEndpoint);
-            var client = CreateConnectedTcpClient(ServiceEndpoint);
-            log.Write(EventType.Diagnostic, "Connection established");
-
-            var stream = client.GetStream();
-
-            log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
-            var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            ssl.AuthenticateAsClient(ServiceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
-            ssl.Write(MxLine, 0, MxLine.Length);
-            ssl.Flush();
-
-            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, ServiceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
-
-            var protocol = new MessageExchangeProtocol(ssl, log);
-            return new SecureConnection(client, ssl, protocol);
-        }
-
-        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
-        {
-            TcpClient client;
-            if (endPoint.Proxy == null)
-            {
-                client = CreateTcpClient();
-                client.ConnectWithTimeout(endPoint.BaseUri, endPoint.TcpClientConnectTimeout);
-            }
-            else
-            {
-                log.Write(EventType.Diagnostic, "Creating a proxy client");
-                client = new ProxyClientFactory()
-                    .CreateProxyClient(log, endPoint.Proxy)
-                    .WithTcpClientFactory(CreateTcpClient)
-                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout);
-            }
-            return client;
-        }
-
-        void ReleaseConnection(IConnection connection)
-        {
-            pool.Return(ServiceEndpoint, connection);
-        }
-
         void HandleError(Exception lastError, bool retryAllowed)
         {
             if (lastError == null)
@@ -205,22 +151,6 @@ namespace Halibut.Transport
             }
 
             throw new HalibutClientException(error.ToString(), lastError);
-        }
-
-        static TcpClient CreateTcpClient()
-        {
-            var client = new TcpClient(AddressFamily.InterNetworkV6)
-            {
-                SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
-                ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
-                Client = { DualMode = true }
-            };
-            return client;
-        }
-
-        X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
-        {
-            return clientCertificate;
         }
     }
 }

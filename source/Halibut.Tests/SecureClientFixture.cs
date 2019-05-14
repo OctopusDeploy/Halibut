@@ -39,14 +39,14 @@ namespace Halibut.Tests
         [Test]
         public void SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
-            var pool = new ConnectionPool<ServiceEndPoint, IConnection>();
+            var connectionManager = new ConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
             stream.When(x => x.IdentifyAsClient()).Do(x => { throw new ConnectionInitializationFailedException(""); });
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
                 connection.Protocol.Returns(new MessageExchangeProtocol(stream));
-                pool.Return(endpoint, connection);
+                connectionManager.ReleaseConnection(endpoint, connection);
             }
 
             var request = new RequestMessage
@@ -57,7 +57,7 @@ namespace Halibut.Tests
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureClient(endpoint, Certificates.Octopus, log, pool);
+            var secureClient = new SecureClient(endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null;
             secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
 
