@@ -30,10 +30,10 @@ namespace Halibut.Tests
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
-            connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == connection);
+            var activeConnection = connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
-            connectionManager.ReleaseConnection(serviceEndpoint, connection);
+            connectionManager.ReleaseConnection(serviceEndpoint, activeConnection);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
 
@@ -43,10 +43,10 @@ namespace Halibut.Tests
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
-            connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == connection);
+            var activeConnection = connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
-            connection.Dispose();
+            activeConnection.Dispose();
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
 
@@ -56,8 +56,8 @@ namespace Halibut.Tests
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
             
-            connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
-            connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == connection);
+            var activeConnection = connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
             connectionManager.Disconnect(serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();

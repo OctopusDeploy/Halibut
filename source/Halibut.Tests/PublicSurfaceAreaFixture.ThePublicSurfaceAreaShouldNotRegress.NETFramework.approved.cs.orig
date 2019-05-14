@@ -301,6 +301,7 @@ namespace Halibut.Transport
         public void ClearPooledConnections(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }
         public void Disconnect(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }
         public void Dispose() { }
+        public IReadOnlyCollection<Halibut.Transport.IConnection> GetActiveConnections(Halibut.ServiceEndPoint serviceEndPoint) { }
         public void ReleaseConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Transport.IConnection connection) { }
     }
     public class ConnectionPool<TKey, TPooledResource>
@@ -319,11 +320,12 @@ namespace Halibut.Transport
     }
     public interface IConnection : Halibut.Transport.IPooledResource, IDisposable
     {
+        event EventHandler OnDisposed
         public Halibut.Transport.Protocol.MessageExchangeProtocol Protocol { get; }
     }
     public interface IConnectionFactory
     {
-        public Halibut.Transport.SecureConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
     }
     public interface IPooledResource : IDisposable
     {
@@ -351,6 +353,7 @@ namespace Halibut.Transport
     }
     public class SecureConnection : Halibut.Transport.IConnection, Halibut.Transport.IPooledResource, IDisposable
     {
+        event EventHandler OnDisposed
         public SecureConnection(IDisposable client, Stream stream, Halibut.Transport.Protocol.MessageExchangeProtocol protocol) { }
         public Halibut.Transport.Protocol.MessageExchangeProtocol Protocol { get; }
         public void Dispose() { }
@@ -390,12 +393,12 @@ namespace Halibut.Transport
     public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
     {
         public TcpConnectionFactory(X509Certificate2 clientCertificate) { }
-        public Halibut.Transport.SecureConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
     }
     public class WebSocketConnectionFactory : Halibut.Transport.IConnectionFactory
     {
         public WebSocketConnectionFactory(X509Certificate2 clientCertificate) { }
-        public Halibut.Transport.SecureConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
     }
 }
 namespace Halibut.Transport.Protocol

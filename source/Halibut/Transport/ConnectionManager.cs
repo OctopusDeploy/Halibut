@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Diagnostics;
+using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
@@ -24,9 +25,8 @@ namespace Halibut.Transport
         IConnection CreateConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
             var connection = connectionFactory.EstablishNewConnection(serviceEndpoint, log);
-            connection.OnDisposed += OnConnectionDisposed;
 
-            return connection;
+            return new DisposableNotifierConnection(connection, OnConnectionDisposed);
         }
 
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
@@ -56,7 +56,10 @@ namespace Halibut.Transport
 
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
-            pool.Clear(serviceEndPoint, log);
+            lock (activeConnections)
+            {
+                pool.Clear(serviceEndPoint, log);
+            }
         }
 
         public IReadOnlyCollection<IConnection> GetActiveConnections(ServiceEndPoint serviceEndPoint)
@@ -98,12 +101,10 @@ namespace Halibut.Transport
             }
         }
 
-        void OnConnectionDisposed(object sender, EventArgs e)
+        void OnConnectionDisposed(IConnection connection)
         {
             lock (activeConnections)
             {
-                var connection = sender as IConnection;
-
                 var setsContainingConnection = activeConnections.Where(c => c.Value.Contains(connection)).ToList();
                 var setsToRemoveCompletely = setsContainingConnection.Where(c => c.Value.Count == 1).ToList();
                 foreach (var setContainingConnection in setsContainingConnection.Except(setsToRemoveCompletely))
@@ -116,6 +117,42 @@ namespace Halibut.Transport
                     activeConnections.Remove(setToRemoveCompletely.Key);
                 }
             }
+        }
+
+        class DisposableNotifierConnection : IConnection
+        {
+            readonly IConnection connectionImplementation;
+            readonly Action<IConnection> onDisposed;
+
+            public DisposableNotifierConnection(IConnection connectionImplementation, Action<IConnection> onDisposed)
+            {
+                this.connectionImplementation = connectionImplementation;
+                this.onDisposed = onDisposed;
+            }
+
+            public void Dispose()
+            {
+                try
+                {
+                    connectionImplementation.Dispose();
+                }
+                finally
+                {
+                    onDisposed(this);
+                }
+            }
+
+            public void NotifyUsed()
+            {
+                connectionImplementation.NotifyUsed();
+            }
+
+            public bool HasExpired()
+            {
+                return connectionImplementation.HasExpired();
+            }
+
+            public MessageExchangeProtocol Protocol => connectionImplementation.Protocol;
         }
     }
 }

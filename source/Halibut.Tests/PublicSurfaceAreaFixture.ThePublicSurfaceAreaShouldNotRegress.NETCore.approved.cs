@@ -326,7 +326,6 @@ namespace Halibut.Transport
     }
     public interface IConnection : Halibut.Transport.IPooledResource, IDisposable
     {
-        event EventHandler OnDisposed
         public Halibut.Transport.Protocol.MessageExchangeProtocol Protocol { get; }
     }
     public interface IConnectionFactory
@@ -359,7 +358,6 @@ namespace Halibut.Transport
     }
     public class SecureConnection : Halibut.Transport.IConnection, Halibut.Transport.IPooledResource, IDisposable
     {
-        event EventHandler OnDisposed
         public SecureConnection(IDisposable client, Stream stream, Halibut.Transport.Protocol.MessageExchangeProtocol protocol) { }
         public Halibut.Transport.Protocol.MessageExchangeProtocol Protocol { get; }
         public void Dispose() { }

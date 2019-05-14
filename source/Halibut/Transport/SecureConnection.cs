@@ -23,7 +23,6 @@ namespace Halibut.Transport
         }
 
         public MessageExchangeProtocol Protocol => protocol;
-        public event EventHandler OnDisposed;
 
         public void NotifyUsed()
         {
@@ -37,7 +36,6 @@ namespace Halibut.Transport
 
         public void Dispose()
         {
-            OnDisposed?.Invoke(this, EventArgs.Empty);
             try
             {
                 protocol.StopAcceptingClientRequests();
