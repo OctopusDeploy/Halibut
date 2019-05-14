@@ -65,6 +65,7 @@ namespace Halibut.Transport
                 }
 
                 connections.Clear();
+                pool.Remove(key);
             }
         }
 

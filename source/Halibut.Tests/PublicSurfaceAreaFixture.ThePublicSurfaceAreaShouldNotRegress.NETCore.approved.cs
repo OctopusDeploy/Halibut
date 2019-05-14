@@ -45,6 +45,7 @@ namespace Halibut
         public static bool OSSupportsWebSockets { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
+        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
         public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
         public void Dispose() { }
@@ -71,6 +72,7 @@ namespace Halibut
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
+        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Uri uri) { }
         public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
         public bool IsTrusted(string remoteThumbprint) { }
@@ -306,6 +308,16 @@ namespace Halibut.ServiceModel
 }
 namespace Halibut.Transport
 {
+    public class ConnectionManager : IDisposable
+    {
+        public ConnectionManager() { }
+        public Halibut.Transport.IConnection AcquireConnection(Halibut.Transport.IConnectionFactory connectionFactory, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
+        public void ClearPooledConnections(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }
+        public void Disconnect(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }
+        public void Dispose() { }
+        public IReadOnlyCollection<Halibut.Transport.IConnection> GetActiveConnections(Halibut.ServiceEndPoint serviceEndPoint) { }
+        public void ReleaseConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Transport.IConnection connection) { }
+    }
     public class ConnectionPool<TKey, TPooledResource>
     {
         public ConnectionPool() { }
@@ -323,6 +335,10 @@ namespace Halibut.Transport
     public interface IConnection : Halibut.Transport.IPooledResource, IDisposable
     {
         public Halibut.Transport.Protocol.MessageExchangeProtocol Protocol { get; }
+    }
+    public interface IConnectionFactory
+    {
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
     }
     public interface IPooledResource : IDisposable
     {
@@ -344,7 +360,7 @@ namespace Halibut.Transport
     public class SecureClient : Halibut.Transport.ISecureClient
     {
         public static int RetryCountLimit;
-        public SecureClient(Halibut.ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, Halibut.Diagnostics.ILog log, Halibut.Transport.ConnectionPool<Halibut.ServiceEndPoint, Halibut.Transport.IConnection> pool) { }
+        public SecureClient(Halibut.ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, Halibut.Diagnostics.ILog log, Halibut.Transport.ConnectionManager connectionManager) { }
         public Halibut.ServiceEndPoint ServiceEndpoint { get; }
         public void ExecuteTransaction(Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler) { }
     }
@@ -378,6 +394,11 @@ namespace Halibut.Transport
     {
         public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout) { }
         public static void ConnectWithTimeout(TcpClient client, string host, int port, TimeSpan timeout) { }
+    }
+    public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
+    {
+        public TcpConnectionFactory(X509Certificate2 clientCertificate) { }
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
     }
 }
 namespace Halibut.Transport.Protocol
