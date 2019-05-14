@@ -13,7 +13,6 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut
 {
-
     public class HalibutRuntime : IHalibutRuntime
     {
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
