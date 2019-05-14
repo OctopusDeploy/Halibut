@@ -45,7 +45,6 @@ namespace Halibut
 
         public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
 
-
         PendingRequestQueue GetQueue(Uri target)
         {
             return queues.GetOrAdd(target, u => new PendingRequestQueue(logs.ForEndpoint(target)));
