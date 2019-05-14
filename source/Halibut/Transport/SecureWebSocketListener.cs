@@ -17,7 +17,7 @@ namespace Halibut.Transport
         readonly X509Certificate2 serverCertificate;
         readonly Func<MessageExchangeProtocol, Task> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
-        readonly Func<string, string, bool> unauthorizedClientConnect;
+        readonly Func<string, string, HandleUnauthorizedClientMode> unauthorizedClientConnect;
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
@@ -43,11 +43,11 @@ namespace Halibut.Transport
         }
 
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => false)
+            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => HandleUnauthorizedClientMode.BlockConnection)
         {
         }
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, bool> unauthorizedClientConnect)
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, HandleUnauthorizedClientMode> unauthorizedClientConnect)
         {
             if (!endPoint.EndsWith("/"))
                 endPoint += "/";
@@ -210,7 +210,7 @@ namespace Halibut.Transport
             if (!isAuthorized)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", clientName, thumbprint);
-                isAuthorized = unauthorizedClientConnect(clientName.ToString(), thumbprint);
+                isAuthorized = unauthorizedClientConnect(clientName.ToString(), thumbprint) == HandleUnauthorizedClientMode.TrustAndAllowConnection;
                 if (!isAuthorized)
                     return false;
             }

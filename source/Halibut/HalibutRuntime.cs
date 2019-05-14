@@ -62,14 +62,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnauthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, OnUnauthorizedClientConnect);
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, NotifyUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, OnUnauthorizedClientConnect);
             listeners.Add(listener);
             listener.Start();
         }
@@ -218,18 +218,14 @@ namespace Halibut
             }
         }
 
-        protected bool NotifyUnauthorizedClientConnect(string clientName, string thumbPrint)
+        protected HandleUnauthorizedClientMode OnUnauthorizedClientConnect(string clientName, string thumbPrint)
         {
             var result = this.UnauthorizedClientConnect == null ? HandleUnauthorizedClientMode.BlockConnection : this.UnauthorizedClientConnect(clientName, thumbPrint);
-            switch(result)
+            if (result == HandleUnauthorizedClientMode.TrustAndAllowConnection)
             {
-                case HandleUnauthorizedClientMode.BlockConnection:
-                    return false;
-                case HandleUnauthorizedClientMode.TrustAndAllowConnection:
-                    this.Trust(thumbPrint);
-                    return true;
+                this.Trust(thumbPrint);
             }
-            return false;
+            return result;
         }
 
 #pragma warning disable DE0009 // API is deprecated
