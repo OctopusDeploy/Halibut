@@ -210,7 +210,6 @@ namespace Halibut
             friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
         }
 
-
         public void Dispose()
         {
             pollingClients.Dispose();
