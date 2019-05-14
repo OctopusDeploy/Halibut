@@ -60,6 +60,12 @@ namespace Halibut
         public void SetFriendlyHtmlPageHeaders(IEnumerable<KeyValuePair<string, string>> headers) { }
         public void Trust(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
+        public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
+    }
+    public enum HandleUnauthorizedClientMode
+    {
+        BlockConnection = 0,
+        TrustAndAllowConnection = 1
     }
     public interface IDataStreamReceiver
     {
@@ -69,6 +75,7 @@ namespace Halibut
     public interface IHalibutRuntime : IDisposable
     {
         public Halibut.Diagnostics.ILogFactory Logs { get; }
+        public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
@@ -370,6 +377,7 @@ namespace Halibut.Transport
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.HandleUnauthorizedClientMode> unauthorizedClientConnect) { }
         public void Dispose() { }
         public int Start() { }
     }
@@ -379,6 +387,7 @@ namespace Halibut.Transport
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.HandleUnauthorizedClientMode> unauthorizedClientConnect) { }
         public void Dispose() { }
         public void Start() { }
     }

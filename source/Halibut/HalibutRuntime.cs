@@ -40,6 +40,8 @@ namespace Halibut
 
         public ILogFactory Logs => logs;
 
+        public Func<string, string, HandleUnauthorizedClientMode> UnauthorizedClientConnect { get; set; }
+
         PendingRequestQueue GetQueue(Uri target)
         {
             return queues.GetOrAdd(target, u => new PendingRequestQueue(logs.ForEndpoint(target)));
@@ -57,14 +59,14 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
+            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, OnUnauthorizedClientConnect);
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, OnUnauthorizedClientConnect);
             listeners.Add(listener);
             listener.Start();
         }
@@ -216,6 +218,16 @@ namespace Halibut
             {
                 listener.Dispose();
             }
+        }
+
+        protected HandleUnauthorizedClientMode OnUnauthorizedClientConnect(string clientName, string thumbPrint)
+        {
+            var result = this.UnauthorizedClientConnect == null ? HandleUnauthorizedClientMode.BlockConnection : this.UnauthorizedClientConnect(clientName, thumbPrint);
+            if (result == HandleUnauthorizedClientMode.TrustAndAllowConnection)
+            {
+                this.Trust(thumbPrint);
+            }
+            return result;
         }
 
 #pragma warning disable DE0009 // API is deprecated
