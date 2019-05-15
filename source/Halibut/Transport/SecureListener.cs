@@ -361,7 +361,7 @@ namespace Halibut.Transport
         {
             cts.Cancel();
             backgroundThread?.Join();
-            listener.Stop();
+            listener?.Stop();
             cts.Dispose();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
