@@ -29,5 +29,10 @@ namespace Halibut.Transport.Protocol
         {
             return new ResponseMessage {Id = request.Id, Error = new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString() }};
         }
+
+        public override string ToString() 
+        {
+            return JsonConvert.SerializeObject(this);
+        }
     }
 }

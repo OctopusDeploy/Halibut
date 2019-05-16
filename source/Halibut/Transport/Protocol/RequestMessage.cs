@@ -26,7 +26,7 @@ namespace Halibut.Transport.Protocol
 
         public override string ToString()
         {
-            return Id;
+            return JsonConvert.SerializeObject(this);
         }
     }
 }
