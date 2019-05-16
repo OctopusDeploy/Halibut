@@ -363,7 +363,7 @@ namespace Halibut.Transport
             backgroundThread?.Join();
             listener?.Stop();
             cts.Dispose();
-            log.Write(EventType.ListenerStopped, "Listener stopped");
+            log?.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
 }
