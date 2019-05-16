@@ -504,6 +504,7 @@ namespace Halibut.Transport.Protocol
         public static Halibut.Transport.Protocol.ResponseMessage FromError(Halibut.Transport.Protocol.RequestMessage request, string message) { }
         public static Halibut.Transport.Protocol.ResponseMessage FromException(Halibut.Transport.Protocol.RequestMessage request, Exception ex) { }
         public static Halibut.Transport.Protocol.ResponseMessage FromResult(Halibut.Transport.Protocol.RequestMessage request, Object result) { }
+        public string ToString() { }
     }
     public class ServerError
     {
