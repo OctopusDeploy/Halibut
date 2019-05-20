@@ -293,8 +293,7 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
-            using (var filter = new EOFFilterStream(stream))
-            using (var zip = new DeflateStream(filter, CompressionMode.Compress, true))
+            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
@@ -339,38 +338,6 @@ namespace Halibut.Transport.Protocol
 
             stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
-        }
-
-        class EOFFilterStream : Stream
-        {
-            // In netcore the DeflateStream will sometimes return an EOF (\u0003) character if it has previously
-            // written something to the stream as part of it's dispose. Since we use compression for writing
-            // messages as part of a longer stream we don't want to send EOF. This filters the EOF out.
-
-            readonly Stream stream;
-            public EOFFilterStream(Stream stream)
-            {
-                this.stream = stream;
-            }
-
-            public override bool CanRead => stream.CanRead;
-            public override bool CanSeek => stream.CanSeek;
-            public override bool CanWrite => stream.CanWrite;
-            public override long Length => stream.Length;
-            public override long Position { get => stream.Position; set => stream.Position = value; }
-
-            public override void Flush() => stream.Flush();
-            public override int Read(byte[] buffer, int offset, int count) => stream.Read(buffer, offset, count);
-            public override long Seek(long offset, SeekOrigin origin) => stream.Seek(offset, origin);
-            public override void SetLength(long value) => stream.SetLength(value);
-            public override void Write(byte[] buffer, int offset, int count)
-            {
-                // \u0003 in LSB order is 03-00.
-                if (count == 2 && buffer[offset] == 3 && buffer[offset + 1] == 0)
-                    return;
-
-                stream.Write(buffer, offset, count);
-            }
         }
     }
 }
