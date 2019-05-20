@@ -379,6 +379,7 @@ namespace Halibut.Transport
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.UnauthorizedClientConnectResponse> unauthorizedClientConnect) { }
+        public void Disconnect(string thumbprint) { }
         public void Dispose() { }
         public int Start() { }
     }

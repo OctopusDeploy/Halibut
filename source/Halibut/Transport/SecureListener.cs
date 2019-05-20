@@ -39,6 +39,7 @@ namespace Halibut.Transport
         readonly Func<string> getFriendlyHtmlPageContent;
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
         readonly CancellationTokenSource cts = new CancellationTokenSource();
+        readonly TcpClientManager tcpClientManager = new TcpClientManager();
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
@@ -108,6 +109,11 @@ namespace Halibut.Transport
             backgroundThread.Start();
 
             return ((IPEndPoint)listener.LocalEndpoint).Port;
+        }
+
+        public void Disconnect(string thumbprint)
+        {
+            tcpClientManager.Disconnect(thumbprint);
         }
 
         void Accept()
@@ -205,7 +211,14 @@ namespace Halibut.Transport
                         return;
                     }
 
-                    if (Authorize(ssl, clientName))
+                    var thumbprint = GetThumbprint(ssl);
+                    if (thumbprint == null)
+                    {
+                        log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", clientName);
+                        return;
+                    }
+
+                    if (Authorize(thumbprint, clientName))
                     {
                         // The ExchangeMessage call can hang on reading the stream which keeps a thread alive,
                         // so we dispose the stream which will cause the thread to abort with an exceptions.
@@ -216,11 +229,15 @@ namespace Halibut.Transport
                                 ((IDisposable)weakSSL.Target).Dispose();
                         });
 
+                        tcpClientManager.AddActiveClient(thumbprint, client);
                         // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                         await ExchangeMessages(ssl);
 
-                        // Mark the stream as delegated once everything has succeeded
-                        keepStreamOpen = true;
+                        if (verifyClientThumbprint(thumbprint))
+                        {
+                            // Mark the stream as delegated once everything has succeeded
+                            keepStreamOpen = true;
+                        }
                     }
                 }
                 catch (AuthenticationException ex)
@@ -277,17 +294,24 @@ namespace Halibut.Transport
             }
         }
 
-        bool Authorize(SslStream stream, EndPoint clientName)
+        static string GetThumbprint(SslStream stream)
         {
-            log.Write(EventType.Diagnostic, "Begin authorization");
-
             if (stream.RemoteCertificate == null)
             {
-                log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", clientName);
-                return false;
+                return null;
             }
 
             var thumbprint = new X509Certificate2(stream.RemoteCertificate.Export(X509ContentType.Cert)).Thumbprint;
+            return thumbprint;
+        }
+
+        bool Authorize(string thumbprint, EndPoint clientName)
+        {
+            if (thumbprint == null)
+                return false;
+
+            log.Write(EventType.Diagnostic, "Begin authorization");
+
             var isAuthorized = verifyClientThumbprint(thumbprint);
 
             if (!isAuthorized)
