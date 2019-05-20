@@ -373,6 +373,7 @@ namespace Halibut.Transport
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<Halibut.Transport.Protocol.MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.UnauthorizedClientConnectResponse> unauthorizedClientConnect) { }
+        public void Disconnect(string thumbprint) { }
         public void Dispose() { }
         public int Start() { }
     }
@@ -397,6 +398,13 @@ namespace Halibut.Transport
     {
         public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout) { }
         public static void ConnectWithTimeout(TcpClient client, string host, int port, TimeSpan timeout) { }
+    }
+    public class TcpClientManager
+    {
+        public TcpClientManager() { }
+        public void AddActiveClient(string thumbprint, TcpClient client) { }
+        public void Disconnect(string thumbprint) { }
+        public IReadOnlyCollection<TcpClient> GetActiveClients(string thumbprint) { }
     }
     public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
     {

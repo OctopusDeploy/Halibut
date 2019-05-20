@@ -13,17 +13,34 @@ namespace Halibut.Tests
         {
             const string thumbprint = "123";
             var manager = new TcpClientManager();
-            manager.AddActiveClient(thumbprint, ConnectedTcpClient());
-            manager.AddActiveClient(thumbprint, ConnectedTcpClient());
 
-            manager.GetActiveClients(thumbprint).Should().HaveCount(2);
+            manager.AddActiveClient(thumbprint, new TcpClient());
+
+            manager.GetActiveClients(thumbprint).Should().HaveCount(1);
         }
 
-        TcpClient ConnectedTcpClient()
+        [Test]
+        public void ShouldRemoveDisconnectedClients()
         {
-            var client = Substitute.ForPartsOf<TcpClient>();
-            client.Connected.Returns(true);
-            return client;
+            const string thumbprint = "123";
+            var manager = new TcpClientManager();
+
+            manager.AddActiveClient(thumbprint, new TcpClient());
+            manager.AddActiveClient(thumbprint, new TcpClient());
+
+            manager.GetActiveClients(thumbprint).Should().HaveCount(1);
+        }
+
+        [Test]
+        public void ShouldDisconnect()
+        {
+            const string thumbprint = "123";
+            var manager = new TcpClientManager();
+
+            manager.AddActiveClient(thumbprint, new TcpClient());
+            manager.Disconnect(thumbprint);
+
+            manager.GetActiveClients(thumbprint).Should().BeEmpty();
         }
     }
 }
