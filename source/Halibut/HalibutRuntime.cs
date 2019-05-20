@@ -172,7 +172,7 @@ namespace Halibut
             lock (trustedThumbprints)
             {
                 trustedThumbprints.Remove(clientThumbprint);
-                DisconnectUntrustedClient(clientThumbprint);
+                DisconnectFromAllListeners(clientThumbprint);
             }
         }
 
@@ -186,26 +186,24 @@ namespace Halibut
                 foreach (var thumbprint in thumbprints)
                     trustedThumbprints.Add(thumbprint);
 
-                DisconnectUntrustedClients(thumbprintsRevoked);
+                DisconnectFromAllListeners(thumbprintsRevoked);
             }
         }
 
-        void DisconnectUntrustedClients(IReadOnlyCollection<string> thumbprints)
+        void DisconnectFromAllListeners(IReadOnlyCollection<string> thumbprints)
         {
             foreach (var thumbprint in thumbprints)
             {
-                DisconnectUntrustedClient(thumbprint);
+                DisconnectFromAllListeners(thumbprint);
             }
         }
 
-        void DisconnectUntrustedClient(string thumbprint)
+        void DisconnectFromAllListeners(string thumbprint)
         {
-            foreach (var listener in listeners)
+            var secureListeners = listeners.Where(l => l is SecureListener).Cast<SecureListener>();
+            foreach (var secureListener in secureListeners)
             {
-                if (listener is SecureListener secureListener)
-                {
-                    secureListener.Disconnect(thumbprint);
-                }
+                secureListener.Disconnect(thumbprint);
             }
         }
 

@@ -307,6 +307,9 @@ namespace Halibut.Transport
 
         bool Authorize(string thumbprint, EndPoint clientName)
         {
+            if (thumbprint == null)
+                return false;
+
             log.Write(EventType.Diagnostic, "Begin authorization");
 
             var isAuthorized = verifyClientThumbprint(thumbprint);

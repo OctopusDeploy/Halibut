@@ -20,12 +20,12 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void ShouldRemoveDisconnectedClients()
+        public void AddShouldRemoveStaleClients()
         {
             const string thumbprint = "123";
             var manager = new TcpClientManager();
 
-            manager.AddActiveClient(thumbprint, new TcpClient());
+            manager.AddActiveClient(thumbprint, new TcpClient()); // this client is stale
             manager.AddActiveClient(thumbprint, new TcpClient());
 
             manager.GetActiveClients(thumbprint).Should().HaveCount(1);

@@ -127,7 +127,7 @@ namespace Halibut.Transport
             }
         }
 
-        void SafelyDisposeConnection(IConnection connection, ILog log)
+        static void SafelyDisposeConnection(IConnection connection, ILog log)
         {
             try
             {
@@ -135,7 +135,7 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                log?.WriteException(EventType.Error, "Exception disposing connection from pool", ex);
+                log?.WriteException(EventType.Error, "Exception disposing connection", ex);
             }
         }
 
