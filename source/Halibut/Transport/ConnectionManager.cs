@@ -78,16 +78,24 @@ namespace Halibut.Transport
         public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)
         {
             ClearPooledConnections(serviceEndPoint, log);
-            ClearActiveConnections(serviceEndPoint);
+            ClearActiveConnections(serviceEndPoint, log);
         }
 
         public void Dispose()
         {
             pool.Dispose();
+            lock (activeConnections)
+            {
+                var connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
+                foreach (var connection in connectionsToDispose)
+                {
+                    SafelyDisposeConnection(connection, null);
+                }
+            }
         }
 
 
-        void ClearActiveConnections(ServiceEndPoint serviceEndPoint)
+        void ClearActiveConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
             lock (activeConnections)
             {
@@ -95,7 +103,7 @@ namespace Halibut.Transport
                 {
                     foreach (var connection in activeConnectionsForEndpoint)
                     {
-                        connection.Dispose();
+                        SafelyDisposeConnection(connection, log);
                     }
                 }
             }
@@ -116,6 +124,18 @@ namespace Halibut.Transport
                 {
                     activeConnections.Remove(setToRemoveCompletely.Key);
                 }
+            }
+        }
+
+        void SafelyDisposeConnection(IConnection connection, ILog log)
+        {
+            try
+            {
+                connection?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                log?.WriteException(EventType.Error, "Exception disposing connection from pool", ex);
             }
         }
 

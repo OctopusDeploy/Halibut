@@ -170,16 +170,42 @@ namespace Halibut
         public void RemoveTrust(string clientThumbprint)
         {
             lock (trustedThumbprints)
+            {
                 trustedThumbprints.Remove(clientThumbprint);
+                DisconnectUntrustedClient(clientThumbprint);
+            }
         }
 
         public void TrustOnly(IReadOnlyList<string> thumbprints)
         {
             lock (trustedThumbprints)
             {
+                var thumbprintsRevoked = trustedThumbprints.Except(thumbprints).ToArray();
+
                 trustedThumbprints.Clear();
                 foreach (var thumbprint in thumbprints)
                     trustedThumbprints.Add(thumbprint);
+
+                DisconnectUntrustedClients(thumbprintsRevoked);
+            }
+        }
+
+        void DisconnectUntrustedClients(IReadOnlyCollection<string> thumbprints)
+        {
+            foreach (var thumbprint in thumbprints)
+            {
+                DisconnectUntrustedClient(thumbprint);
+            }
+        }
+
+        void DisconnectUntrustedClient(string thumbprint)
+        {
+            foreach (var listener in listeners)
+            {
+                if (listener is SecureListener secureListener)
+                {
+                    secureListener.Disconnect(thumbprint);
+                }
             }
         }
 
