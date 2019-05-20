@@ -4,7 +4,7 @@ using System.Net.Sockets;
 
 namespace Halibut.Transport
 {
-    public class TcpClientManager
+    class TcpClientManager
     {
         readonly Dictionary<string, HashSet<TcpClient>> activeClients = new Dictionary<string, HashSet<TcpClient>>();
 
@@ -14,7 +14,7 @@ namespace Halibut.Transport
             {
                 if (activeClients.TryGetValue(thumbprint, out var tcpClients))
                 {
-                    RemoveStaleClients(tcpClients);
+                    tcpClients.RemoveWhere(c => !c.Connected);
                     tcpClients.Add(client);
                 }
                 else
@@ -23,11 +23,6 @@ namespace Halibut.Transport
                     activeClients.Add(thumbprint, tcpClients);
                 }
             }
-        }
-
-        static void RemoveStaleClients(HashSet<TcpClient> tcpClients)
-        {
-            tcpClients.RemoveWhere(c => !c.Connected);
         }
 
         public void Disconnect(string thumbprint)
@@ -45,6 +40,7 @@ namespace Halibut.Transport
             }
         }
 
+        static readonly TcpClient[] NoClients = new TcpClient[0];
         public IReadOnlyCollection<TcpClient> GetActiveClients(string thumbprint)
         {
             lock (activeClients)
@@ -55,7 +51,7 @@ namespace Halibut.Transport
                 }
             }
 
-            return Enumerable.Empty<TcpClient>().ToArray();
+            return NoClients;
         }
     }
 }

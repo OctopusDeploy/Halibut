@@ -62,6 +62,7 @@ namespace Halibut.Transport
             }
         }
 
+        static IConnection[] NoConnections = new IConnection[0];
         public IReadOnlyCollection<IConnection> GetActiveConnections(ServiceEndPoint serviceEndPoint)
         {
             lock (activeConnections)
@@ -72,7 +73,7 @@ namespace Halibut.Transport
                 }
             }
 
-            return Enumerable.Empty<IConnection>().ToArray();
+            return NoConnections;
         }
 
         public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)

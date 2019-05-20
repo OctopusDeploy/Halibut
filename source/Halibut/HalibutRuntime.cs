@@ -200,8 +200,7 @@ namespace Halibut
 
         void DisconnectFromAllListeners(string thumbprint)
         {
-            var secureListeners = listeners.Where(l => l is SecureListener).Cast<SecureListener>();
-            foreach (var secureListener in secureListeners)
+            foreach (var secureListener in listeners.OfType<SecureListener>())
             {
                 secureListener.Disconnect(thumbprint);
             }

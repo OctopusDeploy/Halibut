@@ -399,13 +399,6 @@ namespace Halibut.Transport
         public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout) { }
         public static void ConnectWithTimeout(TcpClient client, string host, int port, TimeSpan timeout) { }
     }
-    public class TcpClientManager
-    {
-        public TcpClientManager() { }
-        public void AddActiveClient(string thumbprint, TcpClient client) { }
-        public void Disconnect(string thumbprint) { }
-        public IReadOnlyCollection<TcpClient> GetActiveClients(string thumbprint) { }
-    }
     public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
     {
         public TcpConnectionFactory(X509Certificate2 clientCertificate) { }
