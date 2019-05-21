@@ -177,7 +177,7 @@ namespace Halibut
 
         public void RemoveTrust(string clientThumbprint)
         {
-           	trustProvider.Remove(clientThumbprint);
+            trustProvider.Remove(clientThumbprint);
             DisconnectFromAllListeners(clientThumbprint);
         }
 
