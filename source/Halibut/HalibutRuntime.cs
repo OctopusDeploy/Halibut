@@ -203,7 +203,6 @@ namespace Halibut
                 secureListener.Disconnect(thumbprint);
             }
         }
-
         public bool IsTrusted(string remoteThumbprint)
         {
            	return trustProvider.IsTrusted(remoteThumbprint);
