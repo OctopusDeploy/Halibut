@@ -253,6 +253,7 @@ namespace Halibut.ServiceModel
         public void Add(string clientThumbprint) { }
         public bool IsTrusted(string clientThumbprint) { }
         public void Remove(string clientThumbprint) { }
+        public String[] ToArray() { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
     public class DelegateServiceFactory : Halibut.ServiceModel.IServiceFactory
@@ -289,6 +290,7 @@ namespace Halibut.ServiceModel
         public void Add(string clientThumbprint) { }
         public bool IsTrusted(string clientThumbprint) { }
         public void Remove(string clientThumbprint) { }
+        public String[] ToArray() { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
     public class NullServiceFactory : Halibut.ServiceModel.IServiceFactory
