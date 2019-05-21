@@ -39,7 +39,9 @@ namespace Halibut
     {
         public static string DefaultFriendlyHtmlPageContent;
         public HalibutRuntime(X509Certificate2 serverCertificate) { }
+        public HalibutRuntime(X509Certificate2 serverCertificate, Halibut.ServiceModel.ITrustProvider trustProvider) { }
         public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate) { }
+        public HalibutRuntime(Halibut.ServiceModel.IServiceFactory serviceFactory, X509Certificate2 serverCertificate, Halibut.ServiceModel.ITrustProvider trustProvider) { }
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public Func<string, string, Halibut.UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
         public static bool OSSupportsWebSockets { get; }
@@ -279,6 +281,14 @@ namespace Halibut.ServiceModel
     public interface IServiceLease : IDisposable
     {
         public Object Service { get; }
+    }
+    public interface ITrustProvider
+    {
+        public void Add(string clientThumbprint) { }
+        public bool IsTrusted(string clientThumbprint) { }
+        public void Remove(string clientThumbprint) { }
+        public String[] ToArray() { }
+        public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
     public class NullServiceFactory : Halibut.ServiceModel.IServiceFactory
     {
