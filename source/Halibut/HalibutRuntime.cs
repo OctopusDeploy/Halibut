@@ -200,7 +200,7 @@ namespace Halibut
         {
             foreach (var secureListener in listeners.OfType<SecureListener>())
             {
-                    trustedThumbprints.Add(thumbprint);
+                secureListener.Disconnect(thumbprint);
             }
         }
 
