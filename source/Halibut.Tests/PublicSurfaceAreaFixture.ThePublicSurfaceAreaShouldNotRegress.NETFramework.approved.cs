@@ -247,15 +247,6 @@ namespace Halibut.Portability
 }
 namespace Halibut.ServiceModel
 {
-    public class DefaultTrustProvider : Halibut.ServiceModel.ITrustProvider
-    {
-        public DefaultTrustProvider() { }
-        public void Add(string clientThumbprint) { }
-        public bool IsTrusted(string clientThumbprint) { }
-        public void Remove(string clientThumbprint) { }
-        public String[] ToArray() { }
-        public void TrustOnly(IReadOnlyList<string> thumbprints) { }
-    }
     public class DelegateServiceFactory : Halibut.ServiceModel.IServiceFactory
     {
         public DelegateServiceFactory() { }
