@@ -43,12 +43,12 @@ namespace Halibut.Transport
                 {
                     protocol.EndCommunicationWithServer();
                 }
-                catch (IOException ioe) when ((ioe.InnerException as SocketException) != null)
+                catch (Exception)
                 {
                     // The stream might have already disconnected, so don't worry about it.
                 }
                 stream.Dispose();
-                ((IDisposable)client).Dispose();
+                client.Dispose();
             }
             catch (SocketException)
             {
