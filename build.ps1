@@ -51,7 +51,9 @@ Param(
     [switch]$WhatIf,
     [switch]$Mono,
     [switch]$SkipToolPackageRestore,
-    [switch]$ForceCIBuild
+    [switch]$ForceCIBuild,
+    [string]$SigningCertificatePath = "./certificates/OctopusDevelopment.pfx",
+    [string]$SigningCertificatePassword = "Password01!"
     # [Parameter(Position=0,Mandatory=$false,ValueFromRemainingArguments=$true)]
     # [string[]]$ScriptArgs
 )
@@ -192,5 +194,5 @@ if (!(Test-Path $CAKE_EXE)) {
 
 # Start Cake
 Write-Host "Running build script..."
-Invoke-Expression "& `"$CAKE_EXE`" `"$Script`" -target=`"$Target`" -configuration=`"$Configuration`" -verbosity=`"$Verbosity`" -forcecibuild=`"$ForceIsCiBuild`" $UseMono $UseDryRun $UseExperimental" # $ScriptArgs"
+Invoke-Expression "& `"$CAKE_EXE`" `"$Script`" -target=`"$Target`" -configuration=`"$Configuration`" -verbosity=`"$Verbosity`" -forcecibuild=`"$ForceIsCiBuild`" -signing_certificate_path=`"$SigningCertificatePath`" -signing_certificate_password=`"$SigningCertificatePassword`" $UseMono $UseDryRun $UseExperimental" # $ScriptArgs"
 exit $LASTEXITCODE
