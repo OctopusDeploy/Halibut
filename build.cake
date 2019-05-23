@@ -4,7 +4,6 @@
 #tool "nuget:?package=GitVersion.CommandLine&version=4.0.0"
 #tool "nuget:?package=gitlink&version=3.1.0"
 #addin "Cake.FileHelpers&version=3.2.0"
-#addin "nuget:?package=Cake.Incubator&version=5.0.1"
 
 using System.Security.Cryptography.X509Certificates;
 
