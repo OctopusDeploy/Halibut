@@ -20,6 +20,8 @@ namespace Halibut.Transport
         readonly ConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
 
+        bool isDisposing;
+
         public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
         {
             this.ServiceEndpoint = serviceEndpoint;
@@ -60,7 +62,8 @@ namespace Halibut.Transport
                     catch
                     {
                         connection?.Dispose();
-                        throw;
+                        if (!isDisposing)
+                            throw;
                     }
 
                     // Only return the connection to the pool if all went well
@@ -151,6 +154,11 @@ namespace Halibut.Transport
             }
 
             throw new HalibutClientException(error.ToString(), lastError);
+        }
+
+        public void Dispose()
+        {
+            isDisposing = true;
         }
     }
 }

@@ -60,6 +60,7 @@ namespace Halibut.Transport
         public void Dispose()
         {
             working = false;
+            secureClient.Dispose();
         }
     }
 }

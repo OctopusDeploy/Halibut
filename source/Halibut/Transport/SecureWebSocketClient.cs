@@ -25,6 +25,8 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly ConnectionManager connectionManager;
 
+        bool isDisposing;
+
         public SecureWebSocketClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
         {
             this.serviceEndpoint = serviceEndpoint;
@@ -69,7 +71,8 @@ namespace Halibut.Transport
                     catch
                     {
                         connection?.Dispose();
-                        throw;
+                        if (!isDisposing)
+                            throw;
                     }
 
                     // Only return the connection to the pool if all went well
@@ -142,6 +145,11 @@ namespace Halibut.Transport
             }
 
             throw new HalibutClientException(error.ToString(), lastError);
+        }
+
+        public void Dispose()
+        {
+            isDisposing = true;
         }
     }
 }
