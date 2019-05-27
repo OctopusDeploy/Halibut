@@ -11,6 +11,8 @@ namespace Halibut.Transport
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new Dictionary<ServiceEndPoint, HashSet<IConnection>>();
 
+        public bool IsDisposed { get; private set; }
+
         public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
             lock (activeConnections)
@@ -93,6 +95,8 @@ namespace Halibut.Transport
                     SafelyDisposeConnection(connection, null);
                 }
             }
+
+            IsDisposed = true;
         }
 
 

@@ -315,6 +315,7 @@ namespace Halibut.Transport
     public class ConnectionManager : IDisposable
     {
         public ConnectionManager() { }
+        public bool IsDisposed { get; }
         public Halibut.Transport.IConnection AcquireConnection(Halibut.Transport.IConnectionFactory connectionFactory, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
         public void ClearPooledConnections(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }
         public void Disconnect(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }

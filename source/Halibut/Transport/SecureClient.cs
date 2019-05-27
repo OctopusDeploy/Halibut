@@ -60,6 +60,8 @@ namespace Halibut.Transport
                     catch
                     {
                         connection?.Dispose();
+                        if (connectionManager.IsDisposed)
+                            return;
                         throw;
                     }
 
