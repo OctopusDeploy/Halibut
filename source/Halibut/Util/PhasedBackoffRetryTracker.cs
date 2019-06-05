@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Halibut.Util
 {
-    public class PhasedBackoffRetryTracker
+    class PhasedBackoffRetryTracker
     {
         readonly Stopwatch stopwatch = new Stopwatch();
         readonly Random random = new Random();

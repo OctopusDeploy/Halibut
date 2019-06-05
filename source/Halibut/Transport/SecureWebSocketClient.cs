@@ -80,20 +80,26 @@ namespace Halibut.Transport
                     log.WriteException(EventType.Error, $"Authentication failed while setting up connection to {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", aex);
                     lastError = aex;
                     retryAllowed = false;
-                    break;
                 }
                 catch (WebSocketException wse) when (wse.Message == "Unable to connect to the remote server")
                 {
-                    log.Write(EventType.Error, $"The remote host at {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running, or it's SSL certificate has not been configured correctly.");
                     lastError = wse;
+                    retryAllowed = false;
                 }
                 catch (WebSocketException wse)
                 {
-                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", wse);
                     lastError = wse;
-                    // When the host is not found an immediate retry isn't going to help
-                    if (wse.InnerException?.Message.StartsWith("The remote name could not be resolved:") ?? false)
-                        break;
+                    // When the host is not found or reset the connection an immediate retry isn't going to help
+                    if ((wse.InnerException?.Message.StartsWith("The remote name could not be resolved:") ?? false) ||
+                        (wse.InnerException?.IsSocketConnectionReset() ?? false) ||
+                        wse.IsSocketConnectionReset())
+                    {
+                        retryAllowed = false;
+                    }
+                    else
+                    {
+                        log.Write(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}");
+                    }
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
@@ -126,20 +132,19 @@ namespace Halibut.Transport
 
             lastError = lastError.UnpackFromContainers();
 
+            var innermost = lastError;
+            while (innermost.InnerException != null)
+                innermost = innermost.InnerException;
+            
+            if (innermost is SocketException se && !retryAllowed)
+                if (se.SocketErrorCode == SocketError.ConnectionAborted || se.SocketErrorCode == SocketError.ConnectionReset)
+                    throw new HalibutClientException($"The server {ServiceEndpoint.BaseUri} aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '{clientCertificate.Thumbprint}'.");
+
+            
             var error = new StringBuilder();
             error.Append("An error occurred when sending a request to '").Append(serviceEndpoint.BaseUri).Append("', ");
             error.Append(retryAllowed ? "before the request could begin: " : "after the request began: ");
             error.Append(lastError.Message);
-
-            var inner = lastError as SocketException;
-            if (inner != null)
-            {
-                if ((inner.SocketErrorCode == SocketError.ConnectionAborted || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
-                {
-                    error.Append("The server aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '");
-                    error.Append(clientCertificate.Thumbprint + "'.");
-                }
-            }
 
             throw new HalibutClientException(error.ToString(), lastError);
         }
