@@ -1,9 +1,3 @@
-// WebSocketClient on .NET Core does not yet support the validation (or bypass) of the remote certificate. It does
-// not use the ServicePointManager callback, nor has an option to specify a callback.
-// This means we cannot validate the remote is presenting the correct certificate
-// See https://github.com/dotnet/corefx/issues/12038
-
-#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -19,7 +13,9 @@ namespace Halibut.Transport
 {
     public class SecureWebSocketClient : ISecureClient
     {
-        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
+        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")]
+        public const int RetryCountLimit = 5;
+
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
@@ -135,12 +131,12 @@ namespace Halibut.Transport
             var innermost = lastError;
             while (innermost.InnerException != null)
                 innermost = innermost.InnerException;
-            
+
             if (innermost is SocketException se && !retryAllowed)
                 if (se.SocketErrorCode == SocketError.ConnectionAborted || se.SocketErrorCode == SocketError.ConnectionReset)
                     throw new HalibutClientException($"The server {ServiceEndpoint.BaseUri} aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '{clientCertificate.Thumbprint}'.");
 
-            
+
             var error = new StringBuilder();
             error.Append("An error occurred when sending a request to '").Append(serviceEndpoint.BaseUri).Append("', ");
             error.Append(retryAllowed ? "before the request could begin: " : "after the request began: ");
@@ -150,4 +146,3 @@ namespace Halibut.Transport
         }
     }
 }
-#endif

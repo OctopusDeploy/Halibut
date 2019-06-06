@@ -1,4 +1,4 @@
-#if SUPPORTS_WEB_SOCKET_CLIENT
+#if !SUPPORTS_CERTIFICATE_VALIDATION_CALLBACK
 using System;
 using System.Collections.Generic;
 using System.Net;

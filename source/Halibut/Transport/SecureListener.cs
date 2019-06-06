@@ -88,10 +88,10 @@ namespace Halibut.Transport
             }
             listener.Start();
 
-#if !NETSTANDARD2_0
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-#else
+#if HAS_RUNTIME_INFORMATION
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+#else
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
 #endif
             {
                 // set socket handle as not inherited so that when tentacle runs powershell

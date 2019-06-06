@@ -24,7 +24,7 @@ namespace Halibut.Transport.Protocol
 
             AttemptToDelete(filePath);
             File.Move(path, filePath);
-#if NETSTANDARD2_0
+#if HAS_RUNTIME_INFORMATION
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 SetFilePermissionsToInheritFromParent(filePath);

@@ -1,4 +1,3 @@
-#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Net;
 using System.Net.WebSockets;
@@ -50,9 +49,25 @@ namespace Halibut.Transport
             var client = new ClientWebSocket();
             client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
             client.Options.AddSubProtocol("Octopus");
-            client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
             if (serviceEndpoint.Proxy != null)
                 client.Options.Proxy = new WebSocketProxy(serviceEndpoint.Proxy);
+            
+#if SUPPORTS_CERTIFICATE_VALIDATION_CALLBACK
+            client.Options.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
+            {
+                var cert = certificate as X509Certificate2;
+                if (cert.Thumbprint != serviceEndpoint.RemoteThumbprint)
+                    throw new UnexpectedCertificateException(cert, serviceEndpoint);
+
+                return true;
+            };
+            
+            using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
+                    client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token)
+                        .ConfigureAwait(false).GetAwaiter().GetResult();
+            
+#else
+            client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
 
             try
             {
@@ -65,8 +80,9 @@ namespace Halibut.Transport
             finally
             {
                 ServerCertificateInterceptor.Remove(connectionId);
-            }
-            
+            }       
+#endif
+       
             return client;
         }
     }
@@ -95,4 +111,3 @@ namespace Halibut.Transport
         public ICredentials Credentials { get; set; }
     }
 }
-#endif
