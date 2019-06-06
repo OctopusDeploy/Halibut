@@ -149,7 +149,7 @@ namespace Halibut
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
         {
-            var client = new SecureClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            var client = new SecureListeningClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>

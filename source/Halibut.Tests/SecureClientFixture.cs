@@ -57,7 +57,7 @@ namespace Halibut.Tests
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureClient(endpoint, Certificates.Octopus, log, connectionManager);
+            var secureClient = new SecureListeningClient(endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null;
             secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
 
