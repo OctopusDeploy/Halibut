@@ -33,17 +33,27 @@ namespace Halibut.Diagnostics
 
         void WriteInternal(LogEvent logEvent)
         {
-            var logLevel = logEvent.Type == EventType.Diagnostic ||
-                           logEvent.Type == EventType.SecurityNegotiation ||
-                           logEvent.Type == EventType.MessageExchange
-                ? LogLevel.Trace 
-                : LogLevel.Info;
+            var logLevel = GetLogLevel(logEvent);
             SendToTrace(logEvent, logLevel);
 
             events.Enqueue(logEvent);
 
-            LogEvent ignore;
-            while (events.Count > 100 && events.TryDequeue(out ignore)) { }
+            while (events.Count > 100 && events.TryDequeue(out _)) { }
+        }
+
+        static LogLevel GetLogLevel(LogEvent logEvent)
+        {
+            switch (logEvent.Type)
+            {
+                case EventType.Error:
+                    return LogLevel.Error;
+                case EventType.Diagnostic:
+                case EventType.SecurityNegotiation:
+                case EventType.MessageExchange:
+                    return LogLevel.Trace;
+                default:
+                    return LogLevel.Info;
+            }
         }
 
         void SendToTrace(LogEvent logEvent, LogLevel level)

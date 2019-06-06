@@ -3,6 +3,7 @@ using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -40,14 +41,23 @@ namespace Halibut.Transport
 
         private void ExecutePollingLoop(object ignored)
         {
+            var retry = new PhasedBackoffRetryTracker();
             while (working)
             {
                 try
                 {
+                    retry.Try();
                     secureClient.ExecuteTransaction(protocol =>
                     {
                         protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
                     });
+                    retry.Success();
+                }
+                catch (HalibutClientException hce)
+                {
+                    var sleepFor = retry.GetSleepPeriod();
+                    log?.Write(EventType.Error, $"{hce.Message?.TrimEnd('.')}. Retrying in {sleepFor.TotalSeconds:n1} seconds");
+                    Thread.Sleep(sleepFor);
                 }
                 catch (Exception ex)
                 {

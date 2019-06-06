@@ -79,6 +79,7 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.Error, $"The remote host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
                     lastError = cex;
+                    retryAllowed = false;
                     Thread.Sleep(retryInterval);
                 }
                 catch (SocketException sex)
@@ -137,21 +138,20 @@ namespace Halibut.Transport
 
             lastError = lastError.UnpackFromContainers();
 
+            var innermost = lastError;
+            while (innermost.InnerException != null)
+                innermost = innermost.InnerException;
+            
+            if (innermost is SocketException se && !retryAllowed)
+                if (se.SocketErrorCode == SocketError.ConnectionAborted || se.SocketErrorCode == SocketError.ConnectionReset)
+                    throw new HalibutClientException($"The server {ServiceEndpoint.BaseUri} aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '{clientCertificate.Thumbprint}'.");
+
+            
             var error = new StringBuilder();
             error.Append("An error occurred when sending a request to '").Append(ServiceEndpoint.BaseUri).Append("', ");
             error.Append(retryAllowed ? "before the request could begin: " : "after the request began: ");
             error.Append(lastError.Message);
-
-            var inner = lastError as SocketException;
-            if (inner != null)
-            {
-                if ((inner.SocketErrorCode == SocketError.ConnectionAborted || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
-                {
-                    error.Append("The server aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '");
-                    error.Append(clientCertificate.Thumbprint + "'.");
-                }
-            }
-
+            
             throw new HalibutClientException(error.ToString(), lastError);
         }
     }
