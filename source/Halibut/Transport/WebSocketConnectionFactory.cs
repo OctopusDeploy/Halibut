@@ -11,7 +11,7 @@ using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Transport
 {
-    public class WebSocketConnectionFactory : IConnectionFactory
+    class WebSocketConnectionFactory : IConnectionFactory
     {
         readonly X509Certificate2 clientCertificate;
 

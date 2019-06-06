@@ -8,7 +8,7 @@ using Halibut.Util.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
-    public class PendingRequestQueue : IPendingRequestQueue
+    class PendingRequestQueue : IPendingRequestQueue
     {
         readonly List<PendingRequest> queue = new List<PendingRequest>();
         readonly Dictionary<string, PendingRequest> inProgress = new Dictionary<string, PendingRequest>();

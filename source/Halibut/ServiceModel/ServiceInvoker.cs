@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Halibut.Portability;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
@@ -53,7 +52,7 @@ namespace Halibut.ServiceModel
                 {
                     var paramType = parameters[i].ParameterType;
                     var argType = argumentTypes[i];
-                    if (argType == null && paramType.IsValueType())
+                    if (argType == null && paramType.IsValueType)
                     {
                         isMatch = false;
                         break;

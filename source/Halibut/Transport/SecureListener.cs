@@ -23,7 +23,7 @@ namespace Halibut.Transport
         PROTECT_FROM_CLOSE = 2
     }
 
-    public class SecureListener : IDisposable
+    class SecureListener : IDisposable
     {
         [DllImport("kernel32.dll", SetLastError = true)]
 #pragma warning disable PC003 // Native API not available in UWP
@@ -44,29 +44,16 @@ namespace Halibut.Transport
         TcpListener listener;
         Thread backgroundThread;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
-
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
-
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) :
-            this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection)
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        public SecureListener(
+            IPEndPoint endPoint,
+            X509Certificate2 serverCertificate,
+            Func<MessageExchangeProtocol, Task> protocolHandler,
+            Predicate<string> verifyClientThumbprint,
+            ILogFactory logFactory,
+            Func<string> getFriendlyHtmlPageContent,
+            Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
+            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect
+        )
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -86,6 +73,7 @@ namespace Halibut.Transport
             {
                 listener.Server.DualMode = true;
             }
+
             listener.Start();
 
 #if !NETSTANDARD2_0
@@ -108,7 +96,7 @@ namespace Halibut.Transport
             };
             backgroundThread.Start();
 
-            return ((IPEndPoint)listener.LocalEndpoint).Port;
+            return ((IPEndPoint) listener.LocalEndpoint).Port;
         }
 
         public void Disconnect(string thumbprint)
@@ -165,8 +153,8 @@ namespace Halibut.Transport
         {
             try
             {
-                client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                client.SendTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
                 await ExecuteRequest(client);
@@ -226,7 +214,7 @@ namespace Halibut.Transport
                         cts.Token.Register(() =>
                         {
                             if (weakSSL.IsAlive)
-                                ((IDisposable)weakSSL.Target).Dispose();
+                                ((IDisposable) weakSSL.Target).Dispose();
                         });
 
                         tcpClientManager.AddActiveClient(thumbprint, client);
@@ -279,7 +267,7 @@ namespace Halibut.Transport
 
             // This could fail if the client terminates the connection and we attempt to write to it
             // Disposing the StreamWriter will close the stream - it owns the stream
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
+            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) {NewLine = "\r\n"})
             {
                 writer.WriteLine("HTTP/1.0 200 OK");
                 writer.WriteLine("Content-Type: text/html; charset=utf-8");
@@ -358,7 +346,7 @@ namespace Halibut.Transport
                 var b = stream.ReadByte();
                 if (b == -1) return builder.ToString();
 
-                var c = (char)b;
+                var c = (char) b;
                 if (c == '\r')
                 {
                     continue;
@@ -378,6 +366,7 @@ namespace Halibut.Transport
                     builder.Append(c);
                 }
             }
+
             return builder.ToString();
         }
 

@@ -13,14 +13,13 @@ using Halibut.Transport.Proxy;
 
 namespace Halibut.Transport
 {
-    public class SecureClient : ISecureClient
+    class SecurePollingClient : ISecurePollingClient
     {
-        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ILog log;
         readonly ConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecurePollingClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
         {
             this.ServiceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;

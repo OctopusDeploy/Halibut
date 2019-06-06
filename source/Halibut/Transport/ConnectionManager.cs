@@ -6,7 +6,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public class ConnectionManager : IDisposable
+    class ConnectionManager : IDisposable
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new Dictionary<ServiceEndPoint, HashSet<IConnection>>();

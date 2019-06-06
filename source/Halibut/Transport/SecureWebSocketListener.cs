@@ -11,10 +11,9 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public class SecureWebSocketListener : IDisposable
+    class SecureWebSocketListener : IDisposable
     {
         readonly string endPoint;
-        readonly X509Certificate2 serverCertificate;
         readonly Func<MessageExchangeProtocol, Task> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
         readonly Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect;
@@ -25,42 +24,26 @@ namespace Halibut.Transport
         ILog log;
         HttpListener listener;
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
-
-        {
-        }
-
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
-
-        {
-        }
-
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
-        {
-        }
-
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection)
-        {
-        }
-
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        public SecureWebSocketListener(
+            string endPoint, 
+            Func<MessageExchangeProtocol, Task> protocolHandler, 
+            Predicate<string> verifyClientThumbprint, 
+            ILogFactory logFactory, 
+            Func<string> getFriendlyHtmlPageContent, 
+            Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
+            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect
+        )
         {
             if (!endPoint.EndsWith("/"))
                 endPoint += "/";
 
             this.endPoint = endPoint;
-            this.serverCertificate = serverCertificate;
             this.protocolHandler = protocolHandler;
             this.verifyClientThumbprint = verifyClientThumbprint;
             this.unauthorizedClientConnect = unauthorizedClientConnect;
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
-            EnsureCertificateIsValidForListening(serverCertificate);
         }
 
         public void Start()
@@ -230,18 +213,6 @@ namespace Halibut.Transport
 
             return protocolHandler(new MessageExchangeProtocol(stream, log));
         }
-
-        // ReSharper disable once UnusedParameter.Local
-        static void EnsureCertificateIsValidForListening(X509Certificate2 certificate)
-        {
-            if (certificate == null) throw new Exception("No certificate was provided.");
-
-            if (!certificate.HasPrivateKey)
-            {
-                throw new Exception("The X509 certificate provided does not have a private key, and so it cannot be used for listening.");
-            }
-        }
-
 
         public void Dispose()
         {

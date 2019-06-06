@@ -19,7 +19,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
         readonly X509Certificate2 serverCertificate;
         readonly List<IDisposable> listeners = new List<IDisposable>();
-        readonly ITrustProvider trustProvider; 
+        readonly ITrustProvider trustProvider;
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
@@ -68,14 +68,30 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureListener(
+                endpoint,
+                serverCertificate,
+                ListenerHandler,
+                IsTrusted,
+                logs,
+                () => friendlyHtmlPageContent,
+                () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect
+            );
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(
+                endpoint,
+                ListenerHandler,
+                IsTrusted,
+                logs,
+                () => friendlyHtmlPageContent,
+                () => friendlyHtmlPageHeaders,
+                HandleUnauthorizedClientConnect
+            );
             listeners.Add(listener);
             listener.Start();
         }
@@ -89,20 +105,21 @@ namespace Halibut
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
-            ISecureClient client;
+            ISecurePollingClient client;
             var log = logs.ForEndpoint(endPoint.BaseUri);
             if (endPoint.IsWebSocketEndpoint)
             {
 #if SUPPORTS_WEB_SOCKET_CLIENT
-                client = new SecureWebSocketClient(endPoint, serverCertificate, log, connectionManager);
+                client = new SecureWebSocketPollingClient(endPoint, serverCertificate, log, connectionManager);
 #else
                 throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
 #endif
             }
             else
             {
-                client = new SecureClient(endPoint, serverCertificate, log, connectionManager);
+                client = new SecurePollingClient(endPoint, serverCertificate, log, connectionManager);
             }
+
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log));
         }
 
@@ -125,7 +142,7 @@ namespace Halibut
         public TService CreateClient<TService>(ServiceEndPoint endpoint)
         {
 #if HAS_REAL_PROXY
-            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
+            return (TService) new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
             (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint);
@@ -152,10 +169,7 @@ namespace Halibut
             var client = new SecureListeningClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
-            client.ExecuteTransaction(protocol =>
-            {
-                response = protocol.ExchangeAsClient(request);
-            });
+            client.ExecuteTransaction(protocol => { response = protocol.ExchangeAsClient(request); });
             return response;
         }
 
@@ -249,12 +263,13 @@ namespace Halibut
             {
                 Trust(thumbPrint);
             }
+
             return result;
         }
 
 #pragma warning disable DE0009 // API is deprecated
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
-                                                    Environment.OSVersion.Version >= new Version(6, 2);
+                                                   Environment.OSVersion.Version >= new Version(6, 2);
 #pragma warning restore DE0009 // API is deprecated
     }
 }

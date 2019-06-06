@@ -89,7 +89,7 @@ namespace Halibut.ServiceModel
         }
     }
 #else
-    public class HalibutProxy : DispatchProxy
+    class HalibutProxy : DispatchProxy
     {
         Func<RequestMessage, ResponseMessage> messageRouter;
         Type contractType;

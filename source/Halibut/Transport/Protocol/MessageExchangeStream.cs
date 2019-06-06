@@ -13,7 +13,7 @@ using Newtonsoft.Json.Bson;
 
 namespace Halibut.Transport.Protocol
 {
-    public class MessageExchangeStream : IMessageExchangeStream
+    class MessageExchangeStream : IMessageExchangeStream
     {
         readonly Stream stream;
         readonly ILog log;

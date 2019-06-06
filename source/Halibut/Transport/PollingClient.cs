@@ -7,22 +7,16 @@ using Halibut.Util;
 
 namespace Halibut.Transport
 {
-    public class PollingClient : IPollingClient
+    class PollingClient : IPollingClient
     {
         readonly Uri subscription;
-        readonly ISecureClient secureClient;
+        readonly ISecurePollingClient secureClient;
         readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
         readonly ILog log;
         readonly Thread thread;
         bool working;
 
-        [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
-            : this(subscription, secureClient, handleIncomingRequest, null)
-        {
-        }
-
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
+        public PollingClient(Uri subscription, ISecurePollingClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;

@@ -2,7 +2,7 @@ using System;
 
 namespace Halibut.Transport.Protocol
 {
-    public class RemoteIdentity
+    class RemoteIdentity
     {
         readonly RemoteIdentityType identityType;
         readonly Uri subscriptionId;

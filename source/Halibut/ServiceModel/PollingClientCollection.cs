@@ -4,12 +4,12 @@ using Halibut.Transport;
 
 namespace Halibut.ServiceModel
 {
-    public class PollingClientCollection
+    class PollingClientCollection
     {
         readonly List<IPollingClient> pollingClients = new List<IPollingClient>();
         readonly object sync = new object();
 
-        public void Add(PollingClient pollingClient)
+        public void Add(IPollingClient pollingClient)
         {
             lock (sync)
             {

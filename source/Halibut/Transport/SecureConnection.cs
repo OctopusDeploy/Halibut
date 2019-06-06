@@ -7,7 +7,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public class SecureConnection : IConnection
+    class SecureConnection : IConnection
     {
         readonly IDisposable client;
         readonly Stream stream;

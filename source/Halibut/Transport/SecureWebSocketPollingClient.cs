@@ -17,15 +17,14 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public class SecureWebSocketClient : ISecureClient
+    class SecureWebSocketPollingClient : ISecurePollingClient
     {
-        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
         readonly ConnectionManager connectionManager;
 
-        public SecureWebSocketClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecureWebSocketPollingClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
         {
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;

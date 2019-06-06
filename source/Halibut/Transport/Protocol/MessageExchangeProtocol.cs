@@ -10,7 +10,7 @@ namespace Halibut.Transport.Protocol
     /// <summary>
     /// Implements the core message exchange protocol for both the client and server.
     /// </summary>
-    public class MessageExchangeProtocol
+    class MessageExchangeProtocol
     {
         readonly IMessageExchangeStream stream;
         readonly ILog log;

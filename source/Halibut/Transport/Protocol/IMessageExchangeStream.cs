@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Transport.Protocol
 {
-    public interface IMessageExchangeStream
+    interface IMessageExchangeStream
     {
         void IdentifyAsClient();
         void SendNext();

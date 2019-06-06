@@ -5,7 +5,7 @@ using System.Runtime.ExceptionServices;
 
 namespace Halibut.Transport
 {
-    public static class TcpClientExtensions
+    static class TcpClientExtensions
     {
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {

@@ -10,7 +10,7 @@ using Halibut.Transport.Proxy;
 
 namespace Halibut.Transport
 {
-    public class TcpConnectionFactory : IConnectionFactory
+    class TcpConnectionFactory : IConnectionFactory
     {
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
 

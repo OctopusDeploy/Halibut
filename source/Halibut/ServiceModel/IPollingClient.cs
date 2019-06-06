@@ -2,7 +2,7 @@ using System;
 
 namespace Halibut.ServiceModel
 {
-    public interface IPollingClient : IDisposable
+    interface IPollingClient : IDisposable
     {
         void Start();
     }
