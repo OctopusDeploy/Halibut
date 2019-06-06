@@ -138,7 +138,7 @@ namespace Halibut.Transport
             {
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus");
                 webSocketStream = new WebSocketStream(webSocketContext.WebSocket);
-                
+
                 var req = await webSocketStream.ReadTextMessage(); // Initial message
                 if (string.IsNullOrEmpty(req))
                 {
@@ -160,6 +160,11 @@ namespace Halibut.Transport
                     // Mark the stream as delegated once everything has succeeded
                     keepConnection = true;
                 }
+            }
+            catch (TaskCanceledException)
+            {
+                if(!cts.Token.IsCancellationRequested)
+                    log.Write(EventType.Error, "A timeout occurred while receiving data");
             }
             catch (Exception ex)
             {

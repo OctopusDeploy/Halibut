@@ -80,7 +80,6 @@ namespace Halibut.Transport
                     log.Write(EventType.Error, $"The remote host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
                     lastError = cex;
                     retryAllowed = false;
-                    Thread.Sleep(retryInterval);
                 }
                 catch (SocketException sex)
                 {

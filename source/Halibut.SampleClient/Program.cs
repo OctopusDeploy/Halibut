@@ -44,10 +44,16 @@ namespace Halibut.SampleClient
 
                 while (true)
                 {
-                    var result = calculator.Add(12, 18);
-
-                    Console.WriteLine("12 + 18 = " + result);
-                    Console.ReadKey();
+                    try
+                    {
+                        var result = calculator.Add(12, 18);
+                        Console.WriteLine("12 + 18 = " + result);
+                        Console.ReadKey();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Write(ex.Message);
+                    }
                 }
             }
         }

@@ -62,15 +62,25 @@ namespace Halibut.Transport
                         .ConfigureAwait(false).GetAwaiter().GetResult();
                 ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
             }
+            catch
+            {
+                if (client.State == WebSocketState.Open)
+                    using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                        client.CloseAsync(WebSocketCloseStatus.ProtocolError, "Certificate thumbprint not recognised", sendCancel.Token)
+                            .ConfigureAwait(false).GetAwaiter().GetResult();
+                
+                client.Dispose();
+                throw;
+            }
             finally
             {
                 ServerCertificateInterceptor.Remove(connectionId);
             }
-            
+
             return client;
         }
     }
-    
+
     class WebSocketProxy : IWebProxy
     {
         readonly Uri uri;

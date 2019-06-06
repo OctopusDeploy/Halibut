@@ -4,6 +4,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 
 namespace Halibut.Transport.Protocol
 {
@@ -49,13 +50,24 @@ namespace Halibut.Transport.Protocol
             var buffer = new ArraySegment<byte>(new byte[10000]);
             while (true)
             {
-                var result = await context.ReceiveAsync(buffer, cancel.Token);
-                if (result.MessageType != WebSocketMessageType.Text)
-                    throw new Exception($"Encountered an unexpected message type {result.MessageType}");
-                sb.Append(Encoding.UTF8.GetString(buffer.Array, 0, result.Count));
+                using(var cts = new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout))
+                using(var combined = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancel.Token))
+                {
+                    var result = await context.ReceiveAsync(buffer, combined.Token);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        using(var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                            await context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Close received", sendCancel.Token);
+                        return null;
+                    }
 
-                if (result.EndOfMessage)
-                    return sb.ToString();
+                    if (result.MessageType != WebSocketMessageType.Text)
+                        throw new Exception($"Encountered an unexpected message type {result.MessageType}");
+                    sb.Append(Encoding.UTF8.GetString(buffer.Array, 0, result.Count));
+
+                    if (result.EndOfMessage)
+                        return sb.ToString();
+                }
             }
         }
 
@@ -102,9 +114,9 @@ namespace Halibut.Transport.Protocol
             if (context.State != WebSocketState.Open)
                 return;
 
-            var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1));
-            context.SendAsync(new ArraySegment<byte>(new byte[0]), WebSocketMessageType.Close, true, sendCancel.Token)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            using(var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", sendCancel.Token)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         protected override void Dispose(bool disposing)

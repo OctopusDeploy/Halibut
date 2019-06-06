@@ -77,7 +77,6 @@ namespace Halibut.Transport
                 }
                 catch (AuthenticationException aex)
                 {
-                    log.WriteException(EventType.Error, $"Authentication failed while setting up connection to {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", aex);
                     lastError = aex;
                     retryAllowed = false;
                 }
