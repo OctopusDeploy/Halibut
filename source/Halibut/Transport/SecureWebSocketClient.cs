@@ -3,6 +3,7 @@
 // This means we cannot validate the remote is presenting the correct certificate
 // See https://github.com/dotnet/corefx/issues/12038
 
+using Halibut.Util;
 #if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Diagnostics;
@@ -97,12 +98,12 @@ namespace Halibut.Transport
                     }
                     else
                     {
-                        log.Write(EventType.Error, $"Socket communication error with connection to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}");
+                        log.Write(EventType.Error, $"Socket communication error with connection to  {serviceEndpoint.Format()}");
                     }
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {(serviceEndpoint == null ? "(Null EndPoint)" : serviceEndpoint.BaseUri.ToString())}", cex);
+                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {serviceEndpoint.Format()}", cex);
                     lastError = cex;
                     retryAllowed = true;
 

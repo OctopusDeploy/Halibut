@@ -10,6 +10,7 @@ using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -69,20 +70,20 @@ namespace Halibut.Transport
                 }
                 catch (AuthenticationException aex)
                 {
-                    log.WriteException(EventType.Error, $"Authentication failed while setting up connection to {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())}", aex);
+                    log.WriteException(EventType.Error, $"Authentication failed while setting up connection to {ServiceEndpoint.Format()}", aex);
                     lastError = aex;
                     retryAllowed = false;
                     break;
                 }
                 catch (SocketException cex) when (cex.SocketErrorCode == SocketError.ConnectionRefused)
                 {
-                    log.Write(EventType.Error, $"The remote host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} refused the connection, this may mean that the expected listening service is not running.");
+                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} refused the connection, this may mean that the expected listening service is not running.");
                     lastError = cex;
                     Thread.Sleep(retryInterval);
                 }
                 catch (SocketException sex)
                 {
-                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())}", sex);
+                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {ServiceEndpoint.Format()}", sex);
                     lastError = sex;
                     // When the host is not found an immediate retry isn't going to help
                     if (sex.SocketErrorCode == SocketError.HostNotFound)
@@ -92,7 +93,7 @@ namespace Halibut.Transport
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())}", cex);
+                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {ServiceEndpoint.Format()}", cex);
                     lastError = cex;
                     retryAllowed = true;
 
@@ -107,14 +108,14 @@ namespace Halibut.Transport
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionReset())
                 {
-                    log.Write(EventType.Error, $"The remote host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
+                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
                     lastError = iox;
                     Thread.Sleep(retryInterval);
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionTimeout())
                 {
                     // Received on a polling client when the network connection is lost.
-                    log.Write(EventType.Error, $"The connection to the host at {(ServiceEndpoint == null ? "(Null EndPoint)" : ServiceEndpoint.BaseUri.ToString())} timed out, there may be problems with the network, connection will be retried.");
+                    log.Write(EventType.Error, $"The connection to the host at {ServiceEndpoint.Format()} timed out, there may be problems with the network, connection will be retried.");
                     lastError = iox;
                     Thread.Sleep(retryInterval);
                 }
