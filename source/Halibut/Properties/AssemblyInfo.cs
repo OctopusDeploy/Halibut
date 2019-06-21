@@ -17,3 +17,4 @@ using System.Runtime.CompilerServices;
 //[assembly: AssemblyDelaySign(false)]
 //[assembly: AssemblyKeyFile("")]
 [assembly: InternalsVisibleTo("Halibut.Tests")]
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]

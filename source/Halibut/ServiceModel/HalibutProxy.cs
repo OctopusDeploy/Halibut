@@ -9,7 +9,7 @@ namespace Halibut.ServiceModel
 #if HAS_REAL_PROXY
     using System.Runtime.Remoting.Messaging;
     using System.Runtime.Remoting.Proxies;
-    class HalibutProxy : RealProxy
+    public class HalibutProxy : RealProxy
     {
         readonly Func<RequestMessage, ResponseMessage> messageRouter;
         readonly Type contractType;
@@ -89,7 +89,7 @@ namespace Halibut.ServiceModel
         }
     }
 #else
-    class HalibutProxy : DispatchProxy
+    public class HalibutProxy : DispatchProxy
     {
         Func<RequestMessage, ResponseMessage> messageRouter;
         Type contractType;

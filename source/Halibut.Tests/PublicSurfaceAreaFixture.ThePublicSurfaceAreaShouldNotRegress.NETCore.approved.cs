@@ -245,6 +245,12 @@ namespace Halibut.ServiceModel
         public Halibut.ServiceModel.IServiceLease CreateService(string serviceName) { }
         public void Register<TContract>(Func<TContract> implementation) { }
     }
+    public class HalibutProxy : DispatchProxy
+    {
+        public HalibutProxy() { }
+        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint) { }
+        protected Object Invoke(MethodInfo targetMethod, Object[] args) { }
+    }
     public interface IServiceFactory
     {
         public Halibut.ServiceModel.IServiceLease CreateService(string serviceName) { }
