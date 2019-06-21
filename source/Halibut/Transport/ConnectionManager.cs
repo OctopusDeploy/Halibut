@@ -15,15 +15,17 @@ namespace Halibut.Transport
 
         public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
-            lock (activeConnections)
-            {
-                var connection = pool.Take(serviceEndpoint) ?? CreateConnection(connectionFactory, serviceEndpoint, log);
-                AddConnectionToActiveConnections(serviceEndpoint, connection);
-
-                return connection;
-            }
+            var connection = GetExistingConnectionFromPool(serviceEndpoint) ?? CreateConnection(connectionFactory, serviceEndpoint, log);
+            AddConnectionToActiveConnections(serviceEndpoint, connection);
+            return connection;
         }
 
+        IConnection GetExistingConnectionFromPool(ServiceEndPoint serviceEndpoint)
+        {
+            lock (activeConnections)
+                return pool.Take(serviceEndpoint);
+        }
+        
         IConnection CreateConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
             var connection = connectionFactory.EstablishNewConnection(serviceEndpoint, log);
@@ -33,14 +35,17 @@ namespace Halibut.Transport
 
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
-            if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
+            lock (activeConnections)
             {
-                connections.Add(connection);
-            }
-            else
-            {
-                connections = new HashSet<IConnection> {connection};
-                activeConnections.Add(serviceEndpoint, connections);
+                if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
+                {
+                    connections.Add(connection);
+                }
+                else
+                {
+                    connections = new HashSet<IConnection> {connection};
+                    activeConnections.Add(serviceEndpoint, connections);
+                }
             }
         }
 
