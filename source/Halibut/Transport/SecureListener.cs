@@ -42,7 +42,6 @@ namespace Halibut.Transport
         readonly TcpClientManager tcpClientManager = new TcpClientManager();
         ILog log;
         TcpListener listener;
-        Thread backgroundThread;
 
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
             : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
@@ -102,11 +101,10 @@ namespace Halibut.Transport
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
 
-            backgroundThread = new Thread(Accept)
+            new Thread(Accept)
             {
                 Name = "Accept connections on " + listener.LocalEndpoint
-            };
-            backgroundThread.Start();
+            }.Start();
 
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
@@ -379,10 +377,8 @@ namespace Halibut.Transport
         public void Dispose()
         {
             cts.Cancel();
-            backgroundThread?.Join();
-            listener?.Stop();
-            cts.Dispose();
-            log?.Write(EventType.ListenerStopped, "Listener stopped");
+            listener.Stop();
+            log.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
 }
