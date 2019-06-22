@@ -119,43 +119,38 @@ namespace Halibut.Transport
         void Accept()
         {
             var numberOfFailedAttemptsInRow = 0;
-
-            while (!cts.IsCancellationRequested)
+            using (cts.Token.Register(listener.Stop))
             {
-                try
+                while (!cts.IsCancellationRequested)
                 {
-                    SpinWait.SpinUntil(() => cts.IsCancellationRequested || listener.Pending());
-
-                    if (cts.IsCancellationRequested)
+                    try
                     {
-                        continue;
-                    }
-
-                    var client = listener.AcceptTcpClient();
+                        var client = listener.AcceptTcpClient();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    HandleClient(client);
+                        HandleClient(client);
 #pragma warning restore CS4014
-                    numberOfFailedAttemptsInRow = 0;
-                }
-                catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
-                {
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-                catch (Exception ex)
-                {
-                    numberOfFailedAttemptsInRow++;
-                    log.WriteException(EventType.Error, $"Error accepting TCP client", ex);
-                    // Slow down the logs in case an exception is immediately encountered after 3 failed AcceptTcpClient calls
-                    if (numberOfFailedAttemptsInRow >= 3)
+                        numberOfFailedAttemptsInRow = 0;
+                    }
+                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
-                        var millisecondsTimeout = Math.Max(0, Math.Min(numberOfFailedAttemptsInRow - 3, 100)) * 10;
-                        log.Write(
-                            EventType.Error,
-                            $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
-                        );
-                        Thread.Sleep(millisecondsTimeout);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                        numberOfFailedAttemptsInRow++;
+                        log.WriteException(EventType.Error, $"Error accepting TCP client", ex);
+                        // Slow down the logs in case an exception is immediately encountered after 3 failed AcceptTcpClientAsync calls
+                        if (numberOfFailedAttemptsInRow >= 3)
+                        {
+                            var millisecondsTimeout = Math.Max(0, Math.Min(numberOfFailedAttemptsInRow - 3, 100)) * 10;
+                            log.Write(
+                                EventType.Error,
+                                $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
+                            );
+                            Thread.Sleep(millisecondsTimeout);
+                        }
                     }
                 }
             }

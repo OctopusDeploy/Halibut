@@ -11,6 +11,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
+
     public class SecureWebSocketListener : IDisposable
     {
         readonly string endPoint;
@@ -80,9 +81,9 @@ namespace Halibut.Transport
 
         async Task Accept()
         {
-            using (cts.Token.Register(listener.Stop))
+            while (!cts.IsCancellationRequested)
             {
-                while (!cts.IsCancellationRequested)
+                using (cts.Token.Register(listener.Stop))
                 {
                     try
                     {
@@ -100,6 +101,7 @@ namespace Halibut.Transport
                             SendFriendlyHtmlPage(context.Response);
                             context.Response.Close();
                         }
+
                     }
                     catch (Exception ex)
                     {
@@ -246,6 +248,7 @@ namespace Halibut.Transport
         public void Dispose()
         {
             cts.Cancel();
+            listener?.Stop();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
