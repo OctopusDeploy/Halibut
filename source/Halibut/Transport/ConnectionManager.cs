@@ -15,37 +15,47 @@ namespace Halibut.Transport
 
         public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
-            var connection = GetExistingConnectionFromPool(serviceEndpoint) ?? CreateConnection(connectionFactory, serviceEndpoint, log);
-            AddConnectionToActiveConnections(serviceEndpoint, connection);
+            var (connection, openConnection) = GetConnection(connectionFactory, serviceEndpoint, log);
+            openConnection(); // Since this involves IO, this should never be done inside a lock
             return connection;
         }
-
-        IConnection GetExistingConnectionFromPool(ServiceEndPoint serviceEndpoint)
+        
+        // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
+        // For existing open connections, the openConnection method does nothing
+        (IConnection connection, Action openConnection) GetConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
             lock (activeConnections)
-                return pool.Take(serviceEndpoint);
+            {
+                var existingConnectionFromPool = pool.Take(serviceEndpoint);
+                var (connection, openConnection) = existingConnectionFromPool != null 
+                    ? (existingConnectionFromPool, () => { }) // existing connections from the pool are already open
+                    : CreateNewConnection(connectionFactory, serviceEndpoint, log);
+                AddConnectionToActiveConnections(serviceEndpoint, connection);
+                return (connection, openConnection);
+            }
         }
-        
-        IConnection CreateConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
-        {
-            var connection = connectionFactory.EstablishNewConnection(serviceEndpoint, log);
 
-            return new DisposableNotifierConnection(connection, OnConnectionDisposed);
+        (IConnection connection, Action openConnection) CreateNewConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
+        {
+            var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(serviceEndpoint, log));
+            var connection = new DisposableNotifierConnection(lazyConnection, OnConnectionDisposed);
+            return (connection, () =>
+            {
+                // ReSharper disable once UnusedVariable
+                var c = lazyConnection.Value;
+            });
         }
 
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
-            lock (activeConnections)
+            if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
             {
-                if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
-                {
-                    connections.Add(connection);
-                }
-                else
-                {
-                    connections = new HashSet<IConnection> {connection};
-                    activeConnections.Add(serviceEndpoint, connections);
-                }
+                connections.Add(connection);
+            }
+            else
+            {
+                connections = new HashSet<IConnection> {connection};
+                activeConnections.Add(serviceEndpoint, connections);
             }
         }
 
@@ -151,12 +161,12 @@ namespace Halibut.Transport
 
         class DisposableNotifierConnection : IConnection
         {
-            readonly IConnection connectionImplementation;
+            readonly Lazy<IConnection> connection;
             readonly Action<IConnection> onDisposed;
 
-            public DisposableNotifierConnection(IConnection connectionImplementation, Action<IConnection> onDisposed)
+            public DisposableNotifierConnection(Lazy<IConnection> connection, Action<IConnection> onDisposed)
             {
-                this.connectionImplementation = connectionImplementation;
+                this.connection = connection;
                 this.onDisposed = onDisposed;
             }
 
@@ -164,7 +174,7 @@ namespace Halibut.Transport
             {
                 try
                 {
-                    connectionImplementation.Dispose();
+                    connection.Value.Dispose();
                 }
                 finally
                 {
@@ -174,15 +184,15 @@ namespace Halibut.Transport
 
             public void NotifyUsed()
             {
-                connectionImplementation.NotifyUsed();
+                connection.Value.NotifyUsed();
             }
 
             public bool HasExpired()
             {
-                return connectionImplementation.HasExpired();
+                return connection.Value.HasExpired();
             }
 
-            public MessageExchangeProtocol Protocol => connectionImplementation.Protocol;
+            public MessageExchangeProtocol Protocol => connection.Value.Protocol;
         }
     }
 }
