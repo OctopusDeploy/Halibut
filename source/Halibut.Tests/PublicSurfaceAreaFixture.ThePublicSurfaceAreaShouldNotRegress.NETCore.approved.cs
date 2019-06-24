@@ -394,6 +394,13 @@ namespace Halibut.Transport
         public void Dispose() { }
         public int Start() { }
     }
+    public class SecureWebSocketClient : Halibut.Transport.ISecureClient
+    {
+        public static int RetryCountLimit;
+        public SecureWebSocketClient(Halibut.ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, Halibut.Diagnostics.ILog log, Halibut.Transport.ConnectionManager connectionManager) { }
+        public Halibut.ServiceEndPoint ServiceEndpoint { get; }
+        public void ExecuteTransaction(Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler) { }
+    }
     public class SecureWebSocketListener : IDisposable
     {
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<Halibut.Transport.Protocol.MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
@@ -412,6 +419,11 @@ namespace Halibut.Transport
     public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
     {
         public TcpConnectionFactory(X509Certificate2 clientCertificate) { }
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
+    }
+    public class WebSocketConnectionFactory : Halibut.Transport.IConnectionFactory
+    {
+        public WebSocketConnectionFactory(X509Certificate2 clientCertificate) { }
         public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
     }
 }
