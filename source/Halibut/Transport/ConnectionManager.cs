@@ -15,20 +15,35 @@ namespace Halibut.Transport
 
         public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
+            var openableConnection = GetConnection(connectionFactory, serviceEndpoint, log);
+            openableConnection.Item2(); // Since this involves IO, this should never be done inside a lock
+            return openableConnection.Item1;
+        }
+        
+        // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
+        // For existing open connections, the openConnection method does nothing
+        Tuple<IConnection, Action> GetConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
+        {
             lock (activeConnections)
             {
-                var connection = pool.Take(serviceEndpoint) ?? CreateConnection(connectionFactory, serviceEndpoint, log);
-                AddConnectionToActiveConnections(serviceEndpoint, connection);
-
-                return connection;
+                var existingConnectionFromPool = pool.Take(serviceEndpoint);
+                var openableConnection = existingConnectionFromPool != null 
+                    ? Tuple.Create<IConnection, Action>(existingConnectionFromPool, () => { }) // existing connections from the pool are already open
+                    : CreateNewConnection(connectionFactory, serviceEndpoint, log);
+                AddConnectionToActiveConnections(serviceEndpoint, openableConnection.Item1);
+                return openableConnection;
             }
         }
 
-        IConnection CreateConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
+        Tuple<IConnection, Action> CreateNewConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
-            var connection = connectionFactory.EstablishNewConnection(serviceEndpoint, log);
-
-            return new DisposableNotifierConnection(connection, OnConnectionDisposed);
+            var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(serviceEndpoint, log));
+            var connection = new DisposableNotifierConnection(lazyConnection, OnConnectionDisposed);
+            return Tuple.Create<IConnection, Action>(connection, () =>
+            {
+                // ReSharper disable once UnusedVariable
+                var c = lazyConnection.Value;
+            });
         }
 
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
@@ -146,12 +161,12 @@ namespace Halibut.Transport
 
         class DisposableNotifierConnection : IConnection
         {
-            readonly IConnection connectionImplementation;
+            readonly Lazy<IConnection> connection;
             readonly Action<IConnection> onDisposed;
 
-            public DisposableNotifierConnection(IConnection connectionImplementation, Action<IConnection> onDisposed)
+            public DisposableNotifierConnection(Lazy<IConnection> connection, Action<IConnection> onDisposed)
             {
-                this.connectionImplementation = connectionImplementation;
+                this.connection = connection;
                 this.onDisposed = onDisposed;
             }
 
@@ -159,7 +174,7 @@ namespace Halibut.Transport
             {
                 try
                 {
-                    connectionImplementation.Dispose();
+                    connection.Value.Dispose();
                 }
                 finally
                 {
@@ -169,15 +184,15 @@ namespace Halibut.Transport
 
             public void NotifyUsed()
             {
-                connectionImplementation.NotifyUsed();
+                connection.Value.NotifyUsed();
             }
 
             public bool HasExpired()
             {
-                return connectionImplementation.HasExpired();
+                return connection.Value.HasExpired();
             }
 
-            public MessageExchangeProtocol Protocol => connectionImplementation.Protocol;
+            public MessageExchangeProtocol Protocol => connection.Value.Protocol;
         }
     }
 }
