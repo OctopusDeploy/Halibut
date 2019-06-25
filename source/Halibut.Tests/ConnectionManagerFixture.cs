@@ -25,6 +25,20 @@ namespace Halibut.Tests
         }
 
         [Test]
+        public void DisposedConnectionsAreRemovedFromActive_WhenMultipleConnectionsAreActive()
+        {
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var connectionManager = new ConnectionManager();
+
+            //do it twice because this bug only triggers on multiple enumeration, having 1 in the collection doesn't trigger the bug
+            connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            connectionManager.AcquireConnection(connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+
+            connectionManager.Disconnect(serviceEndpoint, null);
+            connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
+        }
+       
+        [Test]
         public void ReleasedConnectionsAreNotActive()
         {
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);

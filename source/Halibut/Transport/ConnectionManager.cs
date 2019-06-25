@@ -121,7 +121,7 @@ namespace Halibut.Transport
             {
                 if (activeConnections.TryGetValue(serviceEndPoint, out var activeConnectionsForEndpoint))
                 {
-                    foreach (var connection in activeConnectionsForEndpoint)
+                    foreach (var connection in activeConnectionsForEndpoint.ToArray())
                     {
                         SafelyDisposeConnection(connection, log);
                     }
