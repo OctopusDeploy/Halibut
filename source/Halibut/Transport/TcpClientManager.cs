@@ -53,5 +53,24 @@ namespace Halibut.Transport
 
             return NoClients;
         }
+
+        public void RemoveDisconnectedClient(TcpClient client)
+        {
+            lock (activeClients)
+            {
+                foreach(var activeClient in activeClients)
+                {
+                    if (activeClient.Value.Contains(client))
+                        activeClient.Value.Remove(client);
+                }
+
+                var inactiveThumbprints = activeClients
+                    .Where(x => x.Value.Count == 0)
+                    .Select(x => x.Key)
+                    .ToArray();
+                foreach (var inactiveThumbprint in inactiveThumbprints)
+                    activeClients.Remove(inactiveThumbprint);
+            }
+        }
     }
 }
