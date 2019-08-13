@@ -183,7 +183,7 @@ namespace Halibut.Transport
         async Task ExecuteRequest(TcpClient client)
         {
             // By default we will close the stream to cater for failure scenarios	
-            var keepStreamOpen = false;	
+            var keepStreamOpen = false;
 
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
@@ -232,11 +232,11 @@ namespace Halibut.Transport
                         tcpClientManager.AddActiveClient(thumbprint, client);
                         // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                         await ExchangeMessages(ssl);
-                        
+
                         if (verifyClientThumbprint(thumbprint))	
                         {	
-                            // Mark the stream as delegated once everything has succeeded	
-                            keepStreamOpen = true;	
+                            // Mark the stream as delegated once everything has succeeded
+                            keepStreamOpen = true;
                         }
                     }
                 }
