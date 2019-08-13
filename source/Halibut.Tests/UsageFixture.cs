@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -324,6 +325,7 @@ namespace Halibut.Tests
                 using (var client = new HttpClient(httpClientHandler))
                 {
                     var headers = new List<KeyValuePair<string, string>>();
+                    var existingServerCertificateValidationCallback = ServicePointManager.ServerCertificateValidationCallback;
                     try
                     {
                         // We need to ignore server certificate validation errors - the server certificate is self-signed
@@ -337,7 +339,7 @@ namespace Halibut.Tests
                     finally
                     {
                         // And restore it back to default behaviour
-                        ServicePointManager.ServerCertificateValidationCallback = null;
+                        ServicePointManager.ServerCertificateValidationCallback = existingServerCertificateValidationCallback;
                     }
 
                     return headers;
