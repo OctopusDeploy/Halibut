@@ -54,7 +54,7 @@ namespace Halibut.Transport
             return NoClients;
         }
 
-        public void RemoveDisconnectedClient(TcpClient client)
+        public void RemoveClient(TcpClient client)
         {
             lock (activeClients)
             {

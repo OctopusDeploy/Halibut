@@ -184,7 +184,6 @@ namespace Halibut.Transport
         {
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
-
             using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 try
@@ -255,7 +254,7 @@ namespace Halibut.Transport
                     // Closing an already closed stream or client is safe, better not to leak
                     stream.Close();
                     client.Close();
-                    tcpClientManager.RemoveDisconnectedClient(client);
+                    tcpClientManager.RemoveClient(client);
                 }
             }
         }
