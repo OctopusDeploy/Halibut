@@ -22,7 +22,6 @@ namespace Halibut.Tests
     {
         public long Add(long a, long b)
         {
-            //Console.WriteLine($"Got a request to add {a} + {b}");
             return a + b;
         }
     }
@@ -46,11 +45,16 @@ namespace Halibut.Tests
 
             using (var server = RunServer(Certificates.Octopus, out var port))
             {
+                var expectedTcpClientCount = 1; //server listen = 1 tcpclient
                 //valid requests
                 for (var i = 0; i < NumberOfClients; i++)
                     RunListeningClient(Certificates.TentacleListening, port, Certificates.OctopusPublicThumbprint);
                 for (var i = 0; i < NumberOfClients; i++)
+                {
+                    expectedTcpClientCount++; // each time the server polls, it keeps a tcpclient (as we dont have support to say StopPolling)
                     RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
+                }
+
 #if SUPPORTS_WEB_SOCKET_CLIENT
                 for (var i = 0; i < NumberOfClients; i++)
                     RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
@@ -63,19 +67,11 @@ namespace Halibut.Tests
                     GC.WaitForPendingFinalizers();
                 }
 
-                //server listen doesn't keep a port
-                //server polling doesn't keep a port
-                //server websocket polling _keeps_ a port
-                //client listening _keeps_ a port
-                //client polling doesn't keep a port
-                //client websocket polling doesn't keep a port
-
-                const int expectedTcpClientCount = 1 /* server listening */ + NumberOfClients /* number of times the server has setup a poll  */;
                 dotMemory.Check(memory =>
                 {
-                    var objectsCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
-                    Console.WriteLine($"Found {objectsCount} instances of TcpClient still in memory.");
-                    Assert.That(objectsCount, Is.LessThanOrEqualTo(expectedTcpClientCount));
+                    var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                    Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
+                    Assert.That(tcpClientCount, Is.EqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
                 });
             }
         }
