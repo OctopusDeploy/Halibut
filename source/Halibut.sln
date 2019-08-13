@@ -22,6 +22,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.SampleLoadTest", "H
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.SamplePolling", "Halibut.SamplePolling\Halibut.SamplePolling.csproj", "{0A152095-948F-4075-8FC9-D09B298C4460}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{B742FF5E-172B-4E39-A542-09C37ED46C16}"
+ProjectSection(SolutionItems) = preProject
+	..\.gitattributes = ..\.gitattributes
+	..\.gitignore = ..\.gitignore
+	..\build.cake = ..\build.cake
+	..\build.cmd = ..\build.cmd
+	..\build.ps1 = ..\build.ps1
+	..\build.sh = ..\build.sh
+	..\gitversion.yml = ..\gitversion.yml
+	..\LICENSE.txt = ..\LICENSE.txt
+	..\README.md = ..\README.md
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
