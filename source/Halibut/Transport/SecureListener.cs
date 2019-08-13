@@ -251,10 +251,10 @@ namespace Halibut.Transport
                 }
                 finally
                 {
+                    tcpClientManager.RemoveClient(client);
                     // Closing an already closed stream or client is safe, better not to leak
                     stream.Close();
                     client.Close();
-                    tcpClientManager.RemoveClient(client);
                 }
             }
         }
