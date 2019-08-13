@@ -182,9 +182,6 @@ namespace Halibut.Transport
 
         async Task ExecuteRequest(TcpClient client)
         {
-            // By default we will close the stream to cater for failure scenarios
-            var keepStreamOpen = false;
-
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
 
@@ -226,18 +223,12 @@ namespace Halibut.Transport
                         cts.Token.Register(() =>
                         {
                             if (weakSSL.IsAlive)
-                                ((IDisposable)weakSSL.Target).Dispose();
+                                ((IDisposable) weakSSL.Target).Dispose();
                         });
 
                         tcpClientManager.AddActiveClient(thumbprint, client);
                         // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                         await ExchangeMessages(ssl);
-
-                        if (verifyClientThumbprint(thumbprint))
-                        {
-                            // Mark the stream as delegated once everything has succeeded
-                            keepStreamOpen = true;
-                        }
                     }
                 }
                 catch (AuthenticationException ex)
@@ -262,12 +253,10 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    if (!keepStreamOpen)
-                    {
-                        // Closing an already closed stream or client is safe, better not to leak
-                        stream.Close();
-                        client.Close();
-                    }
+                    tcpClientManager.RemoveClient(client);
+                    // Closing an already closed stream or client is safe, better not to leak
+                    stream.Close();
+                    client.Close();
                 }
             }
         }
