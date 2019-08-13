@@ -9,6 +9,7 @@ using Halibut.ServiceModel;
 using JetBrains.dotMemoryUnit;
 using JetBrains.dotMemoryUnit.Kernel;
 using NUnit.Framework;
+using Serilog;
 
 namespace Halibut.Tests
 {
@@ -29,8 +30,8 @@ namespace Halibut.Tests
     [TestFixture]
     public class MemoryFixture
     {
-        const int Clients = 5;
-        const int RequestsPerClient = 5;
+        const int NumberOfClients = 10;
+        const int RequestsPerClient = 10;
 
         [Test]
         [DotMemoryUnit(SavingStrategy = SavingStrategy.OnCheckFail, Directory = @"c:\temp\dotmemoryunit", WorkspaceNumberLimit = 5, DiskSpaceLimit = 104857600)]
@@ -39,15 +40,20 @@ namespace Halibut.Tests
             if (!dotMemoryApi.IsEnabled)
                 Assert.Inconclusive("This test is meant to be run under dotMemory Unit. In your IDE, right click on the test icon and choose 'Run under dotMemory Unit'.");
 
-            using (RunServer(Certificates.Octopus, out var port))
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.NUnitOutput()
+                .CreateLogger();
+
+            using (var server = RunServer(Certificates.Octopus, out var port))
             {
-                for (var i = 0; i < Clients; i++)
+                //valid requests
+                for (var i = 0; i < NumberOfClients; i++)
                     RunListeningClient(Certificates.TentacleListening, port, Certificates.OctopusPublicThumbprint);
-                for (var i = 0; i < Clients; i++)
-                    RunPollingClient(Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
+                for (var i = 0; i < NumberOfClients; i++)
+                    RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
 #if SUPPORTS_WEB_SOCKET_CLIENT
-                for (var i = 0; i < Clients; i++)
-                    RunWebSocketPollingClient(Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
+                for (var i = 0; i < NumberOfClients; i++)
+                    RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
 #endif
 
                 //https://dotnettools-support.jetbrains.com/hc/en-us/community/posts/360000088690-How-reproduce-DotMemory-s-Force-GC-button-s-behaviour-on-code-with-c-?page=1#community_comment_360000072750
@@ -64,8 +70,13 @@ namespace Halibut.Tests
                 //client polling doesn't keep a port
                 //client websocket polling doesn't keep a port
 
-                const int expectedTcpClientCount = 2;
-                dotMemory.Check(memory => { Assert.That(memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount, Is.LessThanOrEqualTo(expectedTcpClientCount)); });
+                const int expectedTcpClientCount = 1 /* server listening */ + NumberOfClients /* number of times the server has setup a poll  */;
+                dotMemory.Check(memory =>
+                {
+                    var objectsCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                    Console.WriteLine($"Found {objectsCount} instances of TcpClient still in memory.");
+                    Assert.That(objectsCount, Is.LessThanOrEqualTo(expectedTcpClientCount));
+                });
             }
         }
 
@@ -80,14 +91,8 @@ namespace Halibut.Tests
             server.Trust(Certificates.TentacleListeningPublicThumbprint);
             port = server.Listen();
             
-            //setup polling
-            var serviceEndPoint = new ServiceEndPoint(new Uri("https://localhost:8433"), Certificates.TentaclePollingPublicThumbprint);
-            server.Poll(new Uri("poll://SQ-TENTAPOLL"), serviceEndPoint);
-            
             //setup polling websocket
             AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8434");
-            var endPoint = new ServiceEndPoint(new Uri("wss://localhost:8434/Halibut"), Certificates.SslThumbprint);
-            server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), endPoint);
             
             return server;
         }
@@ -101,30 +106,49 @@ namespace Halibut.Tests
             }
         }
         
-        static void RunPollingClient(X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
+        static void RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
         {
             using (var runtime = new HalibutRuntime(clientCertificate))
             {
                 runtime.Listen(new IPEndPoint(IPAddress.IPv6Any, 8433));
                 runtime.Trust(Certificates.OctopusPublicThumbprint);
-                var endpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint);
                 
-                var calculator = runtime.CreateClient<ICalculatorService>(endpoint);
+                //setup polling
+                var serverEndpoint = new ServiceEndPoint(new Uri("https://localhost:8433"), Certificates.TentaclePollingPublicThumbprint)
+                {
+                    TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
+                };
+                server.Poll(new Uri("poll://SQ-TENTAPOLL"), serverEndpoint);
+                
+                var clientEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint);
+                
+                var calculator = runtime.CreateClient<ICalculatorService>(clientEndpoint);
     
                 MakeRequest(calculator, "polling", expectSuccess);
+                
+                runtime.Disconnect(clientEndpoint);
             }
         }
         
-        static void RunWebSocketPollingClient(X509Certificate2 clientCertificate, string remoteThumbprint, string trustedCertificate, bool expectSuccess = true)
+        static void RunWebSocketPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, string trustedCertificate, bool expectSuccess = true)
         {
             using (var runtime = new HalibutRuntime(clientCertificate))
             {
                 runtime.ListenWebSocket("https://+:8434/Halibut");
                 runtime.Trust(trustedCertificate);
-                var endpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint);
-                var calculator = runtime.CreateClient<ICalculatorService>(endpoint);
+                
+                var serverEndpoint = new ServiceEndPoint(new Uri("wss://localhost:8434/Halibut"), Certificates.SslThumbprint)
+                {
+                    TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
+                };
+                server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint);
+                
+                var clientEndpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint);
+                var calculator = runtime.CreateClient<ICalculatorService>(clientEndpoint);
     
                 MakeRequest(calculator, "websocket polling", expectSuccess);
+                
+                runtime.Disconnect(clientEndpoint);
             }
         }
 
