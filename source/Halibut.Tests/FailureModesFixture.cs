@@ -23,7 +23,12 @@ namespace Halibut.Tests
             var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
-                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                var endpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint)
+                {
+                    TcpClientConnectTimeout = TimeSpan.FromSeconds(1),
+                    PollingRequestQueueTimeout = TimeSpan.FromSeconds(5)
+                };
+                var echo = octopus.CreateClient<IEchoService>(endpoint);
                 var error = Assert.Throws<HalibutClientException>(() => echo.SayHello("Paul"));
                 error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
             }
@@ -92,7 +97,12 @@ namespace Halibut.Tests
             var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
-                var echo = octopus.CreateClient<IEchoService>("https://google.com:88", Certificates.TentacleListeningPublicThumbprint);
+                var endpoint = new ServiceEndPoint("https://google.com:88", Certificates.TentacleListeningPublicThumbprint)
+                {
+                    TcpClientConnectTimeout = TimeSpan.FromSeconds(2),
+                    RetryCountLimit = 2
+                };
+                var echo = octopus.CreateClient<IEchoService>(endpoint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
                 ex.Message.Should().Contain("when sending a request to 'https://google.com:88/', before the request");
             }
