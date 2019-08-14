@@ -42,5 +42,18 @@ namespace Halibut.Tests
 
             manager.GetActiveClients(thumbprint).Should().BeEmpty();
         }
+        
+        [Test]
+        public void ShouldRemoveClient()
+        {
+            const string thumbprint = "123";
+            var manager = new TcpClientManager();
+            var client = new TcpClient();
+
+            manager.AddActiveClient(thumbprint, client);
+            manager.RemoveClient(client);
+
+            manager.GetActiveClients(thumbprint).Should().BeEmpty();
+        }
     }
 }

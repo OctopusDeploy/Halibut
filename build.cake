@@ -3,6 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 #tool "nuget:?package=GitVersion.CommandLine&version=4.0.0"
 #tool "nuget:?package=gitlink&version=3.1.0"
+#tool "nuget:?package=JetBrains.DotMemoryUnit&version=3.0.20171219.105559"
 #addin "Cake.FileHelpers&version=3.2.0"
 
 //////////////////////////////////////////////////////////////////////
@@ -82,8 +83,19 @@ Task("Test")
 {
     DotNetCoreTest("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCoreTestSettings
     {
-        Configuration = configuration,
-        NoBuild = true
+        ArgumentCustomization = args => {
+            args.Clear();
+            args.Append("\"C:/Program Files/dotnet/dotnet.exe\"");
+            args.Append("--propagate-exit-code");
+            args.Append("--instance-name=" + Guid.NewGuid());
+            args.Append("--");
+            args.Append("test");
+            args.Append("./source/Halibut.Tests/Halibut.Tests.csproj");
+            args.Append("--configuration=" + configuration);
+            args.Append("--no-build");
+            return args;
+        },
+        ToolPath = "./tools/JetBrains.dotMemoryUnit.3.0.20171219.105559/lib/tools/dotMemoryUnit.exe"
     });
 });
 

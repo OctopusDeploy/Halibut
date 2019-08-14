@@ -53,5 +53,24 @@ namespace Halibut.Transport
 
             return NoClients;
         }
+
+        public void RemoveClient(TcpClient client)
+        {
+            lock (activeClients)
+            {
+                foreach(var thumbprintClientsPair in activeClients)
+                {
+                    if (thumbprintClientsPair.Value.Contains(client))
+                        thumbprintClientsPair.Value.Remove(client);
+                }
+
+                var thumbprintsWithNoClients = activeClients
+                    .Where(x => x.Value.Count == 0)
+                    .Select(x => x.Key)
+                    .ToArray();
+                foreach (var thumbprint in thumbprintsWithNoClients)
+                    activeClients.Remove(thumbprint);
+            }
+        }
     }
 }

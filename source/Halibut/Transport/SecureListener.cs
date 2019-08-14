@@ -182,12 +182,8 @@ namespace Halibut.Transport
 
         async Task ExecuteRequest(TcpClient client)
         {
-            // By default we will close the stream to cater for failure scenarios
-            var keepStreamOpen = false;
-
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
-
             using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 try
@@ -230,14 +226,7 @@ namespace Halibut.Transport
                         });
 
                         tcpClientManager.AddActiveClient(thumbprint, client);
-                        // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                         await ExchangeMessages(ssl);
-
-                        if (verifyClientThumbprint(thumbprint))
-                        {
-                            // Mark the stream as delegated once everything has succeeded
-                            keepStreamOpen = true;
-                        }
                     }
                 }
                 catch (AuthenticationException ex)
@@ -262,13 +251,46 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    if (!keepStreamOpen)
-                    {
-                        // Closing an already closed stream or client is safe, better not to leak
-                        stream.Close();
-                        client.Close();
-                    }
+                    SafelyRemoveClientFromTcpClientManager(client, clientName);
+                    SafelyCloseStream(stream, clientName);
+                    SafelyCloseClient(client, clientName);
                 }
+            }
+        }
+
+        void SafelyCloseClient(TcpClient client, EndPoint clientName)
+        {
+            try
+            {
+                client.Close();
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
+            }
+        }
+
+        void SafelyCloseStream(NetworkStream stream, EndPoint clientName)
+        {
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to close stream for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
+            }
+        }
+
+        void SafelyRemoveClientFromTcpClientManager(TcpClient client, EndPoint clientName)
+        {
+            try
+            {
+                tcpClientManager?.RemoveClient(client);
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to release TcpClient from TcpClientManager for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
             }
         }
 
