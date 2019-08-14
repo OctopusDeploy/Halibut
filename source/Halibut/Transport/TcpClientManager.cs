@@ -58,18 +58,18 @@ namespace Halibut.Transport
         {
             lock (activeClients)
             {
-                foreach(var activeClient in activeClients)
+                foreach(var thumbprintClientsPair in activeClients)
                 {
-                    if (activeClient.Value.Contains(client))
-                        activeClient.Value.Remove(client);
+                    if (thumbprintClientsPair.Value.Contains(client))
+                        thumbprintClientsPair.Value.Remove(client);
                 }
 
-                var inactiveThumbprints = activeClients
+                var thumbprintsWithNoClients = activeClients
                     .Where(x => x.Value.Count == 0)
                     .Select(x => x.Key)
                     .ToArray();
-                foreach (var inactiveThumbprint in inactiveThumbprints)
-                    activeClients.Remove(inactiveThumbprint);
+                foreach (var thumbprint in thumbprintsWithNoClients)
+                    activeClients.Remove(thumbprint);
             }
         }
     }
