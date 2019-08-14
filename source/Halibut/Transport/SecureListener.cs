@@ -251,11 +251,46 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    tcpClientManager.RemoveClient(client);
-                    // Closing an already closed stream or client is safe, better not to leak
-                    stream.Close();
-                    client.Close();
+                    SafelyRemoveClientFromTcpClientManager(client, clientName);
+                    SafelyCloseStream(stream, clientName);
+                    SafelyCloseClient(client, clientName);
                 }
+            }
+        }
+
+        void SafelyCloseClient(TcpClient client, EndPoint clientName)
+        {
+            try
+            {
+                client.Close();
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
+            }
+        }
+
+        void SafelyCloseStream(NetworkStream stream, EndPoint clientName)
+        {
+            try
+            {
+                stream.Close();
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to close stream for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
+            }
+        }
+
+        void SafelyRemoveClientFromTcpClientManager(TcpClient client, EndPoint clientName)
+        {
+            try
+            {
+                tcpClientManager?.RemoveClient(client);
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to release TcpClient from TcpClientManager for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
             }
         }
 
