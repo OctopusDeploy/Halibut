@@ -71,7 +71,7 @@ namespace Halibut.Tests
                 {
                     var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
                     Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
-                    Assert.That(tcpClientCount, Is.EqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
+                    Assert.That(tcpClientCount, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
                 });
             }
         }
