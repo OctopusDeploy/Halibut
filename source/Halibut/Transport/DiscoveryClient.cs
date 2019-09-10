@@ -69,11 +69,15 @@ namespace Halibut.Transport
 
         static TcpClient CreateTcpClient()
         {
-            var client = new TcpClient(AddressFamily.InterNetworkV6)
+            var addressFamily = Socket.OSSupportsIPv6
+                ? AddressFamily.InterNetworkV6
+                : AddressFamily.InterNetwork;
+
+            var client = new TcpClient(addressFamily)
             {
                 SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
                 ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
-                Client = { DualMode = true }
+                Client = { DualMode = Socket.OSSupportsIPv6 }
             };
             return client;
         }
