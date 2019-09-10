@@ -104,7 +104,7 @@ namespace Halibut.Tests
                 };
                 var echo = octopus.CreateClient<IEchoService>(endpoint);
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
-                ex.Message.Should().Contain("when sending a request to 'https://google.com:88/', before the request");
+                ex.Message.Should().Be("An error occurred when sending a request to 'https://google.com:88/', before the request could begin: The client was unable to establish the initial connection within 00:00:02.");
             }
         }
 
