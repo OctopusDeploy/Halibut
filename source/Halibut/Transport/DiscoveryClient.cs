@@ -76,9 +76,12 @@ namespace Halibut.Transport
             var client = new TcpClient(addressFamily)
             {
                 SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
-                ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
-                Client = { DualMode = Socket.OSSupportsIPv6 }
+                ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds
             };
+
+            if (Socket.OSSupportsIPv6)
+                client.Client.DualMode = true;
+
             return client;
         }
     }
