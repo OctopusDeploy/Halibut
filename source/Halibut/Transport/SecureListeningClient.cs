@@ -81,6 +81,12 @@ namespace Halibut.Transport
                     lastError = cex;
                     Thread.Sleep(retryInterval);
                 }
+                catch (HalibutClientException hce)
+                {
+                    lastError = hce;
+                    log.Write(EventType.Error, $"{hce.Message?.TrimEnd('.')}. Retrying in {retryInterval.TotalSeconds:n1} seconds.");
+                    Thread.Sleep(retryInterval);
+                }
                 catch (SocketException sex)
                 {
                     log.WriteException(EventType.Error, $"Socket communication error with connection to  {ServiceEndpoint.Format()}", sex);
