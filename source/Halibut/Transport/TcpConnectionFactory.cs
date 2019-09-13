@@ -43,7 +43,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
+        public static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
@@ -74,7 +74,7 @@ namespace Halibut.Transport
                 ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds
             };
 
-            if (Socket.OSSupportsIPv6)
+            if (client.Client.AddressFamily == AddressFamily.InterNetworkV6)
             {
                 client.Client.DualMode = true;
             }
