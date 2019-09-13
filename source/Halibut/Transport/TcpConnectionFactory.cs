@@ -54,6 +54,7 @@ namespace Halibut.Transport
             else
             {
                 log.Write(EventType.Diagnostic, "Creating a proxy client");
+
                 client = new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
@@ -62,12 +63,17 @@ namespace Halibut.Transport
             return client;
         }
 
-        static TcpClient CreateTcpClient()
+        internal static TcpClient CreateTcpClient()
         {
             var addressFamily = Socket.OSSupportsIPv6
                 ? AddressFamily.InterNetworkV6
                 : AddressFamily.InterNetwork;
 
+            return CreateTcpClient(addressFamily);
+        }
+
+        internal static TcpClient CreateTcpClient(AddressFamily addressFamily)
+        {
             var client = new TcpClient(addressFamily)
             {
                 SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
