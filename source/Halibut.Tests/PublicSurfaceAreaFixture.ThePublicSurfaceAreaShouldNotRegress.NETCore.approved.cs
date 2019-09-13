@@ -412,6 +412,7 @@ namespace Halibut.Transport
     public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
     {
         public TcpConnectionFactory(X509Certificate2 clientCertificate) { }
+        public static TcpClient CreateConnectedTcpClient(Halibut.ServiceEndPoint endPoint, Halibut.Diagnostics.ILog log) { }
         public Halibut.Transport.IConnection EstablishNewConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
     }
 }
