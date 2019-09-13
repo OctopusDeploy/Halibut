@@ -43,7 +43,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
+        internal static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
@@ -54,6 +54,7 @@ namespace Halibut.Transport
             else
             {
                 log.Write(EventType.Diagnostic, "Creating a proxy client");
+
                 client = new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
@@ -62,14 +63,27 @@ namespace Halibut.Transport
             return client;
         }
 
-        static TcpClient CreateTcpClient()
+        internal static TcpClient CreateTcpClient()
         {
-            var client = new TcpClient(AddressFamily.InterNetworkV6)
+            var addressFamily = Socket.OSSupportsIPv6
+                ? AddressFamily.InterNetworkV6
+                : AddressFamily.InterNetwork;
+
+            return CreateTcpClient(addressFamily);
+        }
+
+        internal static TcpClient CreateTcpClient(AddressFamily addressFamily)
+        {
+            var client = new TcpClient(addressFamily)
             {
                 SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
-                ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
-                Client = { DualMode = true }
+                ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds
             };
+
+            if (client.Client.AddressFamily == AddressFamily.InterNetworkV6)
+            {
+                client.Client.DualMode = true;
+            }
             return client;
         }
 

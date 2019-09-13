@@ -18,7 +18,8 @@ namespace Halibut.Transport
         {
             try
             {
-                using (var client = CreateConnectedTcpClient(serviceEndpoint))
+                var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
+                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, log))
                 {
                     using (var stream = client.GetStream())
                     {
@@ -45,37 +46,6 @@ namespace Halibut.Transport
         bool ValidateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
         {
             return true;
-        }
-
-        TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint)
-        {
-            TcpClient client;
-            if (endPoint.Proxy == null)
-            {
-                client = CreateTcpClient();
-                client.ConnectWithTimeout(endPoint.BaseUri, endPoint.TcpClientConnectTimeout);
-            }
-            else
-            {
-                var log = logs.ForEndpoint(endPoint.BaseUri);
-                log.Write(EventType.Diagnostic, "Creating a proxy client");
-                client = new ProxyClientFactory()
-                    .CreateProxyClient(log, endPoint.Proxy)
-                    .WithTcpClientFactory(CreateTcpClient)
-                    .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout);
-            }
-            return client;
-        }
-
-        static TcpClient CreateTcpClient()
-        {
-            var client = new TcpClient(AddressFamily.InterNetworkV6)
-            {
-                SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
-                ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds,
-                Client = { DualMode = true }
-            };
-            return client;
         }
     }
 }
