@@ -43,7 +43,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, protocol);
         }
 
-        public static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
+        internal static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
