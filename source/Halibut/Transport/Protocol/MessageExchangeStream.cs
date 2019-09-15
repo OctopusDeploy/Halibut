@@ -15,31 +15,35 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageExchangeStream : IMessageExchangeStream
     {
+        static readonly UTF8Encoding Utf8EncodingNoMarker = new UTF8Encoding(false);
+        static readonly UTF8Encoding Utf8EncodingNoMarkerThrow = new UTF8Encoding(false, true);
+        static int streamCount;
+        static readonly Version CurrentVersion = new Version(1, 0);
+
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
         readonly StreamReader streamReader;
         readonly JsonSerializer serializer;
-        readonly Version currentVersion = new Version(1, 0);
 
         public MessageExchangeStream(Stream stream, ILog log)
         {
             this.stream = stream;
             this.log = log;
-            streamWriter = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
-            streamReader = new StreamReader(stream, new UTF8Encoding(false));
+            
+            streamWriter = new StreamWriter(stream, Utf8EncodingNoMarker, 1024, true) { NewLine = "\r\n" };
+            streamReader = new StreamReader(stream, Utf8EncodingNoMarker, true, 1024, true);
             serializer = Serializer();
             SetNormalTimeouts();
         }
 
-        static int streamCount = 0;
         public static Func<JsonSerializer> Serializer = CreateDefault;
 
         public void IdentifyAsClient()
         {
             log.Write(EventType.Diagnostic, "Identifying as a client");
             streamWriter.Write("MX-CLIENT ");
-            streamWriter.Write(currentVersion);
+            streamWriter.Write(CurrentVersion);
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -144,7 +148,7 @@ namespace Halibut.Transport.Protocol
         public void IdentifyAsSubscriber(string subscriptionId)
         {
             streamWriter.Write("MX-SUBSCRIBER ");
-            streamWriter.Write(currentVersion);
+            streamWriter.Write(CurrentVersion);
             streamWriter.Write(" ");
             streamWriter.Write(subscriptionId);
             streamWriter.WriteLine();
@@ -157,7 +161,7 @@ namespace Halibut.Transport.Protocol
         public void IdentifyAsServer()
         {
             streamWriter.Write("MX-SERVER ");
-            streamWriter.Write(currentVersion.ToString());
+            streamWriter.Write(CurrentVersion.ToString());
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -265,23 +269,25 @@ namespace Halibut.Transport.Protocol
 
         void ReadStream(StreamCapture capture)
         {
-            var reader = new BinaryReader(stream);
-            var id = new Guid(reader.ReadBytes(16));
-            var length = reader.ReadInt64();
-            var dataStream = FindStreamById(capture, id);
-            var tempFile = CopyStreamToFile(id, length, reader);
-            var lengthAgain = reader.ReadInt64();
-            if (lengthAgain != length)
+            using (var reader = new BinaryReader(stream, Encoding.UTF8, true))
             {
-                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
-            }
+                var id = new Guid(reader.ReadBytes(16));
+                var length = reader.ReadInt64();
+                var dataStream = FindStreamById(capture, id);
+                var tempFile = CopyStreamToFile(id, length, reader);
+                var lengthAgain = reader.ReadInt64();
+                if (lengthAgain != length)
+                {
+                    throw new ProtocolException($"There was a problem receiving a file stream: the length of the file was expected to be: {length} but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
+                }
 
-            ((IDataStreamInternal)dataStream).Received(tempFile);
+                ((IDataStreamInternal) dataStream).Received(tempFile);
+            }
         }
 
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
-            var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
+            var path = Path.Combine(Path.GetTempPath(), $"{id.ToString()}_{Interlocked.Increment(ref streamCount)}");
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
                 var buffer = new byte[1024 * 128];
@@ -315,16 +321,18 @@ namespace Halibut.Transport.Protocol
         {
             foreach (var dataStream in streams)
             {
-                var writer = new BinaryWriter(stream);
-                writer.Write(dataStream.Id.ToByteArray());
-                writer.Write(dataStream.Length);
-                writer.Flush();
+                using (var writer = new BinaryWriter(stream, Utf8EncodingNoMarkerThrow, true))
+                {
+                    writer.Write(dataStream.Id.ToByteArray());
+                    writer.Write(dataStream.Length);
+                    writer.Flush();
 
-                ((IDataStreamInternal)dataStream).Transmit(stream);
-                stream.Flush();
+                    ((IDataStreamInternal) dataStream).Transmit(stream);
+                    stream.Flush();
 
-                writer.Write(dataStream.Length);
-                writer.Flush();
+                    writer.Write(dataStream.Length);
+                    writer.Flush();
+                }
             }
         }
 
