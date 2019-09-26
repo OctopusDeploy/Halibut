@@ -168,14 +168,25 @@ namespace Halibut.Transport.Protocol
             var line = streamReader.ReadLine();
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            var identityType = ParseIdentityType(parts[0]);
-            if (identityType == RemoteIdentityType.Subscriber)
+            try
             {
-                if (parts.Length < 3) throw new ProtocolException("Unable to receive the remote identity; the client identified as a subscriber, but did not supply a subscription ID.");
-                var subscriptionId = new Uri(parts[2]);
-                return new RemoteIdentity(identityType, subscriptionId);
+                var identityType = ParseIdentityType(parts[0]);
+                if (identityType == RemoteIdentityType.Subscriber)
+                {
+                    if (parts.Length < 3) throw new ProtocolException("Unable to receive the remote identity; the client identified as a subscriber, but did not supply a subscription ID.");
+                    var subscriptionId = new Uri(parts[2]);
+                    return new RemoteIdentity(identityType, subscriptionId);
+                }
+                return new RemoteIdentity(identityType);
             }
-            return new RemoteIdentity(identityType);
+            catch (ProtocolException)
+            {
+                log.Write(EventType.Error, "Response:");
+                log.Write(EventType.Error, line);
+                log.Write(EventType.Error, streamReader.ReadToEnd());
+
+                throw;
+            }
         }
 
         public void Send<T>(T message)
