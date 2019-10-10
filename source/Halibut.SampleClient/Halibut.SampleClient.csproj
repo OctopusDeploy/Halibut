@@ -9,6 +9,13 @@
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
   </PropertyGroup>
 
+  <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
+	  <TargetFrameworks>net45</TargetFrameworks>
+  </PropertyGroup>
+  <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
+	  <TargetFrameworks>netcoreapp2.2</TargetFrameworks>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
