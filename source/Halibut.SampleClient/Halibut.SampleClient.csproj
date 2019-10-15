@@ -10,10 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Halibut.SampleContracts\Halibut.SampleContracts.csproj" />
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
   </ItemGroup>
@@ -29,6 +25,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="HalibutSslCertificate.pfx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="HalibutServer.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

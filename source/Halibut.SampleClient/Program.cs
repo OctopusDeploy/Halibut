@@ -2,7 +2,9 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.SampleContracts;
 using Serilog;
@@ -18,35 +20,26 @@ namespace Halibut.SampleClient
                 .CreateLogger();
 
             Console.Title = "Halibut Client";
-            var certificate = new X509Certificate2("HalibutClient.pfx");
-
+            var clientCertificate = new X509Certificate2("HalibutClient.pfx");
+            var serverCertificate = new X509Certificate2("HalibutServer.pfx");
+            
             var hostName = args.FirstOrDefault() ?? "localhost";
             var port = args.Skip(1).FirstOrDefault() ?? "8433";
-            using (var runtime = new HalibutRuntime(certificate))
+            using (var runtime = new HalibutRuntime(clientCertificate))
             {
-                //Begin make request of Listening server
-                //var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                //End make request of Listening server
-
-                //Begin make request of Polling server
-                //var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
-                //runtime.Listen(endPoint);
-                //runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                //var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
-                //End make request of Polling server
-
-                //Begin make request of WebSocket Polling server
-                AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8433");
-                runtime.ListenWebSocket("https://+:8433/Halibut");
-                runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
-                //End make request of WebSocket Polling server
+                ICalculatorService calculatorClient;
+                
+                calculatorClient = MakeRequestOfListeningServer(runtime, hostName, port, serverCertificate);
+                
+                //calculatorClient = MakeRequestOfPollingServer(runtime, serverCertificate, clientCertificate);
+                
+                //calculatorClient = MakeRequestOfWebSocketPollingServer(runtime, serverCertificate, clientCertificate);
 
                 while (true)
                 {
                     try
                     {
-                        var result = calculator.Add(12, 18);
+                        var result = calculatorClient.Add(12, 18);
                         Console.WriteLine("12 + 18 = " + result);
                         Console.ReadKey();
                     }
@@ -56,6 +49,36 @@ namespace Halibut.SampleClient
                     }
                 }
             }
+        }
+
+        static ICalculatorService MakeRequestOfWebSocketPollingServer(HalibutRuntime runtime, X509Certificate2 serverCertificate, X509Certificate2 clientCertificate)
+        {
+            try
+            {
+                AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8433");
+            }
+            catch (CryptographicException cex)
+            {
+                if (cex.InnerException is PlatformNotSupportedException pex)
+                    Log.Warning($"Unable to write to the local machine certificate store: {pex.Message}");
+            }
+
+            runtime.ListenWebSocket("https://+:8433/Halibut");
+            runtime.Trust(serverCertificate.Thumbprint);
+            return runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", clientCertificate.Thumbprint);
+        }
+
+        static ICalculatorService MakeRequestOfPollingServer(HalibutRuntime runtime, X509Certificate2 serverCertificate, X509Certificate2 clientCertificate)
+        {
+            var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
+            runtime.Listen(endPoint);
+            runtime.Trust(serverCertificate.Thumbprint);
+            return runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", clientCertificate.Thumbprint);
+        }
+
+        static ICalculatorService MakeRequestOfListeningServer(HalibutRuntime runtime, string hostName, string port, X509Certificate2 serverCertificate)
+        {
+            return runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", serverCertificate.Thumbprint);
         }
 
         static void AddSslCertToLocalStoreAndRegisterFor(string address)
