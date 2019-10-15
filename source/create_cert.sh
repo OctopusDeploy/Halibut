@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
 usage() { echo "Usage: create_cert.sh -c CN -o filename.pfx"; exit 1; }
