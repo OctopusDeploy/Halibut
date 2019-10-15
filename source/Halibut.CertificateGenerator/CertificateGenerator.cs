@@ -78,7 +78,7 @@ namespace Halibut.CertificateGenerator
                    };
         }
 
-#if NETFRAMEWORK
+#if !__MonoCS__
         static RSACryptoServiceProvider AddPrivateKey(AsymmetricCipherKeyPair cerKp)
         {
             var tempRcsp = (RSACryptoServiceProvider) DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters) cerKp.Private);
@@ -89,8 +89,7 @@ namespace Halibut.CertificateGenerator
             rcsp.ImportCspBlob(tempRcsp.ExportCspBlob(true));
             return rcsp;
         }
-#endif
-#if __MonoCS__ || NETCOREAPP2_2
+#else
         private static RSA AddPrivateKey(AsymmetricCipherKeyPair cerKp)
         {
             return DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters) cerKp.Private);
