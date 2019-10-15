@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // TOOLS
 //////////////////////////////////////////////////////////////////////
-#tool "nuget:?package=GitVersion.CommandLine.DotNetCore&version=5.0.1"
+#tool "nuget:?package=GitVersion.CommandLine&version=5.0.1"
 #tool "nuget:?package=gitlink&version=3.1.0"
 #if !NETCOREAPP
 #tool "nuget:?package=JetBrains.DotMemoryUnit&version=3.0.20171219.105559"
@@ -85,11 +85,11 @@ Task("Test")
     .IsDependentOn("Build")
     .Does(() =>
 {
-// #if NETCOREAPP
-//     RunTestsWithoutProfiling();
-// #else
-//     RunTestsWithProfiling();
-// #endif
+#if NETCOREAPP
+    RunTestsWithoutProfiling();
+#else
+    RunTestsWithProfiling();
+#endif
 });
 
 void RunTestsWithProfiling() {
