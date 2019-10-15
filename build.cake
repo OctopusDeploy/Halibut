@@ -113,11 +113,8 @@ void RunTestsWithProfiling() {
 void RunTestsWithoutProfiling() {
     DotNetCoreTest("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCoreTestSettings
     {
-        ArgumentCustomization = args => {
-            args.Append("--configuration=" + configuration);
-            args.Append("--no-build");
-            return args;
-        }
+        Configuration = configuration,
+        NoBuild = true
     });
 }
 
