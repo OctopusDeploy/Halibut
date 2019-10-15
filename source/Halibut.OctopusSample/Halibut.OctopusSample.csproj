@@ -16,15 +16,9 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
   
-    <ItemGroup Condition=" '$(TargetFramework)'=='net472' ">
+  <ItemGroup Condition=" '$(TargetFramework)'=='net472' ">
     <None Include="App.config" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)'=='net472' ">
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)'=='net472' ">
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -35,9 +29,6 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)'=='net472' ">
     <Compile Update="OctopusForm.cs">
       <SubType>Form</SubType>
     </Compile>

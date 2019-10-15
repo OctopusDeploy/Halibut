@@ -97,7 +97,7 @@ void RunTestsWithProfiling() {
     {
         ArgumentCustomization = args => {
             args.Clear();
-            args.Append("\"dotnet\"");
+            args.Append("\"C:/Program Files/dotnet/dotnet.exe\"");
             args.Append("--propagate-exit-code");
             args.Append("--instance-name=" + Guid.NewGuid());
             args.Append("--");
