@@ -8,7 +8,7 @@
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
   </PropertyGroup>
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
-	  <TargetFrameworks>netcoreapp2.2;net472</TargetFrameworks>
+	  <TargetFrameworks>netcoreapp2.2;net45</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
 	  <TargetFrameworks>netcoreapp2.2</TargetFrameworks>
@@ -56,7 +56,7 @@
     </PackageReference>
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net472' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT</DefineConstants>
   </PropertyGroup>
   
