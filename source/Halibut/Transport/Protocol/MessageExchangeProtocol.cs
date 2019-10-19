@@ -214,7 +214,7 @@ namespace Halibut.Transport.Protocol
                 // We get socket timeout on the server when the network connection to a polling client drops
                 // (in Octopus this is the server for a Polling Tentacle)
                 // In normal operation a client will poll more often than the timeout so we shouldn't see this.
-                log.Write(EventType.Error, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
+                log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
                 return false;
             }
             stream.SendProceed();
@@ -252,7 +252,7 @@ namespace Halibut.Transport.Protocol
                 // We get socket timeout on the server when the network connection to a polling client drops
                 // (in Octopus this is the server for a Polling Tentacle)
                 // In normal operation a client will poll more often than the timeout so we shouldn't see this.
-                log.Write(EventType.Error, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
+                log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
                 return false;
             }
             await stream.SendProceedAsync();
