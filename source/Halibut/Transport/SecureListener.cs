@@ -116,6 +116,15 @@ namespace Halibut.Transport
             tcpClientManager.Disconnect(thumbprint);
         }
 
+        void WaitUntil(Func<bool> predicate)
+        {
+            // See issue: https://github.com/OctopusDeploy/Issues/issues/6035
+            while (!predicate())
+            {
+                Thread.Sleep(TimeSpan.FromMilliseconds(50));
+            }
+        }
+        
         void Accept()
         {
             var numberOfFailedAttemptsInRow = 0;
@@ -124,7 +133,7 @@ namespace Halibut.Transport
             {
                 try
                 {
-                    SpinWait.SpinUntil(() => cts.IsCancellationRequested || listener.Pending());
+                    WaitUntil(() => cts.IsCancellationRequested || listener.Pending());
 
                     if (cts.IsCancellationRequested)
                     {
