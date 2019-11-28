@@ -115,6 +115,8 @@ namespace Halibut.Transport
 
         void Accept()
         {
+            // See: https://github.com/OctopusDeploy/Issues/issues/6035
+            // See: https://github.com/dotnet/corefx/issues/26034
             var tokenCancellationListener = IsWindows()
                 ? cts.Token.Register(listener.Stop)
                 : (IDisposable) new NoopDisposable();
