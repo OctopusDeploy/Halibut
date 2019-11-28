@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -88,11 +89,7 @@ namespace Halibut.Transport
             }
             listener.Start();
 
-#if !NETSTANDARD2_0
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-#else
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-#endif
+            if (IsWindows())
             {
                 // set socket handle as not inherited so that when tentacle runs powershell
                 // with System.Diagnostics.Process those scripts don't lock the socket
@@ -118,47 +115,70 @@ namespace Halibut.Transport
 
         void Accept()
         {
-            var numberOfFailedAttemptsInRow = 0;
-
-            while (!cts.IsCancellationRequested)
-            {
-                try
+            var tokenCancellationListener = IsWindows()
+                ? cts.Token.Register(listener.Stop)
+                : (IDisposable) new NoopDisposable();
+            
+            var shouldAbort = IsWindows()
+                ? () => false
+                : new Func<bool>(() =>
                 {
                     SpinWait.SpinUntil(() => cts.IsCancellationRequested || listener.Pending());
+                    return cts.IsCancellationRequested;
+                });
 
-                    if (cts.IsCancellationRequested)
+            const int errorThreshold = 3;
+
+            using (tokenCancellationListener)
+            {
+                var numberOfFailedAttemptsInRow = 0;
+                while (!cts.IsCancellationRequested)
+                {
+                    try
                     {
-                        continue;
-                    }
+                        if (shouldAbort())
+                        {
+                            continue;
+                        }
 
-                    var client = listener.AcceptTcpClient();
+                        var client = listener.AcceptTcpClient();
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                    HandleClient(client);
+                        HandleClient(client);
 #pragma warning restore CS4014
-                    numberOfFailedAttemptsInRow = 0;
-                }
-                catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
-                {
-                }
-                catch (ObjectDisposedException)
-                {
-                }
-                catch (Exception ex)
-                {
-                    numberOfFailedAttemptsInRow++;
-                    log.WriteException(EventType.Error, $"Error accepting TCP client", ex);
-                    // Slow down the logs in case an exception is immediately encountered after 3 failed AcceptTcpClient calls
-                    if (numberOfFailedAttemptsInRow >= 3)
+                        numberOfFailedAttemptsInRow = 0;
+                    }
+                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
-                        var millisecondsTimeout = Math.Max(0, Math.Min(numberOfFailedAttemptsInRow - 3, 100)) * 10;
-                        log.Write(
-                            EventType.Error,
-                            $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
-                        );
-                        Thread.Sleep(millisecondsTimeout);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                        numberOfFailedAttemptsInRow++;
+                        log.WriteException(EventType.Error, "Error accepting TCP client", ex);
+                        // Slow down the logs in case an exception is immediately encountered after X failed AcceptTcpClient calls
+                        if (numberOfFailedAttemptsInRow >= errorThreshold)
+                        {
+                            var millisecondsTimeout = Math.Max(0, Math.Min(numberOfFailedAttemptsInRow - errorThreshold, 100)) * 10;
+                            log.Write(
+                                EventType.Error,
+                                $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
+                            );
+                            Thread.Sleep(millisecondsTimeout);
+                        }
                     }
                 }
             }
+        }
+
+        bool IsWindows()
+        {
+#if !NETSTANDARD2_0
+            return Environment.OSVersion.Platform == PlatformID.Win32NT;
+#else
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+#endif
         }
 
         async Task HandleClient(TcpClient client)
