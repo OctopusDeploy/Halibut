@@ -40,6 +40,7 @@
     <PackageReference Include="NUnit" Version="3.11.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.13.0" />
     <PackageReference Include="Serilog.Sinks.NUnit" Version="1.0.1" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="4.6.0" />
     <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.15" />
     <PackageReference Include="Serilog" Version="2.3.0" />
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="2.0.0" />
