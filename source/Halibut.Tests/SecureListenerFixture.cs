@@ -13,49 +13,69 @@ namespace Halibut.Tests
 {
     public class SecureListenerFixture
     {
-#if NETFRAMEWORK
+        PerformanceCounter GetCounterForCurrentProcess(string categoryName, string counterName)
+        {
+            var pid = Process.GetCurrentProcess().Id;
+            
+            var instanceName = new PerformanceCounterCategory("Process")
+                .GetInstanceNames()
+                .FirstOrDefault(instance =>
+                {
+                    using (var counter = new PerformanceCounter("Process", "ID Process", instance, true))
+                    {
+                        return pid == counter.RawValue;
+                    }
+                });
+
+            if (instanceName == null)
+            {
+                throw new Exception("Could not find instance name for process.");
+            }
+            
+            return new PerformanceCounter(categoryName, counterName, instanceName, true);
+        }
+        
         [Test]
         [WindowsTest]
         public void SecureListenerDoesNotCreateHundredsOfIOEventsPerSecondOnWindows()
         {
             const int secondsToSample = 5;
-            
-            var currentProcess = Process.GetCurrentProcess().ProcessName;
-            var opsPerSec = new PerformanceCounter("Process", "IO Other Operations/sec", currentProcess);
 
-            var client = new SecureListener(
-                new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1093), 
-                Certificates.TentacleListening,
-                p => { },
-                thumbprint => true,
-                new LogFactory(), 
-                () => ""
-            );
-
-            var idleAverage = CollectCounterValues(opsPerSec)
-                .Take(secondsToSample)
-                .Average();
-
-            float listeningAverage;
-            
-            using (client)
+            using (var opsPerSec = GetCounterForCurrentProcess("Process", "IO Other Operations/sec"))
             {
-                client.Start();
-                
-                listeningAverage = CollectCounterValues(opsPerSec)
+                var client = new SecureListener(
+                    new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1093), 
+                    Certificates.TentacleListening,
+                    p => { },
+                    thumbprint => true,
+                    new LogFactory(), 
+                    () => ""
+                );
+
+                var idleAverage = CollectCounterValues(opsPerSec)
                     .Take(secondsToSample)
                     .Average();
-            }
 
-            var idleAverageWithErrorMargin = idleAverage * 250f;
+                float listeningAverage;
             
-            TestContext.Out.WriteLine($"idle average:      {idleAverage} ops/second");
-            TestContext.Out.WriteLine($"listening average: {listeningAverage} ops/second");
-            TestContext.Out.WriteLine($"expectation:     < {idleAverageWithErrorMargin} ops/second");
+                using (client)
+                {
+                    client.Start();
+                
+                    listeningAverage = CollectCounterValues(opsPerSec)
+                        .Take(secondsToSample)
+                        .Average();
+                }
 
-            listeningAverage.Should().BeLessThan(idleAverageWithErrorMargin);
+                var idleAverageWithErrorMargin = idleAverage * 250f;
+            
+                TestContext.Out.WriteLine($"idle average:      {idleAverage} ops/second");
+                TestContext.Out.WriteLine($"listening average: {listeningAverage} ops/second");
+                TestContext.Out.WriteLine($"expectation:     < {idleAverageWithErrorMargin} ops/second");
+
+                listeningAverage.Should().BeLessThan(idleAverageWithErrorMargin);
+            }
         }
-#endif
         
         IEnumerable<float> CollectCounterValues(PerformanceCounter counter)
         {

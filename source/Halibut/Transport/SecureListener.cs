@@ -117,30 +117,29 @@ namespace Halibut.Transport
         {
             // See: https://github.com/OctopusDeploy/Issues/issues/6035
             // See: https://github.com/dotnet/corefx/issues/26034
-            var tokenCancellationListener = IsWindows()
-                ? cts.Token.Register(listener.Stop)
-                : (IDisposable) new NoopDisposable();
-            
-            var shouldAbort = IsWindows()
-                ? () => false
-                : new Func<bool>(() =>
-                {
-                    SpinWait.SpinUntil(() => cts.IsCancellationRequested || listener.Pending());
-                    return cts.IsCancellationRequested;
-                });
+
+            void WaitForPendingConnectionOrCancellation()
+            {
+                SpinWait.SpinUntil(() => cts.IsCancellationRequested || listener.Pending());
+            }
 
             const int errorThreshold = 3;
 
-            using (tokenCancellationListener)
+            using (IsWindows() ? cts.Token.Register(listener.Stop) : (IDisposable) null)
             {
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cts.IsCancellationRequested)
                 {
                     try
                     {
-                        if (shouldAbort())
+                        if (!IsWindows())
                         {
-                            continue;
+                            WaitForPendingConnectionOrCancellation();
+                            
+                            if (cts.IsCancellationRequested)
+                            {
+                                return;
+                            }
                         }
 
                         var client = listener.AcceptTcpClient();
