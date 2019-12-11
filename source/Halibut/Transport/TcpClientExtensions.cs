@@ -17,7 +17,7 @@ namespace Halibut.Transport
             var connectResult = false;
             try
             {
-                connectResult = client.ConnectAsync(host, port).Wait(timeout);
+                connectResult = client.ConnectAsync(host, port).Wait(timeout/*, cancellationToken */);
             }
             catch (AggregateException aex) when (aex.IsSocketConnectionTimeout())
             {
