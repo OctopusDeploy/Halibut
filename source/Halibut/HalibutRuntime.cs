@@ -152,7 +152,7 @@ namespace Halibut
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
-            (proxy as HalibutProxy).Configure(request => SendOutgoingRequest(request, cancellationToken), typeof(TService), endpoint);
+            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken);
             return proxy;
 #endif
         }

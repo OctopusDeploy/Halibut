@@ -93,17 +93,19 @@ namespace Halibut.ServiceModel
 #else
     public class HalibutProxy : DispatchProxy
     {
-        Func<RequestMessage, ResponseMessage> messageRouter;
+        Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
+        CancellationToken cancellationToken;
 
-        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
+            this.cancellationToken = cancellationToken;
             this.configured = true;
         }
 
@@ -147,7 +149,7 @@ namespace Halibut.ServiceModel
 
         ResponseMessage DispatchRequest(RequestMessage requestMessage)
         {
-            return messageRouter(requestMessage);
+            return messageRouter(requestMessage, cancellationToken);
         }
 
         static void EnsureNotError(ResponseMessage responseMessage)
