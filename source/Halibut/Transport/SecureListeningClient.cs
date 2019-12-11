@@ -125,6 +125,11 @@ namespace Halibut.Transport
                     lastError = iox;
                     Thread.Sleep(retryInterval);
                 }
+                catch (OperationCanceledException oce)
+                {
+                    log.WriteException(EventType.Diagnostic, "The operation was canceled", oce);
+                    retryAllowed = false;
+                }
                 catch (Exception ex)
                 {
                     log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
