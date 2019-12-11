@@ -128,6 +128,7 @@ namespace Halibut.Transport
                 catch (OperationCanceledException oce)
                 {
                     log.WriteException(EventType.Diagnostic, "The operation was canceled", oce);
+                    lastError = oce;
                     retryAllowed = false;
                 }
                 catch (Exception ex)
