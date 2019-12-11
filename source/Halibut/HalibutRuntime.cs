@@ -88,7 +88,13 @@ namespace Halibut
                 id => GetQueue(id.SubscriptionId));
         }
 
+        [Obsolete]
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
+        {
+            Poll(subscription, endPoint, CancellationToken.None);
+        }
+
+        public void Poll(Uri subscription, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
             ISecureClient client;
             var log = logs.ForEndpoint(endPoint.BaseUri);
@@ -104,18 +110,30 @@ namespace Halibut
             {
                 client = new SecureClient(endPoint, serverCertificate, log, connectionManager);
             }
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log));
+            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken));
         }
 
+        [Obsolete]
         public ServiceEndPoint Discover(Uri uri)
         {
-            return Discover(new ServiceEndPoint(uri, null));
+            return Discover(uri, CancellationToken.None);
+        }
+        
+        public ServiceEndPoint Discover(Uri uri, CancellationToken cancellationToken)
+        {
+            return Discover(new ServiceEndPoint(uri, null), cancellationToken);
         }
 
+        [Obsolete]
         public ServiceEndPoint Discover(ServiceEndPoint endpoint)
         {
+            return Discover(endpoint, CancellationToken.None);
+        }
+        
+        public ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
             var client = new DiscoveryClient();
-            return client.Discover(endpoint);
+            return client.Discover(endpoint, cancellationToken);
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
@@ -146,14 +164,14 @@ namespace Halibut
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    return SendOutgoingHttpsRequest(request);
+                    return SendOutgoingHttpsRequest(request, cancellationToken);
                 case "poll":
                     return SendOutgoingPollingRequest(request, cancellationToken);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
 
-        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
+        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
@@ -161,7 +179,7 @@ namespace Halibut
             client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
-            });
+            }, cancellationToken);
             return response;
         }
 

@@ -25,6 +25,7 @@
 
 using System;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace Halibut.Transport.Proxy
 {
@@ -61,6 +62,7 @@ namespace Halibut.Transport.Proxy
         /// <param name="destinationHost">Destination host name or IP address.</param>
         /// <param name="destinationPort">Port number to connect to on the destination host.</param>
         /// <param name="timeout">Timeout duration for the Connect attempt.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>
         /// Returns an open TcpClient object that can be used normally to communicate
         /// with the destination server
@@ -70,7 +72,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout);
+        TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken);
     }
 }
     

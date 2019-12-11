@@ -176,6 +176,7 @@ namespace Halibut.Transport.Proxy
         /// <param name="destinationHost">Destination host name or IP address.</param>
         /// <param name="destinationPort">Port number to connect to on the destination host.</param>
         /// <param name="timeout">Timeout duration for the Connect attempt.</param>
+        /// <param name="cancellationToken"></param>
         /// <returns>
         /// Returns an open TcpClient object that can be used normally to communicate
         /// with the destination server
@@ -185,7 +186,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
-        public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
+        public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken)
         {
             try
             {
@@ -207,7 +208,7 @@ namespace Halibut.Transport.Proxy
 
                     // attempt to open the connection
                     log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
-                    TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout);
+                    TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout, cancellationToken);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port

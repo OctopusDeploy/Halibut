@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using Halibut.SampleLoadTest;
 using Halibut.ServiceModel;
 using Serilog;
@@ -28,7 +29,7 @@ namespace Halibut.SamplePolling
                 var octopusPort = client.Listen();
                 client.Trust(ServerCertificate.Thumbprint);
 
-                server.Poll(new Uri(PollUrl), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), ClientCertificate.Thumbprint));
+                server.Poll(new Uri(PollUrl), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), ClientCertificate.Thumbprint), CancellationToken.None);
 
                 var calculator = client.CreateClient<ICalculatorService>(PollUrl, ServerCertificate.Thumbprint);
                 var result = calculator.Add(12, 18);

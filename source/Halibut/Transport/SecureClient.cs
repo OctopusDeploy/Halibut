@@ -31,7 +31,7 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint { get; }
 
-        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
+        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler, CancellationToken cancellationToken)
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
 
@@ -51,7 +51,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = connectionManager.AcquireConnection(new TcpConnectionFactory(clientCertificate), ServiceEndpoint, log);
+                        connection = connectionManager.AcquireConnection(new TcpConnectionFactory(clientCertificate), ServiceEndpoint, log, cancellationToken);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;

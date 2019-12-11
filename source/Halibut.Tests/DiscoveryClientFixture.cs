@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -37,7 +38,7 @@ namespace Halibut.Tests
         public void DiscoverMethodReturnsEndpointDetails()
         {
             var client = new DiscoveryClient();
-            var discovered = client.Discover(new ServiceEndPoint(endpoint.BaseUri, ""));
+            var discovered = client.Discover(new ServiceEndPoint(endpoint.BaseUri, ""), CancellationToken.None);
 
             discovered.RemoteThumbprint.ShouldBeEquivalentTo(endpoint.RemoteThumbprint);
             discovered.BaseUri.ShouldBeEquivalentTo(endpoint.BaseUri);
@@ -49,7 +50,7 @@ namespace Halibut.Tests
             var client = new DiscoveryClient();
             var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "");
 
-            Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint), "No such host is known");
+            Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint, CancellationToken.None), "No such host is known");
         }
     }
 }

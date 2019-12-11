@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Proxy;
 
@@ -14,12 +15,12 @@ namespace Halibut.Transport
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
         readonly LogFactory logs = new LogFactory();
 
-        public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint)
+        public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
         {
             try
             {
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
-                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, log))
+                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken))
                 {
                     using (var stream = client.GetStream())
                     {
@@ -32,7 +33,9 @@ namespace Halibut.Transport
                             if (ssl.RemoteCertificate == null)
                                 throw new Exception("The server did not provide an SSL certificate");
 
+#pragma warning disable PC001 // API not supported on all platforms - X509Certificate2 not supported on macOS
                             return new ServiceEndPoint(serviceEndpoint.BaseUri, new X509Certificate2(ssl.RemoteCertificate.Export(X509ContentType.Cert)).Thumbprint);
+#pragma warning restore PC001 // API not supported on all platforms - X509Certificate2 not supported on macOS
                         }
                     }
                 }

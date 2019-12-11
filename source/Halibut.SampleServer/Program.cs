@@ -1,6 +1,7 @@
 using System;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using Halibut.SampleContracts;
 using Halibut.ServiceModel;
 using Serilog;
@@ -41,7 +42,7 @@ namespace Halibut.SampleServer
 
                 //Begin WebSocket Polling Setup
                 
-                server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint));
+                server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint), CancellationToken.None);
                 //End WebSocket Polling Setup
 
                 Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");

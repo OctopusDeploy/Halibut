@@ -2,22 +2,35 @@ using System;
 using System.Net.Sockets;
 using Halibut.Diagnostics;
 using System.Runtime.ExceptionServices;
+using System.Threading;
 
 namespace Halibut.Transport
 {
     public static class TcpClientExtensions
     {
+        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {
-            client.ConnectWithTimeout(remoteUri.Host, remoteUri.Port, timeout);
+            ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, CancellationToken.None);
         }
 
+        public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            client.ConnectWithTimeout(remoteUri.Host, remoteUri.Port, timeout, cancellationToken);
+        }
+
+        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
+        {
+            ConnectWithTimeout(client, host, port, timeout, CancellationToken.None);
+        }
+
+        public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
             var connectResult = false;
             try
             {
-                connectResult = client.ConnectAsync(host, port).Wait(timeout/*, cancellationToken */);
+                connectResult = client.ConnectAsync(host, port).Wait((int)timeout.TotalMilliseconds, cancellationToken);
             }
             catch (AggregateException aex) when (aex.IsSocketConnectionTimeout())
             {

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -114,7 +115,7 @@ namespace Halibut.Tests
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
-                server.Poll(new Uri("poll://SQ-TENTAPOLL"), serverEndpoint);
+                server.Poll(new Uri("poll://SQ-TENTAPOLL"), serverEndpoint, CancellationToken.None);
                 
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint);
                 
@@ -137,7 +138,7 @@ namespace Halibut.Tests
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
-                server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint);
+                server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint, CancellationToken.None);
                 
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint);
                 var calculator = runtime.CreateClient<ICalculatorService>(clientEndpoint);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Threading;
 using Halibut.Diagnostics;
 
 namespace Halibut
@@ -18,7 +19,7 @@ namespace Halibut
         int Listen(int port);
         int Listen(IPEndPoint endpoint);
         void ListenWebSocket(string endpoint);
-        void Poll(Uri subscription, ServiceEndPoint endPoint);
+        void Poll(Uri subscription, ServiceEndPoint endPoint, CancellationToken cancellationToken);
         ServiceEndPoint Discover(Uri uri);
         ServiceEndPoint Discover(ServiceEndPoint endpoint);
         TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint);
