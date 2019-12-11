@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -124,16 +125,21 @@ namespace Halibut
 
         public TService CreateClient<TService>(ServiceEndPoint endpoint)
         {
+            return CreateClient<TService>(endpoint, CancellationToken.None);
+        }
+        
+        public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
 #if HAS_REAL_PROXY
-            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
+            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
-            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint);
+            (proxy as HalibutProxy).Configure(request => SendOutgoingRequest(request, cancellationToken), typeof(TService), endpoint);
             return proxy;
 #endif
         }
 
-        ResponseMessage SendOutgoingRequest(RequestMessage request)
+        ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
@@ -142,7 +148,7 @@ namespace Halibut
                 case "https":
                     return SendOutgoingHttpsRequest(request);
                 case "poll":
-                    return SendOutgoingPollingRequest(request);
+                    return SendOutgoingPollingRequest(request, cancellationToken);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
@@ -159,10 +165,10 @@ namespace Halibut
             return response;
         }
 
-        ResponseMessage SendOutgoingPollingRequest(RequestMessage request)
+        ResponseMessage SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
-            return queue.QueueAndWait(request);
+            return queue.QueueAndWait(request, cancellationToken);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)

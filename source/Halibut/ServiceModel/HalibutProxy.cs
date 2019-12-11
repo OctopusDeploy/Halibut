@@ -11,17 +11,19 @@ namespace Halibut.ServiceModel
     using System.Runtime.Remoting.Proxies;
     class HalibutProxy : RealProxy
     {
-        readonly Func<RequestMessage, ResponseMessage> messageRouter;
+        readonly Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
         readonly Type contractType;
         readonly ServiceEndPoint endPoint;
+        readonly CancellationToken cancellationToken;
         long callId;
 
-        public HalibutProxy(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
             : base(contractType)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
+            this.cancellationToken = cancellationToken;
         }
 
         public override IMessage Invoke(IMessage msg)
@@ -73,7 +75,7 @@ namespace Halibut.ServiceModel
 
         ResponseMessage DispatchRequest(RequestMessage requestMessage)
         {
-            return messageRouter(requestMessage);
+            return messageRouter(requestMessage, cancellationToken);
         }
 
         static void EnsureNotError(ResponseMessage responseMessage)
