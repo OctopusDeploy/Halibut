@@ -43,6 +43,7 @@ namespace Halibut.Transport
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.TimedOut)
             {
                 DisposeClient();
+                //todo make these exceptions have a diff message
                 throw new HalibutClientException($"The client was unable to establish the initial connection within {timeout}.");
             }
             catch (Exception ex)
@@ -83,6 +84,8 @@ namespace Halibut.Transport
                 }
                 throw new TimeoutException();
             }
+
+            await wrappedTask;
         }
         
         static async Task AwaitAndSwallowExceptionsWhenCancelled(CancellationToken cancellationToken, Task task)
