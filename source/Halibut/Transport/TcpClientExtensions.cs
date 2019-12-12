@@ -8,7 +8,6 @@ namespace Halibut.Transport
 {
     public static class TcpClientExtensions
     {
-        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {
             ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, CancellationToken.None);
@@ -19,7 +18,6 @@ namespace Halibut.Transport
             ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, cancellationToken);
         }
 
-        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
             ConnectWithTimeout(client, host, port, timeout, CancellationToken.None);

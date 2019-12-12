@@ -23,7 +23,6 @@ namespace Halibut.Transport
         {
         }
 
-        [Obsolete]
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
         : this(subscription, secureClient, handleIncomingRequest, log, CancellationToken.None)
         {

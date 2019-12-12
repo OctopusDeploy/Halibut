@@ -88,7 +88,6 @@ namespace Halibut
                 id => GetQueue(id.SubscriptionId));
         }
 
-        [Obsolete]
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
             Poll(subscription, endPoint, CancellationToken.None);
@@ -113,7 +112,6 @@ namespace Halibut
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken));
         }
 
-        [Obsolete]
         public ServiceEndPoint Discover(Uri uri)
         {
             return Discover(uri, CancellationToken.None);
@@ -124,7 +122,6 @@ namespace Halibut
             return Discover(new ServiceEndPoint(uri, null), cancellationToken);
         }
 
-        [Obsolete]
         public ServiceEndPoint Discover(ServiceEndPoint endpoint)
         {
             return Discover(endpoint, CancellationToken.None);
@@ -139,6 +136,11 @@ namespace Halibut
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
         {
             return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint));
+        }
+
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, CancellationToken cancellationToken)
+        {
+            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), cancellationToken);
         }
 
         public TService CreateClient<TService>(ServiceEndPoint endpoint)

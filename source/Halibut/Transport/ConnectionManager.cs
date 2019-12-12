@@ -14,6 +14,11 @@ namespace Halibut.Transport
 
         public bool IsDisposed { get; private set; }
 
+        public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
+        {
+            return AcquireConnection(connectionFactory, serviceEndpoint, log, CancellationToken.None);
+        }
+
         public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             var openableConnection = GetConnection(connectionFactory, serviceEndpoint, log, cancellationToken);

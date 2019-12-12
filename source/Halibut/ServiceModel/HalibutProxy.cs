@@ -100,6 +100,11 @@ namespace Halibut.ServiceModel
         bool configured;
         CancellationToken cancellationToken;
 
+        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        {
+            Configure(messageRouter, contractType, endPoint, CancellationToken.None);
+        }
+
         public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;

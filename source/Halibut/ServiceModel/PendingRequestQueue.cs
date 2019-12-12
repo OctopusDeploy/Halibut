@@ -21,6 +21,11 @@ namespace Halibut.ServiceModel
             this.log = log;
         }
 
+        public ResponseMessage QueueAndWait(RequestMessage request)
+        {
+            return QueueAndWait(request, CancellationToken.None);
+        }
+        
         public ResponseMessage QueueAndWait(RequestMessage request, CancellationToken cancellationToken)
         {
             var pending = new PendingRequest(request, log);

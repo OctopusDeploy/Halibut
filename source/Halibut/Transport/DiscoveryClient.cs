@@ -15,6 +15,11 @@ namespace Halibut.Transport
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
         readonly LogFactory logs = new LogFactory();
 
+        public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint)
+        {
+            return Discover(serviceEndpoint, CancellationToken.None);
+        }
+
         public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
         {
             try

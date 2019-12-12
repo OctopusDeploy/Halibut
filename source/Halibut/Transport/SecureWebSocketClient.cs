@@ -36,6 +36,11 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
 
+        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
+        {
+            ExecuteTransaction(protocolHandler, CancellationToken.None);
+        }
+
         public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler, CancellationToken cancellationToken)
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
