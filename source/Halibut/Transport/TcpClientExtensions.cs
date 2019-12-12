@@ -27,13 +27,14 @@ namespace Halibut.Transport
 
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            Connect(client, host, port, timeout).GetAwaiter().GetResult();
+            Connect(client, host, port, timeout, cancellationToken).GetAwaiter().GetResult();
         }
-        static async Task Connect(TcpClient client, string host, int port, TimeSpan timeout)
+        
+        static async Task Connect(TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
             try
             {
-                await TimeoutAfter(client.ConnectAsync(host, port), timeout);
+                await TimeoutAfter(client.ConnectAsync(host, port), timeout, cancellationToken);
             }
             catch (TimeoutException)
             {
@@ -69,15 +70,15 @@ namespace Halibut.Transport
         //todo: move to an extension method (TaskExtensions(?))
         //todo: add xmldoc comments
         //todo: unit tests
-        static async Task TimeoutAfter(this Task task, TimeSpan timespan)
+        static async Task TimeoutAfter(this Task task, TimeSpan timespan, CancellationToken cancellationToken)
         {
-            var timeOutTask = Task.Delay(timespan);
-            var source = new CancellationTokenSource();
-            var wrappedTask = AwaitAndSwallowExceptionsWhenCancelled(source.Token, task);
+            var timeOutTask = Task.Delay(timespan, cancellationToken);
+            var timeoutCancellation = new CancellationTokenSource();
+            var wrappedTask = AwaitAndSwallowExceptionsWhenCancelled(timeoutCancellation.Token, task);
             var completedTask = await Task.WhenAny(wrappedTask, timeOutTask);
             if (completedTask == timeOutTask)
             {
-                source.Cancel();
+                timeoutCancellation.Cancel();
                 if (wrappedTask.IsCompleted)
                 {
                     await wrappedTask;
