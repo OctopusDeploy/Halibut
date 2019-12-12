@@ -1,8 +1,8 @@
 using System;
 using System.Net.Sockets;
-using Halibut.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
@@ -16,7 +16,7 @@ namespace Halibut.Transport
 
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            client.ConnectWithTimeout(remoteUri.Host, remoteUri.Port, timeout, cancellationToken);
+            ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, cancellationToken);
         }
 
         [Obsolete]
@@ -27,24 +27,34 @@ namespace Halibut.Transport
 
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            var connectResult = false;
+            Connect(client, host, port, timeout).GetAwaiter().GetResult();
+        }
+        static async Task Connect(TcpClient client, string host, int port, TimeSpan timeout)
+        {
             try
             {
-                connectResult = client.ConnectAsync(host, port).Wait((int)timeout.TotalMilliseconds, cancellationToken);
+                await TimeoutAfter(client.ConnectAsync(host, port), timeout);
             }
-            catch (AggregateException aex) when (aex.IsSocketConnectionTimeout())
+            catch (TimeoutException)
             {
-                // if timeout is > 20 seconds the underlying socket will timeout first
+                DisposeClient();
+                throw new HalibutClientException($"The client was unable to establish the initial connection within {timeout}.");
             }
-            catch(AggregateException aex)
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.TimedOut)
             {
-                ExceptionDispatchInfo.Capture(aex.InnerException).Throw();
+                DisposeClient();
+                throw new HalibutClientException($"The client was unable to establish the initial connection within {timeout}.");
             }
-            if (!connectResult)
+            catch (Exception ex)
+            {
+                DisposeClient();
+                ExceptionDispatchInfo.Capture(ex).Throw();
+            }
+            void DisposeClient()
             {
                 try
                 {
-                    ((IDisposable)client).Dispose();
+                    ((IDisposable) client).Dispose();
                 }
                 catch (SocketException)
                 {
@@ -52,8 +62,41 @@ namespace Halibut.Transport
                 catch (ObjectDisposedException)
                 {
                 }
-
-                throw new HalibutClientException($"The client was unable to establish the initial connection within {timeout}.");
+            }
+        }
+        
+        //todo: move to an extension method (TaskExtensions(?))
+        //todo: add xmldoc comments
+        //todo: unit tests
+        static async Task TimeoutAfter(this Task task, TimeSpan timespan)
+        {
+            var timeOutTask = Task.Delay(timespan);
+            var source = new CancellationTokenSource();
+            var wrappedTask = AwaitAndSwallowExceptionsWhenCancelled(source.Token, task);
+            var completedTask = await Task.WhenAny(wrappedTask, timeOutTask);
+            if (completedTask == timeOutTask)
+            {
+                source.Cancel();
+                if (wrappedTask.IsCompleted)
+                {
+                    await wrappedTask;
+                }
+                throw new TimeoutException();
+            }
+        }
+        
+        static async Task AwaitAndSwallowExceptionsWhenCancelled(CancellationToken cancellationToken, Task task)
+        {
+            try
+            {
+                await task;
+            }
+            catch (Exception)
+            {
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
             }
         }
     }
