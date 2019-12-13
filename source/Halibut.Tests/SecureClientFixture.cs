@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -60,7 +59,7 @@ namespace Halibut.Tests
 
             var secureClient = new SecureListeningClient(endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null;
-            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None);
+            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
 
             // The pool should be cleared after the second failure
             stream.Received(2).IdentifyAsClient();

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Windows.Forms;
 using Halibut.ServiceModel;
 
@@ -25,7 +24,7 @@ namespace Halibut.OctopusSample
 
         public void PollingMode(Uri subscription, ServiceEndPoint octopusServer)
         {
-            tentacleHalibutRuntime.Poll(subscription, octopusServer, CancellationToken.None);
+            tentacleHalibutRuntime.Poll(subscription, octopusServer);
             Text = "Tentacle: polling, subscription: " + subscription;
         }
 
