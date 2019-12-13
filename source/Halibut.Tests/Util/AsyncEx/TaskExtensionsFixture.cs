@@ -25,7 +25,7 @@ namespace Halibut.Tests.Util.AsyncEx
         }
         
         [Test]
-        public async Task When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
+        public void When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
         {
             var triggered = false;
             var task = Task.Run(async () =>
@@ -39,7 +39,7 @@ namespace Halibut.Tests.Util.AsyncEx
         }
         
         [Test]
-        public async Task When_TaskGetsCancelled_ThrowsTaskCanceledException()
+        public void When_TaskGetsCancelled_ThrowsTaskCanceledException()
         {
             var triggered = false;
             var cancellationTokenSource = new CancellationTokenSource();
@@ -74,7 +74,10 @@ namespace Halibut.Tests.Util.AsyncEx
         public async Task When_TaskGetsCanceledButStillThrowsExceptionAfterCancellation_ExceptionsAreObserved()
         {
             var cancellationTokenSource = new CancellationTokenSource();
+#pragma warning disable 4014 
+            // [CS4014] Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call.
             Task.Run(async () =>
+#pragma warning restore 4014
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
                 cancellationTokenSource.Cancel();
