@@ -14,31 +14,33 @@ namespace Halibut.Util.AsyncEx
         /// <param name="timeout">The amount of time to wait until we give up</param>
         /// <param name="cancellationToken">Supports task cancellation</param>
         /// <returns>The task if successful, otherwise a TimeoutException or OperationCanceledException</returns>
-        /// <exception cref="TimeoutException">If the timeout gets reached before the task completes</exception>
+        /// <exception cref="TimeoutException">If the timeout gets reached before the task completes or before the task is cancelled</exception>
         /// <exception cref="OperationCanceledException">The task was cancelled via the cancellation token</exception>
         public static async Task TimeoutAfter(this Task task, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            var timeOutTask = Task.Delay(timeout);
             var cancellationTask = cancellationToken.AsTask();
-            var timeoutCancellation = new CancellationTokenSource();
-            var wrappedTask = AwaitAndSwallowExceptionsWhenCancelled(task, timeoutCancellation.Token);
-            var completedTask = await Task.WhenAny(wrappedTask, timeOutTask, cancellationTask);
-            if (completedTask == timeOutTask)
+            using (var timeoutCancellation = new CancellationTokenSource(timeout))
             {
-                timeoutCancellation.Cancel();
-                if (wrappedTask.IsCompleted)
+                var timeoutCancellationTask = timeoutCancellation.Token.AsTask();
+                var wrappedTask = AwaitAndSwallowExceptionsWhenCancelled(task, timeoutCancellation.Token);
+                var completedTask = await Task.WhenAny(wrappedTask, timeoutCancellationTask, cancellationTask);
+                
+                if (completedTask == timeoutCancellationTask)
                 {
-                    await wrappedTask;
-                }
-                throw new TimeoutException();
-            }
+                    if (wrappedTask.IsCompleted)
+                        await wrappedTask;
 
-            if (completedTask == cancellationTask)
-            {
-                timeoutCancellation.Cancel();
-                throw new OperationCanceledException();
+                    throw new TimeoutException();
+                }
+
+                if (completedTask == cancellationTask)
+                {
+                    timeoutCancellation.Cancel();
+                    throw new OperationCanceledException();
+                }
+
+                await wrappedTask;
             }
-            await wrappedTask;
         }
         
         /// <summary>
