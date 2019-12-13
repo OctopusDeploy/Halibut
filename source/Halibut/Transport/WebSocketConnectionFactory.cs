@@ -29,7 +29,7 @@ namespace Halibut.Transport
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
-            var client = CreateConnectedClient(serviceEndpoint);
+            var client = CreateConnectedClient(serviceEndpoint, cancellationToken);
 
             log.Write(EventType.Diagnostic, "Connection established");
 
@@ -45,7 +45,7 @@ namespace Halibut.Transport
         }
 
         
-        ClientWebSocket CreateConnectedClient(ServiceEndPoint serviceEndpoint)
+        ClientWebSocket CreateConnectedClient(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
         {
             if (!serviceEndpoint.IsWebSocketEndpoint)
                 throw new Exception("Only wss:// endpoints are supported");
@@ -63,8 +63,11 @@ namespace Halibut.Transport
             {
                 ServerCertificateInterceptor.Expect(connectionId);
                 using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
-                    client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token)
-                        .ConfigureAwait(false).GetAwaiter().GetResult();
+                {
+                    using (cancellationToken.Register(() =>  cts?.Cancel()))
+                        client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token)
+                            .ConfigureAwait(false).GetAwaiter().GetResult();
+                }
                 ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
             }
             catch
