@@ -55,7 +55,7 @@ namespace Halibut.Transport
                 if (i > 0)
                 {
                     Thread.Sleep(retryInterval);
-                    log.Write(EventType.Error, "Retry attempt {0}", i);
+                    log.Write(EventType.OpeningNewConnection, $"Retrying connection to {serviceEndpoint.Format()} - attempt #{i}.");
                 }
 
                 try

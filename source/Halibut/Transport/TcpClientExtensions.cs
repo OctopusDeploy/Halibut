@@ -26,9 +26,9 @@ namespace Halibut.Transport
 
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            Connect(client, host, port, timeout, cancellationToken).GetAwaiter().GetResult();
+            Connect(client, host, port, timeout, CancellationToken.None).GetAwaiter().GetResult();
         }
-        
+
         static async Task Connect(TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
             try

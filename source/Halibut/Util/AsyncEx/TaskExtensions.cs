@@ -15,7 +15,7 @@ namespace Halibut.Util.AsyncEx
         /// <param name="cancellationToken">Supports task cancellation</param>
         /// <returns>The task if successful, otherwise a TimeoutException or OperationCanceledException</returns>
         /// <exception cref="TimeoutException">If the timeout gets reached before the task completes</exception>
-        /// <exception cref="OperationCanceledException">The cancek</exception>
+        /// <exception cref="OperationCanceledException">The task was cancelled via the cancellation token</exception>
         public static async Task TimeoutAfter(this Task task, TimeSpan timeout, CancellationToken cancellationToken)
         {
             var timeOutTask = Task.Delay(timeout);
@@ -40,7 +40,7 @@ namespace Halibut.Util.AsyncEx
             }
             await wrappedTask;
         }
-        
+
         /// <summary>
         /// Allows us to await the task, but swallow the exception if the timeout has passed
         /// This prevents us from getting UnobservedTaskException
@@ -62,7 +62,7 @@ namespace Halibut.Util.AsyncEx
                 }
             }
         }
-        
+
         static Task AsTask(this CancellationToken cancellationToken)
         {
             var tcs = new TaskCompletionSource<object>();

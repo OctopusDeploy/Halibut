@@ -29,11 +29,11 @@ namespace Halibut.Transport
 
         public IConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            log.Write(EventType.OpeningNewConnection, "Opening a new connection");
+            log.Write(EventType.OpeningNewConnection, $"Opening a new connection to {serviceEndpoint.BaseUri}");
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken);
-            log.Write(EventType.Diagnostic, "Connection established");
+            log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             var stream = client.GetStream();
 
