@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Util.AsyncEx
 {
-    public static class TaskExtensions
+    internal static class TaskExtensions
     {
         /// <summary>
         /// Waits for a) the task to complete, b) the timeout to pass or c) the cancellationToken to be triggered.
