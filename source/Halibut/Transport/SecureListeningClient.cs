@@ -41,7 +41,8 @@ namespace Halibut.Transport
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < ServiceEndpoint.RetryCountLimit && retryAllowed && watch.Elapsed < ServiceEndpoint.ConnectionErrorRetryTimeout; i++)
             {
-                if (i > 0) log.Write(EventType.Error, "Retry attempt {0}", i);
+                if (i > 0)
+                    log.Write(EventType.OpeningNewConnection, $"Retrying connection to {ServiceEndpoint.Format()} - attempt #{i}.");
 
                 try
                 {
