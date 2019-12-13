@@ -1,7 +1,9 @@
 using System;
 using System.Net.Sockets;
-using Halibut.Diagnostics;
 using System.Runtime.ExceptionServices;
+using System.Threading;
+using System.Threading.Tasks;
+using Halibut.Util.AsyncEx;
 
 namespace Halibut.Transport
 {
@@ -9,29 +11,41 @@ namespace Halibut.Transport
     {
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {
-            client.ConnectWithTimeout(remoteUri.Host, remoteUri.Port, timeout);
+            ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout);
         }
 
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
-            var connectResult = false;
+            Connect(client, host, port, timeout, CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        static async Task Connect(TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
+        {
             try
             {
-                connectResult = client.ConnectAsync(host, port).Wait(timeout);
+                var task = client.ConnectAsync(host, port);
+                await task.TimeoutAfter(timeout, cancellationToken);
             }
-            catch (AggregateException aex) when (aex.IsSocketConnectionTimeout())
+            catch (TimeoutException)
             {
-                // if timeout is > 20 seconds the underlying socket will timeout first
+                DisposeClient();
+                throw new HalibutClientException($"The client was unable to establish the initial connection within the timeout {timeout}.");
             }
-            catch(AggregateException aex)
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.TimedOut)
             {
-                ExceptionDispatchInfo.Capture(aex.InnerException).Throw();
+                DisposeClient();
+                throw new HalibutClientException($"The client was unable to establish the initial connection within {timeout}.");
             }
-            if (!connectResult)
+            catch (Exception ex)
+            {
+                DisposeClient();
+                ExceptionDispatchInfo.Capture(ex).Throw();
+            }
+            void DisposeClient()
             {
                 try
                 {
-                    ((IDisposable)client).Dispose();
+                    ((IDisposable) client).Dispose();
                 }
                 catch (SocketException)
                 {
@@ -39,8 +53,6 @@ namespace Halibut.Transport
                 catch (ObjectDisposedException)
                 {
                 }
-
-                throw new HalibutClientException($"The client was unable to establish the initial connection within {timeout}.");
             }
         }
     }
