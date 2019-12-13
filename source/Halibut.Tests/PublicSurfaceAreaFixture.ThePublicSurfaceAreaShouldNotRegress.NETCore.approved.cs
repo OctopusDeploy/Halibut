@@ -266,7 +266,7 @@ namespace Halibut.ServiceModel
     public class HalibutProxy : DispatchProxy
     {
         public HalibutProxy() { }
-        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint) { }
+        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint) { }
         public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, System.Threading.CancellationToken cancellationToken) { }
         protected Object Invoke(MethodInfo targetMethod, Object[] args) { }
     }
