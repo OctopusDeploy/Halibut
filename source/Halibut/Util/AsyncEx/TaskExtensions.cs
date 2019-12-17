@@ -18,29 +18,16 @@ namespace Halibut.Util.AsyncEx
         /// <exception cref="OperationCanceledException">The task was cancelled via the cancellation token</exception>
         public static async Task TimeoutAfter(this Task task, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            var cancellationTask = cancellationToken.AsTask();
-            using (var timeoutCancellation = new CancellationTokenSource(timeout))
-            {
-                var timeoutCancellationTask = timeoutCancellation.Token.AsTask();
-                var wrappedTask = AwaitAndSwallowExceptionsWhenCancelled(task, timeoutCancellation.Token);
-                var completedTask = await Task.WhenAny(wrappedTask, timeoutCancellationTask, cancellationTask);
-                
-                if (completedTask == timeoutCancellationTask)
-                {
-                    if (wrappedTask.IsCompleted)
-                        await wrappedTask;
+            var timeoutTask = Task.Delay(timeout, cancellationToken);
+            var wrappedTask = AwaitAndSwallowExceptionsWhenTimedOut(task, timeoutTask);
+            await Task.WhenAny(wrappedTask, timeoutTask);
+            
+            if (cancellationToken.IsCancellationRequested)
+                throw new OperationCanceledException();
+            if (timeoutTask.IsCompleted)
+                throw new TimeoutException();
 
-                    throw new TimeoutException();
-                }
-
-                if (completedTask == cancellationTask)
-                {
-                    timeoutCancellation.Cancel();
-                    throw new OperationCanceledException();
-                }
-
-                await wrappedTask;
-            }
+            await wrappedTask;
         }
         
         /// <summary>
@@ -50,7 +37,7 @@ namespace Halibut.Util.AsyncEx
         /// <param name="task"></param>
         /// <param name="timeoutCancellation"></param>
         /// <returns></returns>
-        static async Task AwaitAndSwallowExceptionsWhenCancelled(Task task, CancellationToken timeoutCancellation)
+        static async Task AwaitAndSwallowExceptionsWhenTimedOut(Task task, IAsyncResult timeoutTask)
         {
             try
             {
@@ -58,10 +45,8 @@ namespace Halibut.Util.AsyncEx
             }
             catch (Exception)
             {
-                if (!timeoutCancellation.IsCancellationRequested)
-                {
+                if (!timeoutTask.IsCompleted)
                     throw;
-                }
             }
         }
         
