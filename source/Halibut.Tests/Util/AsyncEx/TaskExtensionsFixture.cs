@@ -25,7 +25,7 @@ namespace Halibut.Tests.Util.AsyncEx
         }
         
         [Test]
-        public void When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
+        public async void When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
         {
             var triggered = false;
             var task = Task.Run(async () =>
@@ -35,15 +35,19 @@ namespace Halibut.Tests.Util.AsyncEx
             });
             Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None);
             act.ShouldThrow<TimeoutException>();
-            triggered.Should().Be(false, "the task should have been aborted");
+            triggered.Should().Be(false, "we should have stopped waiting on the task when timeout happened");
+            await Task.Delay(200);
+            triggered.Should().Be(true, "task should have continued executing in the background");
         }
         
         [Test]
-        public void When_TaskGetsCancelled_ThrowsTaskCanceledException()
+        public async Task When_TaskGetsCancelled_ThrowsTaskCanceledException()
         {
             var triggered = false;
             var cancellationTokenSource = new CancellationTokenSource();
 
+#pragma warning disable 4014 
+            // [CS4014] Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call.
             Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
@@ -55,9 +59,12 @@ namespace Halibut.Tests.Util.AsyncEx
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
                 triggered = true;
             });
+#pragma warning restore 4014
             Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(150), cancellationTokenSource.Token);
             act.ShouldThrow<TaskCanceledException>();
-            triggered.Should().Be(false, "the task should have been aborted");
+            triggered.Should().Be(false, "we should have stopped waiting on the task when cancellation happened");
+            await Task.Delay(200);
+            triggered.Should().Be(true, "task should have continued executing in the background (not entirely ideal, but this task is designed to handle non-cancelable tasks)");
         }
         
         [Test]
