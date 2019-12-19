@@ -25,7 +25,7 @@ namespace Halibut.Tests.Util.AsyncEx
         }
         
         [Test]
-        public async void When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
+        public async Task When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
         {
             var triggered = false;
             var task = Task.Run(async () =>
