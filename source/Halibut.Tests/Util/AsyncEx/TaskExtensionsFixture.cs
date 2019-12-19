@@ -35,7 +35,9 @@ namespace Halibut.Tests.Util.AsyncEx
             });
             Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None);
             act.ShouldThrow<TimeoutException>();
-            triggered.Should().Be(false, "the task should have been aborted");
+            triggered.Should().Be(false, "we should have stopped waiting on the task when timeout happened");
+            await Task.Delay(200);
+            triggered.Should().Be(true, "task should have continued executing in the background");
         }
         
         [Test]
@@ -57,7 +59,9 @@ namespace Halibut.Tests.Util.AsyncEx
             });
             Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(150), cancellationTokenSource.Token);
             act.ShouldThrow<TaskCanceledException>();
-            triggered.Should().Be(false, "the task should have been aborted");
+            triggered.Should().Be(false, "we should have stopped waiting on the task when cancellation happened");
+            await Task.Delay(200);
+            triggered.Should().Be(true, "task should have continued executing in the background (not entirely ideal, but this task is designed to handle non-cancelable tasks)");
         }
         
         [Test]

@@ -8,7 +8,9 @@ namespace Halibut.Util.AsyncEx
     {
         /// <summary>
         /// Waits for a) the task to complete, b) the timeout to pass or c) the cancellationToken to be triggered.
-        /// Wraps it all up so that we dont get UnobservedTaskExceptions 
+        /// Wraps it all up so that we dont get UnobservedTaskExceptions
+        /// On cancellation, this *will not* cancel the task, it just stops waiting on it. If your task supports
+        /// cancellation, you should not use this method.
         /// </summary>
         /// <param name="task">The task to wait on</param>
         /// <param name="timeout">The amount of time to wait until we give up</param>
@@ -22,8 +24,7 @@ namespace Halibut.Util.AsyncEx
             var wrappedTask = AwaitAndSwallowExceptionsWhenTimedOut(task, timeoutTask);
             await Task.WhenAny(wrappedTask, timeoutTask);
             
-            if (cancellationToken.IsCancellationRequested)
-                throw new OperationCanceledException();
+            cancellationToken.ThrowIfCancellationRequested();
             if (timeoutTask.IsCompleted)
                 throw new TimeoutException();
 
@@ -48,13 +49,6 @@ namespace Halibut.Util.AsyncEx
                 if (!timeoutTask.IsCompleted)
                     throw;
             }
-        }
-        
-        static Task AsTask(this CancellationToken cancellationToken)
-        {
-            var tcs = new TaskCompletionSource<object>();
-            cancellationToken.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false);
-            return tcs.Task;
         }
     }
 }
