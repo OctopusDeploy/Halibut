@@ -17,6 +17,11 @@ namespace Halibut.ServiceModel
         readonly CancellationToken cancellationToken;
         long callId;
 
+        public HalibutProxy(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+            : this((message, token) => messageRouter(message), contractType, endPoint, CancellationToken.None)
+        {
+        }
+        
         public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
             : base(contractType)
         {
