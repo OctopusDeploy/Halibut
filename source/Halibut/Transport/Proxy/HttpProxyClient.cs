@@ -187,7 +187,7 @@ namespace Halibut.Transport.Proxy
         /// </remarks>
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
         {
-            return CreateConnection(destinationHost, destinationPort, timeout);
+            return CreateConnection(destinationHost, destinationPort, timeout, CancellationToken.None);
         }
 
         /// <summary>
