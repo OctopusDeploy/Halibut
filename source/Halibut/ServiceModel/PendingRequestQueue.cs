@@ -23,6 +23,11 @@ namespace Halibut.ServiceModel
 
         public ResponseMessage QueueAndWait(RequestMessage request)
         {
+            return QueueAndWait(request, CancellationToken.None);
+        }
+        
+        public ResponseMessage QueueAndWait(RequestMessage request, CancellationToken cancellationToken)
+        {
             var pending = new PendingRequest(request, log);
 
             lock (sync)
@@ -32,7 +37,7 @@ namespace Halibut.ServiceModel
                 hasItems.Set();
             }
 
-            pending.WaitUntilComplete();
+            pending.WaitUntilComplete(cancellationToken);
 
             lock (sync)
             {
@@ -141,11 +146,11 @@ namespace Halibut.ServiceModel
                 get { return request; }
             }
 
-            public void WaitUntilComplete()
+            public void WaitUntilComplete(CancellationToken cancellationToken)
             {
                 log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-                var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout);
+                var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout, cancellationToken);
                 if (success)
                 {
                     log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);

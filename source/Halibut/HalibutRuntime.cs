@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -89,6 +90,11 @@ namespace Halibut
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
+            Poll(subscription, endPoint, CancellationToken.None);
+        }
+
+        public void Poll(Uri subscription, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+        {
             ISecureClient client;
             var log = logs.ForEndpoint(endPoint.BaseUri);
             if (endPoint.IsWebSocketEndpoint)
@@ -103,51 +109,71 @@ namespace Halibut
             {
                 client = new SecureClient(endPoint, serverCertificate, log, connectionManager);
             }
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log));
+            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken));
         }
 
         public ServiceEndPoint Discover(Uri uri)
         {
-            return Discover(new ServiceEndPoint(uri, null));
+            return Discover(uri, CancellationToken.None);
+        }
+        
+        public ServiceEndPoint Discover(Uri uri, CancellationToken cancellationToken)
+        {
+            return Discover(new ServiceEndPoint(uri, null), cancellationToken);
         }
 
         public ServiceEndPoint Discover(ServiceEndPoint endpoint)
         {
+            return Discover(endpoint, CancellationToken.None);
+        }
+        
+        public ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
             var client = new DiscoveryClient();
-            return client.Discover(endpoint);
+            return client.Discover(endpoint, cancellationToken);
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
         {
-            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint));
+            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), CancellationToken.None);
+        }
+
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, CancellationToken cancellationToken)
+        {
+            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), cancellationToken);
         }
 
         public TService CreateClient<TService>(ServiceEndPoint endpoint)
         {
+            return CreateClient<TService>(endpoint, CancellationToken.None);
+        }
+        
+        public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
 #if HAS_REAL_PROXY
-            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint).GetTransparentProxy();
+            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
-            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint);
+            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken);
             return proxy;
 #endif
         }
 
-        ResponseMessage SendOutgoingRequest(RequestMessage request)
+        ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    return SendOutgoingHttpsRequest(request);
+                    return SendOutgoingHttpsRequest(request, cancellationToken);
                 case "poll":
-                    return SendOutgoingPollingRequest(request);
+                    return SendOutgoingPollingRequest(request, cancellationToken);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
 
-        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request)
+        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
@@ -155,14 +181,14 @@ namespace Halibut
             client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
-            });
+            }, cancellationToken);
             return response;
         }
 
-        ResponseMessage SendOutgoingPollingRequest(RequestMessage request)
+        ResponseMessage SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
-            return queue.QueueAndWait(request);
+            return queue.QueueAndWait(request, cancellationToken);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)

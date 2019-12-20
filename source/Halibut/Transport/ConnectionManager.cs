@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 
@@ -15,29 +16,34 @@ namespace Halibut.Transport
 
         public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
-            var openableConnection = GetConnection(connectionFactory, serviceEndpoint, log);
+            return AcquireConnection(connectionFactory, serviceEndpoint, log, CancellationToken.None);
+        }
+
+        public IConnection AcquireConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        {
+            var openableConnection = GetConnection(connectionFactory, serviceEndpoint, log, cancellationToken);
             openableConnection.Item2(); // Since this involves IO, this should never be done inside a lock
             return openableConnection.Item1;
         }
         
         // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
         // For existing open connections, the openConnection method does nothing
-        Tuple<IConnection, Action> GetConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
+        Tuple<IConnection, Action> GetConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             lock (activeConnections)
             {
                 var existingConnectionFromPool = pool.Take(serviceEndpoint);
                 var openableConnection = existingConnectionFromPool != null 
                     ? Tuple.Create<IConnection, Action>(existingConnectionFromPool, () => { }) // existing connections from the pool are already open
-                    : CreateNewConnection(connectionFactory, serviceEndpoint, log);
+                    : CreateNewConnection(connectionFactory, serviceEndpoint, log, cancellationToken);
                 AddConnectionToActiveConnections(serviceEndpoint, openableConnection.Item1);
                 return openableConnection;
             }
         }
 
-        Tuple<IConnection, Action> CreateNewConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
+        Tuple<IConnection, Action> CreateNewConnection(IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(serviceEndpoint, log));
+            var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(serviceEndpoint, log, cancellationToken));
             var connection = new DisposableNotifierConnection(lazyConnection, OnConnectionDisposed);
             return Tuple.Create<IConnection, Action>(connection, () =>
             {

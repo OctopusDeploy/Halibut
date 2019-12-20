@@ -11,12 +11,22 @@ namespace Halibut.Transport
     {
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {
-            ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout);
+            ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, CancellationToken.None);
+        }
+
+        public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, cancellationToken);
         }
 
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
-            Connect(client, host, port, timeout, CancellationToken.None).GetAwaiter().GetResult();
+            ConnectWithTimeout(client, host, port, timeout, CancellationToken.None);
+        }
+
+        public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            Connect(client, host, port, timeout, cancellationToken).GetAwaiter().GetResult();
         }
 
         static async Task Connect(TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)

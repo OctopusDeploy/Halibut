@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
@@ -7,5 +8,6 @@ namespace Halibut.Transport
     {
         ServiceEndPoint ServiceEndpoint { get; }
         void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler);
+        void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler, CancellationToken cancellationToken);
     }
 }

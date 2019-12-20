@@ -15,6 +15,7 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly Thread thread;
         bool working;
+        CancellationToken cancellationToken;
 
         [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
@@ -23,11 +24,17 @@ namespace Halibut.Transport
         }
 
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
+        : this(subscription, secureClient, handleIncomingRequest, log, CancellationToken.None)
+        {
+        }
+
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;
             this.handleIncomingRequest = handleIncomingRequest;
             this.log = log;
+            this.cancellationToken = cancellationToken;
             thread = new Thread(ExecutePollingLoop);
             thread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
             thread.IsBackground = true;
@@ -50,7 +57,7 @@ namespace Halibut.Transport
                     secureClient.ExecuteTransaction(protocol =>
                     {
                         protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
-                    });
+                    }, cancellationToken);
                     retry.Success();
                 }
                 catch (HalibutClientException hce)
