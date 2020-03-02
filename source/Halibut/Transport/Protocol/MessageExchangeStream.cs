@@ -246,10 +246,20 @@ namespace Halibut.Transport.Protocol
 
         T ReadBsonMessage<T>()
         {
+            //TODO: Remove these debugging checks once we're done investigating https://trello.com/c/0gHf4v7m/2974-null-ref-exceptions-in-halibut
+            if (stream == null)
+                throw new Exception("stream is null");
+            if (serializer == null)
+                throw new Exception("serializer is null");
+            
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
-                return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
+                var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
+                if (messageEnvelope == null)
+                    throw new Exception("messageEnvelope is null");
+                
+                return (T)messageEnvelope.Message;
             }
         }
 
