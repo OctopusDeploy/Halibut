@@ -1,9 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
-using System.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using Halibut.SampleContracts;
 using Serilog;
 
@@ -18,37 +17,29 @@ namespace Halibut.SampleClient
                 .CreateLogger();
 
             Console.Title = "Halibut Client";
-            var certificate = new X509Certificate2("HalibutClient.pfx");
-
-            var hostName = args.FirstOrDefault() ?? "localhost";
-            var port = args.Skip(1).FirstOrDefault() ?? "8433";
+            var certificate = new X509Certificate2("itops.pfx");
+            
             using (var runtime = new HalibutRuntime(certificate))
             {
-                //Begin make request of Listening server
-                //var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                //End make request of Listening server
-
-                //Begin make request of Polling server
-                //var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
-                //runtime.Listen(endPoint);
-                //runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                //var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
-                //End make request of Polling server
-
-                //Begin make request of WebSocket Polling server
-                AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8433");
-                runtime.ListenWebSocket("https://+:8433/Halibut");
-                runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
-                //End make request of WebSocket Polling server
-
+                var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8433);
+                runtime.Listen(endPoint);
+                runtime.Route(
+                    new ServiceEndPoint("poll://SQ-EXTENDER", "E27E2A6150E74959244DE91824172C84868FBF6E"), 
+                    new ServiceEndPoint("poll://SQ-PROXY", "177B1A7194EC6C8A80F5666243E5021DF2DC03C2"));
+                runtime.Trust("177B1A7194EC6C8A80F5666243E5021DF2DC03C2");
+                
+                var random = new Random();
+                var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-EXTENDER", "E27E2A6150E74959244DE91824172C84868FBF6E");
                 while (true)
                 {
                     try
                     {
-                        var result = calculator.Add(12, 18);
-                        Console.WriteLine("12 + 18 = " + result);
-                        Console.ReadKey();
+                        Thread.Sleep(2000);
+                        var a = random.Next(0, 100);
+                        var b = random.Next(0, 100);
+                        Console.WriteLine($"Adding {a} + {b} ...");
+                        var result = calculator.Add(a, b);
+                        Console.WriteLine($"... = {result}");
                     }
                     catch (Exception ex)
                     {

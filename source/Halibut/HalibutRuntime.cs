@@ -175,7 +175,16 @@ namespace Halibut
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var client = new SecureListeningClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            SecureListeningClient client;
+            if (routeTable.ContainsKey(request.Destination.BaseUri))
+            {
+                var destination = routeTable[request.Destination.BaseUri];
+                client = new SecureListeningClient(destination, serverCertificate, logs.ForEndpoint(destination.BaseUri), connectionManager);
+            }
+            else
+            {
+                client = new SecureListeningClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            }
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -187,12 +196,26 @@ namespace Halibut
 
         ResponseMessage SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var queue = GetQueue(request.Destination.BaseUri);
+            PendingRequestQueue queue;
+            if (routeTable.ContainsKey(request.Destination.BaseUri))
+            {
+                queue = GetQueue(routeTable[request.Destination.BaseUri].BaseUri);
+            }
+            else
+            {
+                queue = GetQueue(request.Destination.BaseUri);
+            }
+            
             return queue.QueueAndWait(request, cancellationToken);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)
         {
+            if (request.Destination.RemoteThumbprint != serverCertificate.Thumbprint)
+            {
+                return SendOutgoingRequest(request, CancellationToken.None);
+            }
+            
             return invoker.Invoke(request);
         }
 

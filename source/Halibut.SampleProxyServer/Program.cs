@@ -1,10 +1,10 @@
 using System;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using Halibut.SampleContracts;
 using Halibut.ServiceModel;
 using Serilog;
 
-namespace Halibut.SampleServer
+namespace Halibut.SampleProxyServer
 {
     class Program
     {
@@ -14,16 +14,18 @@ namespace Halibut.SampleServer
                 .WriteTo.ColoredConsole()
                 .CreateLogger();
 
-            Console.Title = "Halibut Server";
-            var certificate = new X509Certificate2("extender.pfx");
+            Console.Title = "Halibut Proxy";
+            var certificate = new X509Certificate2("hproxy.pfx");
+            var endPoint = new IPEndPoint(IPAddress.IPv6Any, 8434);
             var services = new DelegateServiceFactory();
-            services.Register<ICalculatorService>(() => new CalculatorService());
-
             using (var server = new HalibutRuntime(services, certificate))
             {
-                server.Poll(new Uri("poll://SQ-EXTENDER"), new ServiceEndPoint(new Uri("https://localhost:8434"), "177B1A7194EC6C8A80F5666243E5021DF2DC03C2"));
+                server.Listen(endPoint);
+                server.Trust("E27E2A6150E74959244DE91824172C84868FBF6E");
                 
-                Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");
+                server.Poll(new Uri("poll://SQ-PROXY"), new ServiceEndPoint(new Uri("https://localhost:8433"), "EDABCA3A77B9119B7ED1E0362F81C6F61C01F6C9"));
+                
+                Console.WriteLine("Server listening on port 8434. Type 'exit' to quit, or 'cls' to clear...");
                 while (true)
                 {
                     var line = Console.ReadLine();
