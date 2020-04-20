@@ -9,7 +9,5 @@ namespace Halibut.SampleContracts
         string SayHello(string name);
 
         bool Crash();
-
-        int CountBytes(DataStream stream);
     }
 }

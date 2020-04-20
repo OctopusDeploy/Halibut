@@ -11,9 +11,7 @@
 
   <ItemGroup>
     <None Include="App.config" />
-    <None Update="itops.pfx">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+    <None Remove="itops.pfx" />
   </ItemGroup>
 
   <ItemGroup>
