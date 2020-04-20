@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 
 namespace Halibut
 {
+    [Obsolete("DataStream are not supported anymore in this version", true)]
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
         readonly Action<Stream> writer;

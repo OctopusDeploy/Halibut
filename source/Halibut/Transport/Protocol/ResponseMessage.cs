@@ -1,5 +1,4 @@
 using System;
-using Halibut.Diagnostics;
 using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
@@ -8,26 +7,11 @@ namespace Halibut.Transport.Protocol
     {
         [JsonProperty("id")]
         public string Id { get; set; }
-
+        
         [JsonProperty("error")]
         public ServerError Error { get; set; }
 
         [JsonProperty("result")]
         public object Result { get; set; }
-
-        public static ResponseMessage FromResult(RequestMessage request, object result)
-        {
-            return new ResponseMessage { Id = request.Id, Result = result };
-        }
-
-        public static ResponseMessage FromError(RequestMessage request, string message)
-        {
-            return new ResponseMessage { Id = request.Id, Error = new ServerError { Message = message } };
-        }
-
-        public static ResponseMessage FromException(RequestMessage request, Exception ex)
-        {
-            return new ResponseMessage {Id = request.Id, Error = new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString() }};
-        }
     }
 }

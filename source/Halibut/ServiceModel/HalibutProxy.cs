@@ -11,13 +11,13 @@ namespace Halibut.ServiceModel
     using System.Runtime.Remoting.Proxies;
     class HalibutProxy : RealProxy
     {
-        readonly Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
+        readonly Func<MessageEnvelope, CancellationToken, MessageEnvelope> messageRouter;
         readonly Type contractType;
         readonly ServiceEndPoint endPoint;
         readonly CancellationToken cancellationToken;
         long callId;
         
-        public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+        public HalibutProxy(Func<MessageEnvelope, CancellationToken, MessageEnvelope> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
             : base(contractType)
         {
             this.messageRouter = messageRouter;
@@ -38,9 +38,11 @@ namespace Halibut.ServiceModel
 
                 var response = DispatchRequest(request);
 
-                EnsureNotError(response);
+                var messageResponse = response.GetMessage<ResponseMessage>();
+                
+                EnsureNotError(messageResponse);
 
-                var result = response.Result;
+                var result = messageResponse.Result;
 
                 var returnType = ((MethodInfo) methodCall.MethodBase).ReturnType;
                 if (result != null && returnType != typeof (void) && !returnType.IsAssignableFrom(result.GetType()))
@@ -56,24 +58,30 @@ namespace Halibut.ServiceModel
             }
         }
 
-        RequestMessage CreateRequest(IMethodMessage methodCall)
+        MessageEnvelope CreateRequest(IMethodMessage methodCall)
         {
             var activityId = Guid.NewGuid();
 
             var method = ((MethodInfo) methodCall.MethodBase);
-            var request = new RequestMessage
+            var id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId;
+            
+            var message = new OutgoingMessageEnvelope(id)
             {
-                Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
-                ActivityId = activityId,
-                Destination = endPoint,
-                MethodName = method.Name,
-                ServiceName = contractType.Name,
-                Params = methodCall.Args
+                Message = new RequestMessage
+                {
+                    Id = id,
+                    ActivityId = activityId,
+                    Destination = endPoint,
+                    MethodName = method.Name,
+                    ServiceName = contractType.Name,
+                    Params = methodCall.Args
+                },
+                Destination = endPoint
             };
-            return request;
+            return message;
         }
 
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        MessageEnvelope DispatchRequest(MessageEnvelope requestMessage)
         {
             return messageRouter(requestMessage, cancellationToken);
         }
@@ -93,19 +101,19 @@ namespace Halibut.ServiceModel
 #else
     public class HalibutProxy : DispatchProxy
     {
-        Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
+        Func<MessageEnvelope, CancellationToken, MessageEnvelope> messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
         CancellationToken cancellationToken;
 
-        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public void Configure(Func<MessageEnvelope, MessageEnvelope> messageRouter, Type contractType, ServiceEndPoint endPoint)
         {
             Configure((requestMessage, ct) => messageRouter(requestMessage), contractType, endPoint, CancellationToken.None);
         }
 
-        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+        public void Configure(Func<MessageEnvelope, CancellationToken, MessageEnvelope> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
@@ -123,9 +131,11 @@ namespace Halibut.ServiceModel
 
             var response = DispatchRequest(request);
 
-            EnsureNotError(response);
+            var responseMessage = response.GetMessage<ResponseMessage>();
+            
+            EnsureNotError(responseMessage);
 
-            var result = response.Result;
+            var result = responseMessage.Result;
 
             var returnType = targetMethod.ReturnType;
             if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
@@ -136,23 +146,27 @@ namespace Halibut.ServiceModel
             return result;
         }
 
-        RequestMessage CreateRequest(MethodInfo targetMethod, object[] args)
+        MessageEnvelope CreateRequest(MethodInfo targetMethod, object[] args)
         {
             var activityId = Guid.NewGuid();
-
-            var request = new RequestMessage
+            var id = contractType.Name + "::" + targetMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId;
+            var request = new OutgoingMessageEnvelope(id)
             {
-                Id = contractType.Name + "::" + targetMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
-                ActivityId = activityId,
-                Destination = endPoint,
-                MethodName = targetMethod.Name,
-                ServiceName = contractType.Name,
-                Params = args
+                Message = new RequestMessage
+                {
+                    Id = id,
+                    ActivityId = activityId,
+                    Destination = endPoint,
+                    MethodName = targetMethod.Name,
+                    ServiceName = contractType.Name,
+                    Params = args
+                },
+                Destination = endPoint
             };
             return request;
         }
 
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        MessageEnvelope DispatchRequest(MessageEnvelope requestMessage)
         {
             return messageRouter(requestMessage, cancellationToken);
         }

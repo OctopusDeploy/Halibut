@@ -49,22 +49,27 @@ namespace Halibut.Tests
                 connectionManager.ReleaseConnection(endpoint, connection);
             }
 
-            var request = new RequestMessage
+            var request = new OutgoingMessageEnvelope(string.Empty)
             {
-                Destination = endpoint,
-                ServiceName = "IEchoService",
-                MethodName = "SayHello",
-                Params = new object[] { "Fred" }
+                Message = new RequestMessage
+                {
+                    Destination = endpoint,
+                    ServiceName = "IEchoService",
+                    MethodName = "SayHello",
+                    Params = new object[] {"Fred"}
+                },
+                Destination = endpoint
             };
 
             var secureClient = new SecureListeningClient(endpoint, Certificates.Octopus, log, connectionManager);
-            ResponseMessage response = null;
+            IncomingMessageEnvelope response = null;
             secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
 
             // The pool should be cleared after the second failure
             stream.Received(2).IdentifyAsClient();
             // And a new valid connection should then be made
-            response.Result.Should().Be("Fred...");
+            var responseMessage = response.GetMessage<ResponseMessage>();
+            responseMessage.Result.Should().Be("Fred...");
         }
     }
 }

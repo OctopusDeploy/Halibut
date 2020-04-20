@@ -14,7 +14,7 @@
     <Compile Remove="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NETFramework.approved.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
+    <None Update="Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;Certificates\Router.pfx;appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="App.config" />

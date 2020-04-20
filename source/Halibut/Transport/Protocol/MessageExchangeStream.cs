@@ -1,13 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Authentication;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -31,8 +30,7 @@ namespace Halibut.Transport.Protocol
             serializer = Serializer();
             SetNormalTimeouts();
         }
-
-        static int streamCount = 0;
+        
         public static Func<JsonSerializer> Serializer = CreateDefault;
 
         public void IdentifyAsClient()
@@ -189,33 +187,23 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public void Send<T>(T message)
+        public void Send(MessageEnvelope message)
         {
-            using (var capture = StreamCapture.New())
-            {
-                WriteBsonMessage(message);
-                WriteEachStream(capture.SerializedStreams);
-            }
-
+            WriteBsonMessage(message);
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public T Receive<T>()
+        public IncomingMessageEnvelope Receive()
         {
-            using (var capture = StreamCapture.New())
-            {
-                var result = ReadBsonMessage<T>();
-                ReadStreams(capture);
-                log.Write(EventType.Diagnostic, "Received: {0}", result);
-                return result;
-            }
+            var result = ReadBsonMessage();
+            log.Write(EventType.Diagnostic, "Received: {0}", result);
+            return result;
         }
 
         static JsonSerializer CreateDefault()
         {
             var serializer = JsonSerializer.Create();
             serializer.Formatting = Formatting.None;
-            serializer.ContractResolver = new HalibutContractResolver();
             serializer.TypeNameHandling = TypeNameHandling.Auto;
             serializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
             serializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
@@ -244,93 +232,49 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
         }
 
-        T ReadBsonMessage<T>()
+        IncomingMessageEnvelope ReadBsonMessage()
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var bson = new BsonDataReader(zip) { CloseInput = false })
+            using(var binaryReader = new BinaryReader(zip, Encoding.UTF8, true))
             {
-                return (T)serializer.Deserialize<MessageEnvelope>(bson).Message;
+                var bytes = ReadBson(binaryReader);
+                var messageEnvelope = bytes.FromBson<IncomingMessageEnvelope>();
+                if (messageEnvelope == null)
+                    throw new Exception("messageEnvelope is null");
+                messageEnvelope.InternalMessage = bytes;
+
+                return messageEnvelope;
             }
         }
 
-        void ReadStreams(StreamCapture capture)
+        byte[] ReadBson(BinaryReader binaryReader)
         {
-            var expected = capture.DeserializedStreams.Count;
-
-            for (var i = 0; i < expected; i++)
-            {
-                ReadStream(capture);
-            }
+            //read bson, read first 4 bytes for size, then read size minus the 4 bytes to get the complete data.
+            var sizeBytes = binaryReader.ReadBytes(4);
+            var size = BitConverter.ToInt32(sizeBytes, 0);
+            var bytes = sizeBytes.Concat(binaryReader.ReadBytes(size - 4)).ToArray();
+            return bytes;
         }
 
-        void ReadStream(StreamCapture capture)
-        {
-            var reader = new BinaryReader(stream);
-            var id = new Guid(reader.ReadBytes(16));
-            var length = reader.ReadInt64();
-            var dataStream = FindStreamById(capture, id);
-            var tempFile = CopyStreamToFile(id, length, reader);
-            var lengthAgain = reader.ReadInt64();
-            if (lengthAgain != length)
-            {
-                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
-            }
-
-            ((IDataStreamInternal)dataStream).Received(tempFile);
-        }
-
-        TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
-        {
-            var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
-            using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
-            {
-                var buffer = new byte[1024 * 128];
-                while (length > 0)
-                {
-                    var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, length));
-                    length -= read;
-                    fileStream.Write(buffer, 0, read);
-                }
-            }
-            return new TemporaryFileStream(path, log);
-        }
-
-        static DataStream FindStreamById(StreamCapture capture, Guid id)
-        {
-            var dataStream = capture.DeserializedStreams.FirstOrDefault(d => d.Id == id);
-            if (dataStream == null) throw new Exception("Unexpected stream!");
-            return dataStream;
-        }
-
-        void WriteBsonMessage<T>(T messages)
+        void WriteBsonMessage(MessageEnvelope messages)
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
-                serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+                if (messages is IncomingMessageEnvelope incomingMessageEnvelope)
+                {
+                    using (var ms = new MemoryStream(incomingMessageEnvelope.InternalMessage))
+                    {
+                        ms.CopyTo(zip);
+                    }
+                }
+                else if(messages is OutgoingMessageEnvelope outgoingMessageEnvelope)
+                {
+                    using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+                    {
+                        serializer.Serialize(bson, outgoingMessageEnvelope);
+                    }
+                }
             }
-        }
-
-        void WriteEachStream(IEnumerable<DataStream> streams)
-        {
-            foreach (var dataStream in streams)
-            {
-                var writer = new BinaryWriter(stream);
-                writer.Write(dataStream.Id.ToByteArray());
-                writer.Write(dataStream.Length);
-                writer.Flush();
-
-                ((IDataStreamInternal)dataStream).Transmit(stream);
-                stream.Flush();
-
-                writer.Write(dataStream.Length);
-                writer.Flush();
-            }
-        }
-
-        class MessageEnvelope
-        {
-            public object Message { get; set; }
         }
 
         void SetNormalTimeouts()

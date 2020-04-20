@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Net;
 using System.Threading;
 using Halibut.Diagnostics;
@@ -28,13 +30,16 @@ namespace Halibut
         TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint);
         TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, CancellationToken cancellationToken);
         TService CreateClient<TService>(ServiceEndPoint endpoint);
+        TService CreateClient<TService>(ServiceEndPoint endpoint, ServiceEndPoint via);
         TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken);
+        TService CreateClient<TService>(ServiceEndPoint endpoint, ServiceEndPoint via, CancellationToken cancellationToken);
         void Trust(string clientThumbprint);
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);
         bool IsTrusted(string remoteThumbprint);
 
-        void Route(ServiceEndPoint to, ServiceEndPoint via);
+        void AddOrUpdateRoute(ServiceEndPoint to, ServiceEndPoint via);
+        void RemoveRoute(ServiceEndPoint to);
         void SetFriendlyHtmlPageContent(string html);
         void Disconnect(ServiceEndPoint endpoint);
         Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }

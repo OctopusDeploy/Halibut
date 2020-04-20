@@ -24,14 +24,5 @@ namespace Halibut.Tests.TestServices
             Thread.Sleep(10000);
             return 12;
         }
-
-        public int CountBytes(DataStream stream)
-        {
-            var tempFile = Path.GetFullPath(Guid.NewGuid().ToString());
-            stream.Receiver().SaveTo(tempFile);
-            var length = (int) new FileInfo(tempFile).Length;
-            File.Delete(tempFile);
-            return length;
-        }
     }
 }

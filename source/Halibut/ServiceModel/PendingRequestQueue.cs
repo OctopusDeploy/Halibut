@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Util.AsyncEx;
+using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Linq;
 
 namespace Halibut.ServiceModel
 {
@@ -21,12 +24,12 @@ namespace Halibut.ServiceModel
             this.log = log;
         }
 
-        public ResponseMessage QueueAndWait(RequestMessage request)
+        public MessageEnvelope QueueAndWait(MessageEnvelope request)
         {
             return QueueAndWait(request, CancellationToken.None);
         }
         
-        public ResponseMessage QueueAndWait(RequestMessage request, CancellationToken cancellationToken)
+        public MessageEnvelope QueueAndWait(MessageEnvelope request, CancellationToken cancellationToken)
         {
             var pending = new PendingRequest(request, log);
 
@@ -59,11 +62,11 @@ namespace Halibut.ServiceModel
         }
 
 
-        public RequestMessage Dequeue()
+        public MessageEnvelope Dequeue()
         {
             var pending = DequeueNext();
-            if (pending == null) return null;
-            return pending.BeginTransfer() ? pending.Request : null;
+            if (pending == null) return MessageEnvelope.EmptyOutgoingMessage;
+            return pending.BeginTransfer() ? pending.Request : MessageEnvelope.EmptyOutgoingMessage;
         }
 
         PendingRequest DequeueNext()
@@ -79,11 +82,11 @@ namespace Halibut.ServiceModel
             return TakeFirst();
         }
 
-        public async Task<RequestMessage> DequeueAsync()
+        public async Task<MessageEnvelope> DequeueAsync()
         {
             var pending = await DequeueNextAsync();
-            if (pending == null) return null;
-            return pending.BeginTransfer() ? pending.Request : null;
+            if (pending == null) return MessageEnvelope.EmptyOutgoingMessage;
+            return pending.BeginTransfer() ? pending.Request : MessageEnvelope.EmptyOutgoingMessage;
         }
 
         async Task<PendingRequest> DequeueNextAsync()
@@ -110,7 +113,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        public void ApplyResponse(ResponseMessage response)
+        public void ApplyResponse(MessageEnvelope response)
         {
             if (response == null)
                 return;
@@ -127,21 +130,21 @@ namespace Halibut.ServiceModel
 
         class PendingRequest
         {
-            readonly RequestMessage request;
+            readonly MessageEnvelope request;
             readonly ILog log;
             readonly ManualResetEventSlim waiter;
             readonly object sync = new object();
             bool transferBegun;
             bool completed;
 
-            public PendingRequest(RequestMessage request, ILog log)
+            public PendingRequest(MessageEnvelope request, ILog log)
             {
                 this.request = request;
                 this.log = log;
                 waiter = new ManualResetEventSlim(false);
             }
 
-            public RequestMessage Request
+            public MessageEnvelope Request
             {
                 get { return request; }
             }
@@ -179,13 +182,13 @@ namespace Halibut.ServiceModel
                     }
                     else
                     {
-                        SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestMaximumMessageProcessingTimeout))));
+                        SetResponse(MessageEnvelope.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestMaximumMessageProcessingTimeout))));
                     }
                 }
                 else
                 {
                     log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
-                    SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestQueueTimeout))));
+                    SetResponse(MessageEnvelope.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestQueueTimeout))));
                 }
             }
 
@@ -201,9 +204,9 @@ namespace Halibut.ServiceModel
                 }
             }
 
-            public ResponseMessage Response { get; private set; }
+            public MessageEnvelope Response { get; private set; }
 
-            public void SetResponse(ResponseMessage response)
+            public void SetResponse(MessageEnvelope response)
             {
                 Response = response;
                 waiter.Set();

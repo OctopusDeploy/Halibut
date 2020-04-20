@@ -21,7 +21,7 @@ namespace Halibut
         readonly X509Certificate2 serverCertificate;
         readonly List<IDisposable> listeners = new List<IDisposable>();
         readonly ITrustProvider trustProvider; 
-        readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
+        readonly ConcurrentDictionary<ServiceEndPoint, ServiceEndPoint> routeTable = new ConcurrentDictionary<ServiceEndPoint, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
         readonly LogFactory logs = new LogFactory();
         readonly ConnectionManager connectionManager = new ConnectionManager();
@@ -135,58 +135,75 @@ namespace Halibut
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
         {
-            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), CancellationToken.None);
+            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), null, CancellationToken.None);
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, CancellationToken cancellationToken)
         {
-            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), cancellationToken);
+            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), null, cancellationToken);
         }
 
-        public TService CreateClient<TService>(ServiceEndPoint endpoint)
+        public TService CreateClient<TService>(ServiceEndPoint endpoint, ServiceEndPoint via)
         {
-            return CreateClient<TService>(endpoint, CancellationToken.None);
+            return CreateClient<TService>(endpoint, via, CancellationToken.None);
         }
         
+        public TService CreateClient<TService>(ServiceEndPoint endpoint)
+        {
+            return CreateClient<TService>(endpoint, null, CancellationToken.None);
+        }
+
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
+            return CreateClient<TService>(endpoint, null, cancellationToken);
+        }
+        
+        public TService CreateClient<TService>(ServiceEndPoint endpoint, ServiceEndPoint via, CancellationToken cancellationToken)
+        {
+            Func<MessageEnvelope, CancellationToken, MessageEnvelope> fun = (message, token) => SendOutgoingRequest(message, via, cancellationToken);
 #if HAS_REAL_PROXY
-            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
+            return (TService)new HalibutProxy(fun, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
-            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken);
+            (proxy as HalibutProxy).Configure(fun, typeof(TService), endpoint, cancellationToken);
             return proxy;
 #endif
         }
 
-        ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
+        MessageEnvelope SendOutgoingRequest(MessageEnvelope request, ServiceEndPoint via, CancellationToken cancellationToken)
         {
-            var endPoint = request.Destination;
-
+            var log = logs.ForEndpoint(request.Destination.BaseUri);
+            ServiceEndPoint endPoint;
+            if (via != null)
+            {
+                endPoint = via;
+                log.Write(EventType.Diagnostic, $"Routed outgoing request via {endPoint.BaseUri}");
+            }
+            else if (routeTable.ContainsKey(request.Destination))
+            {
+                endPoint = routeTable[request.Destination];
+                log.Write(EventType.Diagnostic, $"Routed outgoing request via {endPoint.BaseUri}");
+            }
+            else
+            {
+                log.Write(EventType.Diagnostic, $"Non-routed outgoing request ..");
+                endPoint = request.Destination;
+            }
+            
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    return SendOutgoingHttpsRequest(request, cancellationToken);
+                    return SendOutgoingHttpsRequest(request, endPoint, cancellationToken);
                 case "poll":
-                    return SendOutgoingPollingRequest(request, cancellationToken);
+                    return SendOutgoingPollingRequest(request, endPoint, cancellationToken);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
 
-        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
+        MessageEnvelope SendOutgoingHttpsRequest(MessageEnvelope request, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
-            SecureListeningClient client;
-            if (routeTable.ContainsKey(request.Destination.BaseUri))
-            {
-                var destination = routeTable[request.Destination.BaseUri];
-                client = new SecureListeningClient(destination, serverCertificate, logs.ForEndpoint(destination.BaseUri), connectionManager);
-            }
-            else
-            {
-                client = new SecureListeningClient(request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
-            }
-
-            ResponseMessage response = null;
+            SecureListeningClient client = new SecureListeningClient(endPoint, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            MessageEnvelope response = null;
             client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
@@ -194,27 +211,22 @@ namespace Halibut
             return response;
         }
 
-        ResponseMessage SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
+        MessageEnvelope SendOutgoingPollingRequest(MessageEnvelope request, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
-            PendingRequestQueue queue;
-            if (routeTable.ContainsKey(request.Destination.BaseUri))
-            {
-                queue = GetQueue(routeTable[request.Destination.BaseUri].BaseUri);
-            }
-            else
-            {
-                queue = GetQueue(request.Destination.BaseUri);
-            }
-            
+            PendingRequestQueue queue = GetQueue(endPoint.BaseUri);
             return queue.QueueAndWait(request, cancellationToken);
         }
 
-        ResponseMessage HandleIncomingRequest(RequestMessage request)
+        MessageEnvelope HandleIncomingRequest(MessageEnvelope request)
         {
+            var log = logs.ForEndpoint(request.Destination.BaseUri);
             if (request.Destination.RemoteThumbprint != serverCertificate.Thumbprint)
             {
-                return SendOutgoingRequest(request, CancellationToken.None);
+                log.Write(EventType.Diagnostic, "Routed incoming request ..");
+                return SendOutgoingRequest(request, null, CancellationToken.None);
             }
+            
+            log.Write(EventType.Diagnostic, "Non-routed incoming request ..");
             
             return invoker.Invoke(request);
         }
@@ -260,9 +272,13 @@ namespace Halibut
             return trustProvider.IsTrusted(remoteThumbprint);
         }
 
-        public void Route(ServiceEndPoint to, ServiceEndPoint via)
+        public void AddOrUpdateRoute(ServiceEndPoint to, ServiceEndPoint via)
         {
-            routeTable.TryAdd(to.BaseUri, via);
+            routeTable.AddOrUpdate(to, via, (uri, point) => via);
+        }
+        public void RemoveRoute(ServiceEndPoint to)
+        {
+            routeTable.TryRemove(to, out _);
         }
 
         public void SetFriendlyHtmlPageContent(string html)

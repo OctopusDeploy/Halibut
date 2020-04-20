@@ -9,7 +9,5 @@ namespace Halibut.Tests.TestServices
         string SayHello(string name);
 
         bool Crash();
-
-        int CountBytes(DataStream stream);
     }
 }

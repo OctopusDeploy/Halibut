@@ -5,6 +5,6 @@ namespace Halibut.ServiceModel
 {
     public interface IServiceInvoker
     {
-        ResponseMessage Invoke(RequestMessage requestMessage);
+        MessageEnvelope Invoke(MessageEnvelope requestMessage);
     }
 }

@@ -1,5 +1,4 @@
 using System;
-using Halibut.Diagnostics;
 using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
@@ -8,7 +7,7 @@ namespace Halibut.Transport.Protocol
     {
         [JsonProperty("id")]
         public string Id { get; set; }
-
+        
         [JsonProperty("activityId")]
         public Guid ActivityId { get; set; }
 

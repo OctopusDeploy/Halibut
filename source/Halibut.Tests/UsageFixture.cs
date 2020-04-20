@@ -12,6 +12,7 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
+using Serilog;
 
 namespace Halibut.Tests
 {
@@ -82,6 +83,83 @@ namespace Halibut.Tests
         }
 
         [Test]
+        public void OctopusCanSendMessagesToRoutedPollingTentacle()
+        {
+            var services = GetDelegateServiceFactory();
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var router = new HalibutRuntime(Certificates.Router))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var routerPort = router.Listen();
+                router.Trust(Certificates.TentaclePollingPublicThumbprint);
+                router.Trust(Certificates.OctopusPublicThumbprint);
+
+                var routerServiceEndPoint = new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.RouterPublicThumbprint);
+
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), routerServiceEndPoint);
+
+                var echo = octopus.CreateClient<IEchoService>(new ServiceEndPoint("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint), routerServiceEndPoint);
+                for (var i = 0; i < 2000; i++)
+                {
+                    echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                }
+            }
+        }
+        
+        [Test]
+        public void OctopusCanSendMessagesToRoutedListeningTentacle()
+        {
+            var services = GetDelegateServiceFactory();
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var router = new HalibutRuntime(Certificates.Router))
+            using (var tentacle = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var routerPort = router.Listen();
+                var tentaclePort = tentacle.Listen();
+                router.Trust(Certificates.OctopusPublicThumbprint);
+                tentacle.Trust(Certificates.RouterPublicThumbprint);
+
+                var routerServiceEndPoint = new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.RouterPublicThumbprint);
+                var tentacleServiceEndPoint = new ServiceEndPoint(new Uri("https://localhost:" + tentaclePort), Certificates.TentacleListeningPublicThumbprint);
+
+                var echo = octopus.CreateClient<IEchoService>(tentacleServiceEndPoint, routerServiceEndPoint);
+                for (var i = 0; i < 2000; i++)
+                {
+                    echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                }
+            }
+        }
+        
+        [Test]
+        public void OctopusCanSendMessagesToPollingRoutedPollingTentacle()
+        {
+            var services = GetDelegateServiceFactory();
+            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var router = new HalibutRuntime(Certificates.Router))
+            using (var tentacle = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var octopusPort = octopus.Listen();
+                var routerPort = router.Listen();
+                
+                var routerServiceEndPoint = new ServiceEndPoint(new Uri("https://localhost:" + routerPort), Certificates.RouterPublicThumbprint);
+                var routerPollingServiceEndPoint = new ServiceEndPoint(new Uri("poll://SQ-ROUTER"), Certificates.RouterPublicThumbprint);
+                var octopusServiceEndPoint = new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint);
+                var tentacleServiceEndPoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), Certificates.TentaclePollingPublicThumbprint);
+
+                octopus.Trust(Certificates.RouterPublicThumbprint);
+                router.Trust(Certificates.TentaclePollingPublicThumbprint);
+                router.Poll(new Uri("poll://SQ-ROUTER"), octopusServiceEndPoint);
+                tentacle.Poll(new Uri("poll://SQ-TENTAPOLL"), routerServiceEndPoint);
+                
+                var echo = octopus.CreateClient<IEchoService>(tentacleServiceEndPoint, routerPollingServiceEndPoint);
+                for (var i = 0; i < 2000; i++)
+                {
+                    echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                }
+            }
+        }
+
+        [Test]
         [WindowsTestAttribute]
         public void OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
@@ -113,54 +191,6 @@ namespace Halibut.Tests
             finally
             {
                 RemoveSslCertBindingFor("0.0.0.0:" + octopusPort);
-            }
-        }
-
-        [Test]
-        public void StreamsCanBeSentToListening()
-        {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-            {
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                var data = new byte[1024 * 1024 + 15];
-                new Random().NextBytes(data);
-
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-
-                for (var i = 0; i < 100; i++)
-                {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
-                    count.Should().Be(1024 * 1024 + 15);
-                }
-            }
-        }
-
-        [Test]
-        public void StreamsCanBeSentToPolling()
-        {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
-            {
-                var octopusPort = octopus.Listen();
-                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
-
-                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
-                var data = new byte[1024 * 1024 + 15];
-                new Random().NextBytes(data);
-
-                for (var i = 0; i < 100; i++)
-                {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
-                    count.Should().Be(1024 * 1024 + 15);
-                }
             }
         }
 
@@ -200,31 +230,6 @@ namespace Halibut.Tests
 
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
                 ex.Message.Should().Contain("Ambiguous");
-            }
-        }
-
-        [Test]
-        public void StreamsCanBeSentToListeningWithProgressReporting()
-        {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-            {
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                var progressReported = new List<int>();
-
-                var data = new byte[1024 * 1024 * 16 + 15];
-                new Random().NextBytes(data);
-                var stream = new MemoryStream(data);
-
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-
-                var count = echo.CountBytes(DataStream.FromStream(stream, progressReported.Add));
-                count.Should().Be(1024 * 1024 * 16 + 15);
-
-                progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
             }
         }
 

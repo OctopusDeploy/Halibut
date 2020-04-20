@@ -11,24 +11,24 @@ namespace Halibut.Transport
     {
         readonly Uri subscription;
         readonly ISecureClient secureClient;
-        readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
+        readonly Func<MessageEnvelope, MessageEnvelope> handleIncomingRequest;
         readonly ILog log;
         readonly Thread thread;
         bool working;
         CancellationToken cancellationToken;
 
         [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<MessageEnvelope, MessageEnvelope> handleIncomingRequest)
             : this(subscription, secureClient, handleIncomingRequest, null)
         {
         }
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<MessageEnvelope, MessageEnvelope> handleIncomingRequest, ILog log)
         : this(subscription, secureClient, handleIncomingRequest, log, CancellationToken.None)
         {
         }
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<MessageEnvelope, MessageEnvelope> handleIncomingRequest, ILog log, CancellationToken cancellationToken)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;

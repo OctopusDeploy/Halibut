@@ -7,6 +7,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -28,29 +29,29 @@ namespace Halibut.Tests
         [Test]
         public void ShouldExchangeAsClient()
         {
-            protocol.ExchangeAsClient(new RequestMessage());
+            protocol.ExchangeAsClient(GetOutgoingRequestMessage());
 
             AssertOutput(@"
 --> MX-CLIENT
 <-- MX-SERVER
---> RequestMessage
-<-- ResponseMessage");
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope");
         }
 
         [Test]
         public void ShouldExchangeAsServerOfClient()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
-            stream.NextReadReturns(new RequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            protocol.ExchangeAsServer(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 <-- END");
         }
 
@@ -59,79 +60,79 @@ namespace Halibut.Tests
         {
             // When connections are pooled (kept alive), we send HELLO and expect a PROCEED before each request, that way we can know whether
             // the connection was torn down first or not without attempting to transmit our request
-            protocol.ExchangeAsClient(new RequestMessage());
-            protocol.ExchangeAsClient(new RequestMessage());
-            protocol.ExchangeAsClient(new RequestMessage());
+            protocol.ExchangeAsClient(GetOutgoingRequestMessage());
+            protocol.ExchangeAsClient(GetOutgoingRequestMessage());
+            protocol.ExchangeAsClient(GetOutgoingRequestMessage());
 
             AssertOutput(@"
 --> MX-CLIENT
 <-- MX-SERVER
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
---> RequestMessage
-<-- ResponseMessage");
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope");
         }
 
         [Test]
         public void ShouldExchangeAsServerOfClientWithPooling()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
-            stream.NextReadReturns(new RequestMessage());
-            stream.NextReadReturns(new RequestMessage());
-            stream.NextReadReturns(new RequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            protocol.ExchangeAsServer(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 <-- NEXT
 --> PROCEED
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 <-- NEXT
 --> PROCEED
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 <-- END");
         }
 
         [Test]
         public void ShouldExchangeAsSubscriber()
         {
-            stream.NextReadReturns(new RequestMessage());
-            stream.NextReadReturns(new RequestMessage());
-            stream.NextReadReturns(new RequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), 5);
 
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED");
         }
@@ -141,23 +142,23 @@ namespace Halibut.Tests
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
-            var queue = new Queue<RequestMessage>();
-            queue.Enqueue(new RequestMessage());
-            queue.Enqueue(new RequestMessage());
+            var queue = new Queue<MessageEnvelope>();
+            queue.Enqueue(GetOutgoingRequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
             requestQueue.Dequeue().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+            protocol.ExchangeAsServer(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- NEXT
 --> PROCEED
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- END");
         }
 
@@ -166,72 +167,72 @@ namespace Halibut.Tests
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
-            var queue = new Queue<RequestMessage>();
-            queue.Enqueue(new RequestMessage());
-            queue.Enqueue(new RequestMessage());
+            var queue = new Queue<MessageEnvelope>();
+            queue.Enqueue(GetOutgoingRequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
             requestQueue.DequeueAsync().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+            protocol.ExchangeAsServerAsync(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- NEXT
 --> PROCEED
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- END");
         }
 
         [Test]
         public void ShouldExchangeAsSubscriberWithPooling()
         {
-            stream.NextReadReturns(new RequestMessage());
-            stream.NextReadReturns(new RequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), 5);
 
-            stream.NextReadReturns(new RequestMessage());
+            stream.NextReadReturns(GetIncomingRequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), 5);
 
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
---> ResponseMessage
+<-- IncomingMessageEnvelope
+--> OutgoingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED
-<-- RequestMessage
+<-- IncomingMessageEnvelope
 --> NEXT
 <-- PROCEED");
         }
@@ -241,35 +242,35 @@ namespace Halibut.Tests
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
-            var queue = new Queue<RequestMessage>();
+            var queue = new Queue<MessageEnvelope>();
             requestQueue.Dequeue().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
 
-            queue.Enqueue(new RequestMessage());
-            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+            protocol.ExchangeAsServer(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
-            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
 
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServer(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+            protocol.ExchangeAsServer(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- NEXT
 --> PROCEED
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- END
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- END");
         }
 
@@ -279,36 +280,80 @@ namespace Halibut.Tests
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
-            var queue = new Queue<RequestMessage>();
+            var queue = new Queue<MessageEnvelope>();
             requestQueue.DequeueAsync().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
 
-            queue.Enqueue(new RequestMessage());
-            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+            protocol.ExchangeAsServerAsync(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
-            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(GetOutgoingRequestMessage());
 
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+            protocol.ExchangeAsServerAsync(req => MessageEnvelope.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- NEXT
 --> PROCEED
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- END
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
 --> MX-SERVER
---> RequestMessage
-<-- ResponseMessage
+--> OutgoingMessageEnvelope
+<-- IncomingMessageEnvelope
 <-- END");
+        }
+
+        OutgoingMessageEnvelope GetOutgoingRequestMessage()
+        {
+            var id = Guid.NewGuid().ToString();
+            return new OutgoingMessageEnvelope(id)
+            {
+                Message = new RequestMessage
+                {
+                    Id = id
+                }
+            };
+        }
+
+        IncomingMessageEnvelope GetIncomingRequestMessage()
+        {
+            var outgoingRequestMessage = GetOutgoingRequestMessage();
+            return new IncomingMessageEnvelope
+            {
+                Id = outgoingRequestMessage.Id,
+                InternalMessage = outgoingRequestMessage.ToBson()
+            };
+        }
+
+        IncomingMessageEnvelope GetIncomingResponseMessage()
+        {
+            var outgoingResponseMessage = GetOutgoingResponseMessage();
+            return new IncomingMessageEnvelope
+            {
+                Id = outgoingResponseMessage.Id,
+                InternalMessage = outgoingResponseMessage.ToBson()
+            };
+        }
+
+        OutgoingMessageEnvelope GetOutgoingResponseMessage()
+        {
+            var id = Guid.NewGuid().ToString();
+            return new OutgoingMessageEnvelope(id)
+            {
+                Message = new ResponseMessage()
+                {
+                    Id = id
+                }
+            };
         }
 
         void AssertOutput(string expected)
@@ -404,16 +449,16 @@ namespace Halibut.Tests
                 return remoteIdentity;
             }
 
-            public void Send<T>(T message)
+            public void Send(MessageEnvelope message)
             {
-                output.AppendLine("--> " + typeof(T).Name);
+                output.AppendLine("--> " + message.GetType().Name);
                 Sent.Add(message);
             }
 
-            public T Receive<T>()
+            public IncomingMessageEnvelope Receive()
             {
-                output.AppendLine("<-- " + typeof(T).Name);
-                return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+                output.AppendLine("<-- " + typeof(IncomingMessageEnvelope).Name);
+                return (IncomingMessageEnvelope)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : new IncomingMessageEnvelope{Id = "EMPTY"});
             }
 
             public override string ToString()
