@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -64,7 +65,11 @@ namespace Halibut
 
         public int Listen(int port)
         {
-            return Listen(new IPEndPoint(IPAddress.IPv6Any, port));
+            var ipAddress = Socket.OSSupportsIPv6
+                ? IPAddress.IPv6Any
+                : IPAddress.Any;
+
+            return Listen(new IPEndPoint(ipAddress, port));
         }
 
         public int Listen(IPEndPoint endpoint)
