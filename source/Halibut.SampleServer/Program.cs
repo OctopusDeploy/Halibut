@@ -14,7 +14,7 @@ namespace Halibut.SampleServer
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.ColoredConsole()
-                .MinimumLevel.Warning()
+                .MinimumLevel.Information()
                 .CreateLogger();
 
             Console.Title = "Halibut Server";
@@ -31,8 +31,8 @@ namespace Halibut.SampleServer
                 //in Octopus terms, this would be the Tentacle, being asked to do some work
 
                 //Begin Listening Setup
-                //server.Listen(endPoint);
-                //server.Trust("2074529C99D93D5955FEECA859AEAC6092741205");
+                server.Listen(endPoint);
+                server.Trust("2F84AE8ADF54E6D04D03E730C258CBEBEF6E1C25");
                 //End Listening Setup
 
                 //Begin Polling Setup
@@ -41,7 +41,7 @@ namespace Halibut.SampleServer
 
                 //Begin WebSocket Polling Setup
                 
-                server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint));
+                //server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint));
                 //End WebSocket Polling Setup
 
                 Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");

@@ -25,7 +25,7 @@ namespace Halibut.SampleClient
             using (var runtime = new HalibutRuntime(certificate))
             {
                 //Begin make request of Listening server
-                //var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                var calculator = runtime.CreateClient<ICalculatorService>("https://" + hostName + ":" + port + "/", "2F84AE8ADF54E6D04D03E730C258CBEBEF6E1C25");
                 //End make request of Listening server
 
                 //Begin make request of Polling server
@@ -36,10 +36,10 @@ namespace Halibut.SampleClient
                 //End make request of Polling server
 
                 //Begin make request of WebSocket Polling server
-                AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8433");
-                runtime.ListenWebSocket("https://+:8433/Halibut");
-                runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
-                var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
+                //AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8433");
+                //runtime.ListenWebSocket("https://+:8433/Halibut");
+                //runtime.Trust("EF3A7A69AFE0D13130370B44A228F5CD15C069BC");
+                //var calculator = runtime.CreateClient<ICalculatorService>("poll://SQ-TENTAPOLL", "2074529C99D93D5955FEECA859AEAC6092741205");
                 //End make request of WebSocket Polling server
 
                 while (true)
