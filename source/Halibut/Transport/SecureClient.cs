@@ -76,32 +76,32 @@ namespace Halibut.Transport
                     // Only return the connection to the pool if all went well
                     connectionManager.ReleaseConnection(ServiceEndpoint, connection);
                 }
-                catch (AuthenticationException aex)
+                catch (AuthenticationException ex)
                 {
-                    lastError = aex;
+                    lastError = ex;
                     retryAllowed = false;
                     break;
                 }
-                catch (SocketException cex) when (cex.SocketErrorCode == SocketError.ConnectionRefused)
+                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)
                 {
                     log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} refused the connection, this may mean that the expected listening service is not running.");
-                    lastError = cex;
+                    lastError = ex;
                     retryAllowed = false;
                 }
-                catch (SocketException sex)
+                catch (SocketException ex)
                 {
-                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {ServiceEndpoint.Format()}", sex);
-                    lastError = sex;
+                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {ServiceEndpoint.Format()}", ex);
+                    lastError = ex;
                     // When the host is not found an immediate retry isn't going to help
-                    if (sex.SocketErrorCode == SocketError.HostNotFound)
+                    if (ex.SocketErrorCode == SocketError.HostNotFound)
                     {
                         break;
                     }
                 }
-                catch (ConnectionInitializationFailedException cex)
+                catch (ConnectionInitializationFailedException ex)
                 {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {ServiceEndpoint.Format()}", cex);
-                    lastError = cex;
+                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {ServiceEndpoint.Format()}", ex);
+                    lastError = ex;
                     retryAllowed = true;
 
                     // If this is the second failure, clear the pooled connections as a precaution
@@ -111,16 +111,16 @@ namespace Halibut.Transport
                         connectionManager.ClearPooledConnections(ServiceEndpoint, log);
                     }
                 }
-                catch (IOException iox) when (iox.IsSocketConnectionReset())
+                catch (IOException ex) when (ex.IsSocketConnectionReset())
                 {
                     log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
-                    lastError = iox;
+                    lastError = ex;
                 }
-                catch (IOException iox) when (iox.IsSocketConnectionTimeout())
+                catch (IOException ex) when (ex.IsSocketConnectionTimeout())
                 {
                     // Received on a polling client when the network connection is lost.
                     log.Write(EventType.Error, $"The connection to the host at {ServiceEndpoint.Format()} timed out, there may be problems with the network, connection will be retried.");
-                    lastError = iox;
+                    lastError = ex;
                 }
                 catch (Exception ex)
                 {
