@@ -84,7 +84,7 @@ namespace Halibut.Transport
                 }
                 catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)
                 {
-                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} refused the connection, this may mean that the expected listening service is not running.");
+                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} refused the connection. This may mean that the expected listening service is not running.");
                     lastError = ex;
                 }
                 catch (HalibutClientException ex)
@@ -94,7 +94,7 @@ namespace Halibut.Transport
                 }
                 catch (SocketException ex)
                 {
-                    log.WriteException(EventType.Error, $"Socket communication error with connection to  {ServiceEndpoint.Format()}", ex);
+                    log.WriteException(EventType.Error, $"Socket communication error while connecting to {ServiceEndpoint.Format()}", ex);
                     lastError = ex;
                     // When the host is not found an immediate retry isn't going to help
                     if (ex.SocketErrorCode == SocketError.HostNotFound)
@@ -104,7 +104,7 @@ namespace Halibut.Transport
                 }
                 catch (ConnectionInitializationFailedException ex)
                 {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {ServiceEndpoint.Format()}", ex);
+                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to {ServiceEndpoint.Format()}", ex);
                     lastError = ex;
                     retryAllowed = true;
 
@@ -117,13 +117,13 @@ namespace Halibut.Transport
                 }
                 catch (IOException ex) when (ex.IsSocketConnectionReset())
                 {
-                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
+                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} reset the connection. This may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
                     lastError = ex;
                 }
                 catch (IOException ex) when (ex.IsSocketConnectionTimeout())
                 {
                     // Received on a polling client when the network connection is lost.
-                    log.Write(EventType.Error, $"The connection to the host at {ServiceEndpoint.Format()} timed out, there may be problems with the network, connection will be retried.");
+                    log.Write(EventType.Error, $"The connection to the host at {ServiceEndpoint.Format()} timed out. There may be problems with the network. The connection will be retried.");
                     lastError = ex;
                 }
                 catch (OperationCanceledException ex)
