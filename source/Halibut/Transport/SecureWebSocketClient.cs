@@ -103,12 +103,12 @@ namespace Halibut.Transport
                     }
                     else
                     {
-                        log.Write(EventType.Error, $"Socket communication error with connection to  {serviceEndpoint.Format()}");
+                        log.Write(EventType.Error, $"Socket communication error while connecting to {serviceEndpoint.Format()}");
                     }
                 }
                 catch (ConnectionInitializationFailedException cex)
                 {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to  {serviceEndpoint.Format()}", cex);
+                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to {serviceEndpoint.Format()}", cex);
                     lastError = cex;
                     retryAllowed = true;
 
