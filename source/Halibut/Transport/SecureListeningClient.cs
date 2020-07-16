@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
@@ -9,7 +8,6 @@ using System.Text;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
-using Halibut.Transport.Proxy;
 using Halibut.Util;
 
 namespace Halibut.Transport
@@ -47,7 +45,10 @@ namespace Halibut.Transport
             for (var i = 0; i < ServiceEndpoint.RetryCountLimit && retryAllowed && watch.Elapsed < ServiceEndpoint.ConnectionErrorRetryTimeout; i++)
             {
                 if (i > 0)
+                {
+                    Thread.Sleep(retryInterval);
                     log.Write(EventType.OpeningNewConnection, $"Retrying connection to {ServiceEndpoint.Format()} - attempt #{i}.");
+                }
 
                 try
                 {
@@ -85,13 +86,11 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} refused the connection, this may mean that the expected listening service is not running.");
                     lastError = cex;
-                    Thread.Sleep(retryInterval);
                 }
                 catch (HalibutClientException hce)
                 {
                     lastError = hce;
                     log.Write(EventType.Error, $"{hce.Message?.TrimEnd('.')}. Retrying in {retryInterval.TotalSeconds:n1} seconds.");
-                    Thread.Sleep(retryInterval);
                 }
                 catch (SocketException sex)
                 {
@@ -115,21 +114,17 @@ namespace Halibut.Transport
                     {
                         connectionManager.ClearPooledConnections(ServiceEndpoint, log);
                     }
-
-                    Thread.Sleep(retryInterval);
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionReset())
                 {
                     log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} reset the connection, this may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
                     lastError = iox;
-                    Thread.Sleep(retryInterval);
                 }
                 catch (IOException iox) when (iox.IsSocketConnectionTimeout())
                 {
                     // Received on a polling client when the network connection is lost.
                     log.Write(EventType.Error, $"The connection to the host at {ServiceEndpoint.Format()} timed out, there may be problems with the network, connection will be retried.");
                     lastError = iox;
-                    Thread.Sleep(retryInterval);
                 }
                 catch (OperationCanceledException oce)
                 {
@@ -141,7 +136,6 @@ namespace Halibut.Transport
                 {
                     log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
                     lastError = ex;
-                    Thread.Sleep(retryInterval);
                 }
             }
 
