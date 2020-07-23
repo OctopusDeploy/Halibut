@@ -46,9 +46,9 @@ namespace Halibut.Transport
             thread.Start();
         }
 
-        private void ExecutePollingLoop(object ignored)
+        void ExecutePollingLoop(object ignored)
         {
-            var retry = new PhasedBackoffRetryTracker();
+            var retry = RetryPolicy.Create();
             while (working)
             {
                 try
