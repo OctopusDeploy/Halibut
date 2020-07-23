@@ -18,6 +18,12 @@ namespace Halibut.Tests
         [TestCase(0.5, 1, 120, 30, ExpectedResult = 45)]
         [TestCase(0.5, 1, 120, 60, ExpectedResult = 90)]
         [TestCase(0.5, 1, 120, 120, ExpectedResult = 120)]
+        [TestCase(1, 5, 120, 0, ExpectedResult = 5)]
+        [TestCase(1, 5, 120, 1, ExpectedResult = 5)]
+        [TestCase(1, 5, 120, 2, ExpectedResult = 5)]
+        [TestCase(1, 5, 120, 3, ExpectedResult = 6)]
+        [TestCase(1, 5, 120, 60, ExpectedResult = 120)]
+        [TestCase(1, 5, 120, 120, ExpectedResult = 120)]
         public int RetryTimesShouldBeCorrect(double multiplier, int minimumSeconds, int maximumSeconds, int elapsedSeconds)
         {
             var policy = new RetryPolicy(multiplier, TimeSpan.FromSeconds(minimumSeconds), TimeSpan.FromSeconds(maximumSeconds));
