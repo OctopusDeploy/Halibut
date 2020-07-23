@@ -54,10 +54,9 @@ namespace Halibut.Transport
         void ExecutePollingLoop(object ignored)
         {
             var retry = RetryPolicy.Create();
+            var sleepFor = TimeSpan.Zero;
             while (working)
             {
-                var sleepFor = TimeSpan.Zero;
-
                 try
                 {
                     try
@@ -71,9 +70,9 @@ namespace Halibut.Transport
                         sleepFor = retry.GetSleepPeriod();
                     }
                 }
-                catch (HalibutClientException hce)
+                catch (HalibutClientException ex)
                 {
-                    log?.Write(EventType.Error, $"{hce.Message?.TrimEnd('.')}. Retrying in {sleepFor.TotalSeconds:n1} seconds");
+                    log?.WriteException(EventType.Error, $"{ex.Message?.TrimEnd('.')}. Retrying in {sleepFor.TotalSeconds:n1} seconds", ex);
                 }
                 catch (Exception ex)
                 {
