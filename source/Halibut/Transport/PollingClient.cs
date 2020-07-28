@@ -72,7 +72,7 @@ namespace Halibut.Transport
                 }
                 catch (HalibutClientException ex)
                 {
-                    log?.WriteException(EventType.Error, $"{ex.Message?.TrimEnd('.')}. Retrying in {sleepFor.TotalSeconds:n1} seconds", ex);
+                    log?.WriteException(EventType.Error, $"Halibut client exception: {ex.Message?.TrimEnd('.')}. Retrying in {sleepFor.TotalSeconds:n1} seconds", ex);
                 }
                 catch (Exception ex)
                 {
