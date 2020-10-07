@@ -41,6 +41,7 @@ namespace Halibut.Transport
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         readonly TcpClientManager tcpClientManager = new TcpClientManager();
+        readonly SemaphoreSlim acceptSemaphore = new SemaphoreSlim(5, 5);
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
@@ -142,10 +143,9 @@ namespace Halibut.Transport
                             }
                         }
 
+                        acceptSemaphore.Wait();
                         var client = listener.AcceptTcpClient();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                        HandleClient(client);
-#pragma warning restore CS4014
+                        Task.Factory.StartNew(() => HandleClient(client), cts.Token);
                         numberOfFailedAttemptsInRow = 0;
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
@@ -198,6 +198,10 @@ namespace Halibut.Transport
             catch (Exception ex)
             {
                 log.WriteException(EventType.Error, "Error initializing TCP client", ex);
+            }
+            finally
+            {
+                acceptSemaphore.Release();
             }
         }
 
@@ -430,6 +434,7 @@ namespace Halibut.Transport
             backgroundThread?.Join();
             listener?.Stop();
             cts.Dispose();
+            acceptSemaphore.Dispose();
             log?.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
