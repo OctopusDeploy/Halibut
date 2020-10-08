@@ -201,7 +201,7 @@ namespace Halibut.Transport
             }
             finally
             {
-                acceptSemaphore.Release();
+                SafeRelease();
             }
         }
 
@@ -426,6 +426,18 @@ namespace Halibut.Transport
                 }
             }
             return builder.ToString();
+        }
+
+        void SafeRelease()
+        {
+            try
+            {
+                acceptSemaphore.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // intentionally left blank
+            }
         }
 
         public void Dispose()
