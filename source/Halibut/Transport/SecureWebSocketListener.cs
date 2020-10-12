@@ -206,7 +206,7 @@ namespace Halibut.Transport
             if (certificate == null)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", clientName);
-                return true;
+                return false;
             }
 
             var thumbprint = new X509Certificate2(certificate.Export(X509ContentType.Cert)).Thumbprint;
