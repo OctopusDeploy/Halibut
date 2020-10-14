@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
+using Halibut.Util.AsyncEx;
 
 namespace Halibut.Transport
 {
@@ -218,7 +219,7 @@ namespace Halibut.Transport
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
-                    var req = ReadInitialRequest(ssl);
+                    var req = await ReadInitialRequest(ssl).TimeoutAfter(TimeSpan.FromSeconds(30), CancellationToken.None);
                     if (string.IsNullOrEmpty(req))
                     {
                         log.Write(EventType.Diagnostic, "Ignoring empty request");
@@ -253,6 +254,10 @@ namespace Halibut.Transport
                         tcpClientManager.AddActiveClient(thumbprint, client);
                         await ExchangeMessages(ssl);
                     }
+                }
+                catch (TimeoutException ex)
+                {
+                    log.WriteException(EventType.ClientDenied, "Client failed to make initial request within the allowed time: {0}", ex, clientName);
                 }
                 catch (AuthenticationException ex)
                 {
@@ -396,14 +401,14 @@ namespace Halibut.Transport
             }
         }
 
-        string ReadInitialRequest(Stream stream)
+        Task<string> ReadInitialRequest(Stream stream)
         {
             var builder = new StringBuilder();
             var lastWasNewline = false;
             while (builder.Length < 20000)
             {
                 var b = stream.ReadByte();
-                if (b == -1) return builder.ToString();
+                if (b == -1) return Task.FromResult(builder.ToString());
 
                 var c = (char)b;
                 if (c == '\r')
@@ -425,7 +430,7 @@ namespace Halibut.Transport
                     builder.Append(c);
                 }
             }
-            return builder.ToString();
+            return Task.FromResult(builder.ToString());
         }
 
         void SafeRelease()

@@ -30,6 +30,19 @@ namespace Halibut.Util.AsyncEx
 
             await wrappedTask;
         }
+
+        public static async Task<TResult> TimeoutAfter<TResult>(this Task<TResult> task, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var timeoutTask = Task.Delay(timeout, cancellationToken);
+            var wrappedTask = AwaitAndSwallowExceptionsWhenTimedOut(task, timeoutTask);
+            var finishedTask = await Task.WhenAny(wrappedTask, timeoutTask);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (finishedTask == timeoutTask)
+                throw new TimeoutException();
+
+            return await wrappedTask;
+        }
         
         /// <summary>
         /// Allows us to await the task, but swallow the exception if the timeout has passed
@@ -50,5 +63,26 @@ namespace Halibut.Util.AsyncEx
                     throw;
             }
         }
-    }
+        
+         /// <summary>
+         /// Allows us to await the task, but swallow the exception if the timeout has passed
+         /// This prevents us from getting UnobservedTaskException
+         /// </summary>
+         /// <param name="task"></param>
+         /// <param name="timeoutCancellation"></param>
+         /// <returns></returns>
+         static async Task<TResult> AwaitAndSwallowExceptionsWhenTimedOut<TResult>(Task<TResult> task, IAsyncResult timeoutTask)
+         {
+             try
+             {
+                 return await task;
+             }
+             catch
+             {
+                 if (!timeoutTask.IsCompleted)
+                     throw;
+                 return default;
+             }
+         }
+     }
 }
