@@ -81,7 +81,7 @@ namespace Halibut.Util.AsyncEx
              {
                  if (!timeoutTask.IsCompleted)
                      throw;
-                 return default;
+                 return default(TResult);
              }
          }
      }
