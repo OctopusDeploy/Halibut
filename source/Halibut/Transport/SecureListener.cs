@@ -403,34 +403,38 @@ namespace Halibut.Transport
 
         Task<string> ReadInitialRequest(Stream stream)
         {
-            var builder = new StringBuilder();
-            var lastWasNewline = false;
-            while (builder.Length < 20000)
+            return Task.Run(() =>
             {
-                var b = stream.ReadByte();
-                if (b == -1) return Task.FromResult(builder.ToString());
-
-                var c = (char)b;
-                if (c == '\r')
+                var builder = new StringBuilder();
+                var lastWasNewline = false;
+                while (builder.Length < 20000)
                 {
-                    continue;
-                }
-                else if (c == '\n')
-                {
-                    builder.AppendLine();
+                    var b = stream.ReadByte();
+                    if (b == -1) return builder.ToString();
 
-                    if (lastWasNewline)
-                        break;
+                    var c = (char) b;
+                    if (c == '\r')
+                    {
+                        continue;
+                    }
+                    else if (c == '\n')
+                    {
+                        builder.AppendLine();
 
-                    lastWasNewline = true;
+                        if (lastWasNewline)
+                            break;
+
+                        lastWasNewline = true;
+                    }
+                    else
+                    {
+                        lastWasNewline = false;
+                        builder.Append(c);
+                    }
                 }
-                else
-                {
-                    lastWasNewline = false;
-                    builder.Append(c);
-                }
-            }
-            return Task.FromResult(builder.ToString());
+
+                return builder.ToString();
+            });
         }
 
         void SafeRelease()
