@@ -42,7 +42,7 @@ namespace Halibut.Transport
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         readonly TcpClientManager tcpClientManager = new TcpClientManager();
-        readonly SemaphoreSlim acceptSemaphore = new SemaphoreSlim(5, 5);
+        readonly SemaphoreSlim acceptSemaphore = new SemaphoreSlim(HalibutLimits.MaxConcurrentConnections);
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
@@ -219,7 +219,7 @@ namespace Halibut.Transport
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
-                    var req = await ReadInitialRequest(ssl).TimeoutAfter(TimeSpan.FromSeconds(30), CancellationToken.None);
+                    var req = await ReadInitialRequest(ssl);
                     if (string.IsNullOrEmpty(req))
                     {
                         log.Write(EventType.Diagnostic, "Ignoring empty request");
@@ -434,7 +434,7 @@ namespace Halibut.Transport
                 }
 
                 return builder.ToString();
-            });
+            }).TimeoutAfter(HalibutLimits.InitialRequestTimeout, CancellationToken.None);
         }
 
         void SafeRelease()

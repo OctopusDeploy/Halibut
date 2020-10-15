@@ -14,8 +14,15 @@ namespace Halibut.Diagnostics
             {
                 var value = settings.Get("Halibut." + field.Name);
                 if (string.IsNullOrWhiteSpace(value)) continue;
-                var time = TimeSpan.Parse(value);
-                field.SetValue(null, time);
+
+                object propertyValue;
+                if (field.FieldType == typeof(TimeSpan))
+                    propertyValue = TimeSpan.Parse(value);
+                else if (field.FieldType == typeof(int))
+                    propertyValue = int.Parse(value);
+                else
+                    propertyValue = value;
+                field.SetValue(null, propertyValue);
             }
         }
 
@@ -46,6 +53,11 @@ namespace Halibut.Diagnostics
         /// Stops connection retries if this time period has been exceeded from the initial connection attempt. Can be overridden via the ServiceEndPoint.
         /// </summary>
         public static TimeSpan ConnectionErrorRetryTimeout = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// The number of concurrent connections that a listener will accept.
+        /// </summary>
+        public static int MaxConcurrentConnections = int.MaxValue;
         
         /// <summary>
         /// Amount of time to wait for a TCP or SslStream write to complete successfully
@@ -56,6 +68,11 @@ namespace Halibut.Diagnostics
         /// Amount of time to wait for a TCP or SslStream read to complete successfully
         /// </summary>
         public static TimeSpan TcpClientReceiveTimeout = TimeSpan.FromMinutes(10);
+
+        /// <summary>
+        /// Amount of time an incoming connection has to make an initial request
+        /// </summary>
+        public static TimeSpan InitialRequestTimeout = TimeSpan.FromSeconds(30);
         
         /// <summary>
         /// Amount of time a connection can stay in the pool
