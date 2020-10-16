@@ -168,6 +168,8 @@ namespace Halibut.Diagnostics
     public class HalibutLimits
     {
         public static TimeSpan ConnectionErrorRetryTimeout;
+        public static TimeSpan InitialRequestTimeout;
+        public static int MaxConcurrentConnections;
         public static TimeSpan PollingQueueWaitTimeout;
         public static TimeSpan PollingRequestMaximumMessageProcessingTimeout;
         public static TimeSpan PollingRequestQueueTimeout;
