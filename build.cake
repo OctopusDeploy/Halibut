@@ -1,9 +1,11 @@
 //////////////////////////////////////////////////////////////////////
 // TOOLS
 //////////////////////////////////////////////////////////////////////
-#tool "nuget:?package=GitVersion.CommandLine&version=4.0.0"
+#tool "nuget:?package=GitVersion.CommandLine&version=5.0.1"
 #tool "nuget:?package=gitlink&version=3.1.0"
+#if !NETCOREAPP
 #tool "nuget:?package=JetBrains.DotMemoryUnit&version=3.0.20171219.105559"
+#endif
 #addin "Cake.FileHelpers&version=3.2.0"
 
 //////////////////////////////////////////////////////////////////////
@@ -19,7 +21,7 @@ var artifactsDir = "./artifacts/";
 var localPackagesDir = "../LocalPackages";
 
 GitVersion gitVersionInfo;
-string nugetVersion;
+string nugetVersion = "0.0.0";
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,6 +29,7 @@ string nugetVersion;
 ///////////////////////////////////////////////////////////////////////////////
 Setup(context =>
 {
+#if !NETCOREAPP
     gitVersionInfo = GitVersion(new GitVersionSettings {
         OutputType = GitVersionOutput.Json
     });
@@ -38,6 +41,7 @@ Setup(context =>
 
     Information("Building Halibut v{0}", nugetVersion);
     Information("Informational Version {0}", gitVersionInfo.InformationalVersion);
+#endif
 });
 
 Teardown(context =>
@@ -81,6 +85,14 @@ Task("Test")
     .IsDependentOn("Build")
     .Does(() =>
 {
+#if NETCOREAPP
+    RunTestsWithoutProfiling();
+#else
+    RunTestsWithProfiling();
+#endif
+});
+
+void RunTestsWithProfiling() {
     DotNetCoreTest("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCoreTestSettings
     {
         ArgumentCustomization = args => {
@@ -97,7 +109,14 @@ Task("Test")
         },
         ToolPath = "./tools/JetBrains.dotMemoryUnit.3.0.20171219.105559/lib/tools/dotMemoryUnit.exe"
     });
-});
+}
+void RunTestsWithoutProfiling() {
+    DotNetCoreTest("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCoreTestSettings
+    {
+        Configuration = configuration,
+        NoBuild = true
+    });
+}
 
 Task("PublishLinuxTests")
     .IsDependentOn("Test")
@@ -116,12 +135,9 @@ Task("Pack")
     .IsDependentOn("PublishLinuxTests")
     .Does(() =>
 {
-    var pdbs = GetFiles($"./source/Halibut/bin/{configuration}/**/Halibut.pdb");
-    foreach(var pdb in pdbs)
-    {
-        GitLink3(pdb);
-    }
-
+#if !NETCOREAPP
+    EnableGitLink();
+#endif
     DotNetCorePack("./source/Halibut", new DotNetCorePackSettings
     {
         Configuration = configuration,
@@ -133,6 +149,14 @@ Task("Pack")
 
     DeleteFiles(artifactsDir + "*symbols*");
 });
+
+void EnableGitLink() {
+    var pdbs = GetFiles($"./source/Halibut/bin/{configuration}/**/Halibut.pdb");
+    foreach(var pdb in pdbs)
+    {
+        GitLink3(pdb);
+    }
+}
 
 Task("CopyToLocalPackages")
     .IsDependentOn("Pack")

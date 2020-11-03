@@ -2,16 +2,12 @@
 
   <PropertyGroup>
     <VersionPrefix>0.0.0</VersionPrefix>
-    <TargetFrameworks>net45</TargetFrameworks>
     <AssemblyName>Halibut.SampleServer</AssemblyName>
+    <TargetFrameworks>netcoreapp2.2</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <PackageId>Halibut.SampleServer</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Halibut.SampleContracts\Halibut.SampleContracts.csproj" />
@@ -24,13 +20,11 @@
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="2.0.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
   <ItemGroup>
     <None Update="HalibutServer.pfx">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="HalibutClient.pfx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

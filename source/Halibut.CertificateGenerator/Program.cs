@@ -8,6 +8,9 @@ namespace Halibut.CertificateGenerator
     {
         static int Main(string[] args)
         {
+#if NETCOREAPP
+            throw new NotSupportedException("Please refer to the README for alternatives that will run on this platform");
+#else
             if (args.Length != 2)
             {
                 Console.WriteLine("Usage:  Halibut.CertificateGenerator.exe CN=<name> <output-file>");
@@ -22,6 +25,7 @@ namespace Halibut.CertificateGenerator
             File.WriteAllBytes(file, certificate.Export(X509ContentType.Pkcs12, (string) null));
 
             return 0;
+#endif
         }
     }
 }

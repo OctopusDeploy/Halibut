@@ -2,22 +2,23 @@
 
   <PropertyGroup>
     <VersionPrefix>0.0.0</VersionPrefix>
-    <TargetFramework>net45</TargetFramework>
     <AssemblyName>Halibut.OctopusSample</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>Halibut.OctopusSample</PackageId>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
   </PropertyGroup>
 
-  <ItemGroup>
+  <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+  </PropertyGroup>
+  
+  <ItemGroup Condition=" '$(TargetFramework)'=='net472' ">
     <None Include="App.config" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
-  </ItemGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -28,9 +29,6 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Update="OctopusForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -45,4 +43,8 @@
     </Compile>
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)'=='netcoreapp2.2'">
+	  <Compile Remove="**/*" />
+	  <Compile Include="Program.cs" />
+  </ItemGroup>
 </Project>

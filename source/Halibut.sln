@@ -5,6 +5,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut", "Halibut\Halibut.csproj", "{9D8386A2-4F69-4F80-A21F-F646A9828E25}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{807A6FA5-EC26-42DF-BBC4-6F572781D94E}"
+ProjectSection(SolutionItems) = preProject
+	create_cert.sh = create_cert.sh
+EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.SampleClient", "Halibut.SampleClient\Halibut.SampleClient.csproj", "{405BB295-343B-4EB3-BD7E-50CCE3A4ED60}"
 EndProject

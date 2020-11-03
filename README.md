@@ -65,3 +65,22 @@ One area we've put a lot of thought into with Halibut is failure modes. Below is
  - We connect, but the server encounters an error processing a given request: error is returned and rethrown, no retry
  - We connect, but we encounter an error processing a server request: no retry, error is returned
  - Sending a message to a polling endpoint, but the endpoint doesn't collect the message in a reasonable time (30 seconds currently): fail
+
+## Generating certificates for testing with Halibut
+In general, it is best to use a tried and true toolkit like [openssl](https://www.openssl.org/) for generating your certificates. Most *nix operating systems will have `openssl` installed.
+
+On windows, you could also install `openssl`, [use](https://docs.microsoft.com/en-us/powershell/module/pkiclient/new-selfsignedcertificate) [powershell](https://docs.microsoft.com/en-us/powershell/module/pkiclient/export-pfxcertificate), or use our provided certificate generator.
+
+#### Creating PFX certificates with openssl
+`source/create_cert.sh` will generate a cert for you if you need, but in principle it works like this
+```bash
+# create a self signed cert
+openssl req -new -x509 -newkey rsa:2048 -keyout ss_cert.key -out ss_cert.cer -days 365 -subj /CN=JoesDiner
+
+# export a PFX (set the export password to blank)
+openssl pkcs12 -export -out ss_cert.pfx -inkey ss_cert.key -in ss_cert.cer
+
+# Get a certificate thumbprint
+openssl x509 -in ss_cert.cer -noout -sha1 -fingerprint | sed -r 's/://g'
+```
+ 

@@ -78,7 +78,7 @@ namespace Halibut.CertificateGenerator
                    };
         }
 
-#if !__MonoCS__
+#if !__MonoCS__ && !NETCOREAPP
         static RSACryptoServiceProvider AddPrivateKey(AsymmetricCipherKeyPair cerKp)
         {
             var tempRcsp = (RSACryptoServiceProvider) DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters) cerKp.Private);
