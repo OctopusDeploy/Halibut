@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <VersionPrefix>0.0.0</VersionPrefix>
-    <TargetFrameworks>net462;netcoreapp2.2</TargetFrameworks>
+    <TargetFrameworks>net462;netcoreapp3.1</TargetFrameworks>
     <AssemblyName>Halibut.Tests</AssemblyName>
     <PackageId>Halibut.Tests</PackageId>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>

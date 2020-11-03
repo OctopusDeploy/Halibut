@@ -5,7 +5,7 @@
     <NeutralLanguage>en-US</NeutralLanguage>
     <VersionPrefix>0.0.0</VersionPrefix>
     <Authors>Octopus Deploy</Authors>
-    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
+    <TargetFrameworks>netcoreapp3.1;net45</TargetFrameworks>
     <AssemblyName>Halibut</AssemblyName>
     <PackageId>Halibut</PackageId>
     <PackageIconUrl>https://res.cloudinary.com/octopusdeploy/image/upload/v1422402724/halibut_f0zea8.png</PackageIconUrl>
@@ -25,7 +25,7 @@
     <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.1" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
     <PackageReference Include="System.IO.FileSystem.AccessControl" Version="4.4.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.4.1" />
     <PackageReference Include="System.Reflection.DispatchProxy" Version="4.4.0" />
@@ -41,7 +41,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
     <DefineConstants>$(DefineConstants);HAS_ASYNC_LOCAL;LIBLOG_PORTABLE</DefineConstants>
   </PropertyGroup>
 

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.Authentication;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Transport;
@@ -75,6 +76,25 @@ namespace Halibut.Tests
 
             connectionManager.Disconnect(serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
+        }
+
+        [Test]
+        public void Tls13IsAvailable()
+        {
+            ConnectionManager.AvailableSslProtocols
+                .HasFlag((SslProtocols) 12288) // https://docs.microsoft.com/en-us/dotnet/api/system.security.authentication.sslprotocols?view=netcore-3.1
+                .Should()
+                .BeTrue();
+        }
+        
+        [TestCase(SslProtocols.Ssl2)]
+        [TestCase(SslProtocols.Ssl3)]
+        public void SslIsNotAvailable(SslProtocols protocol)
+        {
+            ConnectionManager.AvailableSslProtocols
+                .HasFlag(protocol)
+                .Should()
+                .BeFalse();
         }
     }
 }

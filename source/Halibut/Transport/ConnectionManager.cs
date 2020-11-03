@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Authentication;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
@@ -9,6 +10,22 @@ namespace Halibut.Transport
 {
     public class ConnectionManager : IDisposable
     {
+        
+        public static readonly SslProtocols AvailableSslProtocols;
+
+        static ConnectionManager()
+        {
+            // This enables all Tls versions available in the executing framework even if the framework used to build this library did not support it
+            // e.g. TLS 1.3 was introduced in netcoreapp30 and net48 but at the time of writing this library is built for netstandard20 and net45
+            // When this library is used on a system with net48 (if built using netfx) or an executable built with netcoreapp30, TLS1.3 will be enabled
+            var protocols = Enum.GetValues(typeof(SslProtocols))
+                .Cast<SslProtocols>()
+                .Where(v => Enum.GetName(typeof(SslProtocols), v)?.StartsWith("Tls") ?? false);
+
+            foreach (var protocol in protocols)
+                AvailableSslProtocols |= protocol;
+        }
+        
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new Dictionary<ServiceEndPoint, HashSet<IConnection>>();
 
