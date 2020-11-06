@@ -308,7 +308,10 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+            //var truncate = new TruncateStream(stream, 256);
+            var corrupt = new CorruptBytesStream(stream);
+            
+            using (var zip = new DeflateStream(corrupt, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
