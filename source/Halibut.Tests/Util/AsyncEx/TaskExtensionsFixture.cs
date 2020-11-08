@@ -25,6 +25,20 @@ namespace Halibut.Tests.Util.AsyncEx
         }
         
         [Test]
+        public async Task When_TaskOfTCompletesWithinTimeout_TaskCompletesSuccessfully()
+        {
+            var triggered = false;
+            var task = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                triggered = true;
+                return true;
+            });
+            await task.TimeoutAfter(TimeSpan.FromMilliseconds(300), CancellationToken.None);
+            triggered.Should().Be(true, "the task should have triggered");
+        }
+        
+        [Test]
         public async Task When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
         {
             var triggered = false;
@@ -32,6 +46,23 @@ namespace Halibut.Tests.Util.AsyncEx
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
                 triggered = true;
+            });
+            Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None);
+            act.ShouldThrow<TimeoutException>();
+            triggered.Should().Be(false, "we should have stopped waiting on the task when timeout happened");
+            await Task.Delay(200);
+            triggered.Should().Be(true, "task should have continued executing in the background");
+        }
+        
+        [Test]
+        public async Task When_TaskOfTDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
+        {
+            var triggered = false;
+            var task = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
+                triggered = true;
+                return true;
             });
             Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None);
             act.ShouldThrow<TimeoutException>();
@@ -68,9 +99,47 @@ namespace Halibut.Tests.Util.AsyncEx
         }
         
         [Test]
+        public async Task When_TaskOfTGetsCancelled_ThrowsTaskCanceledException()
+        {
+            var triggered = false;
+            var cancellationTokenSource = new CancellationTokenSource();
+
+#pragma warning disable 4014 
+            // [CS4014] Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call.
+            Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                cancellationTokenSource.Cancel();
+            });
+            
+            var task = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
+                triggered = true;
+                return true;
+            });
+#pragma warning restore 4014
+            Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(150), cancellationTokenSource.Token);
+            act.ShouldThrow<TaskCanceledException>();
+            triggered.Should().Be(false, "we should have stopped waiting on the task when cancellation happened");
+            await Task.Delay(200);
+            triggered.Should().Be(true, "task should have continued executing in the background (not entirely ideal, but this task is designed to handle non-cancelable tasks)");
+        }
+        
+        [Test]
         public async Task When_TaskThrowsExceptionAfterTimeout_ExceptionsAreObserved()
         {
             await VerifyNoUnobservedExceptions<TimeoutException>(Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
+                throw new ApplicationException("this task threw an exception after timeout");
+            }).TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None));
+        }
+        
+        [Test]
+        public async Task When_TaskOfTThrowsExceptionAfterTimeout_ExceptionsAreObserved()
+        {
+            await VerifyNoUnobservedExceptions<TimeoutException>(Task.Run<bool>(async () =>
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
                 throw new ApplicationException("this task threw an exception after timeout");
@@ -90,6 +159,25 @@ namespace Halibut.Tests.Util.AsyncEx
                 cancellationTokenSource.Cancel();
             });
             await VerifyNoUnobservedExceptions<TaskCanceledException>(Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(200));
+                throw new ApplicationException("this task threw an exception after timeout");
+            }).TimeoutAfter(TimeSpan.FromMilliseconds(150), cancellationTokenSource.Token));
+        }
+        
+        [Test]
+        public async Task When_TaskOfTGetsCanceledButStillThrowsExceptionAfterCancellation_ExceptionsAreObserved()
+        {
+            var cancellationTokenSource = new CancellationTokenSource();
+#pragma warning disable 4014 
+            // [CS4014] Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call.
+            Task.Run(async () =>
+#pragma warning restore 4014
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                cancellationTokenSource.Cancel();
+            });
+            await VerifyNoUnobservedExceptions<TaskCanceledException>(Task.Run<bool>(async () =>
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
                 throw new ApplicationException("this task threw an exception after timeout");
