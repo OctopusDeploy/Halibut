@@ -13,7 +13,7 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly ISecureClient secureClient;
         readonly Uri subscription;
-        readonly Thread thread;
+        public static Thread thread;
         readonly CancellationToken cancellationToken;
         bool working;
 
