@@ -13,6 +13,109 @@ using Newtonsoft.Json.Bson;
 
 namespace Halibut.Transport.Protocol
 {
+    public class BufferedReadStream : Stream
+    {
+        readonly Stream inner;
+        readonly List<byte> bytes = new List<byte>();
+
+        public BufferedReadStream(Stream inner)
+        {
+            this.inner = inner;
+        }
+
+        public byte[] GetBytes() => bytes.ToArray();
+        
+        public override void Flush()
+        {
+            inner.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var bytesRead = inner.Read(buffer, offset, count);
+            bytes.AddRange(buffer.Take(bytesRead));
+            return bytesRead;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            inner.SetLength(value);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            Write(buffer, offset, count);
+            throw new NotImplementedException();
+        }
+
+        public override bool CanRead => inner.CanRead;
+
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => inner.CanWrite;
+        public override long Length => inner.Length;
+        public override long Position
+        {
+            get => inner.Position;
+            set => inner.Position = value;
+        }
+    }
+
+    public class BufferedWriteStream : Stream
+    {
+        readonly Stream inner;
+
+        public BufferedWriteStream(Stream inner)
+        {
+            this.inner = inner;
+        }
+
+        List<byte> bytes = new List<byte>();
+
+        public byte[] GetBytes() => bytes.ToArray();
+        
+        public override void Flush()
+        {
+            inner.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            return inner.Read(buffer, offset, count);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            inner.SetLength(value);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            bytes.AddRange(buffer.Skip(offset).Take(count));
+            inner.Write(buffer, offset, count);
+        }
+
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => inner.CanWrite;
+        public override long Length => inner.Length;
+
+        public override long Position
+        {
+            get => inner.Position;
+            set => inner.Position = value;
+        }
+    }
+    
     public class MessageExchangeStream : IMessageExchangeStream
     {
         readonly Stream stream;
@@ -244,19 +347,35 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
         }
 
+        // T ReadBsonMessage<T>()
+        // {
+        //     using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+        //     using (var bson = new BsonDataReader(zip) { CloseInput = false })
+        //     {
+        //         var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
+        //         if (messageEnvelope == null)
+        //             throw new Exception("messageEnvelope is null");
+        //         
+        //         return (T)messageEnvelope.Message;
+        //     }
+        // }
+        
         T ReadBsonMessage<T>()
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+            using (var buffer = new BufferedReadStream(stream))
+            using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
                 var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
+
+                log.Write(EventType.Diagnostic, $"ReadBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
+                
                 if (messageEnvelope == null)
                     throw new Exception("messageEnvelope is null");
-                
                 return (T)messageEnvelope.Message;
             }
         }
-
+        
         void ReadStreams(StreamCapture capture)
         {
             var expected = capture.DeserializedStreams.Count;
@@ -306,12 +425,24 @@ namespace Halibut.Transport.Protocol
             return dataStream;
         }
 
+        // void WriteBsonMessage<T>(T messages)
+        // {
+        //     using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+        //     using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+        //     {
+        //         serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+        //     }
+        // }
+
         void WriteBsonMessage<T>(T messages)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+            using (var buffer = new BufferedWriteStream(stream))
+            using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+                
+                log.Write(EventType.Diagnostic, $"WriteBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
             }
         }
 
