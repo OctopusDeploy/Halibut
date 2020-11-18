@@ -475,6 +475,7 @@ namespace Halibut.Transport.Protocol
     {
         public MessageExchangeProtocol(Stream stream, Halibut.Diagnostics.ILog log) { }
         public MessageExchangeProtocol(Halibut.Transport.Protocol.IMessageExchangeStream stream) { }
+        public MessageExchangeProtocol(Halibut.Transport.Protocol.IMessageExchangeStream stream, Halibut.Diagnostics.ILog log) { }
         public void EndCommunicationWithServer() { }
         public Halibut.Transport.Protocol.ResponseMessage ExchangeAsClient(Halibut.Transport.Protocol.RequestMessage request) { }
         public void ExchangeAsServer(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> incomingRequestProcessor, Func<Halibut.Transport.Protocol.RemoteIdentity, Halibut.ServiceModel.IPendingRequestQueue> pendingRequests) { }
