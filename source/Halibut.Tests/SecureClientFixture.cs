@@ -45,7 +45,7 @@ namespace Halibut.Tests
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream));
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, Substitute.For<ILog>()));
                 connectionManager.ReleaseConnection(endpoint, connection);
             }
 

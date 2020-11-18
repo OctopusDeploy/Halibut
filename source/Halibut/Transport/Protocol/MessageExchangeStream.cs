@@ -15,6 +15,13 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageExchangeStream : IMessageExchangeStream
     {
+        const string MxClient = "MX-CLIENT";
+        const string Next = "NEXT";
+        const string Proceed = "PROCEED";
+        const string End = "END";
+        const string MxSubscriber = "MX-SUBSCRIBER";
+        const string MxServer = "MX-SERVER";
+        static readonly string[] ControlMessages = {MxClient, MxSubscriber, MxServer, Next, Proceed, End};
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
@@ -37,9 +44,9 @@ namespace Halibut.Transport.Protocol
 
         public void IdentifyAsClient()
         {
+            log.Write(EventType.Diagnostic, $"Sent: {MxClient} {currentVersion}");
             log.Write(EventType.Diagnostic, "Identifying as a client");
-            streamWriter.Write("MX-CLIENT ");
-            streamWriter.Write(currentVersion);
+            streamWriter.Write($"{MxClient} {currentVersion}");
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -48,8 +55,9 @@ namespace Halibut.Transport.Protocol
 
         public void SendNext()
         {
+            log.Write(EventType.Diagnostic, $"Sent: {Next}");
             SetShortTimeouts();
-            streamWriter.Write("NEXT");
+            streamWriter.Write(Next);
             streamWriter.WriteLine();
             streamWriter.Flush();
             SetNormalTimeouts();
@@ -57,22 +65,26 @@ namespace Halibut.Transport.Protocol
 
         public void SendProceed()
         {
-            streamWriter.Write("PROCEED");
+            log.Write(EventType.Diagnostic, $"Sent: {Proceed}");
+            streamWriter.Write(Proceed);
             streamWriter.WriteLine();
             streamWriter.Flush();
         }
 
         public async Task SendProceedAsync()
         {
-            await streamWriter.WriteAsync("PROCEED");
+            log.Write(EventType.Diagnostic, $"Sent: {Proceed}");
+            await streamWriter.WriteAsync(Proceed);
             await streamWriter.WriteLineAsync();
             await streamWriter.FlushAsync();
         }
 
         public void SendEnd()
         {
+            log.Write(EventType.Diagnostic, $"Sent: {End}");
+
             SetShortTimeouts();
-            streamWriter.Write("END");
+            streamWriter.Write(End);
             streamWriter.WriteLine();
             streamWriter.Flush();
             SetNormalTimeouts();
@@ -83,13 +95,13 @@ namespace Halibut.Transport.Protocol
             var line = ReadLine();
             switch (line)
             {
-                case "NEXT":
+                case Next:
                     return true;
                 case null:
-                case "END":
+                case End:
                     return false;
                 default:
-                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+                    throw new ProtocolException($"Expected {Next} or {End}, got: " + line);
             }
         }
 
@@ -98,13 +110,13 @@ namespace Halibut.Transport.Protocol
             var line = await ReadLineAsync();
             switch (line)
             {
-                case "NEXT":
+                case Next:
                     return true;
                 case null:
-                case "END":
+                case End:
                     return false;
                 default:
-                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+                    throw new ProtocolException($"Expected {Next} or {End}, got:  " + line);
             }
         }
 
@@ -114,8 +126,8 @@ namespace Halibut.Transport.Protocol
             var line = ReadLine();
             if (line == null)
                 throw new AuthenticationException("XYZ");
-            if (line != "PROCEED")
-                throw new ProtocolException("Expected PROCEED, got: " + line);
+            if (line != Proceed)
+                throw new ProtocolException($"Expected {Proceed}, got: " + line);
             SetNormalTimeouts();
         }
 
@@ -126,6 +138,7 @@ namespace Halibut.Transport.Protocol
             {
                 line = streamReader.ReadLine();
             }
+            log.Write(EventType.Diagnostic, "Received: {0}", line);
 
             return line;
         }
@@ -137,16 +150,16 @@ namespace Halibut.Transport.Protocol
             {
                 line = await streamReader.ReadLineAsync();
             }
+            log.Write(EventType.Diagnostic, "Received: {0}", line);
 
             return line;
         }
 
         public void IdentifyAsSubscriber(string subscriptionId)
         {
-            streamWriter.Write("MX-SUBSCRIBER ");
-            streamWriter.Write(currentVersion);
-            streamWriter.Write(" ");
-            streamWriter.Write(subscriptionId);
+            log.Write(EventType.Diagnostic, $"Sent: {MxSubscriber} {currentVersion} {subscriptionId}");
+
+            streamWriter.Write($"{MxSubscriber} {currentVersion} {subscriptionId}");
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -156,8 +169,9 @@ namespace Halibut.Transport.Protocol
 
         public void IdentifyAsServer()
         {
-            streamWriter.Write("MX-SERVER ");
-            streamWriter.Write(currentVersion.ToString());
+            log.Write(EventType.Diagnostic, $"Sent: {MxServer} {currentVersion}");
+
+            streamWriter.Write($"{MxServer} {currentVersion}");
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -197,7 +211,7 @@ namespace Halibut.Transport.Protocol
                 WriteEachStream(capture.SerializedStreams);
             }
 
-            log.Write(EventType.Diagnostic, "Sent: {0}", message);
+            log.Write(EventType.Diagnostic, "Sent: {0}", JsonConvert.SerializeObject(message));
         }
 
         public T Receive<T>()
@@ -206,7 +220,7 @@ namespace Halibut.Transport.Protocol
             {
                 var result = ReadBsonMessage<T>();
                 ReadStreams(capture);
-                log.Write(EventType.Diagnostic, "Received: {0}", result);
+                log.Write(EventType.Diagnostic, "Received: {0}", JsonConvert.SerializeObject(result));
                 return result;
             }
         }
@@ -226,11 +240,11 @@ namespace Halibut.Transport.Protocol
         {
             switch (identityType)
             {
-                case "MX-CLIENT":
+                case MxClient:
                     return RemoteIdentityType.Client;
-                case "MX-SERVER":
+                case MxServer:
                     return RemoteIdentityType.Server;
-                case "MX-SUBSCRIBER":
+                case MxSubscriber:
                     return RemoteIdentityType.Subscriber;
                 default:
                     throw new ProtocolException("Unable to process remote identity; unknown identity type: '" + identityType + "'");
@@ -246,14 +260,51 @@ namespace Halibut.Transport.Protocol
 
         T ReadBsonMessage<T>()
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var bson = new BsonDataReader(zip) { CloseInput = false })
+            using (var buffer = new BufferedReadStream(stream))
             {
-                var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
-                if (messageEnvelope == null)
-                    throw new Exception("messageEnvelope is null");
-                
-                return (T)messageEnvelope.Message;
+                try
+                {
+                    using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
+                    {
+                        using (var bson = new BsonDataReader(zip) {CloseInput = false})
+                        {
+                            var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
+
+                            log.Write(EventType.Diagnostic, $"ReadBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
+
+                            if (messageEnvelope == null)
+                                throw new Exception("messageEnvelope is null");
+                            return (T) messageEnvelope.Message;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var plaintext = SafelyGetPlainText(buffer);
+                    if (plaintext.Equals(End))
+                        throw new HalibutClientException("Connection ended by remote.");
+                    if (ControlMessages.Contains(plaintext))
+                        throw new HalibutClientException($"Data format error: expected deflated bson message, but got control message '{plaintext}'");
+
+                    log.WriteException(EventType.Error, $"ReadBsonMessage failed to read BSON message: {BitConverter.ToString(buffer.GetBytes())}", ex);
+                    throw;
+                }
+            }
+        }
+
+        static string SafelyGetPlainText(BufferedReadStream buffer)
+        {
+            try
+            {
+                var bytes = buffer.GetBytes();
+                var ascii = new ASCIIEncoding();
+                var plaintext = ascii.GetString(bytes, 0, Math.Min(bytes.Length, 10));
+                return plaintext.TrimEnd('\r', '\n');
+            }
+            catch
+            {
+                //ok, it's not plaintext
+                return null;
             }
         }
 
@@ -269,18 +320,20 @@ namespace Halibut.Transport.Protocol
 
         void ReadStream(StreamCapture capture)
         {
-            var reader = new BinaryReader(stream);
-            var id = new Guid(reader.ReadBytes(16));
-            var length = reader.ReadInt64();
-            var dataStream = FindStreamById(capture, id);
-            var tempFile = CopyStreamToFile(id, length, reader);
-            var lengthAgain = reader.ReadInt64();
-            if (lengthAgain != length)
+            using (var reader = new BinaryReader(stream, new UTF8Encoding(), true))
             {
-                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
-            }
+                var id = new Guid(reader.ReadBytes(16));
+                var length = reader.ReadInt64();
+                var dataStream = FindStreamById(capture, id);
+                var tempFile = CopyStreamToFile(id, length, reader);
+                var lengthAgain = reader.ReadInt64();
+                if (lengthAgain != length)
+                {
+                    throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
+                }
 
-            ((IDataStreamInternal)dataStream).Received(tempFile);
+                ((IDataStreamInternal)dataStream).Received(tempFile);
+            }
         }
 
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
@@ -308,10 +361,13 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+            using (var buffer = new BufferedWriteStream(stream))
+            using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+
+                log.Write(EventType.Diagnostic, $"WriteBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
             }
         }
 
@@ -353,6 +409,109 @@ namespace Halibut.Transport.Protocol
 
             stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+        }
+    }
+
+    class BufferedReadStream : Stream
+    {
+        readonly Stream inner;
+        readonly List<byte> bytes = new List<byte>();
+
+        public BufferedReadStream(Stream inner)
+        {
+            this.inner = inner;
+        }
+
+        public byte[] GetBytes() => bytes.ToArray();
+
+        public override void Flush()
+        {
+            inner.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var bytesRead = inner.Read(buffer, offset, count);
+            bytes.AddRange(buffer.Take(bytesRead));
+            return bytesRead;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            inner.SetLength(value);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            Write(buffer, offset, count);
+            throw new NotImplementedException();
+        }
+
+        public override bool CanRead => inner.CanRead;
+
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => inner.CanWrite;
+        public override long Length => inner.Length;
+        public override long Position
+        {
+            get => inner.Position;
+            set => inner.Position = value;
+        }
+    }
+
+    class BufferedWriteStream : Stream
+    {
+        readonly Stream inner;
+
+        public BufferedWriteStream(Stream inner)
+        {
+            this.inner = inner;
+        }
+
+        List<byte> bytes = new List<byte>();
+
+        public byte[] GetBytes() => bytes.ToArray();
+
+        public override void Flush()
+        {
+            inner.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            return inner.Read(buffer, offset, count);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            inner.SetLength(value);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            bytes.AddRange(buffer.Skip(offset).Take(count));
+            inner.Write(buffer, offset, count);
+        }
+
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => inner.CanWrite;
+        public override long Length => inner.Length;
+
+        public override long Position
+        {
+            get => inner.Position;
+            set => inner.Position = value;
         }
     }
 }
