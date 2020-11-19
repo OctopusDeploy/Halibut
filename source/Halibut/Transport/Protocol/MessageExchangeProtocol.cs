@@ -23,9 +23,16 @@ namespace Halibut.Transport.Protocol
             this.log = log;
         }
 
+        [Obsolete("Please use the overload where you pass an ILog")]
         public MessageExchangeProtocol(IMessageExchangeStream stream)
         {
             this.stream = stream;
+        }
+
+        public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
+        {
+            this.stream = stream;
+            this.log = log;
         }
 
         public ResponseMessage ExchangeAsClient(RequestMessage request)

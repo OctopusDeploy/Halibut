@@ -22,7 +22,7 @@ namespace Halibut.Tests
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
-            protocol = new MessageExchangeProtocol(stream);
+            protocol = new MessageExchangeProtocol(stream, Substitute.For<ILog>());
         }
 
         [Test]

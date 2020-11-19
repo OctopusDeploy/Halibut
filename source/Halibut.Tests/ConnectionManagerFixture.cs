@@ -19,7 +19,7 @@ namespace Halibut.Tests
         public void SetUp()
         {
             var stream = Substitute.For<IMessageExchangeStream>();
-            connection = new SecureConnection(Substitute.For<IDisposable>(), Stream.Null, new MessageExchangeProtocol(stream));
+            connection = new SecureConnection(Substitute.For<IDisposable>(), Stream.Null, new MessageExchangeProtocol(stream, Substitute.For<ILog>()));
             connectionFactory = Substitute.For<IConnectionFactory>();
             connectionFactory.EstablishNewConnection(Arg.Any<ServiceEndPoint>(), Arg.Any<ILog>()).Returns(connection);
         }

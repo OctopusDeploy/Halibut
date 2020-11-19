@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -15,6 +16,15 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageExchangeStream : IMessageExchangeStream
     {
+        const string MxClient = "MX-CLIENT";
+        const string Next = "NEXT";
+        const string Proceed = "PROCEED";
+        const string End = "END";
+        const string MxSubscriber = "MX-SUBSCRIBER";
+        const string MxServer = "MX-SERVER";
+        static readonly string[] AllControlMessages = {MxClient, Next, Proceed, End, MxSubscriber, MxServer};
+        static readonly int NumCharsRequiredToIdentifyAControlMessage = AllControlMessages.Max(n => n.Length);
+        static readonly int MaxBsonBytesToCapture = 8192;
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
@@ -22,6 +32,9 @@ namespace Halibut.Transport.Protocol
         readonly JsonSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
+        readonly EventType ControlMessageLogEventType = EventType.Diagnostic;
+        readonly EventType PayloadMessageLogEventType = EventType.Diagnostic;
+        
         public MessageExchangeStream(Stream stream, ILog log)
         {
             this.stream = stream;
@@ -35,46 +48,65 @@ namespace Halibut.Transport.Protocol
         static int streamCount = 0;
         public static Func<JsonSerializer> Serializer = CreateDefault;
 
+        void SendControlMessage(string controlMessage, bool sendAdditionalNewline)
+        {
+            streamWriter.Write(controlMessage);
+            streamWriter.WriteLine();
+            if (sendAdditionalNewline)
+            {
+                streamWriter.WriteLine();
+            }
+
+            streamWriter.Flush();
+
+            if (HalibutLimits.LogControlMessages)
+                log.Write(ControlMessageLogEventType, $"Sent: {controlMessage}");
+        }
+
+        async Task SendControlMessageAsync(string controlMessage)
+        {
+            await streamWriter.WriteAsync(controlMessage);
+            await streamWriter.WriteLineAsync();
+            await streamWriter.FlushAsync();
+
+            if (HalibutLimits.LogControlMessages)
+                log.Write(ControlMessageLogEventType, $"Sent: {controlMessage}");
+        }
+        
+        void LogReceivedControlMessage(string controlMessage)
+        {
+            if (HalibutLimits.LogControlMessages)
+                log.Write(ControlMessageLogEventType, $"Received: {controlMessage}");
+        }
+
         public void IdentifyAsClient()
         {
             log.Write(EventType.Diagnostic, "Identifying as a client");
-            streamWriter.Write("MX-CLIENT ");
-            streamWriter.Write(currentVersion);
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage($"{MxClient} {currentVersion}", true);
             ExpectServerIdentity();
         }
 
         public void SendNext()
         {
             SetShortTimeouts();
-            streamWriter.Write("NEXT");
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(Next, false);
             SetNormalTimeouts();
         }
 
         public void SendProceed()
         {
-            streamWriter.Write("PROCEED");
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(Proceed, false);
         }
 
         public async Task SendProceedAsync()
         {
-            await streamWriter.WriteAsync("PROCEED");
-            await streamWriter.WriteLineAsync();
-            await streamWriter.FlushAsync();
+            await SendControlMessageAsync(Proceed);
         }
 
         public void SendEnd()
         {
             SetShortTimeouts();
-            streamWriter.Write("END");
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(End, false);
             SetNormalTimeouts();
         }
 
@@ -83,13 +115,13 @@ namespace Halibut.Transport.Protocol
             var line = ReadLine();
             switch (line)
             {
-                case "NEXT":
+                case Next:
                     return true;
                 case null:
-                case "END":
+                case End:
                     return false;
                 default:
-                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+                    throw new ProtocolException($"Expected {Next} or {End}, got: " + line);
             }
         }
 
@@ -98,13 +130,13 @@ namespace Halibut.Transport.Protocol
             var line = await ReadLineAsync();
             switch (line)
             {
-                case "NEXT":
+                case Next:
                     return true;
                 case null:
-                case "END":
+                case End:
                     return false;
                 default:
-                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+                    throw new ProtocolException($"Expected {Next} or {End}, got:  " + line);
             }
         }
 
@@ -114,8 +146,8 @@ namespace Halibut.Transport.Protocol
             var line = ReadLine();
             if (line == null)
                 throw new AuthenticationException("XYZ");
-            if (line != "PROCEED")
-                throw new ProtocolException("Expected PROCEED, got: " + line);
+            if (line != Proceed)
+                throw new ProtocolException($"Expected {Proceed}, got: " + line);
             SetNormalTimeouts();
         }
 
@@ -126,6 +158,8 @@ namespace Halibut.Transport.Protocol
             {
                 line = streamReader.ReadLine();
             }
+
+            LogReceivedControlMessage(line);
 
             return line;
         }
@@ -138,35 +172,29 @@ namespace Halibut.Transport.Protocol
                 line = await streamReader.ReadLineAsync();
             }
 
+            LogReceivedControlMessage(line);
+
             return line;
         }
 
         public void IdentifyAsSubscriber(string subscriptionId)
         {
-            streamWriter.Write("MX-SUBSCRIBER ");
-            streamWriter.Write(currentVersion);
-            streamWriter.Write(" ");
-            streamWriter.Write(subscriptionId);
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
-
+            SendControlMessage($"{MxSubscriber} {currentVersion} {subscriptionId}", true);
             ExpectServerIdentity();
         }
 
         public void IdentifyAsServer()
         {
-            streamWriter.Write("MX-SERVER ");
-            streamWriter.Write(currentVersion.ToString());
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage($"{MxServer} {currentVersion}", true);
         }
 
         public RemoteIdentity ReadRemoteIdentity()
         {
             var line = streamReader.ReadLine();
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
+            
+            LogReceivedControlMessage(line);
+            
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             try
             {
@@ -197,7 +225,7 @@ namespace Halibut.Transport.Protocol
                 WriteEachStream(capture.SerializedStreams);
             }
 
-            log.Write(EventType.Diagnostic, "Sent: {0}", message);
+            log.Write(EventType.Diagnostic, "Sent: {0}", JsonConvert.SerializeObject(message));
         }
 
         public T Receive<T>()
@@ -206,7 +234,7 @@ namespace Halibut.Transport.Protocol
             {
                 var result = ReadBsonMessage<T>();
                 ReadStreams(capture);
-                log.Write(EventType.Diagnostic, "Received: {0}", result);
+                log.Write(EventType.Diagnostic, "Received: {0}", JsonConvert.SerializeObject(result));
                 return result;
             }
         }
@@ -226,11 +254,11 @@ namespace Halibut.Transport.Protocol
         {
             switch (identityType)
             {
-                case "MX-CLIENT":
+                case MxClient:
                     return RemoteIdentityType.Client;
-                case "MX-SERVER":
+                case MxServer:
                     return RemoteIdentityType.Server;
-                case "MX-SUBSCRIBER":
+                case MxSubscriber:
                     return RemoteIdentityType.Subscriber;
                 default:
                     throw new ProtocolException("Unable to process remote identity; unknown identity type: '" + identityType + "'");
@@ -246,14 +274,89 @@ namespace Halibut.Transport.Protocol
 
         T ReadBsonMessage<T>()
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var bson = new BsonDataReader(zip) { CloseInput = false })
+            // We have to capture bytes for two reasons:
+            // - To check for control messages received at the wrong time.
+            // - For logging, if the flag is enabled.
+            //
+            // We don't capture the entire payload all the time for performance reasons.
+            //
+            var captureLength = HalibutLimits.LogBsonPayloadBytes
+                ? MaxBsonBytesToCapture
+                : NumCharsRequiredToIdentifyAControlMessage;
+            
+            using (var capture = new CaptureReadStream(stream, captureLength))
             {
-                var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
-                if (messageEnvelope == null)
-                    throw new Exception("messageEnvelope is null");
-                
-                return (T)messageEnvelope.Message;
+                try
+                {
+                    using (var zip = new DeflateStream(capture, CompressionMode.Decompress, true))
+                    using (var bson = new BsonDataReader(zip) {CloseInput = false})
+                    {
+                        var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
+
+                        if (HalibutLimits.LogBsonPayloadBytes)
+                            log.Write(PayloadMessageLogEventType, $"Received BSON payload: {BitConverter.ToString(capture.GetBytes())}");
+
+                        if (messageEnvelope == null)
+                            throw new Exception("messageEnvelope is null");
+                        return (T) messageEnvelope.Message;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handling a case that can occur when the polling client shut down and sent us a control
+                    // message when we expected a BSON payload.
+
+                    var plaintext = SafelyGetPlainText(capture);
+
+                    if (plaintext == null)
+                        throw new HalibutClientException($"Data format error: expected deflated bson message, but received unrecognised byte sequence.");
+                    
+                    if (plaintext.Equals(End))
+                        throw new HalibutClientException("Connection ended by remote. This can occur if the remote shut down while a request was in process.");
+
+                    if (LooksLikeAControlMessage(plaintext))
+                        throw new HalibutClientException($"Data format error: expected deflated bson message, but got control message '{plaintext}'");
+
+                    log.WriteException(EventType.Error, $"ReadBsonMessage failed to read BSON message: {BitConverter.ToString(capture.GetBytes())}", ex);
+                    throw;
+                }
+            }
+        }
+
+        bool LooksLikeAControlMessage(string text)
+        {
+            return text == End
+                   || text == Next
+                   || text == Proceed
+                   || text.StartsWith(MxClient)
+                   || text.StartsWith(MxServer)
+                   || text.StartsWith(MxSubscriber);
+        }
+        
+        static string SafelyGetPlainText(CaptureReadStream buffer)
+        {
+            // A few things here that are important but maybe not obvious:
+            // - Use DecoderFallback.ExceptionFallback so that decoding will throw if we find
+            //   characters that we can't handle.
+            // - Use ASCII rather than UTF-8 because we don't need to support multi-byte chars,
+            //   and they could potentially cause issues if we truncate a stream at the wrong
+            //   spot.
+            
+            try
+            {
+                var bytes = buffer.GetBytes();
+                var ascii = Encoding.GetEncoding(
+                    "ASCII", 
+                    EncoderFallback.ExceptionFallback, 
+                    DecoderFallback.ExceptionFallback
+                );
+                var plaintext = ascii.GetString(bytes, 0, bytes.Length);
+                return plaintext.TrimEnd('\r', '\n');
+            }
+            catch
+            {
+                // Ok, it's not plaintext
+                return null;
             }
         }
 
@@ -269,18 +372,20 @@ namespace Halibut.Transport.Protocol
 
         void ReadStream(StreamCapture capture)
         {
-            var reader = new BinaryReader(stream);
-            var id = new Guid(reader.ReadBytes(16));
-            var length = reader.ReadInt64();
-            var dataStream = FindStreamById(capture, id);
-            var tempFile = CopyStreamToFile(id, length, reader);
-            var lengthAgain = reader.ReadInt64();
-            if (lengthAgain != length)
+            using (var reader = new BinaryReader(stream, new UTF8Encoding(), true))
             {
-                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
-            }
+                var id = new Guid(reader.ReadBytes(16));
+                var length = reader.ReadInt64();
+                var dataStream = FindStreamById(capture, id);
+                var tempFile = CopyStreamToFile(id, length, reader);
+                var lengthAgain = reader.ReadInt64();
+                if (lengthAgain != length)
+                {
+                    throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
+                }
 
-            ((IDataStreamInternal)dataStream).Received(tempFile);
+                ((IDataStreamInternal)dataStream).Received(tempFile);
+            }
         }
 
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
@@ -308,10 +413,26 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+            void WriteBsonMessageInternal(Stream writeTo)
             {
-                serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+                using (var zip = new DeflateStream(writeTo, CompressionMode.Compress, true))
+                using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+                {
+                    serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+                }
+            }
+
+            if (HalibutLimits.LogBsonPayloadBytes)
+            {
+                using (var capture = new CaptureWriteStream(stream, MaxBsonBytesToCapture))
+                {
+                    WriteBsonMessageInternal(capture);
+                    log.Write(EventType.Diagnostic, $"Sent BSON payload: {BitConverter.ToString(capture.GetBytes())}");
+                }
+            }
+            else
+            {
+                WriteBsonMessageInternal(stream);
             }
         }
 
