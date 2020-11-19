@@ -14,11 +14,23 @@ namespace Halibut.Diagnostics
             {
                 var value = settings.Get("Halibut." + field.Name);
                 if (string.IsNullOrWhiteSpace(value)) continue;
-                var time = TimeSpan.Parse(value);
-                field.SetValue(null, time);
+
+                if (field.FieldType == typeof(TimeSpan))
+                {
+                    field.SetValue(null, TimeSpan.Parse(value));
+                }
+                else if (field.FieldType == typeof(bool))
+                {
+                    field.SetValue(null, Convert.ToBoolean(value));
+                }
             }
         }
 
+        /// <summary>
+        /// If set to true, Halibut will log the control messages that are sent and received.
+        /// </summary>
+        public static bool LogControlMessages = false;
+        
         /// <summary>
         /// The default amount of time the client will wait for the server to collect a message from the
         /// polling request queue before raising a TimeoutException. Can be overridden via the ServiceEndPoint.

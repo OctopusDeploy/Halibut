@@ -30,6 +30,8 @@ namespace Halibut.Transport.Protocol
         readonly JsonSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
+        readonly EventType ControlMessageLogEventType = EventType.Diagnostic;
+        
         public MessageExchangeStream(Stream stream, ILog log)
         {
             this.stream = stream;
@@ -43,51 +45,65 @@ namespace Halibut.Transport.Protocol
         static int streamCount = 0;
         public static Func<JsonSerializer> Serializer = CreateDefault;
 
+        void SendControlMessage(string controlMessage, bool sendAdditionalNewline)
+        {
+            streamWriter.Write(controlMessage);
+            streamWriter.WriteLine();
+            if (sendAdditionalNewline)
+            {
+                streamWriter.WriteLine();
+            }
+
+            streamWriter.Flush();
+
+            if (HalibutLimits.LogControlMessages)
+                log.Write(ControlMessageLogEventType, $"Sent: {controlMessage}");
+        }
+
+        async Task SendControlMessageAsync(string controlMessage)
+        {
+            await streamWriter.WriteAsync(controlMessage);
+            await streamWriter.WriteLineAsync();
+            await streamWriter.FlushAsync();
+
+            if (HalibutLimits.LogControlMessages)
+                log.Write(ControlMessageLogEventType, $"Sent: {controlMessage}");
+        }
+        
+        void LogReceivedControlMessage(string controlMessage)
+        {
+            if (HalibutLimits.LogControlMessages)
+                log.Write(ControlMessageLogEventType, $"Received: {controlMessage}");
+        }
+
         public void IdentifyAsClient()
         {
-            log.Write(EventType.Diagnostic, $"Sent: {MxClient} {currentVersion}");
             log.Write(EventType.Diagnostic, "Identifying as a client");
-            streamWriter.Write($"{MxClient} {currentVersion}");
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage($"{MxClient} {currentVersion}", true);
             ExpectServerIdentity();
         }
 
         public void SendNext()
         {
-            log.Write(EventType.Diagnostic, $"Sent: {Next}");
             SetShortTimeouts();
-            streamWriter.Write(Next);
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(Next, false);
             SetNormalTimeouts();
         }
 
         public void SendProceed()
         {
-            log.Write(EventType.Diagnostic, $"Sent: {Proceed}");
-            streamWriter.Write(Proceed);
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(Proceed, false);
         }
 
         public async Task SendProceedAsync()
         {
-            log.Write(EventType.Diagnostic, $"Sent: {Proceed}");
-            await streamWriter.WriteAsync(Proceed);
-            await streamWriter.WriteLineAsync();
-            await streamWriter.FlushAsync();
+            await SendControlMessageAsync(Proceed);
         }
 
         public void SendEnd()
         {
-            log.Write(EventType.Diagnostic, $"Sent: {End}");
-
             SetShortTimeouts();
-            streamWriter.Write(End);
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(End, false);
             SetNormalTimeouts();
         }
 
@@ -139,7 +155,8 @@ namespace Halibut.Transport.Protocol
             {
                 line = streamReader.ReadLine();
             }
-            log.Write(EventType.Diagnostic, "Received: {0}", line);
+
+            LogReceivedControlMessage(line);
 
             return line;
         }
@@ -151,37 +168,30 @@ namespace Halibut.Transport.Protocol
             {
                 line = await streamReader.ReadLineAsync();
             }
-            log.Write(EventType.Diagnostic, "Received: {0}", line);
+
+            LogReceivedControlMessage(line);
 
             return line;
         }
 
         public void IdentifyAsSubscriber(string subscriptionId)
         {
-            log.Write(EventType.Diagnostic, $"Sent: {MxSubscriber} {currentVersion} {subscriptionId}");
-
-            streamWriter.Write($"{MxSubscriber} {currentVersion} {subscriptionId}");
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
-
+            SendControlMessage($"{MxSubscriber} {currentVersion} {subscriptionId}", true);
             ExpectServerIdentity();
         }
 
         public void IdentifyAsServer()
         {
-            log.Write(EventType.Diagnostic, $"Sent: {MxServer} {currentVersion}");
-
-            streamWriter.Write($"{MxServer} {currentVersion}");
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage($"{MxServer} {currentVersion}", true);
         }
 
         public RemoteIdentity ReadRemoteIdentity()
         {
             var line = streamReader.ReadLine();
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
+            
+            LogReceivedControlMessage(line);
+            
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             try
             {
