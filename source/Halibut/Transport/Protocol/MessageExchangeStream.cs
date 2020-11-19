@@ -22,7 +22,8 @@ namespace Halibut.Transport.Protocol
         const string End = "END";
         const string MxSubscriber = "MX-SUBSCRIBER";
         const string MxServer = "MX-SERVER";
-        static readonly string[] ControlMessages = { MxClient, MxSubscriber, MxServer, Next, Proceed, End };
+        static readonly string[] AllControlMessages = {MxClient, Next, Proceed, End, MxSubscriber, MxServer};
+        static readonly int NumCharsRequiredToIdentifyAControlMessage = AllControlMessages.Max(n => n.Length);
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
@@ -31,6 +32,7 @@ namespace Halibut.Transport.Protocol
         readonly Version currentVersion = new Version(1, 0);
 
         readonly EventType ControlMessageLogEventType = EventType.Diagnostic;
+        readonly EventType PayloadMessageLogEventType = EventType.Diagnostic;
         
         public MessageExchangeStream(Stream stream, ILog log)
         {
@@ -271,7 +273,17 @@ namespace Halibut.Transport.Protocol
 
         T ReadBsonMessage<T>()
         {
-            using (var buffer = new CaptureReadStream(stream, 32))
+            // We have to capture bytes for two reasons:
+            // - To check for control messages received at the wrong time.
+            // - For logging, if the flag is enabled.
+            //
+            // We don't capture the entire payload all the time for performance reasons.
+            //
+            var captureLength = HalibutLimits.LogBsonPayloadBytes
+                ? int.MaxValue
+                : NumCharsRequiredToIdentifyAControlMessage;
+            
+            using (var buffer = new CaptureReadStream(stream, captureLength))
             {
                 try
                 {
@@ -280,7 +292,8 @@ namespace Halibut.Transport.Protocol
                     {
                         var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
 
-                        log.Write(EventType.Diagnostic, $"ReadBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
+                        if (HalibutLimits.LogBsonPayloadBytes)
+                            log.Write(PayloadMessageLogEventType, $"Received BSON payload: {BitConverter.ToString(buffer.GetBytes())}");
 
                         if (messageEnvelope == null)
                             throw new Exception("messageEnvelope is null");
@@ -289,11 +302,18 @@ namespace Halibut.Transport.Protocol
                 }
                 catch (Exception ex)
                 {
-                    var plaintext = SafelyGetPlainText(buffer);
-                    if (plaintext.Equals(End))
-                        throw new HalibutClientException("Connection ended by remote.");
+                    // Handling a case that can occur when the polling client shut down and sent us a control
+                    // message when we expected a BSON payload.
 
-                    if (ControlMessages.Contains(plaintext))
+                    var plaintext = SafelyGetPlainText(buffer);
+
+                    if (plaintext == null)
+                        throw new HalibutClientException($"Data format error: expected deflated bson message, but received unrecognised byte sequence.");
+                    
+                    if (plaintext.Equals(End))
+                        throw new HalibutClientException("Connection ended by remote. This can occur if the remote shut down while a request was in process.");
+
+                    if (LooksLikeAControlMessage(plaintext))
                         throw new HalibutClientException($"Data format error: expected deflated bson message, but got control message '{plaintext}'");
 
                     log.WriteException(EventType.Error, $"ReadBsonMessage failed to read BSON message: {BitConverter.ToString(buffer.GetBytes())}", ex);
@@ -302,6 +322,16 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        bool LooksLikeAControlMessage(string text)
+        {
+            return text == End
+                   || text == Next
+                   || text == Proceed
+                   || text.StartsWith(MxClient)
+                   || text.StartsWith(MxServer)
+                   || text.StartsWith(MxSubscriber);
+        }
+        
         static string SafelyGetPlainText(CaptureReadStream buffer)
         {
             // A few things here that are important but maybe not obvious:
@@ -314,10 +344,11 @@ namespace Halibut.Transport.Protocol
             try
             {
                 var bytes = buffer.GetBytes();
-                var ascii = new ASCIIEncoding
-                {
-                    DecoderFallback = DecoderFallback.ExceptionFallback
-                };
+                var ascii = Encoding.GetEncoding(
+                    "ASCII", 
+                    EncoderFallback.ExceptionFallback, 
+                    DecoderFallback.ExceptionFallback
+                );
                 var plaintext = ascii.GetString(bytes, 0, bytes.Length);
                 return plaintext.TrimEnd('\r', '\n');
             }
@@ -381,13 +412,26 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
-            using (var buffer = new CaptureWriteStream(stream, 32))
-            using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
-            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+            void WriteBsonMessageInternal(Stream writeTo)
             {
-                serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+                using (var zip = new DeflateStream(writeTo, CompressionMode.Compress, true))
+                using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+                {
+                    serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+                }
+            }
 
-                log.Write(EventType.Diagnostic, $"WriteBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
+            if (HalibutLimits.LogBsonPayloadBytes)
+            {
+                using (var capture = new CaptureWriteStream(stream, int.MaxValue))
+                {
+                    WriteBsonMessageInternal(capture);
+                    log.Write(EventType.Diagnostic, $"Sent BSON payload: {BitConverter.ToString(capture.GetBytes())}");
+                }
+            }
+            else
+            {
+                WriteBsonMessageInternal(stream);
             }
         }
 

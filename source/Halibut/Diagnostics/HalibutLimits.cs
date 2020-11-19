@@ -32,6 +32,11 @@ namespace Halibut.Diagnostics
         public static bool LogControlMessages = false;
         
         /// <summary>
+        /// If set to true, Halibut will log the bytes of BSON paylods that are sent and received.
+        /// </summary>
+        public static bool LogBsonPayloadBytes = false;
+        
+        /// <summary>
         /// The default amount of time the client will wait for the server to collect a message from the
         /// polling request queue before raising a TimeoutException. Can be overridden via the ServiceEndPoint.
         /// </summary>
