@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -21,7 +22,7 @@ namespace Halibut.Transport.Protocol
         const string End = "END";
         const string MxSubscriber = "MX-SUBSCRIBER";
         const string MxServer = "MX-SERVER";
-        static readonly string[] ControlMessages = {MxClient, MxSubscriber, MxServer, Next, Proceed, End};
+        static readonly string[] ControlMessages = { MxClient, MxSubscriber, MxServer, Next, Proceed, End };
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
@@ -260,22 +261,20 @@ namespace Halibut.Transport.Protocol
 
         T ReadBsonMessage<T>()
         {
-            using (var buffer = new BufferedReadStream(stream))
+            using (var buffer = new CaptureReadStream(stream, 32))
             {
                 try
                 {
                     using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
+                    using (var bson = new BsonDataReader(zip) {CloseInput = false})
                     {
-                        using (var bson = new BsonDataReader(zip) {CloseInput = false})
-                        {
-                            var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
+                        var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
 
-                            log.Write(EventType.Diagnostic, $"ReadBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
+                        log.Write(EventType.Diagnostic, $"ReadBsonMessage: {BitConverter.ToString(buffer.GetBytes())}");
 
-                            if (messageEnvelope == null)
-                                throw new Exception("messageEnvelope is null");
-                            return (T) messageEnvelope.Message;
-                        }
+                        if (messageEnvelope == null)
+                            throw new Exception("messageEnvelope is null");
+                        return (T) messageEnvelope.Message;
                     }
                 }
                 catch (Exception ex)
@@ -283,6 +282,7 @@ namespace Halibut.Transport.Protocol
                     var plaintext = SafelyGetPlainText(buffer);
                     if (plaintext.Equals(End))
                         throw new HalibutClientException("Connection ended by remote.");
+
                     if (ControlMessages.Contains(plaintext))
                         throw new HalibutClientException($"Data format error: expected deflated bson message, but got control message '{plaintext}'");
 
@@ -292,18 +292,28 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        static string SafelyGetPlainText(BufferedReadStream buffer)
+        static string SafelyGetPlainText(CaptureReadStream buffer)
         {
+            // A few things here that are important but maybe not obvious:
+            // - Use DecoderFallback.ExceptionFallback so that decoding will throw if we find
+            //   characters that we can't handle.
+            // - Use ASCII rather than UTF-8 because we don't need to support multi-byte chars,
+            //   and they could potentially cause issues if we truncate a stream at the wrong
+            //   spot.
+            
             try
             {
                 var bytes = buffer.GetBytes();
-                var ascii = new ASCIIEncoding();
-                var plaintext = ascii.GetString(bytes, 0, Math.Min(bytes.Length, 10));
+                var ascii = new ASCIIEncoding
+                {
+                    DecoderFallback = DecoderFallback.ExceptionFallback
+                };
+                var plaintext = ascii.GetString(bytes, 0, bytes.Length);
                 return plaintext.TrimEnd('\r', '\n');
             }
             catch
             {
-                //ok, it's not plaintext
+                // Ok, it's not plaintext
                 return null;
             }
         }
@@ -361,7 +371,7 @@ namespace Halibut.Transport.Protocol
 
         void WriteBsonMessage<T>(T messages)
         {
-            using (var buffer = new BufferedWriteStream(stream))
+            using (var buffer = new CaptureWriteStream(stream, 32))
             using (var zip = new DeflateStream(buffer, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
@@ -409,109 +419,6 @@ namespace Halibut.Transport.Protocol
 
             stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
-        }
-    }
-
-    class BufferedReadStream : Stream
-    {
-        readonly Stream inner;
-        readonly List<byte> bytes = new List<byte>();
-
-        public BufferedReadStream(Stream inner)
-        {
-            this.inner = inner;
-        }
-
-        public byte[] GetBytes() => bytes.ToArray();
-
-        public override void Flush()
-        {
-            inner.Flush();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            var bytesRead = inner.Read(buffer, offset, count);
-            bytes.AddRange(buffer.Take(bytesRead));
-            return bytesRead;
-        }
-
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            return inner.Seek(offset, origin);
-        }
-
-        public override void SetLength(long value)
-        {
-            inner.SetLength(value);
-        }
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            Write(buffer, offset, count);
-            throw new NotImplementedException();
-        }
-
-        public override bool CanRead => inner.CanRead;
-
-        public override bool CanSeek => inner.CanSeek;
-        public override bool CanWrite => inner.CanWrite;
-        public override long Length => inner.Length;
-        public override long Position
-        {
-            get => inner.Position;
-            set => inner.Position = value;
-        }
-    }
-
-    class BufferedWriteStream : Stream
-    {
-        readonly Stream inner;
-
-        public BufferedWriteStream(Stream inner)
-        {
-            this.inner = inner;
-        }
-
-        List<byte> bytes = new List<byte>();
-
-        public byte[] GetBytes() => bytes.ToArray();
-
-        public override void Flush()
-        {
-            inner.Flush();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-            return inner.Read(buffer, offset, count);
-        }
-
-        public override long Seek(long offset, SeekOrigin origin)
-        {
-            return inner.Seek(offset, origin);
-        }
-
-        public override void SetLength(long value)
-        {
-            inner.SetLength(value);
-        }
-
-        public override void Write(byte[] buffer, int offset, int count)
-        {
-            bytes.AddRange(buffer.Skip(offset).Take(count));
-            inner.Write(buffer, offset, count);
-        }
-
-        public override bool CanRead => inner.CanRead;
-        public override bool CanSeek => inner.CanSeek;
-        public override bool CanWrite => inner.CanWrite;
-        public override long Length => inner.Length;
-
-        public override long Position
-        {
-            get => inner.Position;
-            set => inner.Position = value;
         }
     }
 }
