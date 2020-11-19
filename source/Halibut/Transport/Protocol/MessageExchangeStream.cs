@@ -24,6 +24,7 @@ namespace Halibut.Transport.Protocol
         const string MxServer = "MX-SERVER";
         static readonly string[] AllControlMessages = {MxClient, Next, Proceed, End, MxSubscriber, MxServer};
         static readonly int NumCharsRequiredToIdentifyAControlMessage = AllControlMessages.Max(n => n.Length);
+        static readonly int MaxBsonBytesToCapture = 8192;
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
@@ -280,20 +281,20 @@ namespace Halibut.Transport.Protocol
             // We don't capture the entire payload all the time for performance reasons.
             //
             var captureLength = HalibutLimits.LogBsonPayloadBytes
-                ? int.MaxValue
+                ? MaxBsonBytesToCapture
                 : NumCharsRequiredToIdentifyAControlMessage;
             
-            using (var buffer = new CaptureReadStream(stream, captureLength))
+            using (var capture = new CaptureReadStream(stream, captureLength))
             {
                 try
                 {
-                    using (var zip = new DeflateStream(buffer, CompressionMode.Decompress, true))
+                    using (var zip = new DeflateStream(capture, CompressionMode.Decompress, true))
                     using (var bson = new BsonDataReader(zip) {CloseInput = false})
                     {
                         var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
 
                         if (HalibutLimits.LogBsonPayloadBytes)
-                            log.Write(PayloadMessageLogEventType, $"Received BSON payload: {BitConverter.ToString(buffer.GetBytes())}");
+                            log.Write(PayloadMessageLogEventType, $"Received BSON payload: {BitConverter.ToString(capture.GetBytes())}");
 
                         if (messageEnvelope == null)
                             throw new Exception("messageEnvelope is null");
@@ -305,7 +306,7 @@ namespace Halibut.Transport.Protocol
                     // Handling a case that can occur when the polling client shut down and sent us a control
                     // message when we expected a BSON payload.
 
-                    var plaintext = SafelyGetPlainText(buffer);
+                    var plaintext = SafelyGetPlainText(capture);
 
                     if (plaintext == null)
                         throw new HalibutClientException($"Data format error: expected deflated bson message, but received unrecognised byte sequence.");
@@ -316,7 +317,7 @@ namespace Halibut.Transport.Protocol
                     if (LooksLikeAControlMessage(plaintext))
                         throw new HalibutClientException($"Data format error: expected deflated bson message, but got control message '{plaintext}'");
 
-                    log.WriteException(EventType.Error, $"ReadBsonMessage failed to read BSON message: {BitConverter.ToString(buffer.GetBytes())}", ex);
+                    log.WriteException(EventType.Error, $"ReadBsonMessage failed to read BSON message: {BitConverter.ToString(capture.GetBytes())}", ex);
                     throw;
                 }
             }
@@ -423,7 +424,7 @@ namespace Halibut.Transport.Protocol
 
             if (HalibutLimits.LogBsonPayloadBytes)
             {
-                using (var capture = new CaptureWriteStream(stream, int.MaxValue))
+                using (var capture = new CaptureWriteStream(stream, MaxBsonBytesToCapture))
                 {
                     WriteBsonMessageInternal(capture);
                     log.Write(EventType.Diagnostic, $"Sent BSON payload: {BitConverter.ToString(capture.GetBytes())}");
