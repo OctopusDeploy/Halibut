@@ -15,6 +15,13 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageExchangeStream : IMessageExchangeStream
     {
+        const string Next = "NEXT";
+        const string Proceed = "PROCEED";
+        const string End = "END";
+        const string MxClient = "MX-CLIENT";
+        const string MxSubscriber = "MX-SUBSCRIBER";
+        const string MxServer = "MX-SERVER";
+
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
@@ -38,8 +45,7 @@ namespace Halibut.Transport.Protocol
         public void IdentifyAsClient()
         {
             log.Write(EventType.Diagnostic, "Identifying as a client");
-            streamWriter.Write("MX-CLIENT ");
-            streamWriter.Write(currentVersion);
+            streamWriter.Write($"{MxClient} {currentVersion}");
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -49,7 +55,7 @@ namespace Halibut.Transport.Protocol
         public void SendNext()
         {
             SetShortTimeouts();
-            streamWriter.Write("NEXT");
+            streamWriter.Write(Next);
             streamWriter.WriteLine();
             streamWriter.Flush();
             SetNormalTimeouts();
@@ -57,14 +63,14 @@ namespace Halibut.Transport.Protocol
 
         public void SendProceed()
         {
-            streamWriter.Write("PROCEED");
+            streamWriter.Write(Proceed);
             streamWriter.WriteLine();
             streamWriter.Flush();
         }
 
         public async Task SendProceedAsync()
         {
-            await streamWriter.WriteAsync("PROCEED");
+            await streamWriter.WriteAsync(Proceed);
             await streamWriter.WriteLineAsync();
             await streamWriter.FlushAsync();
         }
@@ -72,7 +78,7 @@ namespace Halibut.Transport.Protocol
         public void SendEnd()
         {
             SetShortTimeouts();
-            streamWriter.Write("END");
+            streamWriter.Write(End);
             streamWriter.WriteLine();
             streamWriter.Flush();
             SetNormalTimeouts();
@@ -83,13 +89,13 @@ namespace Halibut.Transport.Protocol
             var line = ReadLine();
             switch (line)
             {
-                case "NEXT":
+                case Next:
                     return true;
                 case null:
-                case "END":
+                case End:
                     return false;
                 default:
-                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+                    throw new ProtocolException($"Expected {Next} or {End}, got: " + line);
             }
         }
 
@@ -98,13 +104,13 @@ namespace Halibut.Transport.Protocol
             var line = await ReadLineAsync();
             switch (line)
             {
-                case "NEXT":
+                case Next:
                     return true;
                 case null:
-                case "END":
+                case End:
                     return false;
                 default:
-                    throw new ProtocolException("Expected NEXT or END, got: " + line);
+                    throw new ProtocolException($"Expected {Next} or {End}, got: " + line);
             }
         }
 
@@ -114,8 +120,8 @@ namespace Halibut.Transport.Protocol
             var line = ReadLine();
             if (line == null)
                 throw new AuthenticationException("XYZ");
-            if (line != "PROCEED")
-                throw new ProtocolException("Expected PROCEED, got: " + line);
+            if (line != Proceed)
+                throw new ProtocolException($"Expected {Proceed}, got: " + line);
             SetNormalTimeouts();
         }
 
@@ -143,10 +149,7 @@ namespace Halibut.Transport.Protocol
 
         public void IdentifyAsSubscriber(string subscriptionId)
         {
-            streamWriter.Write("MX-SUBSCRIBER ");
-            streamWriter.Write(currentVersion);
-            streamWriter.Write(" ");
-            streamWriter.Write(subscriptionId);
+            streamWriter.Write($"{MxSubscriber} {currentVersion} {subscriptionId}");
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -156,8 +159,7 @@ namespace Halibut.Transport.Protocol
 
         public void IdentifyAsServer()
         {
-            streamWriter.Write("MX-SERVER ");
-            streamWriter.Write(currentVersion.ToString());
+            streamWriter.Write($"{MxServer} {currentVersion}");
             streamWriter.WriteLine();
             streamWriter.WriteLine();
             streamWriter.Flush();
@@ -226,11 +228,11 @@ namespace Halibut.Transport.Protocol
         {
             switch (identityType)
             {
-                case "MX-CLIENT":
+                case MxClient:
                     return RemoteIdentityType.Client;
-                case "MX-SERVER":
+                case MxServer:
                     return RemoteIdentityType.Server;
-                case "MX-SUBSCRIBER":
+                case MxSubscriber:
                     return RemoteIdentityType.Subscriber;
                 default:
                     throw new ProtocolException("Unable to process remote identity; unknown identity type: '" + identityType + "'");
