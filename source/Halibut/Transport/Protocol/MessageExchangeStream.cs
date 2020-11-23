@@ -45,42 +45,50 @@ namespace Halibut.Transport.Protocol
         public void IdentifyAsClient()
         {
             log.Write(EventType.Diagnostic, "Identifying as a client");
-            streamWriter.Write($"{MxClient} {currentVersion}");
-            streamWriter.WriteLine();
+            SendIdentityMessage($"{MxClient} {currentVersion}");
+            ExpectServerIdentity();
+        }
+
+        void SendControlMessage(string message)
+        {
+            streamWriter.WriteLine(message);
+            streamWriter.Flush();
+        }
+
+        async Task SendControlMessageAsync(string message)
+        {
+            await streamWriter.WriteLineAsync(message);
+            await streamWriter.FlushAsync();
+        }
+
+        void SendIdentityMessage(string identityLine)
+        {
+            streamWriter.WriteLine(identityLine);
             streamWriter.WriteLine();
             streamWriter.Flush();
-            ExpectServerIdentity();
         }
 
         public void SendNext()
         {
             SetShortTimeouts();
-            streamWriter.Write(Next);
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(Next);
             SetNormalTimeouts();
         }
 
         public void SendProceed()
         {
-            streamWriter.Write(Proceed);
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(Proceed);
         }
 
         public async Task SendProceedAsync()
         {
-            await streamWriter.WriteAsync(Proceed);
-            await streamWriter.WriteLineAsync();
-            await streamWriter.FlushAsync();
+            await SendControlMessageAsync(Proceed);
         }
 
         public void SendEnd()
         {
             SetShortTimeouts();
-            streamWriter.Write(End);
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendControlMessage(End);
             SetNormalTimeouts();
         }
 
@@ -149,20 +157,13 @@ namespace Halibut.Transport.Protocol
 
         public void IdentifyAsSubscriber(string subscriptionId)
         {
-            streamWriter.Write($"{MxSubscriber} {currentVersion} {subscriptionId}");
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
-
+            SendIdentityMessage($"{MxSubscriber} {currentVersion} {subscriptionId}");
             ExpectServerIdentity();
         }
 
         public void IdentifyAsServer()
         {
-            streamWriter.Write($"{MxServer} {currentVersion}");
-            streamWriter.WriteLine();
-            streamWriter.WriteLine();
-            streamWriter.Flush();
+            SendIdentityMessage($"{MxServer} {currentVersion}");
         }
 
         public RemoteIdentity ReadRemoteIdentity()
