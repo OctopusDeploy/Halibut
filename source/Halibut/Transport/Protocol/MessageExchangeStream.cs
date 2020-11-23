@@ -110,7 +110,7 @@ namespace Halibut.Transport.Protocol
                 case End:
                     return false;
                 default:
-                    throw new ProtocolException($"Expected {Next} or {End}, got:  " + line);
+                    throw new ProtocolException($"Expected {Next} or {End}, got: " + line);
             }
         }
 
