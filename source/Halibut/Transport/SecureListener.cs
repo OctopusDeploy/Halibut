@@ -33,7 +33,7 @@ namespace Halibut.Transport
 
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
-        readonly Func<MessageExchangeProtocol, Task> protocolHandler;
+        readonly Action<MessageExchangeProtocol> protocolHandler;
         readonly Predicate<string> verifyClientThumbprint;
         readonly Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect;
         readonly ILogFactory logFactory;
@@ -45,29 +45,18 @@ namespace Halibut.Transport
         TcpListener listener;
         Thread backgroundThread;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
-
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, h => Task.Run(() => protocolHandler(h)), verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
-
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
+        /*public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
             : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
-        {
-        }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) :
-            this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection)
         {
-        }
+        }*/
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Func<MessageExchangeProtocol, Task> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        /*public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
+            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
+        {
+        }*/
+
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -143,16 +132,16 @@ namespace Halibut.Transport
                         }
 
                         var client = listener.AcceptTcpClient();
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                         HandleClient(client);
-#pragma warning restore CS4014
                         numberOfFailedAttemptsInRow = 0;
                     }
-                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
+                    catch (SocketException ex) when (ex.SocketErrorCode == SocketError.Interrupted)
                     {
+                        log.WriteException(EventType.Error, "Socket Exception accepting TCP client", ex);
                     }
-                    catch (ObjectDisposedException)
+                    catch (ObjectDisposedException ex)
                     {
+                        log.WriteException(EventType.Error, "Object Disposed Exception accepting TCP client", ex);
                     }
                     catch (Exception ex)
                     {
@@ -182,7 +171,7 @@ namespace Halibut.Transport
 #endif
         }
 
-        async Task HandleClient(TcpClient client)
+        void HandleClient(TcpClient client)
         {
             try
             {
@@ -190,7 +179,7 @@ namespace Halibut.Transport
                 client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
-                await ExecuteRequest(client);
+                ExecuteRequest(client);
             }
             catch (ObjectDisposedException)
             {
@@ -201,7 +190,7 @@ namespace Halibut.Transport
             }
         }
 
-        async Task ExecuteRequest(TcpClient client)
+        void ExecuteRequest(TcpClient client)
         {
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
@@ -210,7 +199,7 @@ namespace Halibut.Transport
                 try
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+                    ssl.AuthenticateAsServer(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -247,7 +236,7 @@ namespace Halibut.Transport
                         });
 
                         tcpClientManager.AddActiveClient(thumbprint, client);
-                        await ExchangeMessages(ssl);
+                        ExchangeMessages(ssl);
                     }
                 }
                 catch (AuthenticationException ex)
@@ -369,11 +358,11 @@ namespace Halibut.Transport
             return true;
         }
 
-        Task ExchangeMessages(SslStream stream)
+        void ExchangeMessages(SslStream stream)
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
-            return protocolHandler(new MessageExchangeProtocol(stream, log));
+            protocolHandler(new MessageExchangeProtocol(stream, log));
         }
 
         bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)

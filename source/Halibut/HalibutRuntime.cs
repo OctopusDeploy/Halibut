@@ -81,12 +81,19 @@ namespace Halibut
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandler, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ListenerHandlerAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             listeners.Add(listener);
             listener.Start();
         }
 
-        Task ListenerHandler(MessageExchangeProtocol obj)
+        void ListenerHandler(MessageExchangeProtocol obj)
+        {
+            obj.ExchangeAsServer(
+                HandleIncomingRequest,
+                id => GetQueue(id.SubscriptionId));
+        }
+
+        Task ListenerHandlerAsync(MessageExchangeProtocol obj)
         {
             return obj.ExchangeAsServerAsync(
                 HandleIncomingRequest,

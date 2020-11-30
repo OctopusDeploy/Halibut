@@ -49,7 +49,9 @@ namespace Halibut.Tests
                     p => { },
                     thumbprint => true,
                     new LogFactory(), 
-                    () => ""
+                    () => "",
+                    () => new Dictionary<string, string>(),
+                    (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)
