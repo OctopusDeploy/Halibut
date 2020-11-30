@@ -121,7 +121,7 @@ namespace Halibut.Transport.Protocol
                     ProcessClientRequests(incomingRequestProcessor);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    await ProcessSubscriberAsync(pendingRequests(identity));
+                    await ProcessSubscriberAsync(pendingRequests(identity)).ConfigureAwait(false);
                     break;
                 default:
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
@@ -175,9 +175,9 @@ namespace Halibut.Transport.Protocol
         {
             while (true)
             {
-                var nextRequest = await pendingRequests.DequeueAsync();
+                var nextRequest = await pendingRequests.DequeueAsync().ConfigureAwait(false);
 
-                var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest);
+                var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest).ConfigureAwait(false);
                 if (!success)
                     return;
             }
@@ -244,7 +244,7 @@ namespace Halibut.Transport.Protocol
 
             try
             {
-                if (!await stream.ExpectNextOrEndAsync())
+                if (!await stream.ExpectNextOrEndAsync().ConfigureAwait(false))
                     return false;
             }
             catch (Exception ex) when (ex.IsSocketConnectionTimeout())
@@ -255,7 +255,8 @@ namespace Halibut.Transport.Protocol
                 log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
                 return false;
             }
-            await stream.SendProceedAsync();
+
+            await stream.SendProceedAsync().ConfigureAwait(false);
             return true;
         }
 

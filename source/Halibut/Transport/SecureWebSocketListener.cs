@@ -75,7 +75,7 @@ namespace Halibut.Transport
 
             log = logFactory.ForPrefix(endPoint);
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(async () => await Accept());
+            Task.Run(async () => await Accept().ConfigureAwait(false));
         }
 
         async Task Accept()
@@ -86,13 +86,11 @@ namespace Halibut.Transport
                 {
                     try
                     {
-                        var context = await listener.GetContextAsync();
+                        var context = await listener.GetContextAsync().ConfigureAwait(false);
 
                         if (context.Request.IsWebSocketRequest)
                         {
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-                            HandleClient(context);
-#pragma warning restore CS4014
+                            await HandleClient(context).ConfigureAwait(false);
                         }
                         else
                         {
@@ -115,7 +113,7 @@ namespace Halibut.Transport
             try
             {
                 log.Write(EventType.ListenerAcceptedClient, "Accepted Web Socket client: {0}", context.Request.RemoteEndPoint);
-                await ExecuteRequest(context);
+                await ExecuteRequest(context).ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
             {
@@ -136,10 +134,10 @@ namespace Halibut.Transport
             WebSocketStream webSocketStream = null;
             try
             {
-                var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus");
+                var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
                 webSocketStream = new WebSocketStream(webSocketContext.WebSocket);
 
-                var req = await webSocketStream.ReadTextMessage(); // Initial message
+                var req = await webSocketStream.ReadTextMessage().ConfigureAwait(false); // Initial message
                 if (string.IsNullOrEmpty(req))
                 {
                     log.Write(EventType.Diagnostic, "Ignoring empty request");
@@ -152,10 +150,10 @@ namespace Halibut.Transport
                     return;
                 }
 
-                if (await Authorize(listenerContext, clientName))
+                if (await Authorize(listenerContext, clientName).ConfigureAwait(false))
                 {
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                    await ExchangeMessages(webSocketStream);
+                    await ExchangeMessages(webSocketStream).ConfigureAwait(false);
 
                     // Mark the stream as delegated once everything has succeeded
                     keepConnection = true;
@@ -202,7 +200,7 @@ namespace Halibut.Transport
         async Task<bool> Authorize(HttpListenerContext context, EndPoint clientName)
         {
             log.Write(EventType.Diagnostic, "Begin authorization");
-            var certificate = await context.Request.GetClientCertificateAsync();
+            var certificate = await context.Request.GetClientCertificateAsync().ConfigureAwait(false);
             if (certificate == null)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", clientName);

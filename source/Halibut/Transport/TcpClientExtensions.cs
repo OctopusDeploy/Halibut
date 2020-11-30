@@ -34,7 +34,7 @@ namespace Halibut.Transport
             try
             {
                 var task = client.ConnectAsync(host, port);
-                await task.TimeoutAfter(timeout, cancellationToken);
+                await task.TimeoutAfter(timeout, cancellationToken).ConfigureAwait(false);
             }
             catch (TimeoutException)
             {

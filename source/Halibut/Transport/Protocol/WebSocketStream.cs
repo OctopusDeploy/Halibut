@@ -38,9 +38,9 @@ namespace Halibut.Transport.Protocol
         {
             AssertCanReadOrWrite();
             var segment = new ArraySegment<byte>(buffer, offset, count);
-            var recieveResult = context.ReceiveAsync(segment, CancellationToken.None)
+            var receiveResult = context.ReceiveAsync(segment, CancellationToken.None)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
-            return recieveResult.Count;
+            return receiveResult.Count;
         }
 
         public async Task<string> ReadTextMessage()
@@ -53,11 +53,11 @@ namespace Halibut.Transport.Protocol
                 using(var cts = new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout))
                 using(var combined = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancel.Token))
                 {
-                    var result = await context.ReceiveAsync(buffer, combined.Token);
+                    var result = await context.ReceiveAsync(buffer, combined.Token).ConfigureAwait(false);
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
                         using(var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
-                            await context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Close received", sendCancel.Token);
+                            await context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Close received", sendCancel.Token).ConfigureAwait(false);
                         return null;
                     }
 

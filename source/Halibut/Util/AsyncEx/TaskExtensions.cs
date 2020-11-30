@@ -22,27 +22,27 @@ namespace Halibut.Util.AsyncEx
         {
             var timeoutTask = Task.Delay(timeout, cancellationToken);
             var wrappedTask = AwaitAndSwallowExceptionsWhenTimedOut(task, timeoutTask);
-            await Task.WhenAny(wrappedTask, timeoutTask);
+            await Task.WhenAny(wrappedTask, timeoutTask).ConfigureAwait(false);
             
             cancellationToken.ThrowIfCancellationRequested();
             if (timeoutTask.IsCompleted)
                 throw new TimeoutException();
 
-            await wrappedTask;
+            await wrappedTask.ConfigureAwait(false);
         }
-        
+
         /// <summary>
         /// Allows us to await the task, but swallow the exception if the timeout has passed
         /// This prevents us from getting UnobservedTaskException
         /// </summary>
         /// <param name="task"></param>
-        /// <param name="timeoutCancellation"></param>
+        /// <param name="timeoutTask"></param>
         /// <returns></returns>
         static async Task AwaitAndSwallowExceptionsWhenTimedOut(Task task, IAsyncResult timeoutTask)
         {
             try
             {
-                await task;
+                await task.ConfigureAwait(false);
             }
             catch (Exception)
             {
