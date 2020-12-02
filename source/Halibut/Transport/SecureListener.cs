@@ -132,16 +132,17 @@ namespace Halibut.Transport
                         }
 
                         var client = listener.AcceptTcpClient();
-                        HandleClient(client);
+
+                        var thread = new Thread(() => HandleClient(client));
+                        thread.Start();
+
                         numberOfFailedAttemptsInRow = 0;
                     }
                     catch (SocketException ex) when (ex.SocketErrorCode == SocketError.Interrupted)
                     {
-                        log.WriteException(EventType.Error, "Socket Exception accepting TCP client", ex);
                     }
-                    catch (ObjectDisposedException ex)
+                    catch (ObjectDisposedException)
                     {
-                        log.WriteException(EventType.Error, "Object Disposed Exception accepting TCP client", ex);
                     }
                     catch (Exception ex)
                     {
