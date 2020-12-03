@@ -23,6 +23,7 @@ namespace Halibut.Transport
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         ILog log;
         HttpListener listener;
+        Thread backgroundThread;
 
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
         {
@@ -51,10 +52,15 @@ namespace Halibut.Transport
 
             log = logFactory.ForPrefix(endPoint);
             log.Write(EventType.ListenerStarted, "Listener started");
-            Task.Run(async () => await Accept().ConfigureAwait(false));
+
+            backgroundThread = new Thread(Accept)
+            {
+                Name = "Accept connections on " + endPoint
+            };
+            backgroundThread.Start();
         }
 
-        async Task Accept()
+        void Accept()
         {
             using (cts.Token.Register(listener.Stop))
             {
@@ -62,11 +68,12 @@ namespace Halibut.Transport
                 {
                     try
                     {
-                        var context = await listener.GetContextAsync().ConfigureAwait(false);
+                        var context = listener.GetContext();
 
                         if (context.Request.IsWebSocketRequest)
                         {
-                            await HandleClient(context).ConfigureAwait(false);
+                            var thread = new Thread(async () => await HandleClient(context).ConfigureAwait(false));
+                            thread.Start();
                         }
                         else
                         {
