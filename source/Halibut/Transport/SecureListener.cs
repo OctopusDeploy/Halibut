@@ -133,8 +133,11 @@ namespace Halibut.Transport
 
                         var client = listener.AcceptTcpClient();
 
-                        var thread = new Thread(() => HandleClient(client));
-                        thread.Start();
+                        // TODO: Decide which approach we prefer - Task or Thread
+                        Task.Run(() => HandleClient(client));
+
+                        /*var thread = new Thread(() => HandleClient(client));
+                        thread.Start();*/
 
                         numberOfFailedAttemptsInRow = 0;
                     }
