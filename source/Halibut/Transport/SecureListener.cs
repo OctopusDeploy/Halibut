@@ -45,17 +45,6 @@ namespace Halibut.Transport
         TcpListener listener;
         Thread backgroundThread;
 
-        /*public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
-
-        {
-        }*/
-
-        /*public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, protocolHandler, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders)
-        {
-        }*/
-
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Action<MessageExchangeProtocol> protocolHandler, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
         {
             this.endPoint = endPoint;
@@ -133,11 +122,8 @@ namespace Halibut.Transport
 
                         var client = listener.AcceptTcpClient();
 
-                        // TODO: Decide which approach we prefer - Task or Thread
-                        Task.Run(() => HandleClient(client));
-
-                        /*var thread = new Thread(() => HandleClient(client));
-                        thread.Start();*/
+                        var thread = new Thread(() => HandleClient(client));
+                        thread.Start();
 
                         numberOfFailedAttemptsInRow = 0;
                     }
