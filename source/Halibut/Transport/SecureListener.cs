@@ -127,7 +127,7 @@ namespace Halibut.Transport
 
                         numberOfFailedAttemptsInRow = 0;
                     }
-                    catch (SocketException ex) when (ex.SocketErrorCode == SocketError.Interrupted)
+                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
                     }
                     catch (ObjectDisposedException)

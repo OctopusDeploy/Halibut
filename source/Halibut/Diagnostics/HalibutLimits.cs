@@ -50,12 +50,12 @@ namespace Halibut.Diagnostics
         /// <summary>
         /// Amount of time to wait for a TCP or SslStream write to complete successfully
         /// </summary>
-        public static TimeSpan TcpClientSendTimeout = TimeSpan.FromMinutes(2);
+        public static TimeSpan TcpClientSendTimeout = TimeSpan.FromMinutes(10);
         
         /// <summary>
         /// Amount of time to wait for a TCP or SslStream read to complete successfully
         /// </summary>
-        public static TimeSpan TcpClientReceiveTimeout = TimeSpan.FromMinutes(3);
+        public static TimeSpan TcpClientReceiveTimeout = TimeSpan.FromMinutes(10);
         
         /// <summary>
         /// Amount of time a connection can stay in the pool

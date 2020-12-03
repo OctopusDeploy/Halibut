@@ -37,7 +37,7 @@ namespace Halibut.Transport
 
             var stream = client.GetStream();
 
-            log.Write(EventType.SecurityNegotiation, "Performing TLS handshake"); // here
+            log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
             ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
             ssl.Write(MxLine, 0, MxLine.Length);
