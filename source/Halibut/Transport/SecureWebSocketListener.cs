@@ -150,7 +150,9 @@ namespace Halibut.Transport
                     return;
                 }
 
-                if (await Authorize(listenerContext, clientName).ConfigureAwait(false))
+                var authorized = await Authorize(listenerContext, clientName).ConfigureAwait(false);
+
+                if (authorized)
                 {
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                     await ExchangeMessages(webSocketStream).ConfigureAwait(false);
