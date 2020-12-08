@@ -57,8 +57,8 @@ namespace Halibut.Transport.Protocol
 
         async Task SendControlMessageAsync(string message)
         {
-            await streamWriter.WriteLineAsync(message);
-            await streamWriter.FlushAsync();
+            await streamWriter.WriteLineAsync(message).ConfigureAwait(false);
+            await streamWriter.FlushAsync().ConfigureAwait(false);
         }
 
         void SendIdentityMessage(string identityLine)
@@ -82,7 +82,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendProceedAsync()
         {
-            await SendControlMessageAsync(Proceed);
+            await SendControlMessageAsync(Proceed).ConfigureAwait(false);
         }
 
         public void SendEnd()
@@ -109,7 +109,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task<bool> ExpectNextOrEndAsync()
         {
-            var line = await ReadLineAsync();
+            var line = await ReadLineAsync().ConfigureAwait(false);
             switch (line)
             {
                 case Next:
@@ -146,10 +146,10 @@ namespace Halibut.Transport.Protocol
 
         async Task<string> ReadLineAsync()
         {
-            var line = await streamReader.ReadLineAsync();
+            var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
             while (line == string.Empty)
             {
-                line = await streamReader.ReadLineAsync();
+                line = await streamReader.ReadLineAsync().ConfigureAwait(false);
             }
 
             return line;
