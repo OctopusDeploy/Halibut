@@ -14,6 +14,7 @@ namespace Halibut
         [JsonConstructor]
         public DataStream()
         {
+            this.writer = stream => { };
         }
 
         public DataStream(long length, Action<Stream> writer)
@@ -122,7 +123,7 @@ namespace Halibut
                 var writeBuffer = new byte[BufferSize];
 
                 var progress = 0;
-                
+
                 var totalLength = source.Length;
                 long copiedSoFar = 0;
                 source.Seek(0, SeekOrigin.Begin);
