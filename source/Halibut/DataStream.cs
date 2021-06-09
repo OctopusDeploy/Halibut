@@ -8,20 +8,19 @@ namespace Halibut
 {
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
-        readonly Action<Stream> writer;
         IDataStreamReceiver receiver;
 
         [JsonConstructor]
         public DataStream()
         {
-            this.writer = stream => { };
+            this.Writer = stream => { };
         }
 
         public DataStream(long length, Action<Stream> writer)
         {
             Length = length;
             Id = Guid.NewGuid();
-            this.writer = writer;
+            this.Writer = writer;
         }
 
         [JsonProperty("id")]
@@ -29,6 +28,9 @@ namespace Halibut
 
         [JsonProperty("length")]
         public long Length { get; set; }
+
+        [JsonIgnore]
+        public Action<Stream> Writer { get; set; }
 
         public IDataStreamReceiver Receiver()
         {
@@ -39,9 +41,9 @@ namespace Halibut
             // exceptions with MemoryStream.
             var maxMemoryStreamLength = int.MaxValue;
             if (Length >= maxMemoryStreamLength)
-                return new TemporaryFileDataStreamReceiver(writer);
+                return new TemporaryFileDataStreamReceiver(Writer);
             else
-                return new InMemoryDataStreamReceiver(writer);
+                return new InMemoryDataStreamReceiver(Writer);
         }
 
         public bool Equals(DataStream other)
@@ -161,7 +163,7 @@ namespace Halibut
 
         void IDataStreamInternal.Transmit(Stream stream)
         {
-            writer(stream);
+            Writer(stream);
         }
 
         void IDataStreamInternal.Received(IDataStreamReceiver attachedReceiver)

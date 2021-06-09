@@ -19,6 +19,7 @@ namespace Halibut
         public DataStream(long length, Action<Stream> writer) { }
         public Guid Id { get; set; }
         public long Length { get; set; }
+        public Action<Stream> Writer { get; set; }
         public bool Equals(Halibut.DataStream other) { }
         public bool Equals(Object obj) { }
         public static Halibut.DataStream FromBytes(Byte[] data) { }
