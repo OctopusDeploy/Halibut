@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Halibut.ServiceModel
 {
@@ -8,5 +9,7 @@ namespace Halibut.ServiceModel
         {
             throw new InvalidOperationException("An attempt was made to call the service '" + serviceName + "' on this machine, but this server has been configured to be a client only.");
         }
+
+        public IReadOnlyList<Type> RegisteredServiceTypes => new List<Type>();
     }
 }

@@ -37,7 +37,7 @@ namespace Halibut.Tests
         
         [Test]
         [WindowsTest]
-        public void SecureListenerDoesNotCreateHundredsOfIOEventsPerSecondOnWindows()
+        public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows()
         {
             const int secondsToSample = 5;
 
@@ -46,7 +46,8 @@ namespace Halibut.Tests
                 var client = new SecureListener(
                     new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1093), 
                     Certificates.TentacleListening,
-                    p => { },
+                    null,
+                    null,
                     thumbprint => true,
                     new LogFactory(), 
                     () => ""

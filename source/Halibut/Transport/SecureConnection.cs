@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Net.Security;
 using System.Net.Sockets;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
@@ -14,11 +13,11 @@ namespace Halibut.Transport
         readonly MessageExchangeProtocol protocol;
         DateTimeOffset lastUsed;
 
-        public SecureConnection(IDisposable client, Stream stream, MessageExchangeProtocol protocol)
+        public SecureConnection(IDisposable client, Stream stream, ExchangeProtocolBuilder exchangeProtocolBuilder, ILog log)
         {
             this.client = client;
             this.stream = stream;
-            this.protocol = protocol;
+            protocol = exchangeProtocolBuilder(stream, log);
             lastUsed = DateTimeOffset.UtcNow;
         }
 

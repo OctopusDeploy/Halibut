@@ -20,12 +20,12 @@ namespace Halibut.Transport
             this.clientCertificate = clientCertificate;
         }
 
-        public IConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log)
+        public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log)
         {
-            return EstablishNewConnection(serviceEndpoint, log, CancellationToken.None);
+            return EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, CancellationToken.None);
         }
         
-        public IConnection EstablishNewConnection(ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
 
@@ -40,8 +40,7 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
-            var protocol = new MessageExchangeProtocol(stream, log);
-            return new SecureConnection(client, stream, protocol);
+            return new SecureConnection(client, stream, exchangeProtocolBuilder, log);
         }
 
         
@@ -64,7 +63,7 @@ namespace Halibut.Transport
                 ServerCertificateInterceptor.Expect(connectionId);
                 using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
                 {
-                    using (cancellationToken.Register(() =>  cts?.Cancel()))
+                    using (cancellationToken.Register(() => cts?.Cancel()))
                         client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token)
                             .ConfigureAwait(false).GetAwaiter().GetResult();
                 }

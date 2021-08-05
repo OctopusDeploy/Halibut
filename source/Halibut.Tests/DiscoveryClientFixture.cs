@@ -1,6 +1,5 @@
 using System;
 using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Transport;
@@ -8,7 +7,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class DiscoveryClientFixture : IDisposable
+    public class DiscoveryClientFixture
     {
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
@@ -27,11 +26,11 @@ namespace Halibut.Tests
             };
         }
 
-        public void Dispose()
+        [TearDown]
+        public void TearDown()
         {
             tentacle.Dispose();
         }
-
 
         [Test]
         public void DiscoverMethodReturnsEndpointDetails()
