@@ -18,9 +18,11 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly ConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
+        readonly ExchangeProtocolBuilder protocolBuilder;
 
-        public SecureClient(ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecureClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
         {
+            this.protocolBuilder = protocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
             this.log = log;
@@ -29,12 +31,12 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint { get; }
 
-        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler)
+        public void ExecuteTransaction(ExchangeAction protocolHandler)
         {
             ExecuteTransaction(protocolHandler, CancellationToken.None);
         }
 
-        public void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler, CancellationToken cancellationToken)
+        public void ExecuteTransaction(ExchangeAction protocolHandler, CancellationToken cancellationToken)
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
 
@@ -58,7 +60,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = connectionManager.AcquireConnection(new TcpConnectionFactory(clientCertificate), ServiceEndpoint, log, cancellationToken);
+                        connection = connectionManager.AcquireConnection(protocolBuilder, new TcpConnectionFactory(clientCertificate), ServiceEndpoint, log, cancellationToken);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -45,7 +46,7 @@ namespace Halibut.Tests
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream));
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, log));
                 connectionManager.ReleaseConnection(endpoint, connection);
             }
 
@@ -57,7 +58,7 @@ namespace Halibut.Tests
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient(endpoint, Certificates.Octopus, log, connectionManager);
+            var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null;
             secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
 
@@ -65,6 +66,11 @@ namespace Halibut.Tests
             stream.Received(2).IdentifyAsClient();
             // And a new valid connection should then be made
             response.Result.Should().Be("Fred...");
+        }
+
+        public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
+        {
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new Type[] { }, logger), logger);
         }
     }
 }

@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Halibut.ServiceModel
 {
     public class DelegateServiceFactory : IServiceFactory
     {
         readonly Dictionary<string, Func<object>> services = new Dictionary<string, Func<object>>(StringComparer.OrdinalIgnoreCase);
+        readonly HashSet<Type> serviceTypes = new HashSet<Type>();
 
         public void Register<TContract>(Func<TContract> implementation)
         {
-            services.Add(typeof(TContract).Name, () => implementation());
+            var serviceType = typeof(TContract);
+            services.Add(serviceType.Name, () => implementation());
+            serviceTypes.Add(serviceType);
         }
 
         public IServiceLease CreateService(string serviceName)
@@ -34,6 +38,8 @@ namespace Halibut.ServiceModel
             var service = serviceBuilder();
             return new Lease(service);
         }
+        
+        public IReadOnlyList<Type> RegisteredServiceTypes => serviceTypes.ToList();
 
         #region Nested type: Lease
 

@@ -1,12 +1,10 @@
 using System;
 using System.Net.Security;
-using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using Halibut.Diagnostics;
-using Halibut.Transport.Proxy;
 
 namespace Halibut.Transport
 {

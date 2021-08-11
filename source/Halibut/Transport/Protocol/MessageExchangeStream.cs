@@ -29,18 +29,18 @@ namespace Halibut.Transport.Protocol
         readonly JsonSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
-        public MessageExchangeStream(Stream stream, ILog log)
+        public MessageExchangeStream(Stream stream, IEnumerable<Type> registeredServiceTypes, ILog log)
         {
             this.stream = stream;
             this.log = log;
             streamWriter = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             streamReader = new StreamReader(stream, new UTF8Encoding(false));
-            serializer = Serializer();
+            serializer = Serializer(registeredServiceTypes);
             SetNormalTimeouts();
         }
 
-        static int streamCount = 0;
-        public static Func<JsonSerializer> Serializer = CreateDefault;
+        static int streamCount;
+        public static Func<IEnumerable<Type>, JsonSerializer> Serializer = CreateDefault;
 
         public void IdentifyAsClient()
         {
@@ -214,7 +214,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        static JsonSerializer CreateDefault()
+        static JsonSerializer CreateDefault(IEnumerable<Type> registeredServiceTypes)
         {
             var serializer = JsonSerializer.Create();
             serializer.Formatting = Formatting.None;
@@ -222,6 +222,7 @@ namespace Halibut.Transport.Protocol
             serializer.TypeNameHandling = TypeNameHandling.Auto;
             serializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
             serializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
+            serializer.SerializationBinder = new RegisteredSerializationBinder(registeredServiceTypes);
             return serializer;
         }
 
@@ -252,11 +253,11 @@ namespace Halibut.Transport.Protocol
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
-                var messageEnvelope = serializer.Deserialize<MessageEnvelope>(bson);
+                var messageEnvelope = serializer.Deserialize<MessageEnvelope<T>>(bson);
                 if (messageEnvelope == null)
                     throw new Exception("messageEnvelope is null");
                 
-                return (T)messageEnvelope.Message;
+                return messageEnvelope.Message;
             }
         }
 
@@ -314,7 +315,7 @@ namespace Halibut.Transport.Protocol
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
-                serializer.Serialize(bson, new MessageEnvelope { Message = messages });
+                serializer.Serialize(bson, new MessageEnvelope<T> { Message = messages });
             }
         }
 
@@ -335,9 +336,11 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        class MessageEnvelope
+        // By making this a generic type, each message specifies the exact type it sends/expects
+        // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
+        class MessageEnvelope<T>
         {
-            public object Message { get; set; }
+            public T Message { get; set; }
         }
 
         void SetNormalTimeouts()

@@ -1,12 +1,17 @@
 using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 
 namespace Halibut.Transport.Protocol
 {
+    public delegate MessageExchangeProtocol ExchangeProtocolBuilder(Stream stream, ILog log);
+
+    public delegate void ExchangeAction(MessageExchangeProtocol protocol);
+
+    public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol);
+    
     /// <summary>
     /// Implements the core message exchange protocol for both the client and server.
     /// </summary>
@@ -17,15 +22,10 @@ namespace Halibut.Transport.Protocol
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(Stream stream, ILog log)
-        {
-            this.stream = new MessageExchangeStream(stream, log);
-            this.log = log;
-        }
-
-        public MessageExchangeProtocol(IMessageExchangeStream stream)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
         {
             this.stream = stream;
+            this.log = log;
         }
 
         public ResponseMessage ExchangeAsClient(RequestMessage request)

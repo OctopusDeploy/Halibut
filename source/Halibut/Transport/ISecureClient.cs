@@ -7,7 +7,7 @@ namespace Halibut.Transport
     public interface ISecureClient
     {
         ServiceEndPoint ServiceEndpoint { get; }
-        void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler);
-        void ExecuteTransaction(Action<MessageExchangeProtocol> protocolHandler, CancellationToken cancellationToken);
+        void ExecuteTransaction(ExchangeAction protocolHandler);
+        void ExecuteTransaction(ExchangeAction protocolHandler, CancellationToken cancellationToken);
     }
 }
