@@ -669,3 +669,11 @@ namespace Halibut.Transport.Proxy.Exceptions
         protected ProxyException(SerializationInfo info, StreamingContext context) { }
     }
 }
+namespace Halibut.Util
+{
+    public static class TypeExtensionMethods
+    {
+        public static bool AllowedOnHalibutInterface(Type type) { }
+        public static IEnumerable<MethodInfo> GetHalibutServiceMethods(Type serviceType) { }
+    }
+}
