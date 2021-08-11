@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using Halibut.Portability;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut.ServiceModel
 {
@@ -21,7 +22,7 @@ namespace Halibut.ServiceModel
         {
             using (var lease = factory.CreateService(requestMessage.ServiceName))
             {
-                var methods = lease.Service.GetType().GetMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
+                var methods = lease.Service.GetType().GetHalibutServiceMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (methods.Count == 0)
                 {
                     return ResponseMessage.FromError(requestMessage, string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
