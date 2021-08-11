@@ -8,6 +8,15 @@ namespace Halibut.Tests
 {
     public class RegisteredSerializationBinderFixture
     {
+        [Test]
+        public void BindMethods_WithValidClass_FindsAllMethodTypes()
+        {
+            var binder = new RegisteredSerializationBinder(new[] { typeof(IExampleService) });
+            binder.BindToName(typeof(ExampleProperties), out var assemblyName, out var typeName);
+            var t = binder.BindToType(assemblyName, typeName);
+            t.Should().Be(typeof(ExampleProperties));
+        }
+        
         public class ExampleProperties
         {
             public string Field;
@@ -40,12 +49,21 @@ namespace Halibut.Tests
             void TakeComplex(ExampleProperties props);
         }
 
+        [TestCase(typeof(IAsyncService))]
+        [TestCase(typeof(IObjectResultService))]
+        [TestCase(typeof(IObjectPropertyService))]
+        [TestCase(typeof(IObjectExampleService))]
+        public void Constructor_WithInvalidTypes_WillThrow(params Type[] types)
+        {
+            Assert.Throws<TypeNotAllowedException>(() => { _ = new RegisteredSerializationBinder(types); });
+        }
+        
         public interface IAsyncService
         { 
             Task<string> GetAsync();
         }
 
-        public interface IObjectResultSerice
+        public interface IObjectResultService
         {
             object GetMeSomething();
         }
@@ -61,21 +79,33 @@ namespace Halibut.Tests
         }
         
         [Test]
-        public void BindMethods_WithValidClass_FindsAllMethodTypes()
+        public void Circular_Types_CanBeResolved()
         {
-            var binder = new RegisteredSerializationBinder(new[] { typeof(IExampleService) });
-            binder.BindToName(typeof(ExampleProperties), out var assemblyName, out var typeName);
-            var t = binder.BindToType(assemblyName, typeName);
-            t.Should().Be(typeof(ExampleProperties));
+            var binder = new RegisteredSerializationBinder(new[] { typeof(IMCircular) });
+            binder.BindToName(typeof(CircularPart1), out var assemblyName1, out var typeName1);
+            var t1 = binder.BindToType(assemblyName1, typeName1);
+            t1.Should().Be(typeof(CircularPart1));
+            
+            binder.BindToName(typeof(CircularPart2), out var assemblyName2, out var typeName2);
+            var t2 = binder.BindToType(assemblyName2, typeName2);
+            t2.Should().Be(typeof(CircularPart2));            
         }
-
-        [TestCase(typeof(IAsyncService))]
-        [TestCase(typeof(IObjectResultSerice))]
-        [TestCase(typeof(IObjectPropertyService))]
-        [TestCase(typeof(IObjectExampleService))]
-        public void Constructor_WithInvalidTypes_WillThrow(params Type[] types)
+        
+        public class CircularPart1
         {
-            Assert.Throws<TypeNotAllowedException>(() => { _ = new RegisteredSerializationBinder(types); });
+            public CircularPart2 Circular { get; set; }
         }
+        
+        public class CircularPart2
+        {
+            public CircularPart1 Circular { get; set; }
+        }
+        
+        public interface IMCircular
+        {
+            CircularPart1 CircularPart1();
+            
+            CircularPart2 CircularPart2();
+        }        
     }
 }
