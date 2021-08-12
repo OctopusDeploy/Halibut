@@ -8,29 +8,40 @@ namespace Halibut.Transport.Protocol
 {
     public class RegisteredSerializationBinder : ISerializationBinder
     {
+        readonly Type[] protocolTypes = new[] { typeof(ResponseMessage), typeof(RequestMessage) };
         HashSet<Type> allowedTypes = new HashSet<Type>();
         ISerializationBinder baseBinder = new DefaultSerializationBinder();
         
         public RegisteredSerializationBinder(IEnumerable<Type> registeredServiceTypes)
         {
+            foreach (var protocolType in protocolTypes)
+            {
+                RegisterType(protocolType, protocolType.Name, true);    
+            }
+            
             foreach (var serviceType in registeredServiceTypes)
             {
                 foreach (var method in serviceType.GetHalibutServiceMethods())
                 {
-                    RegisterType(method.ReturnType, $"{serviceType.Name}.{method.Name}:{method.ReturnType.Name}");
+                    RegisterType(method.ReturnType, $"{serviceType.Name}.{method.Name}:{method.ReturnType.Name}", false);
                     
                     foreach (var param in method.GetParameters())
                     {
-                        RegisterType(param.ParameterType,$"{serviceType.Name}.{method.Name}(){param.Name}:{param.ParameterType.Name}");
+                        RegisterType(param.ParameterType,$"{serviceType.Name}.{method.Name}(){param.Name}:{param.ParameterType.Name}", false);
                     }
                 }
             }
         }
         
-        void RegisterType(Type type, string path)
+        void RegisterType(Type type, string path, bool ignoreObject)
         {
             if (!type.AllowedOnHalibutInterface())
             {
+                if (ignoreObject)
+                {
+                    return;
+                }
+                
                 throw new TypeNotAllowedException(type, path);
             }
 
@@ -44,13 +55,13 @@ namespace Halibut.Transport.Protocol
             {
                 foreach (var p in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    RegisterType(p.PropertyType, $"{path}.{p.Name}");
+                    RegisterType(p.PropertyType, $"{path}.{p.Name}", ignoreObject);
                 }
             }
 
             foreach (var sub in SubTypesFor(type))
             {
-                RegisterType(sub, $"{path}<{sub.Name}>");
+                RegisterType(sub, $"{path}<{sub.Name}>", ignoreObject);
             }
         }
 
