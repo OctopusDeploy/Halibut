@@ -20,7 +20,21 @@ namespace Halibut.Util
 
         public static bool AllowedOnHalibutInterface(this Type type)
         {
-            return type != typeof(object) && type != typeof(Task) && type != typeof(Task<>);
+            if (type == typeof(object) || type == typeof(Task))
+            {
+                return false;
+            }
+
+            if (type.IsGenericType)
+            {
+                var genType = type.GetGenericTypeDefinition();
+                if (genType == typeof(Task<>))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

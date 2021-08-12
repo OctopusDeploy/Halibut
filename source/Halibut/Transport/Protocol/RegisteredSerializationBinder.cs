@@ -40,14 +40,38 @@ namespace Halibut.Transport.Protocol
                 return;
             }
 
-            if (type.IsEnum || type.IsPrimitive)
+            if (ShouldRegisterProperties(type))
             {
-                return;
+                foreach (var p in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    RegisterType(p.PropertyType, $"{path}.{p.Name}");
+                }
+            }
+
+            foreach (var sub in SubTypesFor(type))
+            {
+                RegisterType(sub, $"{path}<{sub.Name}>");
+            }
+        }
+
+        bool ShouldRegisterProperties(Type type)
+        {
+            return !type.IsEnum && !type.IsValueType && !type.IsPrimitive && !type.IsPointer && !type.HasElementType && type.Namespace != null && !type.Namespace.StartsWith("System");
+        }
+
+        IEnumerable<Type> SubTypesFor(Type type)
+        {
+            if (type.HasElementType)
+            {
+                yield return type.GetElementType();
             }
             
-            foreach (var p in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            if (type.IsGenericType)
             {
-                RegisterType(p.PropertyType, $"{path}.{p.Name}");
+                foreach (var t in type.GenericTypeArguments)
+                {
+                    yield return t;
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Transport.Protocol;
@@ -16,6 +17,13 @@ namespace Halibut.Tests
             var t = binder.BindToType(assemblyName, typeName);
             t.Should().Be(typeof(ExampleProperties));
         }
+
+        public class DictionaryValue
+        {
+            public Guid Key { get; set; }
+            
+            public Char Chr { get; set; }
+        }
         
         public class ExampleProperties
         {
@@ -24,6 +32,12 @@ namespace Halibut.Tests
             public string PropertyGet { get; set; }
             
             public string PropertyGetSet { get; set; }
+            
+            public String[] Arguments { get; set; }
+            
+            public List<int> Ids { get; set; }
+            
+            public Dictionary<int,DictionaryValue> Set { get; set; }
         }
 
         public class ExampleWithObject
