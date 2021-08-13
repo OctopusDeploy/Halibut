@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+// ReSharper disable once RedundantUsingDirective : Used in .CORE
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -30,6 +31,7 @@ namespace Halibut
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly IServiceFactory serviceFactory;
+        readonly HashSet<Type> clientTypes = new HashSet<Type>();
 
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
         {
@@ -74,16 +76,34 @@ namespace Halibut
             return Listen(new IPEndPoint(ipAddress, port));
         }
 
+        IEnumerable<Type> AllProtocolTypes()
+        {
+            foreach (var clientType in clientTypes)
+            {
+                yield return clientType;
+            }
+
+            foreach (var serviceType in serviceFactory.RegisteredServiceTypes)
+            {
+                yield return serviceType;
+            }
+        }
+        
+        ExchangeProtocolBuilder ExchangeProtocolBuilder()
+        {
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, AllProtocolTypes(), log), log);
+        }
+
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, serviceFactory.ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             listeners.Add(listener);
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, serviceFactory.ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             listeners.Add(listener);
             listener.Start();
         }
@@ -107,14 +127,14 @@ namespace Halibut
             if (endPoint.IsWebSocketEndpoint)
             {
 #if SUPPORTS_WEB_SOCKET_CLIENT
-                client = new SecureWebSocketClient(serviceFactory.ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
+                client = new SecureWebSocketClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
 #else
                 throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
 #endif
             }
             else
             {
-                client = new SecureClient(serviceFactory.ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
+                client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
             }
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken));
         }
@@ -157,6 +177,7 @@ namespace Halibut
         
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
+            clientTypes.Add(typeof(TService));
 #if HAS_REAL_PROXY
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
 #else
@@ -182,7 +203,7 @@ namespace Halibut
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var client = new SecureListeningClient(serviceFactory.ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -286,8 +307,9 @@ namespace Halibut
         }
 
 #pragma warning disable DE0009 // API is deprecated
+        // ReSharper disable once InconsistentNaming
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
-                                                    Environment.OSVersion.Version >= new Version(6, 2);
+                                                   Environment.OSVersion.Version >= new Version(6, 2);
 #pragma warning restore DE0009 // API is deprecated
         
     }

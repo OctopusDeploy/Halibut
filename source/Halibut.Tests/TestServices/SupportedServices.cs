@@ -92,5 +92,10 @@ namespace Halibut.Tests.TestServices
         {
             return "Hello tuple";
         }
+
+        public MapLocation GetLocation(MapLocation loc)
+        {
+            return new MapLocation { Latitude = loc.Longitude, Longitude = loc.Latitude };
+        }
     }
 }

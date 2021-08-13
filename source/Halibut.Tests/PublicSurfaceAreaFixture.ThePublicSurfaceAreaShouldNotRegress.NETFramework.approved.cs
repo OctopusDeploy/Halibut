@@ -318,10 +318,6 @@ namespace Halibut.ServiceModel
         public void Add(Halibut.Transport.PollingClient pollingClient) { }
         public void Dispose() { }
     }
-    public static class ServiceFactoryExtensionMethods
-    {
-        public static Halibut.Transport.Protocol.ExchangeProtocolBuilder ExchangeProtocolBuilder(Halibut.ServiceModel.IServiceFactory factory) { }
-    }
     public class ServiceInvoker : Halibut.ServiceModel.IServiceInvoker
     {
         public ServiceInvoker(Halibut.ServiceModel.IServiceFactory factory) { }

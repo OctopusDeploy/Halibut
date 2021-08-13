@@ -2,6 +2,14 @@
 
 namespace Halibut.Tests.TestServices
 {
+
+    public class MapLocation
+    {
+        public int Latitude { get; set; }
+        
+        public int Longitude { get; set; }
+    }
+    
     public interface ISupportedServices
     {
         void MethodReturningVoid(long a, long b);
@@ -25,5 +33,7 @@ namespace Halibut.Tests.TestServices
 
         string Ambiguous(string a, string b);
         string Ambiguous(string a, Tuple<string, string> b);
+
+        MapLocation GetLocation(MapLocation loc);
     }
 }

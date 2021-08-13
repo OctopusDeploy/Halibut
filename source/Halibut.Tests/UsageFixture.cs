@@ -5,10 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions.Common;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
@@ -28,7 +28,7 @@ namespace Halibut.Tests
         public void OctopusCanDiscoverTentacle()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
@@ -43,7 +43,7 @@ namespace Halibut.Tests
         public void OctopusCanSendMessagesToListeningTentacle()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
@@ -65,7 +65,7 @@ namespace Halibut.Tests
         public void OctopusCanSendMessagesToPollingTentacle()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
                 var octopusPort = octopus.Listen();
@@ -86,12 +86,13 @@ namespace Halibut.Tests
         public void OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
             var services = GetDelegateServiceFactory();
+            services.Register<ISupportedServices>(() => new SupportedServices());
             const int octopusPort = 8450;
             AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:" + octopusPort);
 
             try
             {
-                using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+                using (var octopus = new HalibutRuntime(Certificates.Octopus))
                 using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
                 {
                     octopus.ListenWebSocket($"https://+:{octopusPort}/Halibut");
@@ -99,10 +100,11 @@ namespace Halibut.Tests
 
                     tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{octopusPort}/Halibut"), Certificates.SslThumbprint));
 
-                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                    for (var i = 0; i < 2000; i++)
+                    var echo = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                    for (var i = 1; i < 100; i++)
                     {
-                        echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                        var i1 = i;
+                        echo.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
                     }
                 }
             }
@@ -120,7 +122,7 @@ namespace Halibut.Tests
         public void StreamsCanBeSentToListening()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
@@ -143,7 +145,7 @@ namespace Halibut.Tests
         public void StreamsCanBeSentToPolling()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
                 var octopusPort = octopus.Listen();
@@ -200,6 +202,8 @@ namespace Halibut.Tests
 
                 var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
                 ex.Message.Should().Contain("Ambiguous");
+
+                echo.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
             }
         }
 
@@ -207,7 +211,7 @@ namespace Halibut.Tests
         public void StreamsCanBeSentToListeningWithProgressReporting()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();

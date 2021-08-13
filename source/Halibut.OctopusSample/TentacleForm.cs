@@ -8,13 +8,12 @@ namespace Halibut.OctopusSample
     public partial class TentacleForm : Form
     {
         readonly HalibutRuntime tentacleHalibutRuntime;
-        readonly Logger log;
 
         public TentacleForm()
         {
             InitializeComponent();
 
-            log = new Logger(textBox1);
+            var log = new Logger(textBox1);
 
             var tentacleServices = new DelegateServiceFactory();
             tentacleServices.Register<IHealthCheckService>(() => new HealthCheck(log));

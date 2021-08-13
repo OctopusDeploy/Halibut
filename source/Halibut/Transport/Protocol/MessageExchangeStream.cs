@@ -315,7 +315,10 @@ namespace Halibut.Transport.Protocol
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
-                serializer.Serialize(bson, new MessageEnvelope<T> { Message = messages });
+                // for the moment this MUST be object so that the $type property is included
+                // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
+                // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
+                serializer.Serialize(bson, new MessageEnvelope<object> { Message = messages });
             }
         }
 

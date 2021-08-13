@@ -3,8 +3,6 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using JetBrains.dotMemoryUnit;
 using JetBrains.dotMemoryUnit.Kernel;
@@ -148,6 +146,7 @@ namespace Halibut.Tests
             }
         }
 
+        // ReSharper disable once UnusedParameter.Local
         static void MakeRequest(ICalculatorService calculator, string requestType, bool expectSuccess)
         {
             for (var i = 0; i < RequestsPerClient; i++)
