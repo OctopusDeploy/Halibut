@@ -95,6 +95,7 @@ namespace Halibut.Tests.TestServices
 
         public MapLocation GetLocation(MapLocation loc)
         {
+            // Swap the latitude and longitude for the round trip verification... never know where you will end up! 
             return new MapLocation { Latitude = loc.Longitude, Longitude = loc.Latitude };
         }
     }
