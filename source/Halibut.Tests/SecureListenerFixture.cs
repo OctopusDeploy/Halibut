@@ -87,6 +87,7 @@ namespace Halibut.Tests
                 Thread.Sleep(sleepTime);
                 yield return counter.NextValue();
             }
+            // ReSharper disable once IteratorNeverReturns : Take is limit
         }
     }
 }

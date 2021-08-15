@@ -13,7 +13,7 @@ namespace Halibut.SamplePolling
         static readonly X509Certificate2 ServerCertificate = new X509Certificate2("HalibutServer.pfx");
         const string PollUrl = "poll://SQ-TENTAPOLL";
 
-        static void Main(string[] args)
+        static void Main()
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.ColoredConsole()
@@ -22,7 +22,7 @@ namespace Halibut.SamplePolling
             var services = new DelegateServiceFactory();
             services.Register<ICalculatorService>(() => new CalculatorService());
 
-            using (var client = new HalibutRuntime(services, ClientCertificate))
+            using (var client = new HalibutRuntime(new NullServiceFactory(), ClientCertificate))
             using (var server = new HalibutRuntime(services, ServerCertificate))
             {
                 var octopusPort = client.Listen();

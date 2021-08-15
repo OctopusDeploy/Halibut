@@ -38,7 +38,7 @@ namespace Halibut.Tests
         public void FailWhenServerThrowsAnException()
         {
             var services = GetStubDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
@@ -54,7 +54,7 @@ namespace Halibut.Tests
         public void FailWhenServerThrowsAnExceptionOnPolling()
         {
             var services = GetStubDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
                 var octopusPort = octopus.Listen();
@@ -112,7 +112,7 @@ namespace Halibut.Tests
         public void FailWhenListeningClientPresentsWrongCertificate()
         {
             var services = GetStubDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.TentaclePolling))
+            using (var octopus = new HalibutRuntime(Certificates.TentaclePolling))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
@@ -128,7 +128,7 @@ namespace Halibut.Tests
         public void FailWhenListeningServerPresentsWrongCertificate()
         {
             var services = GetStubDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
@@ -136,7 +136,7 @@ namespace Halibut.Tests
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentaclePollingPublicThumbprint);
 
-                var ex = Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
             }
         }
     }
