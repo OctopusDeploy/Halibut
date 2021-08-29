@@ -492,6 +492,11 @@ namespace Halibut.Transport.Protocol
         public void SendProceed() { }
         public Task SendProceedAsync() { }
     }
+    public interface IMessageSerializer
+    {
+        public T ReadMessage<T>(Stream stream) { }
+        public void WriteMessage<T>(Stream stream, T message) { }
+    }
     public class InMemoryDataStreamReceiver : Halibut.IDataStreamReceiver
     {
         public InMemoryDataStreamReceiver(Action<Stream> writer) { }
@@ -510,8 +515,7 @@ namespace Halibut.Transport.Protocol
     }
     public class MessageExchangeStream : Halibut.Transport.Protocol.IMessageExchangeStream
     {
-        public static Func<IEnumerable<Type>, Newtonsoft.Json.JsonSerializer> Serializer;
-        public MessageExchangeStream(Stream stream, IEnumerable<Type> registeredServiceTypes, Halibut.Diagnostics.ILog log) { }
+        public MessageExchangeStream(Stream stream, Halibut.Transport.Protocol.IMessageSerializer serializer, Halibut.Diagnostics.ILog log) { }
         public bool ExpectNextOrEnd() { }
         public Task<bool> ExpectNextOrEndAsync() { }
         public void ExpectProceeed() { }
@@ -526,15 +530,23 @@ namespace Halibut.Transport.Protocol
         public void SendProceed() { }
         public Task SendProceedAsync() { }
     }
+    public class MessageSerializer : Halibut.Transport.Protocol.IMessageSerializer
+    {
+        public MessageSerializer() { }
+        public void AddToMessageContract(Type[] types) { }
+        public T ReadMessage<T>(Stream stream) { }
+        public void WriteMessage<T>(Stream stream, T message) { }
+    }
     public class ProtocolException : Exception, ISerializable, _Exception
     {
         public ProtocolException(string message) { }
     }
     public class RegisteredSerializationBinder : Newtonsoft.Json.Serialization.ISerializationBinder
     {
-        public RegisteredSerializationBinder(IEnumerable<Type> registeredServiceTypes) { }
+        public RegisteredSerializationBinder() { }
         public void BindToName(Type serializedType, String& assemblyName, String& typeName) { }
         public Type BindToType(string assemblyName, string typeName) { }
+        public void Register(Type[] registeredServiceTypes) { }
     }
     public class RemoteIdentity
     {

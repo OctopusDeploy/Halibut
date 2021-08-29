@@ -13,7 +13,10 @@ namespace Halibut.ServiceModel
         {
             var serviceType = typeof(TContract);
             services.Add(serviceType.Name, () => implementation());
-            serviceTypes.Add(serviceType);
+            lock (serviceTypes)
+            {
+                serviceTypes.Add(serviceType);    
+            }
         }
 
         public IServiceLease CreateService(string serviceName)
@@ -24,8 +27,7 @@ namespace Halibut.ServiceModel
 
         Func<object> GetService(string name)
         {
-            Func<object> result;
-            if (!services.TryGetValue(name, out result))
+            if (!services.TryGetValue(name, out var result))
             {
                 throw new Exception("Service not found: " + name);
             }
@@ -39,7 +41,16 @@ namespace Halibut.ServiceModel
             return new Lease(service);
         }
         
-        public IReadOnlyList<Type> RegisteredServiceTypes => serviceTypes.ToList();
+        public IReadOnlyList<Type> RegisteredServiceTypes
+        {
+            get
+            {
+                lock (serviceTypes)
+                {
+                    return serviceTypes.ToList();    
+                }
+            }
+        }
 
         #region Nested type: Lease
 
@@ -52,16 +63,13 @@ namespace Halibut.ServiceModel
                 this.service = service;
             }
 
-            public object Service
-            {
-                get { return service; }
-            }
+            public object Service => service;
 
             public void Dispose()
             {
-                if (service is IDisposable)
+                if (service is IDisposable disposable)
                 {
-                    ((IDisposable)service).Dispose();
+                    disposable.Dispose();
                 }
             }
         }

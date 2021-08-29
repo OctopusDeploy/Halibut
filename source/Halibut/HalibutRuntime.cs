@@ -30,8 +30,7 @@ namespace Halibut
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
-        readonly IServiceFactory serviceFactory;
-        readonly HashSet<Type> clientTypes = new HashSet<Type>();
+        readonly MessageSerializer messageSerializer = new MessageSerializer();
 
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
         {
@@ -49,7 +48,7 @@ namespace Halibut
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            this.serviceFactory = serviceFactory;
+            messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
             invoker = new ServiceInvoker(serviceFactory);
         }
 
@@ -75,36 +74,31 @@ namespace Halibut
 
             return Listen(new IPEndPoint(ipAddress, port));
         }
-
-        IEnumerable<Type> AllProtocolTypes()
-        {
-            foreach (var clientType in clientTypes)
-            {
-                yield return clientType;
-            }
-
-            foreach (var serviceType in serviceFactory.RegisteredServiceTypes)
-            {
-                yield return serviceType;
-            }
-        }
         
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, AllProtocolTypes(), log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log), log);
         }
 
         public int Listen(IPEndPoint endpoint)
         {
             var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
-            listeners.Add(listener);
+            lock (listeners)
+            {
+                listeners.Add(listener);
+            }
+
             return listener.Start();
         }
 
         public void ListenWebSocket(string endpoint)
         {
             var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
-            listeners.Add(listener);
+            lock (listeners)
+            {
+                listeners.Add(listener);
+            }
+
             listener.Start();
         }
 
@@ -177,7 +171,8 @@ namespace Halibut
         
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            clientTypes.Add(typeof(TService));
+            messageSerializer.AddToMessageContract(typeof(TService));
+            
 #if HAS_REAL_PROXY
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
 #else
@@ -254,9 +249,12 @@ namespace Halibut
 
         void DisconnectFromAllListeners(string thumbprint)
         {
-            foreach (var secureListener in listeners.OfType<SecureListener>())
+            lock (listeners)
             {
-                secureListener.Disconnect(thumbprint);
+                foreach (var secureListener in listeners.OfType<SecureListener>())
+                {
+                    secureListener.Disconnect(thumbprint);
+                }
             }
         }
 
@@ -290,9 +288,12 @@ namespace Halibut
         {
             pollingClients.Dispose();
             connectionManager.Dispose();
-            foreach (var listener in listeners)
+            lock (listeners)
             {
-                listener.Dispose();
+                foreach (var listener in listeners)
+                {
+                    listener?.Dispose();
+                }
             }
         }
 

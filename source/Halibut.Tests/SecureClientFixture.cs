@@ -42,7 +42,7 @@ namespace Halibut.Tests
         {
             var connectionManager = new ConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
-            stream.When(x => x.IdentifyAsClient()).Do(x => { throw new ConnectionInitializationFailedException(""); });
+            stream.When(x => x.IdentifyAsClient()).Do(x => throw new ConnectionInitializationFailedException(""));
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
@@ -70,7 +70,7 @@ namespace Halibut.Tests
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new Type[] { }, logger), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializer(), logger), logger);
         }
     }
 }
