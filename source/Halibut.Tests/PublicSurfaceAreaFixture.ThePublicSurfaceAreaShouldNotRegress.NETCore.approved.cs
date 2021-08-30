@@ -609,7 +609,7 @@ namespace Halibut.Transport.Protocol
         public Type DisallowedType { get; }
         public string Path { get; }
     }
-    public class WebSocketStream : Stream, IDisposable
+    public class WebSocketStream : Stream, IDisposable, IAsyncDisposable
     {
         public WebSocketStream(WebSocket context) { }
         public bool CanRead { get; }

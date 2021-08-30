@@ -25,7 +25,7 @@ namespace Halibut.Tests
             client.Invoking(c =>
             {
                 var dualMode = c.Client.DualMode;
-            }).ShouldThrow<NotSupportedException>();
+            }).Should().Throw<NotSupportedException>();
         }
     }
 }

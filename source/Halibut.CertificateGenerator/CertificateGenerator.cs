@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Crypto.Operators;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Math;
@@ -66,10 +67,11 @@ namespace Halibut.CertificateGenerator
             certGen.SetNotAfter(DateTime.Today.AddYears(100));
             certGen.SetSubjectDN(new X509Name(ord, attrs));
             certGen.SetPublicKey(cerKp.Public);
-            certGen.SetSignatureAlgorithm("SHA1WithRSA");
             certGen.AddExtension(X509Extensions.BasicConstraints, true, new BasicConstraints(false));
             certGen.AddExtension(X509Extensions.AuthorityKeyIdentifier, true, new AuthorityKeyIdentifier(SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(cerKp.Public)));
-            var x509 = certGen.Generate(cerKp.Private);
+            
+            var signatureFactory = new Asn1SignatureFactory("SHA1WithRSA", cerKp.Private);
+            var x509 = certGen.Generate(signatureFactory);
 
             var x509Certificate = DotNetUtilities.ToX509Certificate(x509);
             return new X509Certificate2(x509Certificate)

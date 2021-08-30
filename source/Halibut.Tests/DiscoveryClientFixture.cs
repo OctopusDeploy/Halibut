@@ -38,8 +38,8 @@ namespace Halibut.Tests
             var client = new DiscoveryClient();
             var discovered = client.Discover(new ServiceEndPoint(endpoint.BaseUri, ""));
 
-            discovered.RemoteThumbprint.ShouldBeEquivalentTo(endpoint.RemoteThumbprint);
-            discovered.BaseUri.ShouldBeEquivalentTo(endpoint.BaseUri);
+            discovered.RemoteThumbprint.Should().BeEquivalentTo(endpoint.RemoteThumbprint);
+            discovered.BaseUri.Should().BeEquivalentTo(endpoint.BaseUri);
         }
 
         [Test]

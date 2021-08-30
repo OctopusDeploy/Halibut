@@ -86,7 +86,8 @@ namespace Halibut.Tests
                 }
                 else
                 {
-                    new [] {"No such device or address", "Resource temporarily unavailable"}.Any(message.Contains).Should().BeTrue();
+                    // Failed with: An error occurred when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request could begin: Name or service not known, but found False.
+                    new [] {"No such device or address", "Resource temporarily unavailable", "Name or service not known"}.Any(message.Contains).Should().BeTrue($"Message does not match known strings: {message}");
                 }
             }
         }
