@@ -8,7 +8,6 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
-using FluentAssertions.Common;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
@@ -65,6 +64,7 @@ namespace Halibut.Tests
         public void OctopusCanSendMessagesToPollingTentacle()
         {
             var services = GetDelegateServiceFactory();
+            services.Register<ISupportedServices>(() => new SupportedServices());
             using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
@@ -73,10 +73,11 @@ namespace Halibut.Tests
 
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
 
-                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                for (var i = 0; i < 2000; i++)
+                var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                for (var i = 1; i < 100; i++)
                 {
-                    echo.SayHello("Deploy package A" + i).Should().Be("Deploy package A" + i + "...");
+                    var i1 = i;
+                    svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
                 }
             }
         }
@@ -100,11 +101,11 @@ namespace Halibut.Tests
 
                     tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{octopusPort}/Halibut"), Certificates.SslThumbprint));
 
-                    var echo = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                    var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                     for (var i = 1; i < 100; i++)
                     {
                         var i1 = i;
-                        echo.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                        svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
                     }
                 }
             }
@@ -118,6 +119,69 @@ namespace Halibut.Tests
             }
         }
 
+        [Test]
+        public void HalibutSerializerIsKeptUpToDateWithPollingTentacle()
+        {
+            var services = GetDelegateServiceFactory();
+            services.Register<ISupportedServices>(() => new SupportedServices());
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+
+                // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered                     
+                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                // This must come before CreateClient<ISupportedServices> for the situation to occur
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A" + "..."); 
+
+                var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                // This must happen before the message loop in MessageExchangeProtocol restarts (timeout, exception, or end) for the error to occur
+                svc.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
+            }
+        }
+        
+        [Test]
+        [WindowsTestAttribute]
+        public void HalibutSerializerIsKeptUpToDateWithWebSocketPollingTentacle()
+        {
+            var services = GetDelegateServiceFactory();
+            services.Register<ISupportedServices>(() => new SupportedServices());
+            const int octopusPort = 8450;
+            AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:" + octopusPort);
+
+            try
+            {
+                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+                {
+                    octopus.ListenWebSocket($"https://+:{octopusPort}/Halibut");
+                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{octopusPort}/Halibut"), Certificates.SslThumbprint));
+
+                    // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered                     
+                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                    // This must come before CreateClient<ISupportedServices> for the situation to occur
+                    echo.SayHello("Deploy package A").Should().Be("Deploy package A" + "..."); 
+
+                    var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                    // This must happen before the message loop in MessageExchangeProtocol restarts (timeout, exception, or end) for the error to occur
+                    svc.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
+                }
+            }
+            catch(NotSupportedException nse) when (nse.Message == "The netstandard build of this library cannot act as the client in a WebSocket polling setup")
+            {
+                Assert.Inconclusive("This test cannot run on the netstandard build");
+            }
+            finally
+            {
+                RemoveSslCertBindingFor("0.0.0.0:" + octopusPort);
+            }
+        }
+        
         [Test]
         public void StreamsCanBeSentToListening()
         {

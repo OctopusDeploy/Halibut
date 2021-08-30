@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
 
 namespace Halibut.Transport.Protocol
 {
@@ -26,21 +23,20 @@ namespace Halibut.Transport.Protocol
         readonly ILog log;
         readonly StreamWriter streamWriter;
         readonly StreamReader streamReader;
-        readonly JsonSerializer serializer;
+        readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
-        public MessageExchangeStream(Stream stream, IEnumerable<Type> registeredServiceTypes, ILog log)
+        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
             this.stream = stream;
             this.log = log;
             streamWriter = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             streamReader = new StreamReader(stream, new UTF8Encoding(false));
-            serializer = Serializer(registeredServiceTypes);
+            this.serializer = serializer;
             SetNormalTimeouts();
         }
 
         static int streamCount;
-        public static Func<IEnumerable<Type>, JsonSerializer> Serializer = CreateDefault;
 
         public void IdentifyAsClient()
         {
@@ -196,7 +192,7 @@ namespace Halibut.Transport.Protocol
         {
             using (var capture = StreamCapture.New())
             {
-                WriteBsonMessage(message);
+                serializer.WriteMessage(stream, message);
                 WriteEachStream(capture.SerializedStreams);
             }
 
@@ -207,23 +203,11 @@ namespace Halibut.Transport.Protocol
         {
             using (var capture = StreamCapture.New())
             {
-                var result = ReadBsonMessage<T>();
+                var result = serializer.ReadMessage<T>(stream);
                 ReadStreams(capture);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
             }
-        }
-
-        static JsonSerializer CreateDefault(IEnumerable<Type> registeredServiceTypes)
-        {
-            var serializer = JsonSerializer.Create();
-            serializer.Formatting = Formatting.None;
-            serializer.ContractResolver = new HalibutContractResolver();
-            serializer.TypeNameHandling = TypeNameHandling.Auto;
-            serializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
-            serializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
-            serializer.SerializationBinder = new RegisteredSerializationBinder(registeredServiceTypes);
-            return serializer;
         }
 
         static RemoteIdentityType ParseIdentityType(string identityType)
@@ -246,19 +230,6 @@ namespace Halibut.Transport.Protocol
             var identity = ReadRemoteIdentity();
             if (identity.IdentityType != RemoteIdentityType.Server)
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
-        }
-
-        T ReadBsonMessage<T>()
-        {
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var bson = new BsonDataReader(zip) { CloseInput = false })
-            {
-                var messageEnvelope = serializer.Deserialize<MessageEnvelope<T>>(bson);
-                if (messageEnvelope == null)
-                    throw new Exception("messageEnvelope is null");
-                
-                return messageEnvelope.Message;
-            }
         }
 
         void ReadStreams(StreamCapture capture)
@@ -310,18 +281,6 @@ namespace Halibut.Transport.Protocol
             return dataStream;
         }
 
-        void WriteBsonMessage<T>(T messages)
-        {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
-            {
-                // for the moment this MUST be object so that the $type property is included
-                // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
-                // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
-                serializer.Serialize(bson, new MessageEnvelope<object> { Message = messages });
-            }
-        }
-
         void WriteEachStream(IEnumerable<DataStream> streams)
         {
             foreach (var dataStream in streams)
@@ -337,13 +296,6 @@ namespace Halibut.Transport.Protocol
                 writer.Write(dataStream.Length);
                 writer.Flush();
             }
-        }
-
-        // By making this a generic type, each message specifies the exact type it sends/expects
-        // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
-        class MessageEnvelope<T>
-        {
-            public T Message { get; set; }
         }
 
         void SetNormalTimeouts()

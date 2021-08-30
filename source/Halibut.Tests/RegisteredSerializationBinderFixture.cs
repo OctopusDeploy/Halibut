@@ -12,7 +12,8 @@ namespace Halibut.Tests
         [Test]
         public void BindMethods_WithValidClass_FindsAllMethodTypes()
         {
-            var binder = new RegisteredSerializationBinder(new[] { typeof(IExampleService) });
+            var binder = new RegisteredSerializationBinder();
+            binder.Register(typeof(IExampleService));
             binder.BindToName(typeof(ExampleProperties), out var assemblyName, out var typeName);
             var t = binder.BindToType(assemblyName, typeName);
             t.Should().Be(typeof(ExampleProperties));
@@ -67,9 +68,10 @@ namespace Halibut.Tests
         [TestCase(typeof(IObjectResultService))]
         [TestCase(typeof(IObjectPropertyService))]
         [TestCase(typeof(IObjectExampleService))]
-        public void Constructor_WithInvalidTypes_WillThrow(params Type[] types)
+        public void Register_WithInvalidTypes_WillThrow(params Type[] types)
         {
-            Assert.Throws<TypeNotAllowedException>(() => { _ = new RegisteredSerializationBinder(types); });
+            var binder = new RegisteredSerializationBinder();
+            Assert.Throws<TypeNotAllowedException>(() => { binder.Register(types); });
         }
         
         public interface IAsyncService
@@ -95,7 +97,8 @@ namespace Halibut.Tests
         [Test]
         public void Circular_Types_CanBeResolved()
         {
-            var binder = new RegisteredSerializationBinder(new[] { typeof(IMCircular) });
+            var binder = new RegisteredSerializationBinder();
+            binder.Register(typeof(IMCircular));
             binder.BindToName(typeof(CircularPart1), out var assemblyName1, out var typeName1);
             var t1 = binder.BindToType(assemblyName1, typeName1);
             t1.Should().Be(typeof(CircularPart1));

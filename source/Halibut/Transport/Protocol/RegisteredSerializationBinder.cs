@@ -9,16 +9,19 @@ namespace Halibut.Transport.Protocol
     public class RegisteredSerializationBinder : ISerializationBinder
     {
         readonly Type[] protocolTypes = new[] { typeof(ResponseMessage), typeof(RequestMessage) };
-        HashSet<Type> allowedTypes = new HashSet<Type>();
-        ISerializationBinder baseBinder = new DefaultSerializationBinder();
+        readonly HashSet<Type> allowedTypes = new HashSet<Type>();
+        readonly ISerializationBinder baseBinder = new DefaultSerializationBinder();
         
-        public RegisteredSerializationBinder(IEnumerable<Type> registeredServiceTypes)
+        public RegisteredSerializationBinder()
         {
             foreach (var protocolType in protocolTypes)
             {
                 RegisterType(protocolType, protocolType.Name, true);    
             }
-            
+        }
+
+        public void Register(params Type[] registeredServiceTypes)
+        {
             foreach (var serviceType in registeredServiceTypes)
             {
                 foreach (var method in serviceType.GetHalibutServiceMethods())
@@ -45,10 +48,13 @@ namespace Halibut.Transport.Protocol
                 throw new TypeNotAllowedException(type, path);
             }
 
-            if (!allowedTypes.Add(type))
+            lock (allowedTypes)
             {
-                // Seen this before, no need to go further
-                return;
+                if (!allowedTypes.Add(type))
+                {
+                    // Seen this before, no need to go further
+                    return;
+                }
             }
 
             if (ShouldRegisterProperties(type))
@@ -89,7 +95,10 @@ namespace Halibut.Transport.Protocol
         public Type BindToType(string assemblyName, string typeName)
         {
             var type = baseBinder.BindToType(assemblyName, typeName);
-            return allowedTypes.Contains(type) ? type : null;
+            lock (allowedTypes)
+            {
+                return allowedTypes.Contains(type) ? type : null;
+            }
         }
 
         public void BindToName(Type serializedType, out string assemblyName, out string typeName)
