@@ -3,7 +3,7 @@
 //////////////////////////////////////////////////////////////////////
 #tool "nuget:?package=GitVersion.CommandLine&version=4.0.0"
 #tool "nuget:?package=gitlink&version=3.1.0"
-#tool "nuget:?package=JetBrains.DotMemoryUnit&version=3.0.20171219.105559"
+#tool "nuget:?package=JetBrains.DotMemoryUnit&version=3.1.20200127.214830"
 #addin "Cake.FileHelpers&version=3.2.0"
 
 //////////////////////////////////////////////////////////////////////
@@ -95,7 +95,7 @@ Task("Test")
             args.Append("--no-build");
             return args;
         },
-        ToolPath = "./tools/JetBrains.dotMemoryUnit.3.0.20171219.105559/lib/tools/dotMemoryUnit.exe"
+        ToolPath = "./tools/JetBrains.dotMemoryUnit.3.1.20200127.214830/lib/tools/dotMemoryUnit.exe"
     });
 });
 
