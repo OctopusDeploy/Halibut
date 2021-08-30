@@ -86,7 +86,7 @@ namespace Halibut.Tests
                 }
                 else
                 {
-                    new [] {"No such device or address", "Resource temporarily unavailable"}.Any(message.Contains).Should().BeTrue();
+                    new [] {"No such device or address", "Resource temporarily unavailable"}.Any(message.Contains).Should().BeTrue($"Message does not match known strings: {message}");
                 }
             }
         }
