@@ -8,10 +8,10 @@
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
   </PropertyGroup>
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
-    <TargetFrameworks>net462;netcoreapp2.2</TargetFrameworks>
+    <TargetFrameworks>net462;netcoreapp3.1</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NETCore.approved.cs" />
@@ -46,11 +46,11 @@
     <PackageReference Include="Serilog.Sinks.NUnit" Version="1.0.1" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="4.6.0" />
     <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.15" />
-    <PackageReference Include="Serilog" Version="2.3.0" />
+    <PackageReference Include="Serilog" Version="2.10.0" />
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="2.0.0" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.2' ">
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
     <PackageReference Include="Microsoft.DotNet.Analyzers.Compatibility" Version="0.2.12-alpha">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

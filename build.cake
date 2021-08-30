@@ -106,7 +106,7 @@ Task("PublishLinuxTests")
     DotNetCorePublish("./source/Halibut.Tests/Halibut.Tests.csproj", new DotNetCorePublishSettings
     {
         Configuration = configuration,
-        Framework = "netcoreapp2.2",
+        Framework = "netcoreapp3.1",
         Runtime = "linux-x64",
         OutputDirectory = new DirectoryPath($"{artifactsDir}publish/linux-x64")
     });
