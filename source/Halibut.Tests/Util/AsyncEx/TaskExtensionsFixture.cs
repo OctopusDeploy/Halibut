@@ -34,7 +34,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 triggered = true;
             });
             Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None);
-            act.ShouldThrow<TimeoutException>();
+            await act.Should().ThrowAsync<TimeoutException>();
             triggered.Should().Be(false, "we should have stopped waiting on the task when timeout happened");
             await Task.Delay(200);
             triggered.Should().Be(true, "task should have continued executing in the background");
@@ -61,7 +61,7 @@ namespace Halibut.Tests.Util.AsyncEx
             });
 #pragma warning restore 4014
             Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(150), cancellationTokenSource.Token);
-            act.ShouldThrow<TaskCanceledException>();
+            await act.Should().ThrowAsync<OperationCanceledException>();
             triggered.Should().Be(false, "we should have stopped waiting on the task when cancellation happened");
             await Task.Delay(200);
             triggered.Should().Be(true, "task should have continued executing in the background (not entirely ideal, but this task is designed to handle non-cancelable tasks)");
@@ -89,7 +89,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
                 cancellationTokenSource.Cancel();
             });
-            await VerifyNoUnobservedExceptions<TaskCanceledException>(Task.Run(async () =>
+            await VerifyNoUnobservedExceptions<OperationCanceledException>(Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
                 throw new ApplicationException("this task threw an exception after timeout");
@@ -106,7 +106,7 @@ namespace Halibut.Tests.Util.AsyncEx
             try
             {
                 Func<Task> act = async () => await task;
-                act.ShouldThrow<T>();
+                await act.Should().ThrowAsync<T>();
 
                 //delay long enough to ensure the task throws its exception
                 await Task.Delay(200);
