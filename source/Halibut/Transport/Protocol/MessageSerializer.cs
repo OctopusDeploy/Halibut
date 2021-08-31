@@ -10,18 +10,15 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
-        readonly JsonSerializer serializer;
-
         readonly RegisteredSerializationBinder binder = new RegisteredSerializationBinder();
 
         readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
         
-        public MessageSerializer()
-        {
-            serializer = CreateDefaultSerializer();
-        }
-            
-        JsonSerializer CreateDefaultSerializer()
+        // NOTE: Do not share the serializer between Read/Write, the HalibutContractResolver adds OnSerializedCallbacks which are specific to the 
+        // operation that is in-progress (and if the list is being enumerated at the time causes an exception).  And probably adds a duplicate each time the 
+        // type is detected. It also makes use of a static, StreamCapture.Current - which seems like a bad™ idea, perhaps this can be straightened out? 
+        // For now, just ensuring each operation does not interfere with each other.
+        JsonSerializer CreateSerializer()
         {
             var jsonSerializer = JsonSerializer.Create();
             jsonSerializer.Formatting = Formatting.None;
@@ -50,7 +47,7 @@ namespace Halibut.Transport.Protocol
                 // for the moment this MUST be object so that the $type property is included
                 // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
-                serializer.Serialize(bson, new MessageEnvelope<object> { Message = message });
+                CreateSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
         }
 
@@ -59,7 +56,7 @@ namespace Halibut.Transport.Protocol
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
-                var messageEnvelope = serializer.Deserialize<MessageEnvelope<T>>(bson);
+                var messageEnvelope = CreateSerializer().Deserialize<MessageEnvelope<T>>(bson);
                 if (messageEnvelope == null)
                     throw new Exception("messageEnvelope is null");
                 
