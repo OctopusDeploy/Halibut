@@ -287,7 +287,7 @@ namespace Halibut.ServiceModel
         public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response) { }
         public Halibut.Transport.Protocol.RequestMessage Dequeue() { }
         public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
-        public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
+        public Task<Halibut.Transport.Protocol.ResponseMessage> QueueAndWaitAsync(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
     }
     public interface IPendingRequestQueueFactory
     {
@@ -333,6 +333,7 @@ namespace Halibut.ServiceModel
         public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
         public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request) { }
         public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
+        public Task<Halibut.Transport.Protocol.ResponseMessage> QueueAndWaitAsync(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
     }
     public class PollingClientCollection
     {

@@ -47,6 +47,12 @@ namespace Halibut.ServiceModel
             return pending.Response;
         }
 
+        public Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+        {
+            var responseMessage = QueueAndWait(request, cancellationToken);
+            return Task.FromResult(responseMessage);
+        }
+
         public bool IsEmpty
         {
             get

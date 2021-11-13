@@ -194,8 +194,14 @@ namespace Halibut
             return proxy;
 #endif
         }
-
+        
+        // TODO: async HalibutProxy
         ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
+        {
+            return SendOutgoingRequestAsync(request, cancellationToken).GetAwaiter().GetResult();
+        }
+
+        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
@@ -204,7 +210,7 @@ namespace Halibut
                 case "https":
                     return SendOutgoingHttpsRequest(request, cancellationToken);
                 case "poll":
-                    return SendOutgoingPollingRequest(request, cancellationToken);
+                    return await SendOutgoingPollingRequest(request, cancellationToken);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
@@ -221,10 +227,10 @@ namespace Halibut
             return response;
         }
 
-        ResponseMessage SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
-            return queue.QueueAndWait(request, cancellationToken);
+            return await queue.QueueAndWaitAsync(request, cancellationToken);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)

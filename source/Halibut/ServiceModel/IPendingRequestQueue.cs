@@ -11,6 +11,6 @@ namespace Halibut.ServiceModel
         void ApplyResponse(ResponseMessage response);
         RequestMessage Dequeue();
         Task<RequestMessage> DequeueAsync();
-        ResponseMessage QueueAndWait(RequestMessage request, CancellationToken cancellationToken);
+        Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken);
     }
 }
