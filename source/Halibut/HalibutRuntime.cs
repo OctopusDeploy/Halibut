@@ -19,13 +19,14 @@ namespace Halibut
     public class HalibutRuntime : IHalibutRuntime
     {
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
-        readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
+        readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new ConcurrentDictionary<Uri, IPendingRequestQueue>();
+        readonly IPendingRequestQueueFactory queueFactory;
         readonly X509Certificate2 serverCertificate;
         readonly List<IDisposable> listeners = new List<IDisposable>();
-        readonly ITrustProvider trustProvider; 
+        readonly ITrustProvider trustProvider;
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
-        readonly LogFactory logs = new LogFactory();
+        readonly ILogFactory logs;
         readonly ConnectionManager connectionManager = new ConnectionManager();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
@@ -48,6 +49,18 @@ namespace Halibut
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
+            logs = new LogFactory();
+            queueFactory = new DefaultPendingRequestQueueFactory(logs);
+            messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+            invoker = new ServiceInvoker(serviceFactory);
+        }
+        
+        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory)
+        {
+            this.serverCertificate = serverCertificate;
+            this.trustProvider = trustProvider;
+            logs = logFactory;
+            this.queueFactory = queueFactory;
             messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
             invoker = new ServiceInvoker(serviceFactory);
         }
@@ -55,10 +68,10 @@ namespace Halibut
         public ILogFactory Logs => logs;
 
         public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-
-        PendingRequestQueue GetQueue(Uri target)
+        
+        IPendingRequestQueue GetQueue(Uri target)
         {
-            return queues.GetOrAdd(target, u => new PendingRequestQueue(logs.ForEndpoint(target)));
+            return queues.GetOrAdd(target, u => queueFactory.CreateQueue(target));
         }
 
         public int Listen()
