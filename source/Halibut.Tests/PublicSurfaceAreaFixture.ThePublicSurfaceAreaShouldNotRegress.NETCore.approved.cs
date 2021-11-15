@@ -70,6 +70,16 @@ namespace Halibut
         public void Trust(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
+    public class HalibutRuntimeBuilder
+    {
+        public HalibutRuntimeBuilder() { }
+        public Halibut.HalibutRuntime Build() { }
+        public Halibut.HalibutRuntimeBuilder WithLogFactory(Halibut.Diagnostics.ILogFactory logFactory) { }
+        public Halibut.HalibutRuntimeBuilder WithPendingRequestQueueFactory(Halibut.ServiceModel.IPendingRequestQueueFactory queueFactory) { }
+        public Halibut.HalibutRuntimeBuilder WithServerCertificate(X509Certificate2 serverCertificate) { }
+        public Halibut.HalibutRuntimeBuilder WithServiceFactory(Halibut.ServiceModel.IServiceFactory serviceFactory) { }
+        public Halibut.HalibutRuntimeBuilder WithTrustProvider(Halibut.ServiceModel.ITrustProvider trustProvider) { }
+    }
     public interface IDataStreamReceiver
     {
         public void Read(Action<Stream> reader) { }
@@ -277,6 +287,11 @@ namespace Halibut.ServiceModel
         public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response) { }
         public Halibut.Transport.Protocol.RequestMessage Dequeue() { }
         public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
+        public Task<Halibut.Transport.Protocol.ResponseMessage> QueueAndWaitAsync(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public interface IPendingRequestQueueFactory
+    {
+        public Halibut.ServiceModel.IPendingRequestQueue CreateQueue(Uri endpoint) { }
     }
     public interface IPollingClient : IDisposable
     {
@@ -318,6 +333,7 @@ namespace Halibut.ServiceModel
         public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
         public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request) { }
         public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
+        public Task<Halibut.Transport.Protocol.ResponseMessage> QueueAndWaitAsync(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
     }
     public class PollingClientCollection
     {

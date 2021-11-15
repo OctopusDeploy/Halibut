@@ -19,46 +19,67 @@ namespace Halibut
     public class HalibutRuntime : IHalibutRuntime
     {
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
-        readonly ConcurrentDictionary<Uri, PendingRequestQueue> queues = new ConcurrentDictionary<Uri, PendingRequestQueue>();
+        readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new ConcurrentDictionary<Uri, IPendingRequestQueue>();
+        readonly IPendingRequestQueueFactory queueFactory;
         readonly X509Certificate2 serverCertificate;
         readonly List<IDisposable> listeners = new List<IDisposable>();
-        readonly ITrustProvider trustProvider; 
+        readonly ITrustProvider trustProvider;
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly ServiceInvoker invoker;
-        readonly LogFactory logs = new LogFactory();
+        readonly ILogFactory logs;
         readonly ConnectionManager connectionManager = new ConnectionManager();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly MessageSerializer messageSerializer = new MessageSerializer();
 
+        [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
         {
         }
 
+        [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate, ITrustProvider trustProvider) : this(new NullServiceFactory(), serverCertificate, trustProvider)
         {
         }
 
+        [Obsolete]
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate) : this(serviceFactory, serverCertificate, new DefaultTrustProvider())
         {
         }
 
+        [Obsolete]
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider)
+        {
+            // if you change anything here, also change the below internal ctor
+            this.serverCertificate = serverCertificate;
+            this.trustProvider = trustProvider;
+            messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+            invoker = new ServiceInvoker(serviceFactory);
+            
+            // these two are the reason we can't just call our internal ctor.
+            logs = new LogFactory();
+            queueFactory = new DefaultPendingRequestQueueFactory(logs);
+        }
+        
+        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
             messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
             invoker = new ServiceInvoker(serviceFactory);
+            
+            logs = logFactory;
+            this.queueFactory = queueFactory;
         }
 
         public ILogFactory Logs => logs;
 
         public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-
-        PendingRequestQueue GetQueue(Uri target)
+        
+        IPendingRequestQueue GetQueue(Uri target)
         {
-            return queues.GetOrAdd(target, u => new PendingRequestQueue(logs.ForEndpoint(target)));
+            return queues.GetOrAdd(target, u => queueFactory.CreateQueue(target));
         }
 
         public int Listen()
@@ -174,15 +195,26 @@ namespace Halibut
             messageSerializer.AddToMessageContract(typeof(TService));
             
 #if HAS_REAL_PROXY
+#pragma warning disable 618
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
+#pragma warning restore 618
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
+#pragma warning disable 618
             (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken);
+#pragma warning restore 618
             return proxy;
 #endif
         }
-
+        
+        // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
+        [Obsolete("Consider implementing an async HalibutProxy instead")]
         ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
+        {
+            return SendOutgoingRequestAsync(request, cancellationToken).GetAwaiter().GetResult();
+        }
+
+        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
@@ -191,7 +223,7 @@ namespace Halibut
                 case "https":
                     return SendOutgoingHttpsRequest(request, cancellationToken);
                 case "poll":
-                    return SendOutgoingPollingRequest(request, cancellationToken);
+                    return await SendOutgoingPollingRequest(request, cancellationToken);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
@@ -208,10 +240,10 @@ namespace Halibut
             return response;
         }
 
-        ResponseMessage SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
-            return queue.QueueAndWait(request, cancellationToken);
+            return await queue.QueueAndWaitAsync(request, cancellationToken);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)
