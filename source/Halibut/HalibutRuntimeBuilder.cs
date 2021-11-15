@@ -7,16 +7,11 @@ namespace Halibut
 {
     public class HalibutRuntimeBuilder
     {
-        ILogFactory logFactory = new LogFactory();
+        ILogFactory logFactory;
         IPendingRequestQueueFactory queueFactory;
         X509Certificate2 serverCertificate;
-        IServiceFactory serviceFactory = new NullServiceFactory();
-        ITrustProvider trustProvider = new DefaultTrustProvider();
-
-        public HalibutRuntimeBuilder()
-        {
-            queueFactory = new DefaultPendingRequestQueueFactory(logFactory);
-        }
+        IServiceFactory serviceFactory;
+        ITrustProvider trustProvider;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -50,6 +45,12 @@ namespace Halibut
 
         public HalibutRuntime Build()
         {
+            if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
+            if (logFactory == null) logFactory = new LogFactory();
+            if (queueFactory == null) queueFactory = new DefaultPendingRequestQueueFactory(logFactory);
+            if (serviceFactory == null) serviceFactory = new NullServiceFactory();
+            if (trustProvider == null) trustProvider = new DefaultTrustProvider();
+
             return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory);
         }
     }
