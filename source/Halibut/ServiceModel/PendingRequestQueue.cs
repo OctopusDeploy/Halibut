@@ -21,11 +21,13 @@ namespace Halibut.ServiceModel
             this.log = log;
         }
 
+        [Obsolete]
         public ResponseMessage QueueAndWait(RequestMessage request)
         {
             return QueueAndWait(request, CancellationToken.None);
         }
         
+        [Obsolete]
         public ResponseMessage QueueAndWait(RequestMessage request, CancellationToken cancellationToken)
         {
             var pending = new PendingRequest(request, log);
@@ -47,10 +49,12 @@ namespace Halibut.ServiceModel
             return pending.Response;
         }
 
-        public Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
         {
+#pragma warning disable 612
             var responseMessage = QueueAndWait(request, cancellationToken);
-            return Task.FromResult(responseMessage);
+#pragma warning restore 612
+            return await Task.FromResult(responseMessage);
         }
 
         public bool IsEmpty

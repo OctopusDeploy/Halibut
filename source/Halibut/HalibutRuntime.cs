@@ -33,36 +33,44 @@ namespace Halibut
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly MessageSerializer messageSerializer = new MessageSerializer();
 
+        [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
         {
         }
 
+        [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate, ITrustProvider trustProvider) : this(new NullServiceFactory(), serverCertificate, trustProvider)
         {
         }
 
+        [Obsolete]
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate) : this(serviceFactory, serverCertificate, new DefaultTrustProvider())
         {
         }
 
+        [Obsolete]
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider)
         {
+            // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            logs = new LogFactory();
-            queueFactory = new DefaultPendingRequestQueueFactory(logs);
             messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
             invoker = new ServiceInvoker(serviceFactory);
+            
+            // these two are the reason we can't just call our internal ctor.
+            logs = new LogFactory();
+            queueFactory = new DefaultPendingRequestQueueFactory(logs);
         }
         
         internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            logs = logFactory;
-            this.queueFactory = queueFactory;
             messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
             invoker = new ServiceInvoker(serviceFactory);
+            
+            logs = logFactory;
+            this.queueFactory = queueFactory;
         }
 
         public ILogFactory Logs => logs;
@@ -187,15 +195,20 @@ namespace Halibut
             messageSerializer.AddToMessageContract(typeof(TService));
             
 #if HAS_REAL_PROXY
+#pragma warning disable 618
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
+#pragma warning restore 618
 #else
             var proxy = DispatchProxy.Create<TService, HalibutProxy>();
+#pragma warning disable 618
             (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken);
+#pragma warning restore 618
             return proxy;
 #endif
         }
         
-        // TODO: async HalibutProxy
+        // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
+        [Obsolete("Consider implementing an async HalibutProxy instead")]
         ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             return SendOutgoingRequestAsync(request, cancellationToken).GetAwaiter().GetResult();
