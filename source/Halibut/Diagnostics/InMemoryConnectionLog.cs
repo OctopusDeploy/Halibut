@@ -51,6 +51,8 @@ namespace Halibut.Diagnostics
                 case EventType.SecurityNegotiation:
                 case EventType.MessageExchange:
                     return LogLevel.Trace;
+                case EventType.OpeningNewConnection:
+                    return LogLevel.Debug;
                 default:
                     return LogLevel.Info;
             }
