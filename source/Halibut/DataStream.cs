@@ -8,7 +8,16 @@ namespace Halibut
 {
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
-        readonly Action<Stream> writer;
+        Action<Stream> writer { get
+            {
+                EnsureLengthAndStreamInitializedFromDelayedCreation();
+                return _writer;
+            } 
+        }
+
+        [JsonIgnore]
+        Action<Stream> _writer;
+        
         IDataStreamReceiver receiver;
 
         [JsonConstructor]
@@ -20,14 +29,56 @@ namespace Halibut
         {
             Length = length;
             Id = Guid.NewGuid();
-            this.writer = writer;
+            this._writer = writer;
+        }
+        
+        
+        public DataStream(Guid guid, Func<DataStream> delayedStreamCreation)
+        {
+            Id = Guid.NewGuid();
+            _delayedStreamCreation = delayedStreamCreation;
         }
 
         [JsonProperty("id")]
         public Guid Id { get; set; }
 
         [JsonProperty("length")]
-        public long Length { get; set; }
+        public long Length
+        {
+            get
+            {
+                EnsureLengthAndStreamInitializedFromDelayedCreation();
+                return _length;
+            }
+            set
+            {
+                EnsureLengthAndStreamInitializedFromDelayedCreation();
+                _length = value;
+            }
+        }
+
+        [JsonIgnore]
+        private long _length = 0;
+
+        [JsonIgnore]
+        Func<DataStream> _delayedStreamCreation = null;
+
+        private void EnsureLengthAndStreamInitializedFromDelayedCreation()
+        {
+            if (_delayedStreamCreation != null)
+            {
+                try
+                {
+                    var r = _delayedStreamCreation();
+                    this._writer = r.writer;
+                    this._length = r.Length;
+                }
+                finally
+                {
+                    _delayedStreamCreation = null;
+                }
+            }
+        }
 
         public IDataStreamReceiver Receiver()
         {

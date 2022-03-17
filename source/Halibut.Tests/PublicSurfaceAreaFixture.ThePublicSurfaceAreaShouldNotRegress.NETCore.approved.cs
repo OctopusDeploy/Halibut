@@ -17,8 +17,10 @@ namespace Halibut
     {
         public DataStream() { }
         public DataStream(long length, Action<Stream> writer) { }
+        public DataStream(Guid guid, Func<Halibut.DataStream> delayedStreamCreation) { }
         public Guid Id { get; set; }
         public long Length { get; set; }
+        private Action<Stream> writer {  }
         public bool Equals(Halibut.DataStream other) { }
         public bool Equals(Object obj) { }
         public static Halibut.DataStream FromBytes(Byte[] data) { }
