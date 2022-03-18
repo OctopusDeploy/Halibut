@@ -295,6 +295,31 @@ namespace Halibut.Tests
                 progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
             }
         }
+        
+        [Test]
+        public void StreamsCanBeSentToListeningWithProgressReportingWhenTheStreamIsLazilyCreated()
+        {
+            var services = GetDelegateServiceFactory();
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var tentaclePort = tentacleListening.Listen();
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                var progressReported = new List<int>();
+
+                var data = new byte[1024 * 1024 * 16 + 15];
+                new Random().NextBytes(data);
+                var stream = new MemoryStream(data);
+
+                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+
+                var count = echo.CountBytes(DataStream.FromLazy(() => DataStream.FromStream(stream, progressReported.Add)));
+                count.Should().Be(1024 * 1024 * 16 + 15);
+
+                progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
+            }
+        }
 
         [TestCase("https://127.0.0.1:{port}")]
         [TestCase("https://127.0.0.1:{port}/")]

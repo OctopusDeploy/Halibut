@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
@@ -33,10 +34,10 @@ namespace Halibut
             _writer = writer;
         }
 
-        public DataStream(Func<DataStream> delayedStreamCreation)
+        private DataStream(Lazy<DataStream> _delayedStreamCreator)
         {
             Id = Guid.NewGuid();
-            _delayedStreamCreation = delayedStreamCreation;
+            this._delayedStreamCreator = _delayedStreamCreator;
         }
 
         [JsonProperty("id")]
@@ -59,21 +60,21 @@ namespace Halibut
 
         [JsonIgnore] long _length;
 
-        [JsonIgnore] Func<DataStream> _delayedStreamCreation;
+        [JsonIgnore] Lazy<DataStream> _delayedStreamCreator;
 
         void EnsureLengthAndStreamInitializedFromDelayedCreation()
         {
-            if (_delayedStreamCreation != null)
+            if (_delayedStreamCreator != null)
             {
                 try
                 {
-                    var r = _delayedStreamCreation();
+                    var r = _delayedStreamCreator.Value;
                     _writer = r.writer;
                     _length = r.Length;
                 }
                 finally
                 {
-                    _delayedStreamCreation = null;
+                    _delayedStreamCreator = null;
                 }
             }
         }
@@ -150,6 +151,16 @@ namespace Halibut
         public static DataStream FromStream(Stream source)
         {
             return FromStream(source, progress => { });
+        }
+
+        public static DataStream FromLazy(Lazy<DataStream> streamCreator)
+        {
+            return new DataStream(streamCreator);
+        }
+        
+        public static DataStream FromLazy(Func<DataStream> streamCreator)
+        {
+            return DataStream.FromLazy(new Lazy<DataStream>(streamCreator));
         }
 
         class StreamingDataStream

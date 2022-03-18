@@ -17,13 +17,14 @@ namespace Halibut
     {
         public DataStream() { }
         public DataStream(long length, Action<Stream> writer) { }
-        public DataStream(Func<Halibut.DataStream> delayedStreamCreation) { }
         public Guid Id { get; set; }
         public long Length { get; set; }
         private Action<Stream> writer {  }
         public bool Equals(Halibut.DataStream other) { }
         public bool Equals(Object obj) { }
         public static Halibut.DataStream FromBytes(Byte[] data) { }
+        public static Halibut.DataStream FromLazy(Lazy<Halibut.DataStream> streamCreator) { }
+        public static Halibut.DataStream FromLazy(Func<Halibut.DataStream> streamCreator) { }
         public static Halibut.DataStream FromStream(Stream source, Action<int> updateProgress) { }
         public static Halibut.DataStream FromStream(Stream source) { }
         public static Halibut.DataStream FromString(string text) { }
