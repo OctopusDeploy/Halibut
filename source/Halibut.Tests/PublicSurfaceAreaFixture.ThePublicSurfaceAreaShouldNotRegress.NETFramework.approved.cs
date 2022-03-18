@@ -17,7 +17,7 @@ namespace Halibut
     {
         public DataStream() { }
         public DataStream(long length, Action<Stream> writer) { }
-        public DataStream(Guid guid, Func<Halibut.DataStream> delayedStreamCreation) { }
+        public DataStream(Func<Halibut.DataStream> delayedStreamCreation) { }
         public Guid Id { get; set; }
         public long Length { get; set; }
         private Action<Stream> writer {  }

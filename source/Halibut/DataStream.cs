@@ -8,16 +8,17 @@ namespace Halibut
 {
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
-        Action<Stream> writer { get
+        Action<Stream> writer
+        {
+            get
             {
                 EnsureLengthAndStreamInitializedFromDelayedCreation();
                 return _writer;
-            } 
+            }
         }
 
-        [JsonIgnore]
-        Action<Stream> _writer;
-        
+        [JsonIgnore] Action<Stream> _writer;
+
         IDataStreamReceiver receiver;
 
         [JsonConstructor]
@@ -29,11 +30,10 @@ namespace Halibut
         {
             Length = length;
             Id = Guid.NewGuid();
-            this._writer = writer;
+            _writer = writer;
         }
-        
-        
-        public DataStream(Guid guid, Func<DataStream> delayedStreamCreation)
+
+        public DataStream(Func<DataStream> delayedStreamCreation)
         {
             Id = Guid.NewGuid();
             _delayedStreamCreation = delayedStreamCreation;
@@ -57,21 +57,19 @@ namespace Halibut
             }
         }
 
-        [JsonIgnore]
-        private long _length = 0;
+        [JsonIgnore] long _length;
 
-        [JsonIgnore]
-        Func<DataStream> _delayedStreamCreation = null;
+        [JsonIgnore] Func<DataStream> _delayedStreamCreation;
 
-        private void EnsureLengthAndStreamInitializedFromDelayedCreation()
+        void EnsureLengthAndStreamInitializedFromDelayedCreation()
         {
             if (_delayedStreamCreation != null)
             {
                 try
                 {
                     var r = _delayedStreamCreation();
-                    this._writer = r.writer;
-                    this._length = r.Length;
+                    _writer = r.writer;
+                    _length = r.Length;
                 }
                 finally
                 {
@@ -90,8 +88,7 @@ namespace Halibut
             var maxMemoryStreamLength = int.MaxValue;
             if (Length >= maxMemoryStreamLength)
                 return new TemporaryFileDataStreamReceiver(writer);
-            else
-                return new InMemoryDataStreamReceiver(writer);
+            return new InMemoryDataStreamReceiver(writer);
         }
 
         public bool Equals(DataStream other)
@@ -105,8 +102,8 @@ namespace Halibut
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((DataStream)obj);
+            if (obj.GetType() != GetType()) return false;
+            return Equals((DataStream) obj);
         }
 
         public override int GetHashCode()
@@ -146,13 +143,13 @@ namespace Halibut
 
         public static DataStream FromStream(Stream source, Action<int> updateProgress)
         {
-            var streamer = new StreamingDataStream(source, updateProgress ?? ((progress) => { }));
+            var streamer = new StreamingDataStream(source, updateProgress ?? (progress => { }));
             return new DataStream(source.Length, streamer.CopyAndReportProgress);
         }
 
         public static DataStream FromStream(Stream source)
         {
-            return FromStream(source, (progress) => { });
+            return FromStream(source, progress => { });
         }
 
         class StreamingDataStream
@@ -173,7 +170,7 @@ namespace Halibut
                 var writeBuffer = new byte[BufferSize];
 
                 var progress = 0;
-                
+
                 var totalLength = source.Length;
                 long copiedSoFar = 0;
                 source.Seek(0, SeekOrigin.Begin);
@@ -188,7 +185,7 @@ namespace Halibut
 
                     copiedSoFar += count;
 
-                    var progressNow = (int)((double)copiedSoFar / totalLength * 100.00);
+                    var progressNow = (int) ((double) copiedSoFar / totalLength * 100.00);
                     if (progressNow == progress)
                         continue;
                     updateProgress(progressNow);
@@ -203,7 +200,7 @@ namespace Halibut
 
             static void Swap<T>(ref T x, ref T y)
             {
-                T tmp = x;
+                var tmp = x;
                 x = y;
                 y = tmp;
             }
