@@ -12,7 +12,7 @@ namespace Halibut.Tests.TestServices
                 var buf = new byte[1024];
                 while (true)
                 {
-                    int read = reader.Read(buf);
+                    int read = reader.Read(buf, 0, buf.Length);
                     if(read == 0) break;
                     total += read;
                 }
