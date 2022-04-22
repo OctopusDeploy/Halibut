@@ -10,6 +10,8 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
+        static readonly HalibutContractResolver halibutContractResolver = new HalibutContractResolver();
+        
         readonly RegisteredSerializationBinder binder = new RegisteredSerializationBinder();
 
         readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
@@ -18,7 +20,7 @@ namespace Halibut.Transport.Protocol
         {
             var jsonSerializer = JsonSerializer.Create();
             jsonSerializer.Formatting = Formatting.None;
-            jsonSerializer.ContractResolver = new HalibutContractResolver();
+            jsonSerializer.ContractResolver = halibutContractResolver;
             jsonSerializer.TypeNameHandling = TypeNameHandling.Auto;
             jsonSerializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
             jsonSerializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
