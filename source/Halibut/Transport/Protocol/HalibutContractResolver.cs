@@ -4,20 +4,19 @@ using Newtonsoft.Json.Serialization;
 
 namespace Halibut.Transport.Protocol
 {
-    public class HalibutContractResolver : IContractResolver
+    public class HalibutContractResolver : DefaultContractResolver
     {
-        IContractResolver baseContractResolver = new DefaultContractResolver();
         volatile bool HaveAddedCaptureOnSerializeCallback = false;
         
-        public JsonContract ResolveContract(Type type)
+        public override JsonContract ResolveContract(Type type)
         {
             if (type == typeof(DataStream))
             {
-                var contract = baseContractResolver.ResolveContract(type);
+                var contract = base.ResolveContract(type);
                 // The contract is globally shared, so we need to make sure multiple threads don't try to edit it at the same time. 
                 if (!HaveAddedCaptureOnSerializeCallback)
                 {
-                    lock (baseContractResolver)
+                    lock (this)
                     {
                         if (!HaveAddedCaptureOnSerializeCallback)
                         {
@@ -32,7 +31,7 @@ namespace Halibut.Transport.Protocol
                 return contract;
             }
             
-            return baseContractResolver.ResolveContract(type);
+            return base.ResolveContract(type);
         }
 
         static void CaptureOnSerialize(object o, StreamingContext context)
