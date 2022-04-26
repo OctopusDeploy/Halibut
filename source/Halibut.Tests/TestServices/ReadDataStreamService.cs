@@ -20,5 +20,16 @@ namespace Halibut.Tests.TestServices
             
             return total;
         }
+
+        public long SendDataMany(DataStream[] dataStreams)
+        {
+            long count = 0;
+            foreach (var dataStream in dataStreams)
+            {
+                count += SendData(dataStream);
+            }
+
+            return count;
+        }
     }
 }
