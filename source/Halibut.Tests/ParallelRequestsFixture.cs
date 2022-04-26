@@ -36,7 +36,7 @@ namespace Halibut.Tests
                     var thread = new Thread(() =>
                     {
                         messagesAreSentTheSameTimeSemaphore.WaitOne();
-                        var recieved = readDataSteamService.SendDataMany(dataStreams);
+                        var recieved = readDataSteamService.SendData(dataStreams);
                         recieved.Should().Be(5 * dataStreams.Length);
                     });
                     thread.Start();
