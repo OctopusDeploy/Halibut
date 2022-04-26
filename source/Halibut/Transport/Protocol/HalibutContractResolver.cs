@@ -13,7 +13,7 @@ namespace Halibut.Transport.Protocol
             if (type == typeof(DataStream))
             {
                 var contract = base.ResolveContract(type);
-                // The contract is globally shared, so we need to make sure multiple threads don't try to edit it at the same time. 
+                // The contract is shared, so we need to make sure multiple threads don't try to edit it at the same time. 
                 if (!HaveAddedCaptureOnSerializeCallback)
                 {
                     lock (this)
