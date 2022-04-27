@@ -10,19 +10,17 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
+        static readonly HalibutContractResolver halibutContractResolver = new HalibutContractResolver();
+        
         readonly RegisteredSerializationBinder binder = new RegisteredSerializationBinder();
 
         readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
         
-        // NOTE: Do not share the serializer between Read/Write, the HalibutContractResolver adds OnSerializedCallbacks which are specific to the 
-        // operation that is in-progress (and if the list is being enumerated at the time causes an exception).  And probably adds a duplicate each time the 
-        // type is detected. It also makes use of a static, StreamCapture.Current - which seems like a bad™ idea, perhaps this can be straightened out? 
-        // For now, just ensuring each operation does not interfere with each other.
         JsonSerializer CreateSerializer()
         {
             var jsonSerializer = JsonSerializer.Create();
             jsonSerializer.Formatting = Formatting.None;
-            jsonSerializer.ContractResolver = new HalibutContractResolver();
+            jsonSerializer.ContractResolver = halibutContractResolver;
             jsonSerializer.TypeNameHandling = TypeNameHandling.Auto;
             jsonSerializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
             jsonSerializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
