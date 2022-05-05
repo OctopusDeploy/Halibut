@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -35,7 +36,7 @@ namespace Halibut.Transport
             var client = CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
-            var stream = client.GetStream();
+            var stream = new BufferedStream(client.GetStream());
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
