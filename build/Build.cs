@@ -1,15 +1,13 @@
+// ReSharper disable RedundantUsingDirective
 using System;
 using JetBrains.Annotations;
 using Nuke.Common;
 using Nuke.Common.CI;
 using Nuke.Common.Execution;
-using Nuke.Common.Git;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
-using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitLink;
-using Nuke.Common.Tools.GitVersion;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities;
 using Nuke.Common.Utilities.Collections;
