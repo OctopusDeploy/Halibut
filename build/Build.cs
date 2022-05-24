@@ -10,6 +10,8 @@ using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitLink;
 using Nuke.Common.Tools.GitVersion;
+using Nuke.Common.Tools.OctoVersion;
+using Nuke.Common.Utilities;
 using Nuke.Common.Utilities.Collections;
 using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotMemoryUnit.DotMemoryUnitTasks;
@@ -31,19 +33,22 @@ class Build : NukeBuild
 
     [Solution(GenerateProjects = true)] readonly Solution Solution;
 
-    [GitRepository] readonly GitRepository GitRepository;
+    [Parameter("Whether to auto-detect the branch name - this is okay for a local build, but should not be used under CI.")]
+    readonly bool AutoDetectBranch = IsLocalBuild;
 
-    [GitVersion] readonly GitVersion GitVersion;
-    
-    // [PackageExecutable("JetBrains.dotMemoryUnit", "dotMemoryUnit.exe")] readonly Tool DotMemoryUnit;
+    [Parameter("Branch name for OctoVersion to use to calculate the version number. Can be set via the environment variable OCTOVERSION_CurrentBranch.",
+        Name = "OCTOVERSION_CurrentBranch")]
+    readonly string BranchName;
+
+    [OctoVersion(UpdateBuildNumber = true, BranchParameter = nameof(BranchName),
+        AutoDetectBranchParameter = nameof(AutoDetectBranch), Framework = "net6.0")]
+    readonly OctoVersionInfo OctoVersionInfo;
 
     static AbsolutePath LocalPackagesDir => RootDirectory / ".." / "LocalPackages";
-    
-    AbsolutePath SourceDirectory => RootDirectory / "source";
 
-    // AbsolutePath TestsDirectory => SourceDirectory / "Halibut.Tests" / "Halibut.Tests.csproj";
+    static AbsolutePath SourceDirectory => RootDirectory / "source";
 
-    AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
+    static AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
 
     Target Clean => _ => _
         .Executes(() =>
@@ -67,9 +72,8 @@ class Build : NukeBuild
             DotNetBuild(s => s
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
-                .SetAssemblyVersion(GitVersion.AssemblySemVer)
-                .SetFileVersion(GitVersion.AssemblySemFileVer)
-                .SetInformationalVersion(GitVersion.InformationalVersion)
+                .SetVersion(OctoVersionInfo.FullSemVer)
+                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
                 .EnableNoRestore());
         });
 
@@ -78,17 +82,8 @@ class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
-            // TODO: Can I toString the dotnet command
-            Arguments args = new Arguments()
-                .Add($"\"{DotNetPath}\"")
-                .Add("--propagate-exit-code")
-                .Add("--instance-name=" + Guid.NewGuid())
-                .Add("--")
-                .Add("test")
-                .Add(Solution.Halibut_Tests.Path)
-                .Add("--configuration=" + Configuration)
-                .Add("--no-build");
-            DotMemoryUnit(args.ToString());
+            DotMemoryUnit(
+                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests.Path} --configuration={Configuration} --no-build");
         });
 
     [PublicAPI]
@@ -107,8 +102,7 @@ class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
-            
-            var pdbs = SourceDirectory.GlobFiles($"**/bin/{Configuration}/**/Halibut.pdb");
+            var pdbs = SourceDirectory.GlobFiles($"**/Halibut/bin/{Configuration}/**/Halibut.pdb");
             foreach (var pdb in pdbs)
             {
                 var settings = new GitLink3Settings().SetPdbFile(pdb);
@@ -117,7 +111,7 @@ class Build : NukeBuild
             
             DotNetPack(_ => _
                 .SetProject(Solution.Halibut)
-                .SetVersion(GitVersion.FullSemVer)
+                .SetVersion(OctoVersionInfo.FullSemVer)
                 .SetConfiguration(Configuration)
                 .SetOutputDirectory(ArtifactsDirectory)
                 .EnableNoBuild()

@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="Nuke.Common" Version="6.0.3" />
-    <PackageDownload Include="GitVersion.Tool" Version="[5.8.0]" />
+    <PackageDownload Include="OctoVersion.Tool" Version="[0.2.1058]" />
     <PackageReference Include="JetBrains.dotMemoryUnit" Version="3.1.20200127.214830" />
     <PackageReference Include="gitlink" Version="3.1.0" />
   </ItemGroup>
