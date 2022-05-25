@@ -25,13 +25,13 @@ namespace Halibut
         readonly List<IDisposable> listeners = new List<IDisposable>();
         readonly ITrustProvider trustProvider;
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
-        readonly ServiceInvoker invoker;
+        readonly IServiceInvoker invoker;
         readonly ILogFactory logs;
         readonly ConnectionManager connectionManager = new ConnectionManager();
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
-        readonly MessageSerializer messageSerializer = new MessageSerializer();
+        readonly IMessageSerializer messageSerializer;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -54,7 +54,9 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+            var serializer = new MessageSerializer();
+            serializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+            messageSerializer = serializer;
             invoker = new ServiceInvoker(serviceFactory);
             
             // these two are the reason we can't just call our internal ctor.
@@ -62,12 +64,12 @@ namespace Halibut
             queueFactory = new DefaultPendingRequestQueueFactory(logs);
         }
         
-        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory)
+        internal HalibutRuntime(IMessageSerializer messageSerializer, IServiceInvoker serviceInvoker, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
-            invoker = new ServiceInvoker(serviceFactory);
+            this.messageSerializer = messageSerializer;
+            invoker = serviceInvoker;
             
             logs = logFactory;
             this.queueFactory = queueFactory;
@@ -192,8 +194,11 @@ namespace Halibut
         
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            messageSerializer.AddToMessageContract(typeof(TService));
-            
+            if (messageSerializer is MessageSerializer serializer)
+            {
+                serializer.AddToMessageContract(typeof(TService));
+            }
+
 #if HAS_REAL_PROXY
 #pragma warning disable 618
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
