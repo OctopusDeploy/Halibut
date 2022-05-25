@@ -505,6 +505,7 @@ namespace Halibut.Transport.Protocol
     }
     public interface IMessageSerializer
     {
+        public void AddToMessageContract(Type[] types) { }
         public T ReadMessage<T>(Stream stream) { }
         public void WriteMessage<T>(Stream stream, T message) { }
     }

@@ -54,9 +54,8 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            var serializer = new MessageSerializer();
-            serializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
-            messageSerializer = serializer;
+            messageSerializer = new MessageSerializer();
+            messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
             invoker = new ServiceInvoker(serviceFactory);
             
             // these two are the reason we can't just call our internal ctor.
