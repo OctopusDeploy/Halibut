@@ -193,10 +193,7 @@ namespace Halibut
         
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            if (messageSerializer is MessageSerializer serializer)
-            {
-                serializer.AddToMessageContract(typeof(TService));
-            }
+            messageSerializer.AddToMessageContract(typeof(TService));
 
 #if HAS_REAL_PROXY
 #pragma warning disable 618
