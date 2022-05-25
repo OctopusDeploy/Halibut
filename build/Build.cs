@@ -6,6 +6,7 @@ using Nuke.Common.CI;
 using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
+using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.GitLink;
 using Nuke.Common.Tools.OctoVersion;
@@ -60,7 +61,10 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotNetRestore(s => s
-                .SetProjectFile(Solution));
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut))
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut_Tests)));
         });
 
     Target Compile => _ => _
@@ -68,11 +72,14 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotNetBuild(s => s
-                .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
                 .SetVersion(OctoVersionInfo.FullSemVer)
                 .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
-                .EnableNoRestore());
+                .EnableNoRestore()
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut))
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut_Tests)));
         });
 
     [PublicAPI]
