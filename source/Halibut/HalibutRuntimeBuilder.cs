@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Transport.Protocol;
 
 namespace Halibut
 {
@@ -12,6 +14,7 @@ namespace Halibut
         X509Certificate2 serverCertificate;
         IServiceFactory serviceFactory;
         ITrustProvider trustProvider;
+        IMessageSerializer messageSerializer;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -43,15 +46,27 @@ namespace Halibut
             return this;
         }
 
+        public HalibutRuntimeBuilder WithMessageSerializer(IMessageSerializer messageSerializer)
+        {
+            this.messageSerializer = messageSerializer;
+            return this;
+        }
+
         public HalibutRuntime Build()
         {
+            var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
-            if (logFactory == null) logFactory = new LogFactory();
-            if (queueFactory == null) queueFactory = new DefaultPendingRequestQueueFactory(logFactory);
-            if (serviceFactory == null) serviceFactory = new NullServiceFactory();
-            if (trustProvider == null) trustProvider = new DefaultTrustProvider();
+            var logFactory = this.logFactory ?? new LogFactory();
+            var queueFactory = this.queueFactory ?? new DefaultPendingRequestQueueFactory(logFactory);
+            var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
+            if (messageSerializer == null)
+            {
+                var serializer = new MessageSerializer();
+                serializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+                messageSerializer = serializer;
+            }
 
-            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory);
+            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, messageSerializer);
         }
     }
 }
