@@ -16,6 +16,7 @@ namespace Halibut
         ITrustProvider trustProvider;
         IMessageSerializer messageSerializer;
         IServiceInvoker serviceInvoker;
+        ITypeRegistry typeRegistry;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -59,6 +60,12 @@ namespace Halibut
             return this;
         }
 
+        public HalibutRuntimeBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
+        {
+            this.typeRegistry = typeRegistry;
+            return this;
+        }
+
         public HalibutRuntime Build()
         {
             if (serviceFactory == null) serviceFactory = new NullServiceFactory();
@@ -67,18 +74,20 @@ namespace Halibut
             if (queueFactory == null) queueFactory = new DefaultPendingRequestQueueFactory(logFactory);
             if (trustProvider == null) trustProvider = new DefaultTrustProvider();
             if (serviceInvoker == null) serviceInvoker = new ServiceInvoker(serviceFactory);
+            if (typeRegistry == null)
+            {
+                var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
+                typeRegistry = new TypeRegistry();
+                typeRegistry.AddToMessageContract(messageContracts);
+            }
             if (messageSerializer == null)
             {
-                var typeRegistry = new TypeRegistry();
-                var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
-                typeRegistry.AddToMessageContract(messageContracts);
-
                 messageSerializer = new MessageSerializerBuilder()
                     .WithTypeRegistry(typeRegistry)
                     .Build();
             }
 
-            return new HalibutRuntime(messageSerializer, serviceInvoker, serverCertificate, trustProvider, queueFactory, logFactory);
+            return new HalibutRuntime(serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer, serviceInvoker);
         }
     }
 }

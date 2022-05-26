@@ -55,27 +55,27 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
+            
+            // these two are the reason we can't just call our internal ctor.
+            logs = new LogFactory();
+            queueFactory = new DefaultPendingRequestQueueFactory(logs);
             typeRegistry = new TypeRegistry();
             typeRegistry.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
             messageSerializer = new MessageSerializerBuilder()
                 .WithTypeRegistry(typeRegistry)
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
-            
-            // these two are the reason we can't just call our internal ctor.
-            logs = new LogFactory();
-            queueFactory = new DefaultPendingRequestQueueFactory(logs);
         }
         
-        internal HalibutRuntime(IMessageSerializer messageSerializer, IServiceInvoker serviceInvoker, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory)
+        internal HalibutRuntime(X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer, IServiceInvoker serviceInvoker)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            this.messageSerializer = messageSerializer;
-            invoker = serviceInvoker;
-            
             logs = logFactory;
             this.queueFactory = queueFactory;
+            this.typeRegistry = typeRegistry;
+            this.messageSerializer = messageSerializer;
+            invoker = serviceInvoker;
         }
 
         public ILogFactory Logs => logs;

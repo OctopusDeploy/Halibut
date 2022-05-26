@@ -81,6 +81,7 @@ namespace Halibut
         public Halibut.HalibutRuntimeBuilder WithServiceFactory(Halibut.ServiceModel.IServiceFactory serviceFactory) { }
         public Halibut.HalibutRuntimeBuilder WithServiceInvoker(Halibut.ServiceModel.IServiceInvoker serviceInvoker) { }
         public Halibut.HalibutRuntimeBuilder WithTrustProvider(Halibut.ServiceModel.ITrustProvider trustProvider) { }
+        public Halibut.HalibutRuntimeBuilder WithTypeRegistry(Halibut.Transport.Protocol.ITypeRegistry typeRegistry) { }
     }
     public interface IDataStreamReceiver
     {
