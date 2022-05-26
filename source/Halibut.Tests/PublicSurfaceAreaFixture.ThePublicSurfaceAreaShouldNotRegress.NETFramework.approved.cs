@@ -569,7 +569,7 @@ namespace Halibut.Transport.Protocol
     {
         public MessageSerializerBuilder() { }
         public Halibut.Transport.Protocol.MessageSerializer Build() { }
-        public Halibut.Transport.Protocol.MessageSerializerBuilder WithSerializerBuilder(Func<Newtonsoft.Json.JsonSerializer> createSerializer) { }
+        public Halibut.Transport.Protocol.MessageSerializerBuilder WithSerializerSettings(Action<Newtonsoft.Json.JsonSerializerSettings> configure) { }
         public Halibut.Transport.Protocol.MessageSerializerBuilder WithTypeRegistry(Halibut.Transport.Protocol.ITypeRegistry typeRegistry) { }
     }
     public class ProtocolException : Exception, ISerializable, _Exception
