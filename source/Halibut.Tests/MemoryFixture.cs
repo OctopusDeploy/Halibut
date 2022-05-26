@@ -42,6 +42,7 @@ namespace Halibut.Tests
             dotMemory.Check(memory =>
             {
                 tcpClientCountToBeginWith = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                Console.WriteLine($"Found {tcpClientCountToBeginWith} instances of TcpClient in memory to begin with.");
             });
 
             Log.Logger = new LoggerConfiguration()
