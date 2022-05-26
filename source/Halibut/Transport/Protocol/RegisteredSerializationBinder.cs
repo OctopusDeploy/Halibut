@@ -6,12 +6,11 @@ using Newtonsoft.Json.Serialization;
 
 namespace Halibut.Transport.Protocol
 {
-    public class RegisteredSerializationBinder : ISerializationBinder
+    public class RegisteredSerializationBinder : DefaultSerializationBinder
     {
         readonly Type[] protocolTypes = new[] { typeof(ResponseMessage), typeof(RequestMessage) };
         readonly HashSet<Type> allowedTypes = new HashSet<Type>();
-        readonly ISerializationBinder baseBinder = new DefaultSerializationBinder();
-        
+
         public RegisteredSerializationBinder()
         {
             foreach (var protocolType in protocolTypes)
@@ -92,18 +91,19 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public Type BindToType(string assemblyName, string typeName)
+        public override Type BindToType(string assemblyName, string typeName)
         {
-            var type = baseBinder.BindToType(assemblyName, typeName);
+            var type = base.BindToType(assemblyName, typeName);
             lock (allowedTypes)
             {
                 return allowedTypes.Contains(type) ? type : null;
             }
         }
 
-        public void BindToName(Type serializedType, out string assemblyName, out string typeName)
+        // kept for backwards compatibility
+        public override void BindToName(Type serializedType, out string assemblyName, out string typeName)
         {
-            baseBinder.BindToName(serializedType, out assemblyName, out typeName);
+            base.BindToName(serializedType, out assemblyName, out typeName);
         }
     }
 }

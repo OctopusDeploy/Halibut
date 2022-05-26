@@ -483,6 +483,7 @@ namespace Halibut.Transport.Protocol
     public class HalibutContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver, Newtonsoft.Json.Serialization.IContractResolver
     {
         public HalibutContractResolver() { }
+        internal static Newtonsoft.Json.Serialization.IContractResolver Instance {  }
         public Newtonsoft.Json.Serialization.JsonContract ResolveContract(Type type) { }
     }
     public interface IMessageExchangeStream
@@ -550,7 +551,7 @@ namespace Halibut.Transport.Protocol
     {
         public ProtocolException(string message) { }
     }
-    public class RegisteredSerializationBinder : Newtonsoft.Json.Serialization.ISerializationBinder
+    public class RegisteredSerializationBinder : Newtonsoft.Json.Serialization.DefaultSerializationBinder, Newtonsoft.Json.Serialization.ISerializationBinder
     {
         public RegisteredSerializationBinder() { }
         public void BindToName(Type serializedType, String& assemblyName, String& typeName) { }
