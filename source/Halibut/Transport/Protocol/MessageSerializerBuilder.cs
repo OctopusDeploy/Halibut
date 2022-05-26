@@ -7,7 +7,7 @@ namespace Halibut.Transport.Protocol
     public class MessageSerializerBuilder
     {
         ITypeRegistry typeRegistry;
-        Func<JsonSerializer> createSerializer;
+        Action<JsonSerializerSettings> configureSerializer;
 
         public MessageSerializerBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
         {
@@ -15,38 +15,41 @@ namespace Halibut.Transport.Protocol
             return this;
         }
 
-        public MessageSerializerBuilder WithSerializerBuilder(Func<JsonSerializer> createSerializer)
+        public MessageSerializerBuilder WithSerializerSettings(Action<JsonSerializerSettings> configure)
         {
-            this.createSerializer = createSerializer;
+            this.configureSerializer = configure;
             return this;
         }
 
         public MessageSerializer Build()
         {
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
-            var createSerializer = this.createSerializer ?? (() =>
+
+            JsonSerializer Serializer()
             {
+                var settings = CreateSerializer();
                 var binder = new RegisteredSerializationBinder(typeRegistry);
-                return CreateSerializer(binder);
-            });
-            var messageSerializer = new MessageSerializer(typeRegistry, createSerializer);
+                settings.SerializationBinder = binder;
+                configureSerializer?.Invoke(settings);
+                return JsonSerializer.Create(settings);
+            }
+
+            var messageSerializer = new MessageSerializer(typeRegistry, Serializer);
 
             return messageSerializer;
         }
 
-        internal static JsonSerializer CreateSerializer(ISerializationBinder binder)
+        internal static JsonSerializerSettings CreateSerializer()
         {
-            var jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings
+            var jsonSerializerSettings = new JsonSerializerSettings
             {
                 Formatting = Formatting.None,
                 ContractResolver = HalibutContractResolver.Instance,
                 TypeNameHandling = TypeNameHandling.Auto,
                 TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
                 DateFormatHandling = DateFormatHandling.IsoDateFormat,
-                SerializationBinder = binder
-            });
-
-            return jsonSerializer;
+            };
+            return jsonSerializerSettings;
         }
     }
 }

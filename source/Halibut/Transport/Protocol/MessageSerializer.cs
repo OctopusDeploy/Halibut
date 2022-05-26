@@ -16,8 +16,10 @@ namespace Halibut.Transport.Protocol
             typeRegistry = new TypeRegistry();
             createSerializer = () =>
             {
+                var settings = MessageSerializerBuilder.CreateSerializer();
                 var binder = new RegisteredSerializationBinder(typeRegistry);
-                return MessageSerializerBuilder.CreateSerializer(binder);
+                settings.SerializationBinder = binder;
+                return JsonSerializer.Create(settings);
             };
         }
 
