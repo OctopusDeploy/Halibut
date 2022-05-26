@@ -69,9 +69,13 @@ namespace Halibut
             if (serviceInvoker == null) serviceInvoker = new ServiceInvoker(serviceFactory);
             if (messageSerializer == null)
             {
-                var serializer = new MessageSerializer();
-                serializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
-                messageSerializer = serializer;
+                var typeRegistry = new TypeRegistry();
+                var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
+                typeRegistry.AddToMessageContract(messageContracts);
+
+                messageSerializer = new MessageSerializerBuilder()
+                    .WithTypeRegistry(typeRegistry)
+                    .Build();
             }
 
             return new HalibutRuntime(messageSerializer, serviceInvoker, serverCertificate, trustProvider, queueFactory, logFactory);

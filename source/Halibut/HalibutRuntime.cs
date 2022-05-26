@@ -32,6 +32,7 @@ namespace Halibut
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly IMessageSerializer messageSerializer;
+        readonly ITypeRegistry typeRegistry;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -54,8 +55,11 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            messageSerializer = new MessageSerializer();
-            messageSerializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+            typeRegistry = new TypeRegistry();
+            typeRegistry.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+            messageSerializer = new MessageSerializerBuilder()
+                .WithTypeRegistry(typeRegistry)
+                .Build();
             invoker = new ServiceInvoker(serviceFactory);
             
             // these two are the reason we can't just call our internal ctor.
@@ -193,7 +197,7 @@ namespace Halibut
         
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            messageSerializer.AddToMessageContract(typeof(TService));
+            typeRegistry.AddToMessageContract(typeof(TService));
 
 #if HAS_REAL_PROXY
 #pragma warning disable 618
