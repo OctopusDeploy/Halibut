@@ -37,6 +37,13 @@ namespace Halibut.Tests
             if (!dotMemoryApi.IsEnabled)
                 Assert.Inconclusive("This test is meant to be run under dotMemory Unit. In your IDE, right click on the test icon and choose 'Run under dotMemory Unit'.");
 
+            var tcpClientCountToBeginWith = 0;
+
+            dotMemory.Check(memory =>
+            {
+                tcpClientCountToBeginWith = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+            });
+
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
@@ -55,10 +62,7 @@ namespace Halibut.Tests
 
 #if SUPPORTS_WEB_SOCKET_CLIENT
                 for (var i = 0; i < NumberOfClients; i++)
-                {
-                    expectedTcpClientCount++; // each time the server polls, it keeps a tcpclient (as we dont have support to say StopPolling)
                     RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
-                }
 #endif
 
                 //https://dotnettools-support.jetbrains.com/hc/en-us/community/posts/360000088690-How-reproduce-DotMemory-s-Force-GC-button-s-behaviour-on-code-with-c-?page=1#community_comment_360000072750
@@ -72,7 +76,7 @@ namespace Halibut.Tests
                 {
                     var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
                     Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
-                    Assert.That(tcpClientCount, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
+                    Assert.That(tcpClientCount - tcpClientCountToBeginWith, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
                 });
             }
         }
