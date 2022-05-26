@@ -37,14 +37,6 @@ namespace Halibut.Tests
             if (!dotMemoryApi.IsEnabled)
                 Assert.Inconclusive("This test is meant to be run under dotMemory Unit. In your IDE, right click on the test icon and choose 'Run under dotMemory Unit'.");
 
-            var tcpClientCountToBeginWith = 0;
-
-            dotMemory.Check(memory =>
-            {
-                tcpClientCountToBeginWith = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
-                Console.WriteLine($"Found {tcpClientCountToBeginWith} instances of TcpClient in memory to begin with.");
-            });
-
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
@@ -77,7 +69,7 @@ namespace Halibut.Tests
                 {
                     var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
                     Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
-                    Assert.That(tcpClientCount - tcpClientCountToBeginWith, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
+                    Assert.That(tcpClientCount, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
                 });
             }
         }
