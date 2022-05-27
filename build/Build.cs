@@ -43,11 +43,9 @@ class Build : NukeBuild
         AutoDetectBranchParameter = nameof(AutoDetectBranch), Framework = "net6.0")]
     readonly OctoVersionInfo OctoVersionInfo;
 
-    static AbsolutePath LocalPackagesDir => RootDirectory / ".." / "LocalPackages";
-
     static AbsolutePath SourceDirectory => RootDirectory / "source";
-
     static AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
+    static AbsolutePath LocalPackagesDirectory => RootDirectory / ".." / "LocalPackages";
 
     Target Clean => _ => _
         .Executes(() =>
@@ -129,9 +127,9 @@ class Build : NukeBuild
         .TriggeredBy(Pack)
         .Executes(() =>
         {
-            EnsureExistingDirectory(LocalPackagesDir);
+            EnsureExistingDirectory(LocalPackagesDirectory);
             ArtifactsDirectory.GlobFiles("*.nupkg")
-                .ForEach(package => CopyFileToDirectory(package, LocalPackagesDir, FileExistsPolicy.Overwrite));
+                .ForEach(package => CopyFileToDirectory(package, LocalPackagesDirectory, FileExistsPolicy.Overwrite));
         });
 
     Target Default => _ => _
