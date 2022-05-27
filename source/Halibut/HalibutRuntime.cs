@@ -32,6 +32,7 @@ namespace Halibut
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly IMessageSerializer messageSerializer;
+        readonly ITypeRegistry typeRegistry;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -54,25 +55,27 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            var serializer = new MessageSerializer();
-            serializer.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
-            messageSerializer = serializer;
-            invoker = new ServiceInvoker(serviceFactory);
             
             // these two are the reason we can't just call our internal ctor.
             logs = new LogFactory();
             queueFactory = new DefaultPendingRequestQueueFactory(logs);
+            typeRegistry = new TypeRegistry();
+            typeRegistry.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
+            messageSerializer = new MessageSerializerBuilder()
+                .WithTypeRegistry(typeRegistry)
+                .Build();
+            invoker = new ServiceInvoker(serviceFactory);
         }
         
-        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, IMessageSerializer messageSerializer)
+        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            this.messageSerializer = messageSerializer;
-            invoker = new ServiceInvoker(serviceFactory);
-            
             logs = logFactory;
             this.queueFactory = queueFactory;
+            this.typeRegistry = typeRegistry;
+            this.messageSerializer = messageSerializer;
+            invoker = new ServiceInvoker(serviceFactory);
         }
 
         public ILogFactory Logs => logs;
@@ -194,10 +197,7 @@ namespace Halibut
         
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            if (messageSerializer is MessageSerializer serializer)
-            {
-                serializer.AddToMessageContract(typeof(TService));
-            }
+            typeRegistry.AddToMessageContract(typeof(TService));
 
 #if HAS_REAL_PROXY
 #pragma warning disable 618

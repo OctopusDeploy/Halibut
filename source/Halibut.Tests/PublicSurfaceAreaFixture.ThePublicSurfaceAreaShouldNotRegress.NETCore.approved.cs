@@ -80,6 +80,7 @@ namespace Halibut
         public Halibut.HalibutRuntimeBuilder WithServerCertificate(X509Certificate2 serverCertificate) { }
         public Halibut.HalibutRuntimeBuilder WithServiceFactory(Halibut.ServiceModel.IServiceFactory serviceFactory) { }
         public Halibut.HalibutRuntimeBuilder WithTrustProvider(Halibut.ServiceModel.ITrustProvider trustProvider) { }
+        public Halibut.HalibutRuntimeBuilder WithTypeRegistry(Halibut.Transport.Protocol.ITypeRegistry typeRegistry) { }
     }
     public interface IDataStreamReceiver
     {
@@ -484,6 +485,7 @@ namespace Halibut.Transport.Protocol
     public class HalibutContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver, Newtonsoft.Json.Serialization.IContractResolver
     {
         public HalibutContractResolver() { }
+        internal static Newtonsoft.Json.Serialization.IContractResolver Instance {  }
         public Newtonsoft.Json.Serialization.JsonContract ResolveContract(Type type) { }
     }
     public interface IMessageExchangeStream
@@ -512,6 +514,13 @@ namespace Halibut.Transport.Protocol
         public InMemoryDataStreamReceiver(Action<Stream> writer) { }
         public void Read(Action<Stream> reader) { }
         public void SaveTo(string filePath) { }
+    }
+    public interface ITypeRegistry
+    {
+        public void AddToMessageContract(Type[] types) { }
+        public bool IsInAllowedTypes(Type type) { }
+        public void Register(Type[] registeredServiceTypes) { }
+        public void RegisterType(Type type, string path, bool ignoreObject) { }
     }
     public class MessageExchangeProtocol
     {
@@ -546,6 +555,13 @@ namespace Halibut.Transport.Protocol
         public void AddToMessageContract(Type[] types) { }
         public T ReadMessage<T>(Stream stream) { }
         public void WriteMessage<T>(Stream stream, T message) { }
+    }
+    public class MessageSerializerBuilder
+    {
+        public MessageSerializerBuilder() { }
+        public Halibut.Transport.Protocol.MessageSerializer Build() { }
+        public Halibut.Transport.Protocol.MessageSerializerBuilder WithSerializerBuilder(Func<Newtonsoft.Json.JsonSerializer> createSerializer) { }
+        public Halibut.Transport.Protocol.MessageSerializerBuilder WithTypeRegistry(Halibut.Transport.Protocol.ITypeRegistry typeRegistry) { }
     }
     public class ProtocolException : Exception, ISerializable
     {

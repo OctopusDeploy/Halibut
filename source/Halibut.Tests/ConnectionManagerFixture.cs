@@ -78,7 +78,7 @@ namespace Halibut.Tests
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog log)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializer(), log), log);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), log), log);
         }
     }
 }
