@@ -75,7 +75,7 @@ namespace Halibut
         public HalibutRuntimeBuilder() { }
         public Halibut.HalibutRuntime Build() { }
         public Halibut.HalibutRuntimeBuilder WithLogFactory(Halibut.Diagnostics.ILogFactory logFactory) { }
-        public Halibut.HalibutRuntimeBuilder WithMessageSerializer(Halibut.Transport.Protocol.IMessageSerializer messageSerializer) { }
+        public Halibut.HalibutRuntimeBuilder WithMessageSerializer(Action<Halibut.Transport.Protocol.MessageSerializerBuilder> configureBuilder) { }
         public Halibut.HalibutRuntimeBuilder WithPendingRequestQueueFactory(Halibut.ServiceModel.IPendingRequestQueueFactory queueFactory) { }
         public Halibut.HalibutRuntimeBuilder WithServerCertificate(X509Certificate2 serverCertificate) { }
         public Halibut.HalibutRuntimeBuilder WithServiceFactory(Halibut.ServiceModel.IServiceFactory serviceFactory) { }

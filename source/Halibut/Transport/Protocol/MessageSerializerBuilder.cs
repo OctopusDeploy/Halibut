@@ -1,6 +1,5 @@
 ﻿using System;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 
 namespace Halibut.Transport.Protocol
 {
@@ -17,7 +16,7 @@ namespace Halibut.Transport.Protocol
 
         public MessageSerializerBuilder WithSerializerSettings(Action<JsonSerializerSettings> configure)
         {
-            this.configureSerializer = configure;
+            configureSerializer = configure;
             return this;
         }
 

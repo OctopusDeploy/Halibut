@@ -14,7 +14,7 @@ namespace Halibut
         X509Certificate2 serverCertificate;
         IServiceFactory serviceFactory;
         ITrustProvider trustProvider;
-        IMessageSerializer messageSerializer;
+        Action<MessageSerializerBuilder> configureMessageSerializerBuilder;
         ITypeRegistry typeRegistry;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
@@ -47,9 +47,9 @@ namespace Halibut
             return this;
         }
 
-        public HalibutRuntimeBuilder WithMessageSerializer(IMessageSerializer messageSerializer)
+        public HalibutRuntimeBuilder WithMessageSerializer(Action<MessageSerializerBuilder> configureBuilder)
         {
-            this.messageSerializer = messageSerializer;
+            configureMessageSerializerBuilder = configureBuilder;
             return this;
         }
 
@@ -71,12 +71,9 @@ namespace Halibut
             var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
             typeRegistry.AddToMessageContract(messageContracts);
 
-            if (messageSerializer == null)
-            {
-                messageSerializer = new MessageSerializerBuilder()
-                    .WithTypeRegistry(typeRegistry)
-                    .Build();
-            }
+            var builder = new MessageSerializerBuilder();
+            configureMessageSerializerBuilder?.Invoke(builder);
+            var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
 
             return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer);
         }
