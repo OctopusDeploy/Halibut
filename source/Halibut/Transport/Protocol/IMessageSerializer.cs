@@ -8,7 +8,5 @@ namespace Halibut.Transport.Protocol
         void WriteMessage<T>(Stream stream, T message);
 
         T ReadMessage<T>(Stream stream);
-
-        void AddToMessageContract(params Type[] types);
     }
 }
