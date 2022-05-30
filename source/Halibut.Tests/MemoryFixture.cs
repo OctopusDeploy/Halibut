@@ -40,7 +40,13 @@ namespace Halibut.Tests
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
-
+            
+            dotMemory.Check(memory =>
+            {
+                var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                Console.WriteLine($"Found {tcpClientCount} instances of TcpClient in memory to start.");
+            });
+            
             using (var server = RunServer(Certificates.Octopus, out var port))
             {
                 var expectedTcpClientCount = 1; //server listen = 1 tcpclient
@@ -56,7 +62,7 @@ namespace Halibut.Tests
 #if SUPPORTS_WEB_SOCKET_CLIENT
                 for (var i = 0; i < NumberOfClients; i++)
                 {
-                    Console.WriteLine($"Websocket");
+                    Console.WriteLine($"Doing a Websocket");
                     RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
                 }
 #endif
