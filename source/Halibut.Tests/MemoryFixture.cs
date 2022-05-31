@@ -40,6 +40,12 @@ namespace Halibut.Tests
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
+            
+            dotMemory.Check(memory =>
+            {
+                var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                Console.WriteLine($"Found {tcpClientCount} instances of TcpClient to start.");
+            });
 
             using (var server = RunServer(Certificates.Octopus, out var port))
             {
@@ -57,6 +63,11 @@ namespace Halibut.Tests
                 for (var i = 0; i < NumberOfClients; i++)
                     RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
 #endif
+                dotMemory.Check(memory =>
+                {
+                    var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                    Console.WriteLine($"Found {tcpClientCount} instances of TcpClient currently in memory.");
+                });
 
                 //https://dotnettools-support.jetbrains.com/hc/en-us/community/posts/360000088690-How-reproduce-DotMemory-s-Force-GC-button-s-behaviour-on-code-with-c-?page=1#community_comment_360000072750
                 for (var i = 0; i < 4; i++)
