@@ -6,6 +6,8 @@ namespace Halibut.Transport.Protocol
 {
     public class HalibutContractResolver : DefaultContractResolver
     {
+        internal static IContractResolver Instance { get; } = new HalibutContractResolver();
+
         volatile bool HaveAddedCaptureOnSerializeCallback = false;
         
         public override JsonContract ResolveContract(Type type)
