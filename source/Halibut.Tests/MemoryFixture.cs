@@ -31,7 +31,7 @@ namespace Halibut.Tests
     {
         const int NumberOfClients = 10;
         const int RequestsPerClient = 10;
-        const int SecondsToGarbageCollect = 20;
+        const int SecondsToGarbageCollect = 120;
 
         [Test]
         [DotMemoryUnit(SavingStrategy = SavingStrategy.OnCheckFail, Directory = @"c:\temp\dotmemoryunit", WorkspaceNumberLimit = 5, DiskSpaceLimit = 104857600)]
@@ -94,7 +94,7 @@ namespace Halibut.Tests
                     {
                         throw;
                     }
-                    Thread.Sleep(100);
+                    Thread.Sleep(1000);
                     // No Timeout, lets try again
                 }
             }
