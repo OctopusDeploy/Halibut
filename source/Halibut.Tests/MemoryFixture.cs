@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using FluentAssertions;
 using Halibut.ServiceModel;
 using JetBrains.dotMemoryUnit;
 using JetBrains.dotMemoryUnit.Kernel;
@@ -30,6 +31,7 @@ namespace Halibut.Tests
     {
         const int NumberOfClients = 10;
         const int RequestsPerClient = 10;
+        const int SecondsToGarbageCollect = 20;
 
         [Test]
         [DotMemoryUnit(SavingStrategy = SavingStrategy.OnCheckFail, Directory = @"c:\temp\dotmemoryunit", WorkspaceNumberLimit = 5, DiskSpaceLimit = 104857600)]
@@ -66,24 +68,34 @@ namespace Halibut.Tests
                     GC.WaitForPendingFinalizers();
                 }
 
-                var stopwatch = Stopwatch.StartNew();
-
-                while (true)
+                ShouldEventually(() =>
                 {
-                    try
-                    {
-                        var tcpClientCount = 0;
-                        dotMemory.Check(memory => { tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount; });
-                        Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
-                        Assert.That(tcpClientCount, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
-                        break;
-                    }
-                    catch (Exception)
-                    {
-                        Thread.Sleep(TimeSpan.FromSeconds(1));
-                    }
+                    var tcpClientCount = 0;
+                    dotMemory.Check(memory => { tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount; });
+                    Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
+                    tcpClientCount.Should().BeLessOrEqualTo(expectedTcpClientCount, "Unexpected number of TcpClient objects in memory");
+                }, TimeSpan.FromSeconds(SecondsToGarbageCollect));
+            }
+        }
 
-                    Assert.Less(stopwatch.Elapsed, TimeSpan.FromSeconds(10));
+        void ShouldEventually(Action test, TimeSpan timeout)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            while (true)
+            {
+                try
+                {
+                    test();
+                    return;
+                }
+                catch (Exception)
+                {
+                    if (stopwatch.ElapsedMilliseconds >= timeout.TotalMilliseconds)
+                    {
+                        throw;
+                    }
+                    Thread.Sleep(100);
+                    // No Timeout, lets try again
                 }
             }
         }
