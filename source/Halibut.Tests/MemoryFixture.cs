@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using Halibut.ServiceModel;
 using JetBrains.dotMemoryUnit;
 using JetBrains.dotMemoryUnit.Kernel;
@@ -61,17 +62,8 @@ namespace Halibut.Tests
 
 #if SUPPORTS_WEB_SOCKET_CLIENT
                 for (var i = 0; i < NumberOfClients; i++)
-                {
-                    Console.WriteLine($"Doing a Websocket");
                     RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
-                }
 #endif
-                
-                dotMemory.Check(memory =>
-                {
-                    var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
-                    Console.WriteLine($"Found {tcpClientCount} instances of TcpClient currently in memory.");
-                });
                 
                 //https://dotnettools-support.jetbrains.com/hc/en-us/community/posts/360000088690-How-reproduce-DotMemory-s-Force-GC-button-s-behaviour-on-code-with-c-?page=1#community_comment_360000072750
                 for (var i = 0; i < 4; i++)
@@ -80,12 +72,27 @@ namespace Halibut.Tests
                     GC.WaitForPendingFinalizers();
                 }
 
-                dotMemory.Check(memory =>
+                var stopwatch = Stopwatch.StartNew();
+
+                while (true)
                 {
-                    var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
-                    Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
-                    Assert.That(tcpClientCount, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
-                });
+                    try
+                    {
+                        var tcpClientCount = 0;
+                        dotMemory.Check(memory =>
+                        {
+                            tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                        });
+                        Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
+                        Assert.That(tcpClientCount, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
+                        break;
+                    }
+                    catch (Exception)
+                    {
+                        Thread.Sleep(TimeSpan.FromSeconds(1));
+                    }
+                    Assert.Less(stopwatch.Elapsed, TimeSpan.FromSeconds(10));
+                }
             }
         }
 
