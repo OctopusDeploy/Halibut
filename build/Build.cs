@@ -105,13 +105,6 @@ class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
-            var pdbs = SourceDirectory.GlobFiles($"**/Halibut/bin/{Configuration}/**/Halibut.pdb");
-            foreach (var pdb in pdbs)
-            {
-                var settings = new GitLink3Settings().SetPdbFile(pdb);
-                GitLink3(settings);
-            }
-            
             DotNetPack(_ => _
                 .SetProject(Solution.Halibut)
                 .SetVersion(OctoVersionInfo.FullSemVer)
