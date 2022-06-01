@@ -31,7 +31,7 @@ namespace Halibut.Tests
     {
         const int NumberOfClients = 10;
         const int RequestsPerClient = 10;
-        const int SecondsToGarbageCollect = 120;
+        const int SecondsToGarbageCollect = 60;
 
         [Test]
         [DotMemoryUnit(SavingStrategy = SavingStrategy.OnCheckFail, Directory = @"c:\temp\dotmemoryunit", WorkspaceNumberLimit = 5, DiskSpaceLimit = 104857600)]
@@ -70,10 +70,13 @@ namespace Halibut.Tests
 
                 ShouldEventually(() =>
                 {
-                    var tcpClientCount = 0;
-                    dotMemory.Check(memory => { tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount; });
-                    Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
-                    tcpClientCount.Should().BeLessOrEqualTo(expectedTcpClientCount, "Unexpected number of TcpClient objects in memory");
+                    dotMemory.Check(memory =>
+                    {
+                        var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                        Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
+                        tcpClientCount.Should().BeLessOrEqualTo(expectedTcpClientCount, "Unexpected number of TcpClient objects in memory");
+                    });
+                    
                 }, TimeSpan.FromSeconds(SecondsToGarbageCollect));
             }
         }
