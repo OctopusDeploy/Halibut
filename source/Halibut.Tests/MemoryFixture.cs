@@ -42,12 +42,6 @@ namespace Halibut.Tests
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
             
-            dotMemory.Check(memory =>
-            {
-                var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
-                Console.WriteLine($"Found {tcpClientCount} instances of TcpClient in memory to start.");
-            });
-            
             using (var server = RunServer(Certificates.Octopus, out var port))
             {
                 var expectedTcpClientCount = 1; //server listen = 1 tcpclient
