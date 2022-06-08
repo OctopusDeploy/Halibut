@@ -1,5 +1,4 @@
-```
- **_Are you a customer of Octopus Deploy? Please contact [our support team](https://octopus.com/support) so we can triage your PR, so that we can make sure it's handled appropriately._**
+**_Are you a customer of Octopus Deploy? Please contact [our support team](https://octopus.com/support) so we can triage your PR, so that we can make sure it's handled appropriately._**
 
 # Background
 
@@ -43,4 +42,3 @@ Quality :heavy_check_mark:
 - [ ] I have read [How we use GitHub Issues](https://github.com/OctopusDeploy/Issues/blob/master/docs/CONTRIBUTING.internal.md) for help deciding when and where it's appropriate to make an issue.
 - [ ] I have considered informing or consulting the right people, according to the [ownership map](https://whimsical.com/ownership-map-NzbiD4HJyvhC9jNJNfS6TG).
 - [ ] I have considered appropriate testing for my change.
-```
