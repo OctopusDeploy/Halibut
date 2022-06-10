@@ -51,7 +51,9 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void FailWhenServerThrowsAnExceptionOnPolling()
+        [TestCase(false, TestName = "FailWhenServerThrowsAnExceptionOnPolling")]
+        [TestCase(true, TestName = "FailWhenServerThrowsAnExceptionOnPollingRewindable")]
+        public void FailWhenServerThrowsAnExceptionOnPolling(bool useRewindableMessageReceive)
         {
             var services = GetStubDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(Certificates.Octopus))

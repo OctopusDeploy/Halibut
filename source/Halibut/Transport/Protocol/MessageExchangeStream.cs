@@ -28,7 +28,7 @@ namespace Halibut.Transport.Protocol
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
-            this.stream = new RewindableBufferStream(stream);
+            this.stream = stream;
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             streamReader = new StreamReader(this.stream, new UTF8Encoding(false));

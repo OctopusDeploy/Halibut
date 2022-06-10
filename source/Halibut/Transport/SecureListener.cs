@@ -41,6 +41,7 @@ namespace Halibut.Transport
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         readonly TcpClientManager tcpClientManager = new TcpClientManager();
         readonly ExchangeActionAsync exchangeAction;
+        readonly bool useRewindableMessageReceive;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
@@ -55,7 +56,14 @@ namespace Halibut.Transport
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint,
+            ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint,
+                logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, unauthorizedClientConnect, false)
+        {
+        }
+
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, bool useRewindableMessageReceive)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -66,6 +74,7 @@ namespace Halibut.Transport
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
+            this.useRewindableMessageReceive = useRewindableMessageReceive;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -235,7 +244,16 @@ namespace Halibut.Transport
                         });
 
                         tcpClientManager.AddActiveClient(thumbprint, client);
-                        await ExchangeMessages(ssl).ConfigureAwait(false);
+                        Stream exchangeStream;
+                        if (useRewindableMessageReceive)
+                        {
+                            exchangeStream = new RewindableBufferStream(ssl);
+                        }
+                        else
+                        {
+                            exchangeStream = ssl;
+                        }
+                        await ExchangeMessages(exchangeStream).ConfigureAwait(false);
                     }
                 }
                 catch (AuthenticationException ex)
@@ -357,7 +375,7 @@ namespace Halibut.Transport
             return true;
         }
 
-        Task ExchangeMessages(SslStream stream)
+        Task ExchangeMessages(Stream stream)
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 

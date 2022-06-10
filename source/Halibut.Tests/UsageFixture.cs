@@ -61,14 +61,16 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void OctopusCanSendMessagesToPollingTentacle()
+        [TestCase(false, TestName = "OctopusCanSendMessagesToPollingTentacle")]
+        [TestCase(false, TestName = "OctopusCanSendMessagesToPollingTentacleRewindable")]
+        public void OctopusCanSendMessagesToPollingTentacle(bool useRewindableMessageReceive)
         {
             var services = GetDelegateServiceFactory();
             services.Register<ISupportedServices>(() => new SupportedServices());
             using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
-                var octopusPort = octopus.Listen();
+                var octopusPort = octopus.Listen(useRewindableMessageReceive);
                 octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
 
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
@@ -206,13 +208,15 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void StreamsCanBeSentToPolling()
+        [TestCase(false, TestName = "StreamsCanBeSentToPolling")]
+        [TestCase(true, TestName = "StreamsCanBeSentToPollingRewindable")]
+        public void StreamsCanBeSentToPolling(bool useRewindableMessageReceive)
         {
             var services = GetDelegateServiceFactory();
             using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
-                var octopusPort = octopus.Listen();
+                var octopusPort = octopus.Listen(useRewindableMessageReceive);
                 octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
 
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));

@@ -77,16 +77,16 @@ namespace Halibut.Transport
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
             
             // Do not attempt to read from the base stream if the buffer has been partially filled
-            // from the rewind buffer. This is for safety, because if the base stream is a type of NetworkStream,
-            // it will kill the TCP connection (for reasons unknown....).
+            // from the rewind buffer. This is for safety, so the Halibut protocol doesn't consume bytes
+            // destined for a subsequent operation.
             if (rewoundCount > 0)
             {
                 return rewoundCount;
             }
 
-            var baseCount = baseStream.Read(buffer, rewoundCount, count);
+            var baseCount = baseStream.Read(buffer, offset, count);
             WriteToRewindBuffer(buffer, offset, baseCount);
-            return rewoundCount + baseCount;
+            return baseCount;
         }
 
         public override long Seek(long offset, SeekOrigin origin)

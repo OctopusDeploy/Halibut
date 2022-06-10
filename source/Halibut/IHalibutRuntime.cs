@@ -17,6 +17,7 @@ namespace Halibut
         ILogFactory Logs { get; }
         int Listen();
         int Listen(int port);
+        int Listen(int port, bool useRewindableMessageReceive);
         int Listen(IPEndPoint endpoint);
         void ListenWebSocket(string endpoint);
         void Poll(Uri subscription, ServiceEndPoint endPoint);

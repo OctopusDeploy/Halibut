@@ -87,13 +87,20 @@ namespace Halibut
             return Listen(0);
         }
 
+        public int Listen(bool useRewindableMessageReceive)
+            => Listen(0, useRewindableMessageReceive);
+        
+
         public int Listen(int port)
+            => Listen(port, false);
+
+        public int Listen(int port, bool useRewindableMessageReceive)
         {
             var ipAddress = Socket.OSSupportsIPv6
                 ? IPAddress.IPv6Any
                 : IPAddress.Any;
 
-            return Listen(new IPEndPoint(ipAddress, port));
+            return Listen(new IPEndPoint(ipAddress, port), useRewindableMessageReceive);
         }
         
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
@@ -102,8 +109,11 @@ namespace Halibut
         }
 
         public int Listen(IPEndPoint endpoint)
+            => Listen(endpoint, false);
+
+        public int Listen(IPEndPoint endpoint, bool useRewindableMessageReceive)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, useRewindableMessageReceive);
             lock (listeners)
             {
                 listeners.Add(listener);
