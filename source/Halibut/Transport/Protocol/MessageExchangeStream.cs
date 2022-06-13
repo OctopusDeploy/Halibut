@@ -265,13 +265,15 @@ namespace Halibut.Transport.Protocol
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
+            long bytesLeftToRead = length;
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
                 var buffer = new byte[1024 * 128];
-                while (length > 0)
+                while (bytesLeftToRead > 0)
                 {
-                    var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, length));
-                    length -= read;
+                    var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesLeftToRead));
+                    if (read == 0) throw new ProtocolException($"Stream with length {length} was closed after only reading {length - bytesLeftToRead} bytes.");
+                    bytesLeftToRead -= read;
                     fileStream.Write(buffer, 0, read);
                 }
             }

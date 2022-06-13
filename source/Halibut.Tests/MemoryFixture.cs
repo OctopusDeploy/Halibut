@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using FluentAssertions;
 using Halibut.ServiceModel;
 using JetBrains.dotMemoryUnit;
 using JetBrains.dotMemoryUnit.Kernel;
@@ -23,12 +25,13 @@ namespace Halibut.Tests
             return a + b;
         }
     }
-    
+
     [TestFixture]
     public class MemoryFixture
     {
         const int NumberOfClients = 10;
         const int RequestsPerClient = 10;
+        const int SecondsToGarbageCollect = 60;
 
         [Test]
         [DotMemoryUnit(SavingStrategy = SavingStrategy.OnCheckFail, Directory = @"c:\temp\dotmemoryunit", WorkspaceNumberLimit = 5, DiskSpaceLimit = 104857600)]
@@ -65,12 +68,38 @@ namespace Halibut.Tests
                     GC.WaitForPendingFinalizers();
                 }
 
-                dotMemory.Check(memory =>
+                ShouldEventually(() =>
                 {
-                    var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
-                    Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
-                    Assert.That(tcpClientCount, Is.LessThanOrEqualTo(expectedTcpClientCount), "Unexpected number of TcpClient objects in memory");
-                });
+                    dotMemory.Check(memory =>
+                    {
+                        var tcpClientCount = memory.GetObjects(x => x.Type.Is<TcpClient>()).ObjectsCount;
+                        Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
+                        tcpClientCount.Should().BeLessOrEqualTo(expectedTcpClientCount, "Unexpected number of TcpClient objects in memory");
+                    });
+                    
+                }, TimeSpan.FromSeconds(SecondsToGarbageCollect));
+            }
+        }
+
+        void ShouldEventually(Action test, TimeSpan timeout)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            while (true)
+            {
+                try
+                {
+                    test();
+                    return;
+                }
+                catch (Exception)
+                {
+                    if (stopwatch.ElapsedMilliseconds >= timeout.TotalMilliseconds)
+                    {
+                        throw;
+                    }
+                    Thread.Sleep(1000);
+                    // No Timeout, lets try again
+                }
             }
         }
 
@@ -80,14 +109,14 @@ namespace Halibut.Tests
             services.Register<ICalculatorService>(() => new CalculatorService());
 
             var server = new HalibutRuntime(services, serverCertificate);
-            
+
             //set up listening  
             server.Trust(Certificates.TentacleListeningPublicThumbprint);
             port = server.Listen();
-            
+
             //setup polling websocket
             AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8434");
-            
+
             return server;
         }
 
@@ -99,49 +128,49 @@ namespace Halibut.Tests
                 MakeRequest(calculator, "listening", expectSuccess);
             }
         }
-        
+
         static void RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
         {
             using (var runtime = new HalibutRuntime(clientCertificate))
             {
                 runtime.Listen(new IPEndPoint(IPAddress.IPv6Any, 8433));
                 runtime.Trust(Certificates.OctopusPublicThumbprint);
-                
+
                 //setup polling
                 var serverEndpoint = new ServiceEndPoint(new Uri("https://localhost:8433"), Certificates.TentaclePollingPublicThumbprint)
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
                 server.Poll(new Uri("poll://SQ-TENTAPOLL"), serverEndpoint);
-                
+
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint);
-                
+
                 var calculator = runtime.CreateClient<ICalculatorService>(clientEndpoint);
-    
+
                 MakeRequest(calculator, "polling", expectSuccess);
-                
+
                 runtime.Disconnect(clientEndpoint);
             }
         }
-        
+
         static void RunWebSocketPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, string trustedCertificate, bool expectSuccess = true)
         {
             using (var runtime = new HalibutRuntime(clientCertificate))
             {
                 runtime.ListenWebSocket("https://+:8434/Halibut");
                 runtime.Trust(trustedCertificate);
-                
+
                 var serverEndpoint = new ServiceEndPoint(new Uri("wss://localhost:8434/Halibut"), Certificates.SslThumbprint)
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
                 server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint);
-                
+
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint);
                 var calculator = runtime.CreateClient<ICalculatorService>(clientEndpoint);
-    
+
                 MakeRequest(calculator, "websocket polling", expectSuccess);
-                
+
                 runtime.Disconnect(clientEndpoint);
             }
         }
@@ -150,7 +179,6 @@ namespace Halibut.Tests
         static void MakeRequest(ICalculatorService calculator, string requestType, bool expectSuccess)
         {
             for (var i = 0; i < RequestsPerClient; i++)
-            {
                 try
                 {
                     var result = calculator.Add(12, 18);
@@ -160,12 +188,8 @@ namespace Halibut.Tests
                 }
                 catch (Exception)
                 {
-                    if (expectSuccess)
-                    {
-                        throw;
-                    }
+                    if (expectSuccess) throw;
                 }
-            }
         }
 
         static void AddSslCertToLocalStoreAndRegisterFor(string address)

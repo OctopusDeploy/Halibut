@@ -1,0 +1,6 @@
+{
+    "NonPreReleaseTags": [
+        "refs/heads/main",
+        "refs/heads/master"
+    ]
+} 
