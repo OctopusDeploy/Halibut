@@ -86,6 +86,10 @@ namespace Halibut.Transport.Protocol
                     {
                         rewindable.FinishRewindBuffer(unusedBytesSize);
                     }
+                    else
+                    {
+                        rewindable.CancelRewindBuffer();
+                    }
                     return messageEnvelope.Message;
                 }
             }
