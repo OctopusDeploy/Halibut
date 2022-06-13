@@ -28,10 +28,14 @@ namespace Halibut.Transport.Protocol
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
+            #if NETFRAMEWORK
             this.stream = stream;
+            #else
+            this.stream = new RewindableBufferStream(stream);
+            #endif
             this.log = log;
-            streamWriter = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
-            streamReader = new StreamReader(stream, new UTF8Encoding(false));
+            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
+            streamReader = new StreamReader(this.stream, new UTF8Encoding(false));
             this.serializer = serializer;
             SetNormalTimeouts();
         }

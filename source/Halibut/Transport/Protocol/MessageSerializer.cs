@@ -13,6 +13,8 @@ namespace Halibut.Transport.Protocol
         readonly RegisteredSerializationBinder binder = new RegisteredSerializationBinder();
 
         readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
+
+        readonly DeflateStreamInputBufferReflector deflateReflector = new DeflateStreamInputBufferReflector();
         
         // NOTE: Do not share the serializer between Read/Write, the HalibutContractResolver adds OnSerializedCallbacks which are specific to the 
         // operation that is in-progress (and if the list is being enumerated at the time causes an exception).  And probably adds a duplicate each time the 
@@ -53,15 +55,61 @@ namespace Halibut.Transport.Protocol
 
         public T ReadMessage<T>(Stream stream)
         {
+            if (stream is IRewindableBuffer rewindable)
+            {
+                return ReadCompressedMessageRewindable<T>(stream, rewindable);
+            }
+
+            return ReadCompressedMessage<T>(stream);
+        }
+
+        T ReadCompressedMessage<T>(Stream stream)
+        {
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
-                var messageEnvelope = CreateSerializer().Deserialize<MessageEnvelope<T>>(bson);
-                if (messageEnvelope == null)
-                    throw new Exception("messageEnvelope is null");
-                
+                var messageEnvelope = DeserializeMessage<T>(bson);
                 return messageEnvelope.Message;
             }
+        }
+
+        T ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
+        {
+            rewindable.StartRewindBuffer();
+            try
+            {
+                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+                using (var bson = new BsonDataReader(zip) { CloseInput = false })
+                {
+                    var messageEnvelope = DeserializeMessage<T>(bson);
+
+                    // Find the unused bytes in the DeflateStream input buffer
+                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
+                    {
+                        rewindable.FinishRewindBuffer(unusedBytesCount);
+                    }
+                    else
+                    {
+                        rewindable.CancelRewindBuffer();
+                    }
+                    return messageEnvelope.Message;
+                }
+            }
+            catch
+            {
+                rewindable.CancelRewindBuffer();
+                throw;
+            }
+        }
+
+        MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
+        {
+            var result = CreateSerializer().Deserialize<MessageEnvelope<T>>(reader);
+            if (result == null)
+            {
+                throw new Exception("messageEnvelope is null");
+            }
+            return result;
         }
         
         // By making this a generic type, each message specifies the exact type it sends/expects
