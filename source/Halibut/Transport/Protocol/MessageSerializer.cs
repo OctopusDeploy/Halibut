@@ -29,6 +29,7 @@ namespace Halibut.Transport.Protocol
         {
             this.typeRegistry = typeRegistry;
             this.createSerializer = createSerializer;
+            deflateReflector = new DeflateStreamInputBufferReflector();
         }
 
         public void AddToMessageContract(params Type[] types) // kept for backwards compatibility
