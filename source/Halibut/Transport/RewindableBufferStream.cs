@@ -77,8 +77,8 @@ namespace Halibut.Transport
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
             
             // Do not attempt to read from the base stream if the buffer has been partially filled
-            // from the rewind buffer. This is for safety, so the Halibut protocol doesn't consume bytes
-            // destined for a subsequent operation.
+            // from the rewind buffer. This is for safety, so the Halibut protocol doesn't accidentally
+            // consume bytes destined for a subsequent operation.
             if (rewoundCount > 0)
             {
                 return rewoundCount;

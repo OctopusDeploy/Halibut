@@ -12,6 +12,7 @@ namespace Halibut.Transport.Protocol
     {
         readonly RegisteredSerializationBinder binder = new RegisteredSerializationBinder();
         readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
+        readonly DeflateStreamInputBufferReflector deflateReflector = new DeflateStreamInputBufferReflector();
 
         // NOTE: Do not share the serializer between Read/Write, the HalibutContractResolver adds OnSerializedCallbacks which are specific to the 
         // operation that is in-progress (and if the list is being enumerated at the time causes an exception).  And probably adds a duplicate each time the 
@@ -75,16 +76,16 @@ namespace Halibut.Transport.Protocol
             rewindable.StartRewindBuffer();
             try
             {
-                using (var tracker = new ReadTrackerStream(stream))
-                using (var zip = new Ionic.Zlib.DeflateStream(tracker, Ionic.Zlib.CompressionMode.Decompress, true))
+                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
                 using (var bson = new BsonDataReader(zip) { CloseInput = false })
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);
 
-                    // 'zip.Position' represents the number of compressed bytes read.
-                    // The difference between the total bytes read and the compressed bytes read will be
-                    // the additional bytes over-read and consumed by the DeflateStream buffer.
-                    rewindable.FinishRewindBuffer(tracker.TotalBytesRead - zip.Position);
+                    // Find the unused bytes in the DeflateStream input buffer
+                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesSize))
+                    {
+                        rewindable.FinishRewindBuffer(unusedBytesSize);
+                    }
                     return messageEnvelope.Message;
                 }
             }
@@ -105,7 +106,6 @@ namespace Halibut.Transport.Protocol
             return result;
         }
 
-        
         // By making this a generic type, each message specifies the exact type it sends/expects
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
         class MessageEnvelope<T>
