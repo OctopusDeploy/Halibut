@@ -52,7 +52,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCase(false, TestName = "FailWhenServerThrowsAnExceptionOnPolling")]
+        #if !NETFRAMEWORK
         [TestCase(true, TestName = "FailWhenServerThrowsAnExceptionOnPollingRewindable")]
+        #endif
         public void FailWhenServerThrowsAnExceptionOnPolling(bool useRewindableMessageReceive)
         {
             var services = GetStubDelegateServiceFactory();

@@ -62,7 +62,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCase(false, TestName = "OctopusCanSendMessagesToPollingTentacle")]
+        #if !NETFRAMEWORK
         [TestCase(false, TestName = "OctopusCanSendMessagesToPollingTentacleRewindable")]
+        #endif
         public void OctopusCanSendMessagesToPollingTentacle(bool useRewindableMessageReceive)
         {
             var services = GetDelegateServiceFactory();
@@ -209,7 +211,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCase(false, TestName = "StreamsCanBeSentToPolling")]
+        #if !NETFRAMEWORK
         [TestCase(true, TestName = "StreamsCanBeSentToPollingRewindable")]
+        #endif
         public void StreamsCanBeSentToPolling(bool useRewindableMessageReceive)
         {
             var services = GetDelegateServiceFactory();

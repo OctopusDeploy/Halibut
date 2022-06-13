@@ -21,6 +21,7 @@ namespace Halibut.Tests.Transport.Protocol
             }
         }
 
+        #if !NETFRAMEWORK
         [Test]
         public void SendReceiveMessageRewindableShouldRoundTrip()
         {
@@ -35,7 +36,7 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ReadMessage_RewindableShouldNotConsumeTrailingData()
+        public void ReadMessageRewindableShouldNotConsumeTrailingData()
         {
             const string trailingData = "SomeOtherData";
 
@@ -56,6 +57,7 @@ namespace Halibut.Tests.Transport.Protocol
                 }
             }
         }
+        #endif
 
         static class MessageSerializerBuilder
         {
