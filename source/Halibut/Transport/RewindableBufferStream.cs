@@ -12,7 +12,7 @@ namespace Halibut.Transport
         int rewindBufferCount;
         bool rewindEnabled;
 
-        public RewindableBufferStream(Stream baseStream, int rewindBufferSize = 16384)
+        public RewindableBufferStream(Stream baseStream, int rewindBufferSize = 8192)
         {
             this.baseStream = baseStream;
             rewindBuffer = new byte[rewindBufferSize];
