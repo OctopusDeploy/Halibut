@@ -1,6 +1,8 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
@@ -142,6 +144,57 @@ namespace Halibut.Tests
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentaclePollingPublicThumbprint);
 
                 Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+            }
+        }
+        
+        [Test]
+        public void FailWhenServerThrowsDuringADataStreamOnListening()
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<IReadDataSteamService>(() => new ReadDataStreamService());
+            
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            {
+                var tentaclePort = tentacleListening.Listen();
+                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                var readDataSteamService = octopus.CreateClient<IReadDataSteamService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+
+                // Previously tentacle would eventually stop responding only after many failed calls.
+                // This loop ensures (at the time) the test shows the problem.
+                for (int i = 0; i < 128; i++)
+                {
+                    Assert.Throws<HalibutClientException>(() => readDataSteamService.SendData(new DataStream(10000, stream => throw new Exception("Oh noes"))));
+                }
+                
+                long recieved = readDataSteamService.SendData(DataStream.FromString("hello"));
+                recieved.Should().Be(5);
+            }
+        }
+        
+        [Test]
+        public void FailWhenServerThrowsDuringADataStreamOnPolling()
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<IReadDataSteamService>(() => new ReadDataStreamService());
+            
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+
+                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                
+                var readDataSteamService = octopus.CreateClient<IReadDataSteamService>("poll://SQ-TENTAPOLL", Certificates.TentacleListeningPublicThumbprint);
+
+                Assert.Throws<HalibutClientException>(() => readDataSteamService.SendData(new DataStream(10000, stream => throw new Exception("Oh noes"))));
+
+                long recieved = readDataSteamService.SendData(DataStream.FromString("hello"));
+                recieved.Should().Be(5);
             }
         }
     }

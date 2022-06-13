@@ -316,7 +316,7 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
             {
                 var listenPort = octopus.Listen();
-                var uri = uriFormat.Replace("{machine}", Environment.MachineName).Replace("{port}", listenPort.ToString());
+                var uri = uriFormat.Replace("{machine}", Dns.GetHostName()).Replace("{port}", listenPort.ToString());
 
                 var result = await DownloadStringIgnoringCertificateValidation(uri);
 

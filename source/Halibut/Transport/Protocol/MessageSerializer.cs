@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -10,33 +8,32 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
-        readonly RegisteredSerializationBinder binder = new RegisteredSerializationBinder();
-        readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
-        readonly DeflateStreamInputBufferReflector deflateReflector = new DeflateStreamInputBufferReflector();
+        readonly ITypeRegistry typeRegistry;
+        readonly Func<JsonSerializer> createSerializer;
+        readonly DeflateStreamInputBufferReflector deflateReflector;
 
-        // NOTE: Do not share the serializer between Read/Write, the HalibutContractResolver adds OnSerializedCallbacks which are specific to the 
-        // operation that is in-progress (and if the list is being enumerated at the time causes an exception).  And probably adds a duplicate each time the 
-        // type is detected. It also makes use of a static, StreamCapture.Current - which seems like a bad™ idea, perhaps this can be straightened out? 
-        // For now, just ensuring each operation does not interfere with each other.
-        JsonSerializer CreateSerializer()
+        public MessageSerializer() // kept for backwards compatibility.
         {
-            var jsonSerializer = JsonSerializer.Create();
-            jsonSerializer.Formatting = Formatting.None;
-            jsonSerializer.ContractResolver = new HalibutContractResolver();
-            jsonSerializer.TypeNameHandling = TypeNameHandling.Auto;
-            jsonSerializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
-            jsonSerializer.DateFormatHandling = DateFormatHandling.IsoDateFormat;
-            jsonSerializer.SerializationBinder = binder;
-            return jsonSerializer;
+            typeRegistry = new TypeRegistry();
+            createSerializer = () =>
+            {
+                var settings = MessageSerializerBuilder.CreateSerializer();
+                var binder = new RegisteredSerializationBinder(typeRegistry);
+                settings.SerializationBinder = binder;
+                return JsonSerializer.Create(settings);
+            };
+            deflateReflector = new DeflateStreamInputBufferReflector();
         }
 
-        public void AddToMessageContract(params Type[] types)
+        internal MessageSerializer(ITypeRegistry typeRegistry, Func<JsonSerializer> createSerializer)
         {
-            lock (messageContractTypes)
-            {
-                var newTypes = types.Where(t => messageContractTypes.Add(t)).ToArray();
-                binder.Register(newTypes);
-            }
+            this.typeRegistry = typeRegistry;
+            this.createSerializer = createSerializer;
+        }
+
+        public void AddToMessageContract(params Type[] types) // kept for backwards compatibility
+        {
+            typeRegistry.AddToMessageContract(types);
         }
         
         public void WriteMessage<T>(Stream stream, T message)
@@ -47,7 +44,7 @@ namespace Halibut.Transport.Protocol
                 // for the moment this MUST be object so that the $type property is included
                 // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
-                CreateSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
+                createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
         }
 
@@ -102,7 +99,7 @@ namespace Halibut.Transport.Protocol
 
         MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
         {
-            var result = CreateSerializer().Deserialize<MessageEnvelope<T>>(reader);
+            var result = createSerializer().Deserialize<MessageEnvelope<T>>(reader);
             if (result == null)
             {
                 throw new Exception("messageEnvelope is null");
