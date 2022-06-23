@@ -71,7 +71,7 @@ namespace Halibut.Transport.Protocol
 
         T ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
         {
-            rewindable.StartRewindBuffer();
+            rewindable.StartBuffer();
             try
             {
                 using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
@@ -82,18 +82,18 @@ namespace Halibut.Transport.Protocol
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
-                        rewindable.FinishRewindBuffer(unusedBytesCount);
+                        rewindable.FinishAndRewind(unusedBytesCount);
                     }
                     else
                     {
-                        rewindable.CancelRewindBuffer();
+                        rewindable.CancelBuffer();
                     }
                     return messageEnvelope.Message;
                 }
             }
             catch
             {
-                rewindable.CancelRewindBuffer();
+                rewindable.CancelBuffer();
                 throw;
             }
         }

@@ -36,12 +36,12 @@ namespace Halibut.Tests.Transport
                 baseStream.Write(inputBuffer, 0, inputBuffer.Length);
                 baseStream.Position = 0;
 
-                sut.StartRewindBuffer();
+                sut.StartBuffer();
                 var outputBuffer = new byte[inputBuffer.Length];
                 Assert.AreEqual(4, sut.Read(outputBuffer, 0, inputBuffer.Length));
                 var initialReadValue = Encoding.ASCII.GetString(outputBuffer);
                 Assert.AreEqual(initialReadValue, "Test");
-                sut.FinishRewindBuffer(0);
+                sut.FinishAndRewind(0);
 
                 var rewoundOutputBuffer = new byte[4];
                 Assert.AreEqual(0, sut.Read(rewoundOutputBuffer, 0, 4));
@@ -58,10 +58,10 @@ namespace Halibut.Tests.Transport
                 baseStream.Write(inputBuffer, 0, inputBuffer.Length);
                 baseStream.Position = 0;
 
-                sut.StartRewindBuffer();
+                sut.StartBuffer();
                 var outputBuffer = new byte[inputBuffer.Length];
                 _ = sut.Read(outputBuffer, 0, inputBuffer.Length);
-                sut.FinishRewindBuffer(2);
+                sut.FinishAndRewind(2);
 
                 var rewoundOutputBuffer = new byte[8];
                 Assert.AreEqual(2, sut.Read(rewoundOutputBuffer, 0, 8));
@@ -81,10 +81,10 @@ namespace Halibut.Tests.Transport
 
                 baseStream.Position = 0;
 
-                sut.StartRewindBuffer();
+                sut.StartBuffer();
                 var outputBuffer = new byte[inputBuffer.Length];
                 _ = sut.Read(outputBuffer, 0, inputBuffer.Length);
-                sut.CancelRewindBuffer();
+                sut.CancelBuffer();
 
                 var rewoundOutputBuffer = new byte[1];
                 Assert.AreEqual(0, sut.Read(rewoundOutputBuffer, 0, 1));

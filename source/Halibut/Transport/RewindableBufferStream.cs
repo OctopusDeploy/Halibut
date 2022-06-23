@@ -20,7 +20,10 @@ namespace Halibut.Transport
 
         public override void Flush() => baseStream.Flush();
 
-        public void StartRewindBuffer()
+        /// <summary>
+        /// Keep a rewind buffer of the latest <see cref="Stream.Read"/> on the underlying stream.
+        /// </summary>
+        public void StartBuffer()
         {
             if (rewindEnabled)
             {
@@ -32,12 +35,12 @@ namespace Halibut.Transport
         }
 
         /// <summary>
-        /// Stops read data being added to the rewind buffer, and rewinds the buffer.
+        /// Stops data being added to the rewind buffer, and rewinds the buffer.
         /// </summary>
         /// <param name="rewindCount">The number of bytes to rewind.</param>
-        /// <exception cref="ArgumentOutOfRangeException"><see cref="rewindCount"/> must be a positive number and less than the number of bytes read since <see cref="StartRewindBuffer"/> was called.</exception>
-        /// <exception cref="NotSupportedException"><see cref="StartRewindBuffer"/> has not been called.</exception>
-        public void FinishRewindBuffer(long rewindCount)
+        /// <exception cref="ArgumentOutOfRangeException"><see cref="rewindCount"/> must be a positive number and less than the number of bytes read since <see cref="StartBuffer"/> was called.</exception>
+        /// <exception cref="NotSupportedException"><see cref="StartBuffer"/> has not been called.</exception>
+        public void FinishAndRewind(long rewindCount)
         {
             if (!rewindEnabled)
             {
@@ -53,8 +56,8 @@ namespace Halibut.Transport
         /// <summary>
         /// Stops read data being added to the rewind buffer. Does not rewind the buffer.
         /// </summary>
-        /// <exception cref="NotSupportedException"><see cref="StartRewindBuffer"/> has not been called.</exception>
-        public void CancelRewindBuffer()
+        /// <exception cref="NotSupportedException"><see cref="StartBuffer"/> has not been called.</exception>
+        public void CancelBuffer()
         {
             if (!rewindEnabled)
             {
@@ -111,18 +114,18 @@ namespace Halibut.Transport
         public override long Position
         {
             get => baseStream.Position;
-            set => throw new NotSupportedException($"You probably want {nameof(FinishRewindBuffer)}.");
+            set => throw new NotSupportedException($"You probably want {nameof(FinishAndRewind)}.");
         }
         void RewindBuffer(int rewindSize)
         {
             if (rewindSize > rewindBufferCount)
             {
-                throw new ArgumentException($"Cannot rewind farther than what has been read since {nameof(StartRewindBuffer)} was called.");
+                throw new ArgumentException($"Cannot rewind farther than what has been read since {nameof(StartBuffer)} was called.");
             }
 
             if (rewindBufferOffset - rewindSize < 0)
             {
-                throw new ArgumentException($"Cannot rewind before the start of data read since {nameof(StartRewindBuffer)} was called.");
+                throw new ArgumentException($"Cannot rewind before the start of data read since {nameof(StartBuffer)} was called.");
             }
 
             rewindBufferOffset -= rewindSize;
@@ -168,6 +171,7 @@ namespace Halibut.Transport
         {
             rewindBufferOffset = 0;
             rewindBufferCount = 0;
+            rewindBufferPopulated = false;
         }
     }
 }
