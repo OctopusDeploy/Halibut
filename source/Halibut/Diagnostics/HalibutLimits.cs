@@ -46,6 +46,14 @@ namespace Halibut.Diagnostics
         /// Stops connection retries if this time period has been exceeded from the initial connection attempt. Can be overridden via the ServiceEndPoint.
         /// </summary>
         public static TimeSpan ConnectionErrorRetryTimeout = TimeSpan.FromMinutes(5);
+
+        /// <summary>
+        /// The size of the buffer, in bytes, of the rewind buffer when reading compressed message envelopes.
+        /// </summary>
+        /// <remarks>
+        /// For safety, this should match the buffer size of the decorated stream (i.e. DeflateStream) to avoid unintended side-effects.
+        /// </remarks>
+        public static int RewindableBufferStreamSize = 8192;
         
         /// <summary>
         /// Amount of time to wait for a TCP or SslStream write to complete successfully

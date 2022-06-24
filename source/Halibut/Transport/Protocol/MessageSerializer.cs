@@ -10,6 +10,7 @@ namespace Halibut.Transport.Protocol
     {
         readonly ITypeRegistry typeRegistry;
         readonly Func<JsonSerializer> createSerializer;
+        readonly DeflateStreamInputBufferReflector deflateReflector;
 
         public MessageSerializer() // kept for backwards compatibility.
         {
@@ -21,12 +22,14 @@ namespace Halibut.Transport.Protocol
                 settings.SerializationBinder = binder;
                 return JsonSerializer.Create(settings);
             };
+            deflateReflector = new DeflateStreamInputBufferReflector();
         }
 
         internal MessageSerializer(ITypeRegistry typeRegistry, Func<JsonSerializer> createSerializer)
         {
             this.typeRegistry = typeRegistry;
             this.createSerializer = createSerializer;
+            deflateReflector = new DeflateStreamInputBufferReflector();
         }
 
         public void AddToMessageContract(params Type[] types) // kept for backwards compatibility
@@ -48,15 +51,61 @@ namespace Halibut.Transport.Protocol
 
         public T ReadMessage<T>(Stream stream)
         {
+            if (stream is IRewindableBuffer rewindable)
+            {
+                return ReadCompressedMessageRewindable<T>(stream, rewindable);
+            }
+
+            return ReadCompressedMessage<T>(stream);
+        }
+
+        T ReadCompressedMessage<T>(Stream stream)
+        {
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
-                var messageEnvelope = createSerializer().Deserialize<MessageEnvelope<T>>(bson);
-                if (messageEnvelope == null)
-                    throw new Exception("messageEnvelope is null");
-                
+                var messageEnvelope = DeserializeMessage<T>(bson);
                 return messageEnvelope.Message;
             }
+        }
+
+        T ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
+        {
+            rewindable.StartBuffer();
+            try
+            {
+                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+                using (var bson = new BsonDataReader(zip) { CloseInput = false })
+                {
+                    var messageEnvelope = DeserializeMessage<T>(bson);
+
+                    // Find the unused bytes in the DeflateStream input buffer
+                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
+                    {
+                        rewindable.FinishAndRewind(unusedBytesCount);
+                    }
+                    else
+                    {
+                        rewindable.CancelBuffer();
+                    }
+                    return messageEnvelope.Message;
+                }
+            }
+            catch
+            {
+                rewindable.CancelBuffer();
+                throw;
+            }
+        }
+
+        MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
+        {
+            var result = createSerializer().Deserialize<MessageEnvelope<T>>(reader);
+            if (result == null)
+            {
+                throw new Exception("messageEnvelope is null");
+            }
+            return result;
         }
         
         // By making this a generic type, each message specifies the exact type it sends/expects

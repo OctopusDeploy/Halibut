@@ -185,6 +185,7 @@ namespace Halibut.Diagnostics
         public static TimeSpan PollingRequestQueueTimeout;
         public static int RetryCountLimit;
         public static TimeSpan RetryListeningSleepInterval;
+        public static int RewindableBufferStreamSize;
         public static TimeSpan TcpClientConnectTimeout;
         public static TimeSpan TcpClientHeartbeatReceiveTimeout;
         public static TimeSpan TcpClientHeartbeatSendTimeout;
