@@ -31,7 +31,7 @@ namespace Halibut.Transport.Protocol
             #if NETFRAMEWORK
             this.stream = stream;
             #else
-            this.stream = new RewindableBufferStream(stream);
+            this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             #endif
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
