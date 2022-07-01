@@ -101,14 +101,14 @@ namespace Halibut
             return Listen(new IPEndPoint(ipAddress, port));
         }
         
-        ExchangeProtocolBuilder ExchangeProtocolBuilder()
+        ExchangeProtocolBuilder ExchangeProtocolBuilder(bool useRewindableBuffer = false)
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log, useRewindableBuffer), log);
         }
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(true), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -119,7 +119,7 @@ namespace Halibut
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(true), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             lock (listeners)
             {
                 listeners.Add(listener);
