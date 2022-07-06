@@ -543,7 +543,6 @@ namespace Halibut.Transport.Protocol
     public class MessageExchangeStream : Halibut.Transport.Protocol.IMessageExchangeStream
     {
         public MessageExchangeStream(Stream stream, Halibut.Transport.Protocol.IMessageSerializer serializer, Halibut.Diagnostics.ILog log) { }
-        public MessageExchangeStream(Stream stream, Halibut.Transport.Protocol.IMessageSerializer serializer, Halibut.Diagnostics.ILog log, bool useRewindableBuffer) { }
         public bool ExpectNextOrEnd() { }
         public Task<bool> ExpectNextOrEndAsync() { }
         public void ExpectProceeed() { }
