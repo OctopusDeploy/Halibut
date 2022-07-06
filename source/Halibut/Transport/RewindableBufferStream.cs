@@ -108,6 +108,20 @@ namespace Halibut.Transport
         public override bool CanSeek => false;
         public override bool CanWrite => true;
 
+        public override bool CanTimeout => baseStream.CanTimeout;
+        
+        public override int ReadTimeout
+        {
+            get => baseStream.ReadTimeout;
+            set => baseStream.ReadTimeout = value;
+        }
+
+        public override int WriteTimeout
+        {
+            get => baseStream.WriteTimeout;
+            set => baseStream.WriteTimeout = value;
+        }
+
         public override long Length
             => throw new NotSupportedException();
 
