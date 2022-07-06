@@ -26,16 +26,12 @@ namespace Halibut.Transport.Protocol
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log) : this(stream, serializer, log, false)
-        {
-        }
-
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log, bool useRewindableBuffer)
+        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
             #if NETFRAMEWORK
             this.stream = stream;
             #else
-            this.stream = useRewindableBuffer ? new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize) : stream;
+            this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             #endif
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
