@@ -38,6 +38,8 @@ namespace Halibut.Tests
 
                 var sayHelloTask = Task.Run(() => echo.SayHello("Bob"));
 
+                // The test knows that Halibut should be using the shorter TcpClientHeartbeatReceiveTimeout when checking
+                // the TCP connection pulled out of the pool. Doing this reduces the test time in the failure case.
                 await Task.WhenAny(sayHelloTask, Task.Delay(HalibutLimits.TcpClientHeartbeatReceiveTimeout * 2));
 
                 sayHelloTask.IsCompleted.Should().BeTrue("We should be able to detect dead TCP connections and retry requests with a new TCP connection.");
