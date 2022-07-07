@@ -81,8 +81,6 @@ namespace Halibut.Tests.Util
 
             while (true)
             {
-                await PausePump();
-                
                 await Task.Yield();
 
                 if (cancellationToken.IsCancellationRequested) break;
@@ -91,9 +89,10 @@ namespace Halibut.Tests.Util
 
                 try
                 {
+                    await PausePump(cancellationToken);
                     var receivedByteCount = await readFrom.ReceiveAsync(inputBuffer, SocketFlags.None, cancellationToken).ConfigureAwait(false);
                     if (receivedByteCount == 0) break;
-                    await PausePump();
+                    await PausePump(cancellationToken);
                     var outputBuffer = new ArraySegment<byte>(inputBuffer, 0, receivedByteCount);
                     await writeTo.SendAsync(outputBuffer, SocketFlags.None, cancellationToken).ConfigureAwait(false);
                 }
@@ -112,11 +111,12 @@ namespace Halibut.Tests.Util
             }
         }
 
-        async Task PausePump()
+        async Task PausePump(CancellationToken cancellationToken)
         {
             while (IsPaused)
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
+                cancellationToken.ThrowIfCancellationRequested();
             }
         }
 
