@@ -8,7 +8,7 @@ namespace Halibut.ServiceModel
     public interface IPendingRequestQueue
     {
         bool IsEmpty { get; }
-        void ApplyResponse(ResponseMessage response);
+        void ApplyResponse(ResponseMessage response, ServiceEndPoint destination);
         RequestMessage Dequeue();
         Task<RequestMessage> DequeueAsync();
         Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken);

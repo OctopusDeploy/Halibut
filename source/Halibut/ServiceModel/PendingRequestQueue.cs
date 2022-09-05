@@ -120,7 +120,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        public void ApplyResponse(ResponseMessage response)
+        public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination)
         {
             if (response == null)
                 return;
