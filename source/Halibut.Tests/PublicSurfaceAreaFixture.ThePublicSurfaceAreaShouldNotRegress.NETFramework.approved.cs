@@ -280,7 +280,7 @@ namespace Halibut.ServiceModel
     public interface IPendingRequestQueue
     {
         public bool IsEmpty { get; }
-        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response) { }
+        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response, Halibut.ServiceEndPoint destination) { }
         public Halibut.Transport.Protocol.RequestMessage Dequeue() { }
         public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
         public Task<Halibut.Transport.Protocol.ResponseMessage> QueueAndWaitAsync(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
@@ -324,7 +324,7 @@ namespace Halibut.ServiceModel
     {
         public PendingRequestQueue(Halibut.Diagnostics.ILog log) { }
         public bool IsEmpty { get; }
-        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response) { }
+        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response, Halibut.ServiceEndPoint destination) { }
         public Halibut.Transport.Protocol.RequestMessage Dequeue() { }
         public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
         public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request) { }

@@ -191,7 +191,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response);
+                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
             }
             catch (Exception ex)
@@ -199,7 +199,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = ResponseMessage.FromException(nextRequest, ex);
-                    pendingRequests.ApplyResponse(response);
+                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
                 return false;
             }
@@ -229,7 +229,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response);
+                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
             }
             catch (Exception ex)
@@ -237,7 +237,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = ResponseMessage.FromException(nextRequest, ex);
-                    pendingRequests.ApplyResponse(response);
+                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
                 return false;
             }
