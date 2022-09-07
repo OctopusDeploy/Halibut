@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Halibut.Tests.Util
@@ -9,14 +10,16 @@ namespace Halibut.Tests.Util
         public WebSocketListeningPrerequisites()
         {
             Port = FreeTcpPortFinder.Find();
-            AddSslCertToLocalStoreAndRegisterFor($"0.0.0.0:{Port}");
+            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                AddSslCertToLocalStoreAndRegisterFor($"0.0.0.0:{Port}");
         }
 
         public int Port { get;}
 
         public void Dispose()
         {
-            RemoveSslCertBindingFor($"0.0.0.0:{Port}");
+            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                RemoveSslCertBindingFor($"0.0.0.0:{Port}");
         }
         
         static void AddSslCertToLocalStoreAndRegisterFor(string address)
