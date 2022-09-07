@@ -82,7 +82,6 @@ namespace Halibut.Tests
             }
         }
 
-#if SUPPORTS_WEB_SOCKET_CLIENT
         [Test]
         public void OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
@@ -106,7 +105,6 @@ namespace Halibut.Tests
                 }
             }
         }
-#endif
 
         [Test]
         public void HalibutSerializerIsKeptUpToDateWithPollingTentacle()
@@ -132,7 +130,6 @@ namespace Halibut.Tests
             }
         }
 
-#if SUPPORTS_WEB_SOCKET_CLIENT
         [Test]
         public void HalibutSerializerIsKeptUpToDateWithWebSocketPollingTentacle()
         {
@@ -158,7 +155,6 @@ namespace Halibut.Tests
                 svc.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
             }
         }
-#endif
 
         [Test]
         public void StreamsCanBeSentToListening()

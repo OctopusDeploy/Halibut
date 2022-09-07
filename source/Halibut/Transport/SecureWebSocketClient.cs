@@ -1,10 +1,4 @@
-// WebSocketClient on .NET Core does not yet support the validation (or bypass) of the remote certificate. It does
-// not use the ServicePointManager callback, nor has an option to specify a callback.
-// This means we cannot validate the remote is presenting the correct certificate
-// See https://github.com/dotnet/corefx/issues/12038
-
 using Halibut.Util;
-#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -157,4 +151,3 @@ namespace Halibut.Transport
         }
     }
 }
-#endif

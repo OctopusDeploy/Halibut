@@ -56,10 +56,8 @@ namespace Halibut.Tests
                     RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
                 }
 
-#if SUPPORTS_WEB_SOCKET_CLIENT
                 for (var i = 0; i < NumberOfClients; i++)
                     RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
-#endif
 
                 //https://dotnettools-support.jetbrains.com/hc/en-us/community/posts/360000088690-How-reproduce-DotMemory-s-Force-GC-button-s-behaviour-on-code-with-c-?page=1#community_comment_360000072750
                 for (var i = 0; i < 4; i++)
