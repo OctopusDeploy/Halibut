@@ -100,7 +100,7 @@ namespace Halibut.Tests
                     ? Certificates.SslThumbprint
                     : Certificates.OctopusPublicThumbprint;
                     
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{prereq.Port}/Halibut"), expectedCert);
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{prereq.Port}/Halibut"), expectedCert));
 
                 var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 for (var i = 1; i < 100; i++)
