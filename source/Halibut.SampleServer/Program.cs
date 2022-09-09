@@ -33,18 +33,20 @@ namespace Halibut.SampleServer
                 //Begin Listening Setup
                 //server.Listen(endPoint);
                 //server.Trust("2074529C99D93D5955FEECA859AEAC6092741205");
+                //Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");
                 //End Listening Setup
 
                 //Begin Polling Setup
                 //server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:8433"), "2074529C99D93D5955FEECA859AEAC6092741205"));
+                //Console.WriteLine("Server polling. Type 'exit' to quit, or 'cls' to clear...");
                 //End Polling Setup
 
                 //Begin WebSocket Polling Setup
                 
                 server.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("wss://localhost:8433/Halibut"), SslCertificateThumbprint));
+                Console.WriteLine("Server polling using websockets. Type 'exit' to quit, or 'cls' to clear...");
                 //End WebSocket Polling Setup
 
-                Console.WriteLine("Server listening on port 8433. Type 'exit' to quit, or 'cls' to clear...");
                 while (true)
                 {
                     var line = Console.ReadLine();

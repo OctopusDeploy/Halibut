@@ -24,13 +24,13 @@ namespace Halibut.Transport.Protocol
 
             AttemptToDelete(filePath);
             File.Move(path, filePath);
-#if NETSTANDARD2_0
+#if NETFRAMEWORK
+            SetFilePermissionsToInheritFromParent(filePath);
+#else
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 SetFilePermissionsToInheritFromParent(filePath);
             }
-#else
-            SetFilePermissionsToInheritFromParent(filePath);
 #endif
 
             moved = true;

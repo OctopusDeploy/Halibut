@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.SampleContracts;
@@ -15,6 +17,7 @@ namespace Halibut.SampleClient
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.ColoredConsole()
+                .MinimumLevel.Verbose()
                 .CreateLogger();
 
             Console.Title = "Halibut Client";
@@ -61,31 +64,31 @@ namespace Halibut.SampleClient
         static void AddSslCertToLocalStoreAndRegisterFor(string address)
         {
             var certificate = new X509Certificate2("HalibutSslCertificate.pfx", "password");
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-            store.Open(OpenFlags.ReadWrite);
-            store.Add(certificate);
-            store.Close();
+                var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+                store.Open(OpenFlags.ReadWrite);
+                store.Add(certificate);
+                store.Close();
 
 
-            var proc = new Process()
-            {
-                StartInfo = new ProcessStartInfo("netsh", $"http add sslcert ipport={address} certhash={certificate.Thumbprint} appid={{2e282bfb-fce9-40fc-a594-2136043e1c8f}}")
+                var proc = new Process()
                 {
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false
-                }
-            };
-            proc.Start();
-            proc.WaitForExit();
-            var output = proc.StandardOutput.ReadToEnd();
+                    StartInfo = new ProcessStartInfo("netsh", $"http add sslcert ipport={address} certhash={certificate.Thumbprint} appid={{2e282bfb-fce9-40fc-a594-2136043e1c8f}}")
+                    {
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false
+                    }
+                };
+                proc.Start();
+                proc.WaitForExit();
+                var output = proc.StandardOutput.ReadToEnd();
 
-            if (proc.ExitCode != 0 && !output.Contains("Cannot create a file when that file already exists"))
-            {
-                Console.WriteLine(output);
-                Console.WriteLine(proc.StandardError.ReadToEnd());
-                throw new Exception("Could not bind cert to port");
+                if (proc.ExitCode != 0 && !output.Contains("Cannot create a file when that file already exists"))
+                {
+                    Console.WriteLine(output);
+                    Console.WriteLine(proc.StandardError.ReadToEnd());
+                    throw new Exception("Could not bind cert to port");
+                }
             }
         }
     }
-}

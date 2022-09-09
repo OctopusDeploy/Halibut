@@ -55,7 +55,7 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            
+
             // these two are the reason we can't just call our internal ctor.
             logs = new LogFactory();
             queueFactory = new DefaultPendingRequestQueueFactory(logs);
@@ -66,7 +66,7 @@ namespace Halibut
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
         }
-        
+
         internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer)
         {
             this.serverCertificate = serverCertificate;
@@ -81,7 +81,7 @@ namespace Halibut
         public ILogFactory Logs => logs;
 
         public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-        
+
         IPendingRequestQueue GetQueue(Uri target)
         {
             return queues.GetOrAdd(target, u => queueFactory.CreateQueue(target));
@@ -100,7 +100,7 @@ namespace Halibut
 
             return Listen(new IPEndPoint(ipAddress, port));
         }
-        
+
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
             return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log), log);
@@ -146,16 +146,13 @@ namespace Halibut
             var log = logs.ForEndpoint(endPoint.BaseUri);
             if (endPoint.IsWebSocketEndpoint)
             {
-#if SUPPORTS_WEB_SOCKET_CLIENT
                 client = new SecureWebSocketClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
-#else
-                throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
-#endif
             }
             else
             {
                 client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
             }
+
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken));
         }
 
@@ -163,7 +160,7 @@ namespace Halibut
         {
             return Discover(uri, CancellationToken.None);
         }
-        
+
         public ServiceEndPoint Discover(Uri uri, CancellationToken cancellationToken)
         {
             return Discover(new ServiceEndPoint(uri, null), cancellationToken);
@@ -173,7 +170,7 @@ namespace Halibut
         {
             return Discover(endpoint, CancellationToken.None);
         }
-        
+
         public ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             var client = new DiscoveryClient();
@@ -194,7 +191,7 @@ namespace Halibut
         {
             return CreateClient<TService>(endpoint, CancellationToken.None);
         }
-        
+
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             typeRegistry.AddToMessageContract(typeof(TService));
@@ -211,7 +208,7 @@ namespace Halibut
             return proxy;
 #endif
         }
-        
+
         // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
         [Obsolete("Consider implementing an async HalibutProxy instead")]
         ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
@@ -238,10 +235,7 @@ namespace Halibut
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
-            client.ExecuteTransaction(protocol =>
-            {
-                response = protocol.ExchangeAsClient(request);
-            }, cancellationToken);
+            client.ExecuteTransaction(protocol => { response = protocol.ExchangeAsClient(request); }, cancellationToken);
             return response;
         }
 
@@ -341,6 +335,7 @@ namespace Halibut
             {
                 Trust(thumbPrint);
             }
+
             return result;
         }
 
@@ -349,6 +344,5 @@ namespace Halibut
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                                    Environment.OSVersion.Version >= new Version(6, 2);
 #pragma warning restore DE0009 // API is deprecated
-        
     }
 }

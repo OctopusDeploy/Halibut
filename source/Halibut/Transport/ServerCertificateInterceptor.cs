@@ -1,4 +1,4 @@
-#if SUPPORTS_WEB_SOCKET_CLIENT
+#if REQUIRES_SERVICE_POINT_MANAGER
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -6,6 +6,17 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Halibut.Transport
 {
+    /// <summary>
+    /// .NET Prior to Core (or 5.0) had a static, ugly, process wide way of validating client supplied certificates for WebSockets.
+    ///
+    /// Since Halibut typically isn't the only one accepting and making requests, it has to play nicely.
+    /// 
+    /// Halibut does this by wrapping the current global ServerCertificateValidationCallback with some extra logic. 
+    /// It then keeps tracks of the connections being made and captures those certificate. Finally the code calls Validate
+    /// to check we've captured the appropriate certificate as part of the request.
+    ///
+    /// This can die in flames when net465 (or similar) support is dropped.
+    /// </summary>
     static class ServerCertificateInterceptor
     {
         public const string Header = "X-Octopus-RequestId";
@@ -61,7 +72,7 @@ namespace Halibut.Transport
             X509Certificate2 providedCertificate;
 
             lock (certificates)
-                if (!certificates.TryGetValue(connectionId, out providedCertificate))
+                if (!certificates.TryGetValue(connectionId, out providedCertificate) || providedCertificate == null)
                     throw new Exception("Did not recieve a certificate from the server");
 
             if (providedCertificate.Thumbprint != endPoint.RemoteThumbprint)

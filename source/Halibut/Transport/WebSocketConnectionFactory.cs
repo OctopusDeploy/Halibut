@@ -1,4 +1,3 @@
-#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Net;
 using System.Net.WebSockets;
@@ -24,7 +23,7 @@ namespace Halibut.Transport
         {
             return EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, CancellationToken.None);
         }
-        
+
         public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
@@ -43,31 +42,40 @@ namespace Halibut.Transport
             return new SecureConnection(client, stream, exchangeProtocolBuilder, log);
         }
 
-        
         ClientWebSocket CreateConnectedClient(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
         {
             if (!serviceEndpoint.IsWebSocketEndpoint)
                 throw new Exception("Only wss:// endpoints are supported");
-
+#if REQUIRES_SERVICE_POINT_MANAGER
             var connectionId = Guid.NewGuid().ToString();
+#endif
 
             var client = new ClientWebSocket();
             client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
             client.Options.AddSubProtocol("Octopus");
+#if REQUIRES_SERVICE_POINT_MANAGER
             client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
+#else
+            client.Options.RemoteCertificateValidationCallback = new ClientCertificateValidator(serviceEndpoint).Validate;
+#endif
+
             if (serviceEndpoint.Proxy != null)
                 client.Options.Proxy = new WebSocketProxy(serviceEndpoint.Proxy);
 
             try
             {
+#if REQUIRES_SERVICE_POINT_MANAGER
                 ServerCertificateInterceptor.Expect(connectionId);
+#endif
                 using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
                 {
                     using (cancellationToken.Register(() => cts?.Cancel()))
                         client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token)
                             .ConfigureAwait(false).GetAwaiter().GetResult();
                 }
+#if REQUIRES_SERVICE_POINT_MANAGER
                 ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
+#endif
             }
             catch
             {
@@ -75,14 +83,16 @@ namespace Halibut.Transport
                     using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                         client.CloseAsync(WebSocketCloseStatus.ProtocolError, "Certificate thumbprint not recognised", sendCancel.Token)
                             .ConfigureAwait(false).GetAwaiter().GetResult();
-                
+
                 client.Dispose();
                 throw;
             }
+#if REQUIRES_SERVICE_POINT_MANAGER
             finally
             {
                 ServerCertificateInterceptor.Remove(connectionId);
             }
+#endif
 
             return client;
         }
@@ -112,4 +122,3 @@ namespace Halibut.Transport
         public ICredentials Credentials { get; set; }
     }
 }
-#endif

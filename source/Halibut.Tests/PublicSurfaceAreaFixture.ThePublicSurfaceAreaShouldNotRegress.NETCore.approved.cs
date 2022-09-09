@@ -430,7 +430,16 @@ namespace Halibut.Transport
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Transport.Protocol.ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.UnauthorizedClientConnectResponse> unauthorizedClientConnect) { }
         public void Disconnect(string thumbprint) { }
         public void Dispose() { }
+        public static bool IsWindows() { }
         public int Start() { }
+    }
+    public class SecureWebSocketClient : Halibut.Transport.ISecureClient
+    {
+        public static int RetryCountLimit;
+        public SecureWebSocketClient(Halibut.Transport.Protocol.ExchangeProtocolBuilder protocolBuilder, Halibut.ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, Halibut.Diagnostics.ILog log, Halibut.Transport.ConnectionManager connectionManager) { }
+        public Halibut.ServiceEndPoint ServiceEndpoint { get; }
+        public void ExecuteTransaction(Halibut.Transport.Protocol.ExchangeAction protocolHandler) { }
+        public void ExecuteTransaction(Halibut.Transport.Protocol.ExchangeAction protocolHandler, System.Threading.CancellationToken cancellationToken) { }
     }
     public class SecureWebSocketListener : IDisposable
     {
@@ -450,6 +459,12 @@ namespace Halibut.Transport
     public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
     {
         public TcpConnectionFactory(X509Certificate2 clientCertificate) { }
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
+        public Halibut.Transport.IConnection EstablishNewConnection(Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public class WebSocketConnectionFactory : Halibut.Transport.IConnectionFactory
+    {
+        public WebSocketConnectionFactory(X509Certificate2 clientCertificate) { }
         public Halibut.Transport.IConnection EstablishNewConnection(Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
         public Halibut.Transport.IConnection EstablishNewConnection(Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log, System.Threading.CancellationToken cancellationToken) { }
     }
