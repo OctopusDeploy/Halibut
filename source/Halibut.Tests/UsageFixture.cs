@@ -11,6 +11,7 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
+using Halibut.Transport;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -95,7 +96,11 @@ namespace Halibut.Tests
                 octopus.ListenWebSocket($"https://+:{prereq.Port}/Halibut");
                 octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
 
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{prereq.Port}/Halibut"), Certificates.SslThumbprint));
+                var expectedCert = SecureListener.IsWindows()
+                    ? Certificates.SslThumbprint
+                    : Certificates.OctopusPublicThumbprint;
+                    
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{prereq.Port}/Halibut"), expectedCert);
 
                 var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 for (var i = 1; i < 100; i++)
@@ -142,8 +147,12 @@ namespace Halibut.Tests
             {
                 octopus.ListenWebSocket($"https://+:{prereq.Port}/Halibut");
                 octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+                
+                var expectedCert = SecureListener.IsWindows()
+                    ? Certificates.SslThumbprint
+                    : Certificates.OctopusPublicThumbprint;
 
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{prereq.Port}/Halibut"), Certificates.SslThumbprint));
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri($"wss://localhost:{prereq.Port}/Halibut"), expectedCert));
 
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered                     
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);

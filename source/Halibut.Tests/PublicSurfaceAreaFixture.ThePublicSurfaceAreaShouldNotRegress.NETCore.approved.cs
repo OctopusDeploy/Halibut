@@ -430,6 +430,7 @@ namespace Halibut.Transport
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Transport.Protocol.ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.UnauthorizedClientConnectResponse> unauthorizedClientConnect) { }
         public void Disconnect(string thumbprint) { }
         public void Dispose() { }
+        public static bool IsWindows() { }
         public int Start() { }
     }
     public class SecureWebSocketClient : Halibut.Transport.ISecureClient
