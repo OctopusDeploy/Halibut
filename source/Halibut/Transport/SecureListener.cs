@@ -161,7 +161,7 @@ namespace Halibut.Transport
             }
         }
 
-        bool IsWindows()
+        public static bool IsWindows()
         {
 #if NETFRAMEWORK
             return Environment.OSVersion.Platform == PlatformID.Win32NT;
