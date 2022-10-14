@@ -26,7 +26,7 @@ namespace Halibut.Tests.Util
             listeningSocket.Listen(0);
             logger.Information("Listening on {LoadBalancerEndpoint}", listeningSocket.LocalEndPoint?.ToString());
 
-            var port = ((IPEndPoint?)listeningSocket.LocalEndPoint)!.Port;
+            var port = ((IPEndPoint)listeningSocket.LocalEndPoint).Port;
             PublicEndpoint = new UriBuilder(scheme, "localhost", port).Uri;
 
             Task.Factory.StartNew(() => WorkerTask(cancellationTokenSource.Token).ConfigureAwait(false), TaskCreationOptions.LongRunning);
