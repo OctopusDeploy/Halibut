@@ -68,7 +68,7 @@ namespace Halibut.Tests.Util
             }
         }
 
-        void OnPortForwarderStopped(object? sender, EventArgs e)
+        void OnPortForwarderStopped(object sender, EventArgs e)
         {
             if (sender is TcpPump portForwarder)
             {

@@ -29,7 +29,7 @@ namespace Halibut.Tests.Util
             clientEndPoint = clientSocket.RemoteEndPoint ?? throw new ArgumentException("Remote endpoint is null", nameof(clientSocket));
         }
 
-        public event EventHandler<EventArgs>? Stopped;
+        public event EventHandler<EventArgs> Stopped;
 
         public void Start()
         {
@@ -90,11 +90,12 @@ namespace Halibut.Tests.Util
                 try
                 {
                     await PausePump(cancellationToken);
-                    var receivedByteCount = await readFrom.ReceiveAsync(inputBuffer, SocketFlags.None, cancellationToken).ConfigureAwait(false);
+                    ArraySegment<byte> inputBufferArraySegment = new ArraySegment<byte>(inputBuffer);
+                    var receivedByteCount = await readFrom.ReceiveAsync(inputBufferArraySegment, SocketFlags.None).ConfigureAwait(false);
                     if (receivedByteCount == 0) break;
                     await PausePump(cancellationToken);
                     var outputBuffer = new ArraySegment<byte>(inputBuffer, 0, receivedByteCount);
-                    await writeTo.SendAsync(outputBuffer, SocketFlags.None, cancellationToken).ConfigureAwait(false);
+                    await writeTo.SendAsync(outputBuffer, SocketFlags.None).ConfigureAwait(false);
                 }
                 catch (SocketException socketException)
                 {
