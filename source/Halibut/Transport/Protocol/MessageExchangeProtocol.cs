@@ -163,11 +163,17 @@ namespace Halibut.Transport.Protocol
         {
             while (true)
             {
+                log.Write(EventType.Diagnostic, "Dequeuing...");
                 var nextRequest = pendingRequests.Dequeue();
 
                 var success = ProcessReceiverInternal(pendingRequests, nextRequest);
                 if (!success)
+                {
+                    log.Write(EventType.Diagnostic, "Dequeue failed.");
                     return;
+                }
+
+                log.Write(EventType.Diagnostic, "Dequeue success.");
             }
         }
 

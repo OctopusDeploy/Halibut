@@ -51,12 +51,14 @@ namespace Halibut.Transport.Protocol
 
         void SendControlMessage(string message)
         {
+            log.Write(EventType.Diagnostic, "Sending control: {0}", message);
             streamWriter.WriteLine(message);
             streamWriter.Flush();
         }
 
         async Task SendControlMessageAsync(string message)
         {
+            log.Write(EventType.Diagnostic, "Sending control: {0}", message);
             await streamWriter.WriteLineAsync(message).ConfigureAwait(false);
             await streamWriter.FlushAsync().ConfigureAwait(false);
         }
@@ -95,6 +97,7 @@ namespace Halibut.Transport.Protocol
         public bool ExpectNextOrEnd()
         {
             var line = ReadLine();
+            log.Write(EventType.Diagnostic, "Expect next or end, got: {0}", line);
             switch (line)
             {
                 case Next:
@@ -110,6 +113,7 @@ namespace Halibut.Transport.Protocol
         public async Task<bool> ExpectNextOrEndAsync()
         {
             var line = await ReadLineAsync().ConfigureAwait(false);
+            log.Write(EventType.Diagnostic, "Expect next or end, got: {0}", line);
             switch (line)
             {
                 case Next:
@@ -194,6 +198,8 @@ namespace Halibut.Transport.Protocol
 
         public void Send<T>(T message)
         {
+            log.Write(EventType.Diagnostic, "Sending: {0}", message);
+            
             using (var capture = StreamCapture.New())
             {
                 serializer.WriteMessage(stream, message);
@@ -205,6 +211,8 @@ namespace Halibut.Transport.Protocol
 
         public T Receive<T>()
         {
+            log.Write(EventType.Diagnostic, "Receiving...");
+            
             using (var capture = StreamCapture.New())
             {
                 var result = serializer.ReadMessage<T>(stream);
