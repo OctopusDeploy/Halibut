@@ -215,7 +215,9 @@ namespace Halibut.Transport.Protocol
             
             using (var capture = StreamCapture.New())
             {
+                log.Write(EventType.Diagnostic, "Starting capture...");
                 var result = serializer.ReadMessage<T>(stream);
+                log.Write(EventType.Diagnostic, "Reading streams...");
                 ReadStreams(capture);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
