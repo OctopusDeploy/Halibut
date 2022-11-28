@@ -137,7 +137,6 @@ namespace Halibut.ServiceModel
 
         class PendingRequest
         {
-            readonly RequestMessage request;
             readonly ILog log;
             readonly ManualResetEventSlim waiter;
             readonly object sync = new object();
@@ -146,24 +145,21 @@ namespace Halibut.ServiceModel
 
             public PendingRequest(RequestMessage request, ILog log)
             {
-                this.request = request;
+                this.Request = request;
                 this.log = log;
                 waiter = new ManualResetEventSlim(false);
             }
 
-            public RequestMessage Request
-            {
-                get { return request; }
-            }
+            public RequestMessage Request { get; }
 
             public void WaitUntilComplete(CancellationToken cancellationToken)
             {
-                log.Write(EventType.MessageExchange, "Request {0} was queued", request);
+                log.Write(EventType.MessageExchange, "Request {0} was queued", Request);
 
-                var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout, cancellationToken);
+                var success = waiter.Wait(Request.Destination.PollingRequestQueueTimeout, cancellationToken);
                 if (success)
                 {
-                    log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
+                    log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", Request);
                     return;
                 }
 
@@ -182,20 +178,20 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    success = waiter.Wait(request.Destination.PollingRequestMaximumMessageProcessingTimeout);
+                    success = waiter.Wait(Request.Destination.PollingRequestMaximumMessageProcessingTimeout);
                     if (success)
                     {
-                        log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
+                        log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", Request);
                     }
                     else
                     {
-                        SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestMaximumMessageProcessingTimeout))));
+                        SetResponse(ResponseMessage.FromException(Request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", Request.Destination.PollingRequestMaximumMessageProcessingTimeout))));
                     }
                 }
                 else
                 {
-                    log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
-                    SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestQueueTimeout))));
+                    log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", Request);
+                    SetResponse(ResponseMessage.FromException(Request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", Request.Destination.PollingRequestQueueTimeout))));
                 }
             }
 
