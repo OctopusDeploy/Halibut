@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading;
@@ -29,9 +31,9 @@ namespace Halibut.Transport.Protocol
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
             // #if NETFRAMEWORK
-            this.stream = stream;
+            // this.stream = stream;
             // #else
-            // this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+            this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             // #endif
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
@@ -215,12 +217,48 @@ namespace Halibut.Transport.Protocol
             
             using (var capture = StreamCapture.New())
             {
-                log.Write(EventType.Diagnostic, "Starting capture...");
+                if (stream is IRewindableBuffer rewindable)
+                {
+                    var preview = Peek(rewindable);
+                    log.Write(EventType.Diagnostic, "Received raw: {0}", preview);
+                }
+                
                 var result = serializer.ReadMessage<T>(stream);
-                log.Write(EventType.Diagnostic, "Reading streams...");
                 ReadStreams(capture);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
+            }
+        }
+        
+        string Peek(IRewindableBuffer rewindable)
+        {
+            var deflateReflector = new DeflateStreamInputBufferReflector();
+            var output = new MemoryStream();
+            rewindable.StartBuffer();
+            
+            try
+            {
+                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+                {
+                    zip.CopyTo(output);
+                    var str = output.ToString();
+                    
+                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
+                    {
+                        rewindable.FinishAndRewind(unusedBytesCount);
+                    }
+                    else
+                    {
+                        rewindable.CancelBuffer();
+                    }
+
+                    return str;
+                }
+            }
+            catch
+            {
+                rewindable.CancelBuffer();
+                throw;
             }
         }
 
