@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -98,7 +99,8 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
+        // MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
+        MessageEnvelope<T> DeserializeMessage<T>(BsonDataReader reader)
         {
             var result = createSerializer().Deserialize<MessageEnvelope<T>>(reader);
             if (result == null)
@@ -107,7 +109,7 @@ namespace Halibut.Transport.Protocol
             }
             return result;
         }
-        
+
         // By making this a generic type, each message specifies the exact type it sends/expects
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
         class MessageEnvelope<T>
