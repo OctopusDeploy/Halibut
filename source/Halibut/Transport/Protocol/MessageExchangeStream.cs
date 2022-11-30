@@ -30,13 +30,13 @@ namespace Halibut.Transport.Protocol
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
-            // #if NETFRAMEWORK
-            // this.stream = stream;
-            // #else
+#if NETFRAMEWORK
+            this.stream = stream;
+#else
             this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
-            // #endif
+#endif
             this.log = log;
-            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
+            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) {NewLine = "\r\n"};
             streamReader = new StreamReader(this.stream, new UTF8Encoding(false));
             this.serializer = serializer;
             SetNormalTimeouts();
@@ -176,7 +176,7 @@ namespace Halibut.Transport.Protocol
         {
             var line = streamReader.ReadLine();
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
-            var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var parts = line.Split(new[] {' '}, StringSplitOptions.RemoveEmptyEntries);
             try
             {
                 var identityType = ParseIdentityType(parts[0]);
@@ -186,6 +186,7 @@ namespace Halibut.Transport.Protocol
                     var subscriptionId = new Uri(parts[2]);
                     return new RemoteIdentity(identityType, subscriptionId);
                 }
+
                 return new RemoteIdentity(identityType);
             }
             catch (ProtocolException)
@@ -201,7 +202,7 @@ namespace Halibut.Transport.Protocol
         public void Send<T>(T message)
         {
             log.Write(EventType.Diagnostic, "Sending: {0}", message);
-            
+
             using (var capture = StreamCapture.New())
             {
                 serializer.WriteMessage(stream, message);
@@ -214,51 +215,13 @@ namespace Halibut.Transport.Protocol
         public T Receive<T>()
         {
             log.Write(EventType.Diagnostic, "Receiving...");
-            
+
             using (var capture = StreamCapture.New())
             {
-                if (stream is IRewindableBuffer rewindable)
-                {
-                    var preview = Peek(rewindable);
-                    log.Write(EventType.Diagnostic, "Received raw: {0}", preview);
-                }
-                
                 var result = serializer.ReadMessage<T>(stream);
                 ReadStreams(capture);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
-            }
-        }
-        
-        string Peek(IRewindableBuffer rewindable)
-        {
-            var deflateReflector = new DeflateStreamInputBufferReflector();
-            var output = new MemoryStream();
-            rewindable.StartBuffer();
-            
-            try
-            {
-                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-                {
-                    zip.CopyTo(output);
-                    var str = output.ToString();
-                    
-                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
-                    {
-                        rewindable.FinishAndRewind(unusedBytesCount);
-                    }
-                    else
-                    {
-                        rewindable.CancelBuffer();
-                    }
-
-                    return str;
-                }
-            }
-            catch
-            {
-                rewindable.CancelBuffer();
-                throw;
             }
         }
 
@@ -307,24 +270,26 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
             }
 
-            ((IDataStreamInternal)dataStream).Received(tempFile);
+            ((IDataStreamInternal) dataStream).Received(tempFile);
         }
 
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
+            log.Write(EventType.Diagnostic, "Writing stream to file: {0}", path);
             long bytesLeftToRead = length;
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
                 var buffer = new byte[1024 * 128];
                 while (bytesLeftToRead > 0)
                 {
-                    var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesLeftToRead));
+                    var read = reader.Read(buffer, 0, (int) Math.Min(buffer.Length, bytesLeftToRead));
                     if (read == 0) throw new ProtocolException($"Stream with length {length} was closed after only reading {length - bytesLeftToRead} bytes.");
                     bytesLeftToRead -= read;
                     fileStream.Write(buffer, 0, read);
                 }
             }
+
             return new TemporaryFileStream(path, log);
         }
 
@@ -344,7 +309,7 @@ namespace Halibut.Transport.Protocol
                 writer.Write(dataStream.Length);
                 writer.Flush();
 
-                ((IDataStreamInternal)dataStream).Transmit(stream);
+                ((IDataStreamInternal) dataStream).Transmit(stream);
                 stream.Flush();
 
                 writer.Write(dataStream.Length);
@@ -357,8 +322,8 @@ namespace Halibut.Transport.Protocol
             if (!stream.CanTimeout)
                 return;
 
-            stream.WriteTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+            stream.WriteTimeout = (int) HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int) HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
         }
 
         void SetShortTimeouts()
@@ -366,8 +331,8 @@ namespace Halibut.Transport.Protocol
             if (!stream.CanTimeout)
                 return;
 
-            stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+            stream.WriteTimeout = (int) HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int) HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
         }
     }
 }
