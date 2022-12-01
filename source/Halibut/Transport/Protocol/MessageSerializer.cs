@@ -99,8 +99,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        // MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
-        MessageEnvelope<T> DeserializeMessage<T>(BsonDataReader reader)
+        MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
         {
             var result = createSerializer().Deserialize<MessageEnvelope<T>>(reader);
             if (result == null)
