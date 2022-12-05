@@ -198,11 +198,10 @@ namespace Halibut.Transport.Protocol
                 log.Write(EventType.MessageExchange, "Sent: {0}", nextRequest);
                 if (nextRequest != null)
                 {
-                    log.Write(EventType.MessageExchange, "Receiving...");
+                    log.Write(EventType.MessageExchange, "ProcessReceiverInternal - Receiving...");
                     var response = stream.Receive<ResponseMessage>();
-                    log.Write(EventType.MessageExchange, "Received: {0}", response);
+                    log.Write(EventType.MessageExchange, "ProcessReceiverInternal - Received: {0}", response);
                     pendingRequests.ApplyResponse(response, nextRequest.Destination);
-                    log.Write(EventType.MessageExchange, "Applied response: {0}", response);
                 }
             }
             catch (Exception ex)
@@ -241,11 +240,10 @@ namespace Halibut.Transport.Protocol
                 log.Write(EventType.MessageExchange, "Sent: {0}", nextRequest);
                 if (nextRequest != null)
                 {
-                    log.Write(EventType.MessageExchange, "Receiving...");
+                    log.Write(EventType.MessageExchange, "ProcessReceiverInternalAsync - Receiving...");
                     var response = stream.Receive<ResponseMessage>();
-                    log.Write(EventType.MessageExchange, "Received: {0}", response);
+                    log.Write(EventType.MessageExchange, "ProcessReceiverInternalAsync - Received: {0}", response);
                     pendingRequests.ApplyResponse(response, nextRequest.Destination);
-                    log.Write(EventType.MessageExchange, "Applied response: {0}", response);
                 }
             }
             catch (Exception ex)
