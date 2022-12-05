@@ -30,11 +30,11 @@ namespace Halibut.Transport.Protocol
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
-#if NETFRAMEWORK
+// #if NETFRAMEWORK
             this.stream = stream;
-#else
-             this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
-#endif
+// #else
+//              this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+// #endif
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) {NewLine = "\r\n"};
             streamReader = new StreamReader(this.stream, new UTF8Encoding(false));
@@ -216,13 +216,13 @@ namespace Halibut.Transport.Protocol
 
         public T Receive<T>()
         {
-            log.Write(EventType.Diagnostic, "Receiving...");
+            log.Write(EventType.Diagnostic, "Receive - Receiving...");
 
             using (var capture = StreamCapture.New())
             {
                 var result = serializer.ReadMessage<T>(stream);
+                log.Write(EventType.Diagnostic, "Receive - Received: {0}", result);
                 ReadStreams(capture);
-                log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
             }
         }
