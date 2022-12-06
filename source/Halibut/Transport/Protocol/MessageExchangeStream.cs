@@ -26,8 +26,9 @@ namespace Halibut.Transport.Protocol
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
+        public MessageExchangeStream(Stream streamIn, IMessageSerializer serializer, ILog log)
         {
+            var stream = streamIn.ToRecordingStream("msgex");
             #if NETFRAMEWORK
             this.stream = stream;
             #else
