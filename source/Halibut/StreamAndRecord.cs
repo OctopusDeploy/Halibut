@@ -6,7 +6,7 @@ namespace Halibut
 {
     public static class StreamRecorderWrapperHelper
     {
-        public static string Instance = DateTimeOffset.Now.ToUnixTimeSeconds() + "";
+        public static string Instance = DateTime.UtcNow.ToLongTimeString() + "";
 
         static int counter = 0;
         public static string StreamName()
