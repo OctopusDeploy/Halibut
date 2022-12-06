@@ -43,9 +43,9 @@ namespace Halibut
             this.stream = stream;
             this.name = name;
 
-            writtenStream = File.Create(recordStem + "_written" + "_" + name);
-            readStream = File.Create(recordStem + "_read" + "_" + name);
-            otherStream = File.Create(recordStem + "_other" + "_" + name);
+            writtenStream = File.Create(recordStem + "_written" + "_" + name + ".txt");
+            readStream = File.Create(recordStem + "_read" + "_" + name + ".txt");
+            otherStream = File.Create(recordStem + "_other" + "_" + name + ".txt");
         }
 
         public override void Flush()
