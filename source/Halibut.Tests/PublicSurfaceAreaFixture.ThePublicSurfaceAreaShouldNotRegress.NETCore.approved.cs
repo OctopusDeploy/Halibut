@@ -147,6 +147,33 @@ namespace Halibut
         public static bool IsWebSocketAddress(Uri baseUri) { }
         public string ToString() { }
     }
+    public class StreamAndRecord : Stream, IDisposable, IAsyncDisposable
+    {
+        public StreamAndRecord(Stream stream, string recordStem, string name) { }
+        public bool CanRead { get; }
+        public bool CanSeek { get; }
+        public bool CanWrite { get; }
+        public long Length { get; }
+        public long Position { get; set; }
+        public void Close() { }
+        public void Flush() { }
+        public int Read(Byte[] buffer, int offset, int count) { }
+        public long Seek(long offset, SeekOrigin origin) { }
+        public void SetLength(long value) { }
+        public void Write(Byte[] buffer, int offset, int count) { }
+    }
+    public static class StreamRecorderWrapperHelper
+    {
+        public static string Instance;
+        public static string streamDumpDir;
+        public static string StreamName() { }
+        public static Stream ToRecordingStream(Stream stream, string name) { }
+    }
+    public static class StringExtensionMethods
+    {
+        public static Byte[] ToUtf8(string s) { }
+        public static void WriteStringToStream(FileStream stream, string s) { }
+    }
     public enum UnauthorizedClientConnectResponse
     {
         BlockConnection = 0,
@@ -535,7 +562,7 @@ namespace Halibut.Transport.Protocol
     }
     public class MessageExchangeStream : Halibut.Transport.Protocol.IMessageExchangeStream
     {
-        public MessageExchangeStream(Stream stream, Halibut.Transport.Protocol.IMessageSerializer serializer, Halibut.Diagnostics.ILog log) { }
+        public MessageExchangeStream(Stream streamIn, Halibut.Transport.Protocol.IMessageSerializer serializer, Halibut.Diagnostics.ILog log) { }
         public bool ExpectNextOrEnd() { }
         public Task<bool> ExpectNextOrEndAsync() { }
         public void ExpectProceeed() { }
