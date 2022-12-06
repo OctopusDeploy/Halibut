@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -35,17 +36,19 @@ namespace Halibut.Transport
             var client = CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
-            var stream = client.GetStream();
+            Stream stream = client.GetStream();
+            stream = stream.ToRecordingStream("raw");
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
             ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
             ssl.Write(MxLine, 0, MxLine.Length);
             ssl.Flush();
+            
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
 
-            return new SecureConnection(client, ssl, exchangeProtocolBuilder, log);
+            return new SecureConnection(client, ssl.ToRecordingStream("sslwrap"), exchangeProtocolBuilder, log);
         }
 
         internal static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log, CancellationToken cancellationToken)

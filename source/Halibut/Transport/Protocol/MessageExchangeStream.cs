@@ -28,15 +28,16 @@ namespace Halibut.Transport.Protocol
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
+        public MessageExchangeStream(Stream streamIn, IMessageSerializer serializer, ILog log)
         {
-#if NETFRAMEWORK
+            var stream = streamIn.ToRecordingStream("msgex");
+            #if NETFRAMEWORK
             this.stream = stream;
-#else
-              this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
-#endif
+            #else
+            this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+            #endif
             this.log = log;
-            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) {NewLine = "\r\n"};
+            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             streamReader = new StreamReader(this.stream, new UTF8Encoding(false));
             this.serializer = serializer;
             SetNormalTimeouts();
