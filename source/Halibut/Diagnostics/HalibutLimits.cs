@@ -53,7 +53,7 @@ namespace Halibut.Diagnostics
         /// <remarks>
         /// For safety, this should match the buffer size of the decorated stream (i.e. DeflateStream) to avoid unintended side-effects.
         /// </remarks>
-        public static int RewindableBufferStreamSize = 8192;
+        public static int RewindableBufferStreamSize = 84000;
         
         /// <summary>
         /// Amount of time to wait for a TCP or SslStream write to complete successfully
