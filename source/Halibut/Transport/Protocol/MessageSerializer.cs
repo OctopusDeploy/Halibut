@@ -108,7 +108,7 @@ namespace Halibut.Transport.Protocol
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
                         rewindable.FinishAndRewind(unusedBytesCount);
-                        streamAndRecord.MakeNote($"\nbufferread rewind by {unusedBytesCount}\n");
+                        if(streamAndRecord != null) streamAndRecord.MakeNote($"\nbufferread rewind by {unusedBytesCount}\n");
                     }
                     else
                     {
