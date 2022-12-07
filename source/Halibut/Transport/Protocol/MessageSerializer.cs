@@ -62,7 +62,7 @@ namespace Halibut.Transport.Protocol
 
         T ReadCompressedMessage<T>(Stream stream)
         {
-            using (var zip = new DeflateStream(stream, CompressionLevel.NoCompression, true))
+            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
                 var messageEnvelope = DeserializeMessage<T>(bson);
@@ -75,7 +75,7 @@ namespace Halibut.Transport.Protocol
             rewindable.StartBuffer();
             try
             {
-                using (var zip = new DeflateStream(stream, CompressionLevel.NoCompression, true))
+                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
                 using (var bson = new BsonDataReader(zip) { CloseInput = false })
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);
