@@ -40,7 +40,7 @@ namespace Halibut.Transport.Protocol
         
         public void WriteMessage<T>(Stream stream, T message)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+            using (var zip = new DeflateStream(stream, CompressionLevel.NoCompression, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 // for the moment this MUST be object so that the $type property is included
@@ -62,7 +62,7 @@ namespace Halibut.Transport.Protocol
 
         T ReadCompressedMessage<T>(Stream stream)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+            using (var zip = new DeflateStream(stream, CompressionLevel.NoCompression, true))
             using (var bson = new BsonDataReader(zip) { CloseInput = false })
             {
                 var messageEnvelope = DeserializeMessage<T>(bson);
@@ -75,7 +75,7 @@ namespace Halibut.Transport.Protocol
             rewindable.StartBuffer();
             try
             {
-                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
+                using (var zip = new DeflateStream(stream, CompressionLevel.NoCompression, true))
                 using (var bson = new BsonDataReader(zip) { CloseInput = false })
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);
