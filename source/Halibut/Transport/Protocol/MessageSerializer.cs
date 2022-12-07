@@ -36,17 +36,26 @@ namespace Halibut.Transport.Protocol
         {
             typeRegistry.AddToMessageContract(types);
         }
+
+        public void TryTakeNote(Stream stream, string msg)
+        {
+            StreamAndRecord streamAndRecord = null;
+            if (stream is RewindableBufferStream)
+            {
+                var rewindableBufferStream = (RewindableBufferStream) stream;
+                TryTakeNote(rewindableBufferStream.baseStream, msg);
+                
+            }
+            if (stream is StreamAndRecord)
+            {
+                streamAndRecord = (StreamAndRecord) stream;
+                streamAndRecord.MakeNote(msg);
+            }
+        }
         
         public void WriteMessage<T>(Stream stream, T message)
         {
-            var rewindableBufferStream = (RewindableBufferStream) stream;
-            StreamAndRecord streamAndRecord = null;
-            if (rewindableBufferStream.baseStream is StreamAndRecord)
-            {
-                streamAndRecord = (StreamAndRecord) rewindableBufferStream.baseStream;
-            }
-
-            if(streamAndRecord != null) streamAndRecord.MakeNote("\nSENDING ZIP\n");
+            TryTakeNote(stream, "\nSENDING ZIP\n");
 
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
@@ -56,7 +65,8 @@ namespace Halibut.Transport.Protocol
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
                 createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
-            if(streamAndRecord != null) streamAndRecord.MakeNote("\nSENDING ZIP done\n");
+
+            TryTakeNote(stream, "\nSENDING ZIP done\n");
         }
 
         public T ReadMessage<T>(Stream stream)
@@ -82,15 +92,8 @@ namespace Halibut.Transport.Protocol
         T ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
         {
             
-            var rewindableBufferStream = (RewindableBufferStream) stream;
-            StreamAndRecord streamAndRecord = null;
-            if (rewindableBufferStream.baseStream is StreamAndRecord)
-            {
-                streamAndRecord = (StreamAndRecord) rewindableBufferStream.baseStream;
-            }
+            TryTakeNote(stream, "\nBEGIN read zip with rewind\n");
 
-            if(streamAndRecord != null) streamAndRecord.MakeNote("\nbufferread START\n");
-            
             rewindable.StartBuffer();
             try
             {
@@ -108,7 +111,7 @@ namespace Halibut.Transport.Protocol
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
                         rewindable.FinishAndRewind(unusedBytesCount);
-                        if(streamAndRecord != null) streamAndRecord.MakeNote($"\nbufferread rewind by {unusedBytesCount}\n");
+                        TryTakeNote(stream, $"\nbufferread rewind by {unusedBytesCount}\n");
                     }
                     else
                     {
@@ -124,7 +127,7 @@ namespace Halibut.Transport.Protocol
             }
             finally
             {
-                if(streamAndRecord != null) streamAndRecord.MakeNote("\nbufferread DONE\n");
+                TryTakeNote(stream, "\nDONE read zip with rewind\n");
             }
         }
 
