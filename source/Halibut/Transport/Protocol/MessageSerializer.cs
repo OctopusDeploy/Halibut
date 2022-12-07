@@ -48,6 +48,7 @@ namespace Halibut.Transport.Protocol
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
                 createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
+            stream.Flush();
         }
 
         public T ReadMessage<T>(Stream stream)
