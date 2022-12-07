@@ -102,22 +102,14 @@ namespace Halibut.Transport.Protocol
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);
                     
+                    // Chance of a fix here:
+                    var b = new byte[1024];
+                    var res = zip.Read(b, 0, b.Length);
+                    // Chance of fix END.
+
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
-                        if (unusedBytesCount == 0)
-                        {
-                            // Chance of a fix here:
-                            var b = new byte[1024];
-                            var res = zip.Read(b, 0, b.Length);
-                            // Chance of fix END.
-                            deflateReflector.TryGetAvailableInputBufferSize(zip, out unusedBytesCount);
-                            if (unusedBytesCount != 0)
-                            {
-                                TryTakeNote(stream, $"\nFIX USED\n");
-                            }
-                        }
-                        
                         rewindable.FinishAndRewind(unusedBytesCount);
                         TryTakeNote(stream, $"\nbufferread rewind by {unusedBytesCount}\n");
                     }
@@ -125,7 +117,6 @@ namespace Halibut.Transport.Protocol
                     {
                         rewindable.CancelBuffer();
                     }
-                    
                     return messageEnvelope.Message;
                 }
             }
