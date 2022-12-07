@@ -39,6 +39,8 @@ namespace Halibut.Transport.Protocol
         
         public void WriteMessage<T>(Stream stream, T message)
         {
+            var streamAndRecord = (StreamAndRecord) ((RewindableBufferStream) stream).baseStream;
+            streamAndRecord.MakeNote("\nSENDING ZIP\n");
             using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
@@ -47,6 +49,7 @@ namespace Halibut.Transport.Protocol
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
                 createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
+            streamAndRecord.MakeNote("\nSENDING ZIP done\n");
         }
 
         public T ReadMessage<T>(Stream stream)
@@ -71,6 +74,8 @@ namespace Halibut.Transport.Protocol
 
         T ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
         {
+            var streamAndRecord = (StreamAndRecord) ((RewindableBufferStream) stream).baseStream;
+            streamAndRecord.MakeNote("\nbufferread START\n");
             rewindable.StartBuffer();
             try
             {
@@ -88,6 +93,7 @@ namespace Halibut.Transport.Protocol
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
                         rewindable.FinishAndRewind(unusedBytesCount);
+                        streamAndRecord.MakeNote($"\nbufferread rewind by {unusedBytesCount}\n");
                     }
                     else
                     {
@@ -100,6 +106,10 @@ namespace Halibut.Transport.Protocol
             {
                 rewindable.CancelBuffer();
                 throw;
+            }
+            finally
+            {
+                streamAndRecord.MakeNote("\nbufferread DONE\n");
             }
         }
 

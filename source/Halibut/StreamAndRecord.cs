@@ -47,6 +47,13 @@ namespace Halibut
             readStream = File.Create(recordStem + "_read" + "_" + name + ".txt");
             otherStream = File.Create(recordStem + "_other" + "_" + name + ".txt");
         }
+        
+        public void MakeNote(string note)
+        {
+            otherStream.WriteStringToStream(note);
+            readStream.WriteStringToStream(note);
+            writtenStream.WriteStringToStream(note);
+        }
 
         public override void Flush()
         {
