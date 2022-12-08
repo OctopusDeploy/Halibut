@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Transport.Protocol
 {
-    public class ControlMessagesReader
+    public class ControlMessageReader
     {
         internal string ReadUntilNonEmptyControlMessage(Stream stream)
         {
@@ -21,26 +21,28 @@ namespace Halibut.Transport.Protocol
             StringBuilder sb = new StringBuilder();
             while (true)
             {
-                var line = stream.ReadByte();
-                if (line == -1) throw new EndOfStreamException();
-                if (line == '\r')
+                var nextByte = stream.ReadByte();
+                if (nextByte == -1) throw new EndOfStreamException();
+                // Control messages must end with \r\n and must not contain \r or \n
+                if (nextByte == '\r')
                 {
-                    line = stream.ReadByte();
-                    if (line == -1)
+                    nextByte = stream.ReadByte();
+                    if (nextByte == -1)
                     {
                         throw new EndOfStreamException();
                     }
 
-                    if (line != '\n')
+                    if (nextByte != '\n')
                     {
-                        throw new Exception($"It is not clear what should be done with this character: dec value {line}");
+                        var byteAsHex = nextByte.ToString("X");
+                        throw new Exception($"Unexpected byte after '\r' in control message: 0x{byteAsHex}");
                     }
 
-                    // We have found the end of the line, ie we have found \r\n
+                    // We have found the end of control message
                     return sb.ToString();
                 }
 
-                sb.Append((char) line);
+                sb.Append((char) nextByte);
             }
         }
 
@@ -58,24 +60,27 @@ namespace Halibut.Transport.Protocol
             StringBuilder sb = new StringBuilder();
             while (true)
             {
-                var line = new byte[1];
-                var read = await stream.ReadAsync(line, 0, line.Length);
+                var nextByte = new byte[1];
+                var read = await stream.ReadAsync(nextByte, 0, nextByte.Length);
                 if (read == 0) throw new EndOfStreamException();
-                if (line[0] == '\r')
+                
+                // Control messages must end with \r\n and must not contain \r or \n
+                if (nextByte[0] == '\r')
                 {
-                    read = await stream.ReadAsync(line, 0, line.Length);
+                    read = await stream.ReadAsync(nextByte, 0, nextByte.Length);
                     if (read == 0) throw new EndOfStreamException();
 
-                    if (line[0] != '\n')
+                    if (nextByte[0] != '\n')
                     {
-                        throw new Exception($"It is not clear what should be done with this character: dec value {line}");
+                        var byteAsHex = nextByte[0].ToString("X");
+                        throw new Exception($"Unexpected byte after '\r' in control message: 0x{byteAsHex}");
                     }
 
                     // We have found the end of control message
                     return sb.ToString();
                 }
 
-                sb.Append((char) line[0]);
+                sb.Append((char) nextByte[0]);
             }
         }
     }
