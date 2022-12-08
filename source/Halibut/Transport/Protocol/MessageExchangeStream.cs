@@ -24,7 +24,7 @@ namespace Halibut.Transport.Protocol
         readonly StreamWriter streamWriter;
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
-        readonly ControlMessagesReader controlMessagesReader = new ControlMessagesReader();
+        readonly ControlMessageReader controlMessageReader = new ControlMessageReader();
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
@@ -93,7 +93,7 @@ namespace Halibut.Transport.Protocol
 
         public bool ExpectNextOrEnd()
         {
-            var line = controlMessagesReader.ReadUntilNonEmptyControlMessage(stream);
+            var line = controlMessageReader.ReadUntilNonEmptyControlMessage(stream);
             switch (line)
             {
                 case Next:
@@ -108,7 +108,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task<bool> ExpectNextOrEndAsync()
         {
-            var line = await controlMessagesReader.ReadUntilNonEmptyControlMessageAsync(stream).ConfigureAwait(false);
+            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream).ConfigureAwait(false);
             switch (line)
             {
                 case Next:
@@ -124,7 +124,7 @@ namespace Halibut.Transport.Protocol
         public void ExpectProceeed()
         {
             SetShortTimeouts();
-            var line = controlMessagesReader.ReadUntilNonEmptyControlMessage(stream);
+            var line = controlMessageReader.ReadUntilNonEmptyControlMessage(stream);
             if (line == null)
                 throw new AuthenticationException("XYZ");
             if (line != Proceed)
@@ -147,12 +147,12 @@ namespace Halibut.Transport.Protocol
 
         public RemoteIdentity ReadRemoteIdentity()
         {
-            var line = controlMessagesReader.ReadControlMessage(stream);
+            var line = controlMessageReader.ReadControlMessage(stream);
             
             
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
             
-            var emptyLine = controlMessagesReader.ReadControlMessage(stream);
+            var emptyLine = controlMessageReader.ReadControlMessage(stream);
             if (emptyLine.Length != 0)
             {
                 throw new ProtocolException("Unable to receive the remote identity; the following line was not empty.");
@@ -174,7 +174,7 @@ namespace Halibut.Transport.Protocol
             {
                 log.Write(EventType.Error, "Response:");
                 log.Write(EventType.Error, line);
-                log.Write(EventType.Error, "TODO: streamReader.ReadToEnd()");
+                log.Write(EventType.Error, new StreamReader(stream, new UTF8Encoding(false)).ReadToEnd());
 
                 throw;
             }
