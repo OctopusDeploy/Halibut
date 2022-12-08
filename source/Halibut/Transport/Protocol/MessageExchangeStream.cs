@@ -24,6 +24,7 @@ namespace Halibut.Transport.Protocol
         readonly StreamWriter streamWriter;
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
+        readonly ControlMessagesReader controlMessagesReader = new ControlMessagesReader();
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
@@ -92,7 +93,7 @@ namespace Halibut.Transport.Protocol
 
         public bool ExpectNextOrEnd()
         {
-            var line = ReadUntilNonEmptyControlMessage();
+            var line = controlMessagesReader.ReadUntilNonEmptyControlMessage(stream);
             switch (line)
             {
                 case Next:
@@ -107,7 +108,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task<bool> ExpectNextOrEndAsync()
         {
-            var line = await ReadLineAsync().ConfigureAwait(false);
+            var line = await controlMessagesReader.ReadUntilNonEmptyControlMessageAsync(stream).ConfigureAwait(false);
             switch (line)
             {
                 case Next:
@@ -123,7 +124,7 @@ namespace Halibut.Transport.Protocol
         public void ExpectProceeed()
         {
             SetShortTimeouts();
-            var line = ReadUntilNonEmptyControlMessage();
+            var line = controlMessagesReader.ReadUntilNonEmptyControlMessage(stream);
             if (line == null)
                 throw new AuthenticationException("XYZ");
             if (line != Proceed)
@@ -131,84 +132,7 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
-        string ReadUntilNonEmptyControlMessage()
-        {
-            while (true)
-            {
-                var line = ReadControlMessage();
-                if (line.Length > 0) return line;
-            }
-        }
-
-        string ReadControlMessage()
-        {
-
-            StringBuilder sb = new StringBuilder();
-            while (true)
-            {
-                var line = stream.ReadByte();
-                if (line == -1) throw new EndOfStreamException();
-                if (line == '\r')
-                {
-                    line = stream.ReadByte();
-                    if (line == -1)
-                    {
-                        throw new EndOfStreamException();
-                    }
-
-                    if (line != '\n')
-                    {
-                        throw new Exception($"It is not clear what should be done with this character: dec value {line}");
-                    }
-                    
-                    // We have found the end of the line, ie we have found \r\n
-                    return sb.ToString();
-                }
-
-                sb.Append((char) line);
-            }
-        }
         
-        async Task<string> ReadUntilNonEmptyControlMessageAsync()
-        {
-            while (true)
-            {
-                var line = await ReadControlMessageAsync();
-                if (line.Length > 0) return line;
-            }
-        }
-
-        async Task<string> ReadControlMessageAsync()
-        {
-
-            StringBuilder sb = new StringBuilder();
-            while (true)
-            {
-                var line = new byte[1];
-                var read = await stream.ReadAsync(line, 0, line.Length);
-                if (read == 0) throw new EndOfStreamException();
-                if (line[0] == '\r')
-                {
-                    read = await stream.ReadAsync(line, 0, line.Length);
-                    if (read == 0) throw new EndOfStreamException();
-
-                    if (line[0] != '\n')
-                    {
-                        throw new Exception($"It is not clear what should be done with this character: dec value {line}");
-                    }
-                    
-                    // We have found the end of control message
-                    return sb.ToString();
-                }
-
-                sb.Append((char) line[0]);
-            }
-        }
-
-        async Task<string> ReadLineAsync()
-        {
-            return await ReadUntilNonEmptyControlMessageAsync();
-        }
 
         public void IdentifyAsSubscriber(string subscriptionId)
         {
@@ -223,12 +147,12 @@ namespace Halibut.Transport.Protocol
 
         public RemoteIdentity ReadRemoteIdentity()
         {
-            var line = ReadControlMessage();
+            var line = controlMessagesReader.ReadControlMessage(stream);
             
             
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
             
-            var emptyLine = ReadControlMessage();
+            var emptyLine = controlMessagesReader.ReadControlMessage(stream);
             if (emptyLine.Length != 0)
             {
                 throw new ProtocolException("Unable to receive the remote identity; the following line was not empty.");
