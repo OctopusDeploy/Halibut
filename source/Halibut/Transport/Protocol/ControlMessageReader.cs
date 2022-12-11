@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Transport.Protocol
 {
-    public class ControlMessageReader
+    internal class ControlMessageReader
     {
         internal string ReadUntilNonEmptyControlMessage(Stream stream)
         {
