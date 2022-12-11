@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -226,6 +227,36 @@ namespace Halibut.Tests
                 {
                     var count = echo.CountBytes(DataStream.FromBytes(data));
                     count.Should().Be(1024 * 1024 + 15);
+                }
+            }
+        }
+        
+        
+        [Test]
+        public void StreamsCanBeSentToPollingWithLatency()
+        {
+            var services = GetDelegateServiceFactory();
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                using (var loadBalancer = new PortForwarder(new Uri("https://localhost:" + octopusPort), TimeSpan.FromMilliseconds(10)))
+                {
+
+                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + loadBalancer.PublicEndpoint.Port), Certificates.OctopusPublicThumbprint));
+
+                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+
+                    var data = new byte[1024 * 1024 + 15];
+                    new Random().NextBytes(data);
+
+                    for (var i = 0; i < 100; i++)
+                    {
+                        var count = echo.CountBytes(DataStream.FromBytes(data));
+                        count.Should().Be(1024 * 1024 + 15);
+                    }
                 }
             }
         }
