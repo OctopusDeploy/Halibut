@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -16,16 +18,18 @@ namespace Halibut.Tests.Util
         readonly EndPoint originEndPoint;
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly ILogger logger = Log.ForContext<TcpPump>();
+        readonly TimeSpan sendDelay;
         bool isDisposing;
         bool isDisposed;
-        
         public bool IsPaused { get; set; }
+        
 
-        public TcpPump(Socket clientSocket, Socket originSocket, EndPoint originEndPoint)
+        public TcpPump(Socket clientSocket, Socket originSocket, EndPoint originEndPoint, TimeSpan sendDelay)
         {
             this.clientSocket = clientSocket ?? throw new ArgumentNullException(nameof(clientSocket));
             this.originSocket = originSocket ?? throw new ArgumentNullException(nameof(originSocket));
             this.originEndPoint = originEndPoint ?? throw new ArgumentNullException(nameof(originEndPoint));
+            this.sendDelay = sendDelay;
             clientEndPoint = clientSocket.RemoteEndPoint ?? throw new ArgumentException("Remote endpoint is null", nameof(clientSocket));
         }
 
@@ -45,8 +49,8 @@ namespace Halibut.Tests.Util
                         await originSocket.ConnectAsync(originEndPoint).ConfigureAwait(false);
 
                         // If the connection was ok, then set-up a pump both ways
-                        var pump1 = Task.Run(async () => await PumpBytes(clientSocket, originSocket, cancellationToken).ConfigureAwait(false), cancellationToken);
-                        var pump2 = Task.Run(async () => await PumpBytes(originSocket, clientSocket, cancellationToken).ConfigureAwait(false), cancellationToken);
+                        var pump1 = Task.Run(async () => await PumpBytes(clientSocket, originSocket, new SocketPump(() => this.IsPaused, sendDelay), cancellationToken).ConfigureAwait(false), cancellationToken);
+                        var pump2 = Task.Run(async () => await PumpBytes(originSocket, clientSocket, new SocketPump(() => this.IsPaused, sendDelay), cancellationToken).ConfigureAwait(false), cancellationToken);
 
                         // When one is finished, they are both "done" so stop them
                         await Task.WhenAny(pump1, pump2).ConfigureAwait(false);
@@ -75,10 +79,8 @@ namespace Halibut.Tests.Util
                 cancellationToken);
         }
 
-        async Task PumpBytes(Socket readFrom, Socket writeTo, CancellationToken cancellationToken)
+        async Task PumpBytes(Socket readFrom, Socket writeTo, SocketPump socketPump, CancellationToken cancellationToken)
         {
-            var inputBuffer = new byte[readFrom.ReceiveBufferSize];
-
             while (true)
             {
                 await Task.Yield();
@@ -89,13 +91,9 @@ namespace Halibut.Tests.Util
 
                 try
                 {
-                    await PausePump(cancellationToken);
-                    ArraySegment<byte> inputBufferArraySegment = new ArraySegment<byte>(inputBuffer);
-                    var receivedByteCount = await readFrom.ReceiveAsync(inputBufferArraySegment, SocketFlags.None).ConfigureAwait(false);
-                    if (receivedByteCount == 0) break;
-                    await PausePump(cancellationToken);
-                    var outputBuffer = new ArraySegment<byte>(inputBuffer, 0, receivedByteCount);
-                    await writeTo.SendAsync(outputBuffer, SocketFlags.None).ConfigureAwait(false);
+
+                    var socketStatus = await socketPump.PumpBytes(readFrom, writeTo, cancellationToken);
+                    if(socketStatus == SocketPump.SocketStatus.SOCKET_CLOSED) break;
                 }
                 catch (SocketException socketException)
                 {
@@ -112,14 +110,6 @@ namespace Halibut.Tests.Util
             }
         }
 
-        async Task PausePump(CancellationToken cancellationToken)
-        {
-            while (IsPaused)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(100));
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-        }
 
         public void Dispose()
         {

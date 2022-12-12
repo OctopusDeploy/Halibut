@@ -21,7 +21,7 @@ namespace Halibut.Tests
             using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
             {
                 var tentaclePort = tentacleListening.Listen();
-                using (var loadBalancer = new PortForwarder(new Uri("https://localhost:" + tentaclePort)))
+                using (var loadBalancer = new PortForwarder(new Uri("https://localhost:" + tentaclePort), TimeSpan.Zero))
                 {
                     tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
                 
