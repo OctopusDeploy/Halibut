@@ -15,10 +15,12 @@ namespace Halibut.Tests.Util
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         public readonly List<TcpPump> Pumps = new List<TcpPump>();
         readonly ILogger logger = Log.ForContext<PortForwarder>();
+        readonly TimeSpan sendDelay;
 
-        public PortForwarder(Uri originServer)
+        public PortForwarder(Uri originServer, TimeSpan sendDelay)
         {
             this.originServer = originServer;
+            this.sendDelay = sendDelay;
             var scheme = originServer.Scheme;
 
             listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -47,7 +49,7 @@ namespace Halibut.Tests.Util
                     var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                     var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
-                    var pump = new TcpPump(clientSocket, originSocket, originEndPoint);
+                    var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay);
                     pump.Stopped += OnPortForwarderStopped;
                     lock (Pumps)
                     {

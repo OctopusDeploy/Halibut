@@ -22,9 +22,9 @@ namespace Halibut.Transport.Protocol
         readonly Stream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
-        readonly StreamReader streamReader;
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
+        readonly ControlMessageReader controlMessageReader = new ControlMessageReader();
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
@@ -35,7 +35,6 @@ namespace Halibut.Transport.Protocol
             #endif
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
-            streamReader = new StreamReader(this.stream, new UTF8Encoding(false));
             this.serializer = serializer;
             SetNormalTimeouts();
         }
@@ -94,7 +93,7 @@ namespace Halibut.Transport.Protocol
 
         public bool ExpectNextOrEnd()
         {
-            var line = ReadLine();
+            var line = controlMessageReader.ReadUntilNonEmptyControlMessage(stream);
             switch (line)
             {
                 case Next:
@@ -109,7 +108,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task<bool> ExpectNextOrEndAsync()
         {
-            var line = await ReadLineAsync().ConfigureAwait(false);
+            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream).ConfigureAwait(false);
             switch (line)
             {
                 case Next:
@@ -125,7 +124,7 @@ namespace Halibut.Transport.Protocol
         public void ExpectProceeed()
         {
             SetShortTimeouts();
-            var line = ReadLine();
+            var line = controlMessageReader.ReadUntilNonEmptyControlMessage(stream);
             if (line == null)
                 throw new AuthenticationException("XYZ");
             if (line != Proceed)
@@ -133,27 +132,7 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
-        string ReadLine()
-        {
-            var line = streamReader.ReadLine();
-            while (line == string.Empty)
-            {
-                line = streamReader.ReadLine();
-            }
-
-            return line;
-        }
-
-        async Task<string> ReadLineAsync()
-        {
-            var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
-            while (line == string.Empty)
-            {
-                line = await streamReader.ReadLineAsync().ConfigureAwait(false);
-            }
-
-            return line;
-        }
+        
 
         public void IdentifyAsSubscriber(string subscriptionId)
         {
@@ -168,8 +147,17 @@ namespace Halibut.Transport.Protocol
 
         public RemoteIdentity ReadRemoteIdentity()
         {
-            var line = streamReader.ReadLine();
+            var line = controlMessageReader.ReadControlMessage(stream);
+            
+            
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
+            
+            var emptyLine = controlMessageReader.ReadControlMessage(stream);
+            if (emptyLine.Length != 0)
+            {
+                throw new ProtocolException("Unable to receive the remote identity; the following line was not empty.");
+            }
+            
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             try
             {
@@ -186,7 +174,7 @@ namespace Halibut.Transport.Protocol
             {
                 log.Write(EventType.Error, "Response:");
                 log.Write(EventType.Error, line);
-                log.Write(EventType.Error, streamReader.ReadToEnd());
+                log.Write(EventType.Error, new StreamReader(stream, new UTF8Encoding(false)).ReadToEnd());
 
                 throw;
             }
