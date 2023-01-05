@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Halibut.Transport;
 using NUnit.Framework;
 
@@ -22,6 +23,24 @@ namespace Halibut.Tests.Transport
                 using (var streamReader = new StreamReader(sut))
                 {
                     Assert.AreEqual("Test", streamReader.ReadToEnd());
+                }
+            }
+        }
+
+        [Test]
+        public async Task ReadAsyncShouldPassThrough()
+        {
+            using (var baseStream = new MemoryStream(16))
+            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            {
+                var inputBuffer = Encoding.ASCII.GetBytes("Test");
+                await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
+
+                baseStream.Position = 0;
+
+                using (var streamReader = new StreamReader(sut))
+                {
+                    Assert.AreEqual("Test", await streamReader.ReadToEndAsync());
                 }
             }
         }
@@ -49,6 +68,28 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
+        public async Task ReadAsyncZeroRewindShouldPassThrough()
+        {
+            using (var baseStream = new MemoryStream(16))
+            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            {
+                var inputBuffer = Encoding.ASCII.GetBytes("Test");
+                await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
+                baseStream.Position = 0;
+
+                sut.StartBuffer();
+                var outputBuffer = new byte[inputBuffer.Length];
+                Assert.AreEqual(4, await sut.ReadAsync(outputBuffer, 0, inputBuffer.Length));
+                var initialReadValue = Encoding.ASCII.GetString(outputBuffer);
+                Assert.AreEqual(initialReadValue, "Test");
+                sut.FinishAndRewind(0);
+
+                var rewoundOutputBuffer = new byte[4];
+                Assert.AreEqual(0, await sut.ReadAsync(rewoundOutputBuffer, 0, 4));
+            }
+        }
+
+        [Test]
         public void ReadShouldReadRewindBufferAfterRewind()
         {
             using (var baseStream = new MemoryStream(16))
@@ -65,6 +106,28 @@ namespace Halibut.Tests.Transport
 
                 var rewoundOutputBuffer = new byte[8];
                 Assert.AreEqual(2, sut.Read(rewoundOutputBuffer, 0, 8));
+                var postRewindValue = Encoding.ASCII.GetString(rewoundOutputBuffer.AsSpan(0, 2).ToArray());
+                Assert.AreEqual("st", postRewindValue);
+            }
+        }
+
+        [Test]
+        public async Task ReadAsyncShouldReadRewindBufferAfterRewind()
+        {
+            using (var baseStream = new MemoryStream(16))
+            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            {
+                var inputBuffer = Encoding.ASCII.GetBytes("Test");
+                await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
+                baseStream.Position = 0;
+
+                sut.StartBuffer();
+                var outputBuffer = new byte[inputBuffer.Length];
+                _ = await sut.ReadAsync(outputBuffer, 0, inputBuffer.Length);
+                sut.FinishAndRewind(2);
+
+                var rewoundOutputBuffer = new byte[8];
+                Assert.AreEqual(2, await sut.ReadAsync(rewoundOutputBuffer, 0, 8));
                 var postRewindValue = Encoding.ASCII.GetString(rewoundOutputBuffer.AsSpan(0, 2).ToArray());
                 Assert.AreEqual("st", postRewindValue);
             }

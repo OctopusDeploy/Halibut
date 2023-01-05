@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
@@ -88,6 +90,31 @@ namespace Halibut.Transport
             }
 
             var baseCount = baseStream.Read(buffer, offset, count);
+            WriteToRewindBuffer(buffer, offset, baseCount);
+            return baseCount;
+        }
+
+        /// <summary>
+        /// Reads a sequence of bytes from the stream asynchronously. If the buffer has been rewound, only the rewound bytes are returned.
+        /// </summary>
+        /// <param name="buffer"><inheritdoc/></param>
+        /// <param name="offset"><inheritdoc/></param>
+        /// <param name="count"><inheritdoc/></param>
+        /// <param name="cancellationToken"><inheritdoc/></param>
+        /// <returns><inheritdoc/></returns>
+        public async override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
+
+            // Do not attempt to read from the base stream if the buffer has been partially filled
+            // from the rewind buffer. This is for safety, so the Halibut protocol doesn't accidentally
+            // consume bytes destined for a subsequent operation.
+            if (rewoundCount > 0)
+            {
+                return rewoundCount;
+            }
+
+            var baseCount = await baseStream.ReadAsync(buffer, offset, count);
             WriteToRewindBuffer(buffer, offset, baseCount);
             return baseCount;
         }
