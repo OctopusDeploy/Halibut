@@ -132,7 +132,7 @@ namespace Halibut.Transport
 
         public async override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            await base.WriteAsync(buffer, offset, count, cancellationToken);
+            await baseStream.WriteAsync(buffer, offset, count, cancellationToken);
         }
 
 
