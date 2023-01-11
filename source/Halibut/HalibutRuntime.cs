@@ -199,17 +199,17 @@ namespace Halibut
         {
             typeRegistry.AddToMessageContract(typeof(TService));
 
-#if HAS_REAL_PROXY
+            var proxy = DispatchProxyAsync.Create<TService, AsyncHalibutProxy>();
+            (proxy as AsyncHalibutProxy).Initialise(
 #pragma warning disable 618
-            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
+                SendOutgoingRequest,
 #pragma warning restore 618
-#else
-            var proxy = DispatchProxy.Create<TService, HalibutProxy>();
-#pragma warning disable 618
-            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken);
-#pragma warning restore 618
+                SendOutgoingRequestAsync,
+                typeof(TService),
+                endpoint,
+                cancellationToken);
+
             return proxy;
-#endif
         }
         
         // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
