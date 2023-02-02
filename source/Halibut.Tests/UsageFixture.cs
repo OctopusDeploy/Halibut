@@ -233,6 +233,32 @@ namespace Halibut.Tests
         
         
         [Test]
+        public void SmallStreamsCanBeSentToPolling()
+        {
+            var services = GetDelegateServiceFactory();
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+
+                var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+
+                var data = "I have gazed into the Omniscience, and it has gazed into me.".ToUtf8();
+                
+
+                for (var i = 0; i < 3; i++)
+                {
+                    var count = echo.CountBytes(DataStream.FromBytes(data));
+                    count.Should().Be(data.Length);
+                }
+            }
+        }
+        
+        
+        [Test]
         public void StreamsCanBeSentToPollingWithLatency()
         {
             var services = GetDelegateServiceFactory();

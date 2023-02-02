@@ -8,7 +8,7 @@ using Serilog;
 
 namespace Halibut.Tests.Util
 {
-    sealed class PortForwarder : IDisposable
+    public sealed class PortForwarder : IDisposable
     {
         readonly Uri originServer;
         readonly Socket listeningSocket;

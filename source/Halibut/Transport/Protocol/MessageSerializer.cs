@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -37,10 +38,28 @@ namespace Halibut.Transport.Protocol
             typeRegistry.AddToMessageContract(types);
         }
         
+        public void TryTakeNote(Stream stream, string msg, OnStream onStream)
+        {
+            StreamAndRecord streamAndRecord = null;
+            if (stream is RewindableBufferStream)
+            {
+                var rewindableBufferStream = (RewindableBufferStream) stream;
+                TryTakeNote(rewindableBufferStream.baseStream, msg, onStream);
+                
+            }
+            if (stream is StreamAndRecord)
+            {
+                streamAndRecord = (StreamAndRecord) stream;
+                streamAndRecord.MakeNote(msg, onStream);
+            }
+        }
+        
         public void WriteMessage<T>(Stream stream, T message)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
-            using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
+            //TryTakeNote(stream, "\nSENDING ZIP\n", OnStream.WRITE);
+            using (var zip = new DeflateStream(stream, CompressionLevel.NoCompression, true))
+            using (StreamWriter writer = new StreamWriter(zip, Encoding.UTF8, -1,  true))
+            using (var bson = new JsonTextWriter(writer) { CloseOutput = false })
             {
                 // for the moment this MUST be object so that the $type property is included
                 // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
@@ -56,13 +75,15 @@ namespace Halibut.Transport.Protocol
                 return ReadCompressedMessageRewindable<T>(stream, rewindable);
             }
 
-            return ReadCompressedMessage<T>(stream);
+            var t =  ReadCompressedMessage<T>(stream);
+            return t;
         }
 
         T ReadCompressedMessage<T>(Stream stream)
         {
             using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var bson = new BsonDataReader(zip) { CloseInput = false })
+            using (StreamReader reader = new StreamReader(zip, Encoding.UTF8, true, -1, true))
+            using (var bson = new JsonTextReader(reader) { CloseInput = false })
             {
                 var messageEnvelope = DeserializeMessage<T>(bson);
                 return messageEnvelope.Message;
@@ -75,13 +96,27 @@ namespace Halibut.Transport.Protocol
             try
             {
                 using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-                using (var bson = new BsonDataReader(zip) { CloseInput = false })
+                using (StreamReader reader = new StreamReader(zip, Encoding.UTF8, true, -1, true))
+                using (var bson = new JsonTextReader(reader) {CloseInput = false})
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);
 
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
+                        if (unusedBytesCount == 0)
+                        {
+                            // Chance of a fix here:
+                            var b = new byte[1024];
+                            var res = zip.Read(b, 0, b.Length);
+                            // Chance of fix END.
+                            deflateReflector.TryGetAvailableInputBufferSize(zip, out unusedBytesCount);
+                            if (unusedBytesCount != 0)
+                            {
+                                // Fix used.
+                            }
+                        }
+                        
                         rewindable.FinishAndRewind(unusedBytesCount);
                     }
                     else

@@ -26,10 +26,18 @@ namespace Halibut.Transport.Protocol
         readonly Version currentVersion = new Version(1, 0);
         readonly ControlMessageReader controlMessageReader = new ControlMessageReader();
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
+        public MessageExchangeStream(Stream streamIn, IMessageSerializer serializer, ILog log)
         {
-            #if NETFRAMEWORK
+            Stream stream =  streamIn.ToRecordingStream("msgex", log);
+#if NETFRAMEWORK
             this.stream = stream;
+         if ("hello".Length)
+            {
+                throw new Exception("No must be net 6");
+            }               
+{  
+  
+}
             #else
             this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             #endif

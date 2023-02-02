@@ -28,7 +28,9 @@ namespace Halibut.Tests
                     var data = new byte[1024];
                     new Random().NextBytes(data);
 
-                    var echo = octopus.CreateClient<IEchoService>("https://localhost:" + loadBalancer.PublicEndpoint.Port, Certificates.TentacleListeningPublicThumbprint);
+                    var serviceEndpoint = new ServiceEndPoint("https://localhost:" + loadBalancer.PublicEndpoint.Port, Certificates.TentacleListeningPublicThumbprint);
+
+                    var echo = octopus.CreateClient<IEchoService>(serviceEndpoint);
 
                     echo.SayHello("Bob");
 

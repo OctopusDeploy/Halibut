@@ -12,7 +12,10 @@ namespace Halibut.Transport.Protocol
             while (true)
             {
                 var line = ReadControlMessage(stream);
-                if (line.Length > 0) return line;
+                if (line.Length > 0)
+                {
+                    return line;
+                }
             }
         }
 
