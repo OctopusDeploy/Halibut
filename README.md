@@ -20,6 +20,9 @@ Halibut has the following features:
  - Requests/responses are serialized using Json.NET BSON, and GZipped
  - Requests and responses can also contain streams of arbitrary length
 
+
+A more detailed look at the protocol can be found under the [Halibit Protocol](docs/halibut-protocol.md) page.
+
 ## Usage
 
 Clients and servers both make use of `HalibutRuntime` to distribute messages. In this example, there's a "Tentacle" that listens on a port, and Octopus connects to it:
