@@ -30,7 +30,7 @@ When the **Service** is in  **Polling** mode, the **Service** identifies itself 
 
 ## Request and Response message format
 
-The message format is always a Zipped BSON representation of either the [Request](../source/Halibut/Transport/Protocol/RequestMessage.cs) or [Response](../source/Halibut/Transport/Protocol/ResponseMessage.cs) message, followed by multiple [DataStream](../source/Halibut/DataStream.cs). DataStreams is the way Halibut sends large amounts of data. DataStreams are not compressed and are send one by one after the compressed BSON. DataStreams are referenced by GUID in the BSON section and labelled with a GUID in the DataStream section.
+The message format is always a Zipped BSON representation of either the [Request](../source/Halibut/Transport/Protocol/RequestMessage.cs) or [Response](../source/Halibut/Transport/Protocol/ResponseMessage.cs) message, followed by zero or more [DataStream]s(../source/Halibut/DataStream.cs). A `DataStream` represents data that should not be serialized as part of a message, for example a file to be transferred. They can be sent in either a request or a response. `DataStream`s are transferred as raw bytes in the TCP stream (i.e. they are not compressed) and are sent sequentially after the compressed BSON of the request/response. Each `DataStream` has a unique GUID which is referenced in the request/response so that it can be used by calling code.
 
 ![Request/Response message format](images/message-format.png)
 
