@@ -1,25 +1,36 @@
 # Halibut Protocol data exchange
 
+This document outlines the data that is exchanged between the **Client** and **Service**. In this document:
+
+ - **Client** is what makes the remote procedure calls e.g. Octopus.
+ - **Service** is what execiutes the methods e.g. Tentacle. 
+
+
 When invoking a remote method in both polling and listening mode, the same general process is followed:
 
- - The Server sends a `Request` message containing the method to execute and data.
- - The client executes the method and sends the result in a `Response` message.
- - The client sends a `NEXT` control message.
- - The Server semds a `Proceed` control message.
- - The above 4 steps are repeated until the connection is terminated or control `END` messages are sent.
+1.  After the TCP connection is intiated, both server and client identify themselves to each other through a set of control messages.
+2. The Client sends a `Request` message containing the method to execute and data.
+3. The Service executes the method and sends the result in a `Response` message.
+4. The Service sends a `NEXT` control message, signaling it is ready for the next action.
+5. The Client sends a `Proceed` control message, signaling to the Service to be ready for another `Request`.
+6. Steps 2 to 5 are repeated until the connection is terminated or control `END` messages are sent.
 
 
-## Listening client protocol data exchange
+## Listening Service protocol data exchange
+
+When the **Service** is in  **Listening** mode, the **Client** it identifies itself as `MX_CLIENT 1.0` while the `Service` identifies itself as `MX-SERVER 1.0`.
 
 ![Listening client protocol data exchange](images/listeningprotocoldata.png)
 
-## Polling client protocol data exchange
+## Polling Service protocol data exchange
+
+When the **Service** is in  **Polling** mode, the **Service** identifies itself as `MX-SUBSCRIBER 1.0` while the `Client` identifies itself as `MX-SERVER 1.0`.
 
 ![Polling client protocol data exchange](images/pollingprotocoldata.png)
 
 ## Request and Response message format
 
-Request and Response messages are sent and received in the same format with only the data within the BSON section changing to denote the type of message.
+The message format is always a Zipped BSON representation of either the [Request](../source/Halibut/Transport/Protocol/RequestMessage.cs) or [Response](../source/Halibut/Transport/Protocol/ResponseMessage.cs) message, followed by multiple [DataStream](../source/Halibut/DataStream.cs). DataStreams is the way Halibut sends large amounts of data. DataStreams are not compressed and are send one by one after the compressed BSON. DataStreams are referenced by GUID in the BSON section and labelled with a GUID in the DataStream section.
 
 ![Request/Response message format](images/message-format.png)
 
