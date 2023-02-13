@@ -3,7 +3,7 @@
 This document outlines the data that is exchanged between the **Client** and **Service**. In this document:
 
  - **Client** is what makes the remote procedure calls e.g. Octopus.
- - **Service** is what execiutes the methods e.g. Tentacle. 
+ - **Service** is what executes the methods e.g. Tentacle. 
 
 
 When invoking a remote method in both polling and listening mode, the same general process is followed:
