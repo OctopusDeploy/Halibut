@@ -18,7 +18,7 @@ When invoking a remote method in both polling and listening mode, the same gener
 
 ## Listening Service protocol data exchange
 
-When the **Service** is in  **Listening** mode, the **Client** it identifies itself as `MX_CLIENT 1.0` while the `Service` identifies itself as `MX-SERVER 1.0`.
+When the **Service** is in  **Listening** mode, the **Client** it identifies itself as `MX-CLIENT 1.0` while the `Service` identifies itself as `MX-SERVER 1.0`.
 
 ![Listening client protocol data exchange](images/listeningprotocoldata.png)
 
