@@ -62,12 +62,7 @@ namespace Halibut.Diagnostics
 
         void SendToTrace(LogEvent logEvent, LogLevel level)
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-
             var logger = GetLogger();//LogProvider.GetLogger("Halibut");
-            stopwatch.Stop();
-            Interlocked.Add(ref HalibutLimits.time, ((long) stopwatch.Elapsed.TotalMilliseconds));
-            HalibutLimits.lastTime = stopwatch.Elapsed.TotalMilliseconds;
             logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
         }
 
