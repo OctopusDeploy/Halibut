@@ -77,3 +77,7 @@ The resulting Request
 The resulting response
 
 ![Example response](images/example-response.png)
+
+### Links
+
+[Diagrams src](https://whimsical.com/halibut-protocol-S4zyHWADysGLbqcFxUQK3V)
