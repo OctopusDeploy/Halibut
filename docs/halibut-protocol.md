@@ -18,8 +18,8 @@ Now that the connections are established, the Service will wait for requests fro
 
 1. The Client sends a `Request` message containing the method to execute and data.
 2. The Service executes the method and sends the result in a `Response` message.
-3. The Service sends a `NEXT` control message, signaling it is ready for the next action.
-4. The Client sends a `PROCEED` control message, signaling to the Service to be ready for another `Request`.
+3. The Service sends a `NEXT` control message, signalling it is ready for the next action.
+4. The Client sends a `PROCEED` control message, signalling to the Service to be ready for another `Request`.
 
 The steps are repeated for both Listening and Polling mode until either Client or Service begins the Ending a connection stage.
 
@@ -36,6 +36,8 @@ When the **Service** is in  **Listening** mode, the **Client** identifies itself
 ## Polling Service protocol data exchange
 
 When the **Service** is in  **Polling** mode, the **Service** identifies itself as `MX-SUBSCRIBER 1.0` while the `Client` identifies itself as `MX-SERVER 1.0`.
+
+Under polling mode, unlike listening, the Client will periodically send a no-op NUL Request to the Service to keep the TCP connection alive.
 
 ![Polling client protocol data exchange](images/pollingprotocoldata.png)
 
