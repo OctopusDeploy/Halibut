@@ -4,47 +4,48 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using NUnit.Framework;
 
-namespace Halibut.Tests;
-
-public class AsyncToSyncContractFixture
+namespace Halibut.Tests
 {
-    public interface IAsyncEchoService
+    public class AsyncToSyncContractFixture
     {
-        Task<string> SayHelloAsync(string name);
-        string SayHello(string name);
-    }
-        
-    public interface ISyncEchoService
-    {
-        string SayHello(string name);
-    }
-
-    public class SyncEchoService : ISyncEchoService
-    {
-        public string SayHello(string name)
+        public interface IAsyncEchoService
         {
-            return name;
+            Task<string> SayHelloAsync(string name);
+            string SayHello(string name);
         }
-    }
-        
-    [Test]
-    public async Task AsyncTestExample()
-    {
-        var services = new DelegateServiceFactory();
-        services.Register<ISyncEchoService>(() => new SyncEchoService());
-            
-        using (var octopus = new HalibutRuntime(Certificates.Octopus))
-        using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+
+        public interface ISyncEchoService
         {
-            var octopusPort = octopus.Listen();
-            octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+            string SayHello(string name);
+        }
 
-            tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+        public class SyncEchoService : ISyncEchoService
+        {
+            public string SayHello(string name)
+            {
+                return name;
+            }
+        }
 
-            var echo = octopus.CreateClient<ISyncEchoService, IAsyncEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+        [Test]
+        public async Task AsyncTestExample()
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<ISyncEchoService>(() => new SyncEchoService());
 
-            var res = await echo.SayHelloAsync("hello");
-            res.Should().Be("hello");
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            {
+                var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+
+                var echo = octopus.CreateClient<ISyncEchoService, IAsyncEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+
+                var res = await echo.SayHelloAsync("hello");
+                res.Should().Be("hello");
+            }
         }
     }
 }
