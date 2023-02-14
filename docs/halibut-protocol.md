@@ -8,11 +8,11 @@ This document outlines the data that is exchanged between the **Client** and **S
 
 When invoking a remote method in both polling and listening mode, the `Client` and `Service` go through three stages.
 
- ### Stage 1 - Establish Connection
+ ### Stage 1 - Identification
  
   A TCP connection is established and both server and client identify themselves, though a series of control messages. The control messages sent vary depending on if [listening](#listening-service-protocol-data-exchange) or [polling](#polling-service-protocol-data-exchange) mode is used.
 
-### Stage 2 - Execute requests
+### Stage 2 - Message exchange
 
 Now that the connections are established, the Service will wait for requests from the Client. In both polling and listening the following steps are repeated in order:
 
@@ -21,9 +21,9 @@ Now that the connections are established, the Service will wait for requests fro
 3. The Service sends a `NEXT` control message, signaling it is ready for the next action.
 4. The Client sends a `PROCEED` control message, signaling to the Service to be ready for another `Request`.
 
-The steps are repeated for both Listening and Polling mode until either Client or Service begins the terminate connection stage.
+The steps are repeated for both Listening and Polling mode until either Client or Service begins the Ending a connection stage.
 
-### Stage 3 - Terminate connection
+### Stage 3 - Ending a connection
 
 The final stage can be entered by either the Client or Service terminating the TCP connection or sending a `END` control message. Once this stage is reached no more requests will be processed in the current TCP connection.
 
