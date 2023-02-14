@@ -10,7 +10,7 @@ When invoking a remote method in both polling and listening mode, the `Client` a
 
  ### Stage 1 - Identification
  
-  A TCP connection is established and both server and client identify themselves, through a series of control messages. The control messages sent vary depending on if [listening](#listening-service-protocol-data-exchange) or [polling](#polling-service-protocol-data-exchange) mode is used.
+  A TCP connection is established and both Service and client identify themselves, through a series of control messages. The control messages sent vary depending on if [listening](#listening-service-protocol-data-exchange) or [polling](#polling-service-protocol-data-exchange) mode is used.
 
 ### Stage 2 - Message exchange
 
