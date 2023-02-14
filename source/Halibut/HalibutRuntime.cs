@@ -184,6 +184,11 @@ namespace Halibut
         {
             return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), CancellationToken.None);
         }
+        
+        public TReturnService CreateClient<TService, TReturnService>(String endpointBaseUri, string publicThumbprint)
+        {
+            return CreateClient<TService, TReturnService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), CancellationToken.None);
+        }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, CancellationToken cancellationToken)
         {
@@ -194,8 +199,14 @@ namespace Halibut
         {
             return CreateClient<TService>(endpoint, CancellationToken.None);
         }
-        
+
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
+            return CreateClient<TService, TService>(endpoint, cancellationToken);
+        }
+
+
+        public TReturnService CreateClient<TService, TReturnService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             typeRegistry.AddToMessageContract(typeof(TService));
 
@@ -204,9 +215,10 @@ namespace Halibut
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken).GetTransparentProxy();
 #pragma warning restore 618
 #else
-            var proxy = DispatchProxy.Create<TService, HalibutProxy>();
+            var proxy = DispatchProxyAsync.Create<TReturnService, HalibutProxy>();
 #pragma warning disable 618
-            (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, cancellationToken);
+            IMessageRouter router = new FuncPoweredMessageRouter(SendOutgoingRequest, SendOutgoingRequestAsync);
+            (proxy as HalibutProxy).Configure(router, typeof(TService), endpoint, cancellationToken);
 #pragma warning restore 618
             return proxy;
 #endif
