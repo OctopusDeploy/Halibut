@@ -16,8 +16,8 @@ When invoking a remote method in both polling and listening mode, the `Client` a
 
 Now that the connections are established, the Service will wait for requests from the Client. In both polling and listening the following steps are repeated in order:
 
-1. The Client sends a `Request` message containing the method to execute and data.
-2. The Service executes the method and sends the result in a `Response` message.
+1. The Client sends a `Request` message containing the method to execute, its parameters and 0 or more data streams.
+2. The Service executes the method and sends the result in a `Response` message containing the result and 0 or more data streams.
 3. The Service sends a `NEXT` control message, signalling it is ready for the next action.
 4. The Client sends a `PROCEED` control message, signalling to the Service to be ready for another `Request`.
 
@@ -78,6 +78,11 @@ The resulting response
 
 ![Example response](images/example-response.png)
 
-### Links
+
+## Inspiration
+
+Halibut's protocol was inspired by JSON-RPC, read its [history here](https://www.codeproject.com/Articles/554692/Halibut-a-secure-communication-stack-for-NET-Mono).
+
+## Links
 
 [Diagrams src](https://whimsical.com/halibut-protocol-S4zyHWADysGLbqcFxUQK3V)
