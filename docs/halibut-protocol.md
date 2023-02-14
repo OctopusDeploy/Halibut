@@ -29,7 +29,7 @@ The final stage can be entered by either the Client or Service terminating the T
 
 ## Listening Service protocol data exchange
 
-When the **Service** is in  **Listening** mode, the **Client** it identifies itself as `MX-CLIENT 1.0` while the `Service` identifies itself as `MX-SERVER 1.0`.
+When the **Service** is in  **Listening** mode, the **Client** identifies itself as `MX-CLIENT 1.0` while the `Service` identifies itself as `MX-SERVER 1.0`.
 
 ![Listening client protocol data exchange](images/listeningprotocoldata.png)
 
