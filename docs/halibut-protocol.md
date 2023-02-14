@@ -6,15 +6,26 @@ This document outlines the data that is exchanged between the **Client** and **S
  - **Service** is what executes the methods e.g. Tentacle. 
 
 
-When invoking a remote method in both polling and listening mode, the same general process is followed:
+When invoking a remote method in both polling and listening mode, the `Client` and `Service` go through three stages.
 
-1.  After the TCP connection is intiated, both server and client identify themselves to each other through a set of control messages.
-2. The Client sends a `Request` message containing the method to execute and data.
-3. The Service executes the method and sends the result in a `Response` message.
-4. The Service sends a `NEXT` control message, signaling it is ready for the next action.
-5. The Client sends a `Proceed` control message, signaling to the Service to be ready for another `Request`.
-6. Steps 2 to 5 are repeated until the connection is terminated or control `END` messages are sent.
+ ### Stage 1 - Establish Connection
+ 
+  A TCP connection is established and both server and client identify themselves, though a series of control messages. The control messages sent vary depending on if [listening](#listening-service-protocol-data-exchange) or [polling](#polling-service-protocol-data-exchange) mode is used.
 
+### Stage 2 - Execute requests
+
+Now that the connections are established, the Service will wait for requests from the Client. In both polling and listening the following steps are repeated in order:
+
+1. The Client sends a `Request` message containing the method to execute and data.
+2. The Service executes the method and sends the result in a `Response` message.
+3. The Service sends a `NEXT` control message, signaling it is ready for the next action.
+4. The Client sends a `PROCEED` control message, signaling to the Service to be ready for another `Request`.
+
+The steps are repeated for both Listening and Polling mode until either Client or Service begins the terminate connection stage.
+
+### Stage 3 - Terminate connection
+
+The final stage can be entered by either the Client or Service terminating the TCP connection or sending a `END` control message. Once this stage is reached no more requests will be processed in the current TCP connection.
 
 ## Listening Service protocol data exchange
 
