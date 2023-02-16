@@ -93,6 +93,11 @@ namespace Halibut.Transport.Protocol
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
+                        if (unusedBytesCount == 0)
+                        {
+                            await zip.ReadAsync(buffer, 0, buffer.Length, CancellationToken.None);
+                            deflateReflector.TryGetAvailableInputBufferSize(zip, out unusedBytesCount);
+                        }
                         rewindable.FinishAndRewind(unusedBytesCount);
                     }
                     else
