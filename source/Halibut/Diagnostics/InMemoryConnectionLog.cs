@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Halibut.Logging;
 
 namespace Halibut.Diagnostics
 {
-    internal class InMemoryConnectionLog : ILog
+    public class InMemoryConnectionLog : ILog
     {
         readonly string endpoint;
         readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
+        WeakReference<Logging.ILog> loggerRef;
 
         public InMemoryConnectionLog(string endpoint)
         {
@@ -60,8 +62,32 @@ namespace Halibut.Diagnostics
 
         void SendToTrace(LogEvent logEvent, LogLevel level)
         {
-            var logger = LogProvider.GetLogger("Halibut");
+            var logger = GetLogger();//LogProvider.GetLogger("Halibut");
             logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
         }
+
+        private Logging.ILog GetLogger()
+        {
+            if (loggerRef == null)
+            {
+                Logging.ILog log = LogProvider.GetLogger("Halibut");
+                loggerRef = new WeakReference<Logging.ILog>(log);
+            }
+
+            if (loggerRef.TryGetTarget(out var logger))
+            {
+                return logger;
+            }
+            else
+            {
+                Logging.ILog log = LogProvider.GetLogger("Halibut");
+                loggerRef.SetTarget(log);
+                return log;
+
+            }
+            
+        }
+
+        
     }
 }
