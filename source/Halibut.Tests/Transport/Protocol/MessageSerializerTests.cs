@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -9,21 +10,21 @@ namespace Halibut.Tests.Transport.Protocol
     public class MessageSerializerTests
     {
         [Test]
-        public void SendReceiveMessageShouldRoundTrip()
+        public async Task SendReceiveMessageShouldRoundTrip()
         {
             var sut = MessageSerializerBuilder.Build();
             using (var stream = new MemoryStream())
             {
                 sut.WriteMessage(stream, "Test");
                 stream.Position = 0;
-                var result = sut.ReadMessage<string>(stream);
+                var result = await sut.ReadMessage<string>(stream);
                 Assert.AreEqual("Test", result);
             }
         }
 
         #if !NETFRAMEWORK
         [Test]
-        public void SendReceiveMessageRewindableShouldRoundTrip()
+        public async Task SendReceiveMessageRewindableShouldRoundTrip()
         {
             using (var stream = new MemoryStream())
             using (var rewindableStream = new RewindableBufferStream(stream))
@@ -31,7 +32,7 @@ namespace Halibut.Tests.Transport.Protocol
                 var sut = MessageSerializerBuilder.Build();
                 sut.WriteMessage(stream, "Test");
                 stream.Position = 0;
-                Assert.AreEqual("Test", sut.ReadMessage<string>(rewindableStream));
+                Assert.AreEqual("Test", await sut.ReadMessage<string>(rewindableStream));
             }
         }
 
