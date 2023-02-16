@@ -191,11 +191,11 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public T Receive<T>()
+        public async Task<T> Receive<T>()
         {
             using (var capture = StreamCapture.New())
             {
-                var result = serializer.ReadMessage<T>(stream);
+                var result = await serializer.ReadMessage<T>(stream);
                 ReadStreams(capture);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;

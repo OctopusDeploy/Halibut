@@ -410,10 +410,10 @@ namespace Halibut.Tests
                 Sent.Add(message);
             }
 
-            public T Receive<T>()
+            public Task<T> Receive<T>()
             {
                 output.AppendLine("<-- " + typeof(T).Name);
-                return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+                return Task.FromResult((T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T)));
             }
 
             public override string ToString()

@@ -6,6 +6,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
@@ -30,12 +31,7 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint { get; }
 
-        public void ExecuteTransaction(ExchangeAction protocolHandler)
-        {
-            ExecuteTransaction(protocolHandler, CancellationToken.None);
-        }
-        
-        public void ExecuteTransaction(ExchangeAction protocolHandler, CancellationToken cancellationToken)
+        public async Task ExecuteTransaction(ExchangeActionAsync protocolHandler, CancellationToken cancellationToken)
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
 
@@ -64,7 +60,7 @@ namespace Halibut.Transport
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
 
-                        protocolHandler(connection.Protocol);
+                        await protocolHandler(connection.Protocol);
                     }
                     catch
                     {

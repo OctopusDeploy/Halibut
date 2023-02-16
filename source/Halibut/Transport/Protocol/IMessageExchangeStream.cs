@@ -17,6 +17,6 @@ namespace Halibut.Transport.Protocol
         void IdentifyAsServer();
         RemoteIdentity ReadRemoteIdentity();
         void Send<T>(T message);
-        T Receive<T>();
+        Task<T> Receive<T>();
     }
 }

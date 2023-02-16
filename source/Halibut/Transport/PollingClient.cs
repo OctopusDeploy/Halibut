@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -13,7 +14,6 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly ISecureClient secureClient;
         readonly Uri subscription;
-        readonly Thread thread;
         readonly CancellationToken cancellationToken;
         bool working;
 
@@ -35,15 +35,12 @@ namespace Halibut.Transport
             this.handleIncomingRequest = handleIncomingRequest;
             this.log = log;
             this.cancellationToken = cancellationToken;
-            thread = new Thread(ExecutePollingLoop);
-            thread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
-            thread.IsBackground = true;
         }
 
         public void Start()
         {
             working = true;
-            thread.Start();
+            Task.Run(ExecutePollingLoop);
         }
 
         public void Dispose()
@@ -51,7 +48,7 @@ namespace Halibut.Transport
             working = false;
         }
 
-        void ExecutePollingLoop(object ignored)
+        async Task ExecutePollingLoop()
         {
             var retry = RetryPolicy.Create();
             var sleepFor = TimeSpan.Zero;
@@ -62,7 +59,7 @@ namespace Halibut.Transport
                     try
                     {
                         retry.Try();
-                        secureClient.ExecuteTransaction(protocol => { protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest); }, cancellationToken);
+                        await secureClient.ExecuteTransaction(async protocol => { await protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest); }, cancellationToken);
                         retry.Success();
                     }
                     finally

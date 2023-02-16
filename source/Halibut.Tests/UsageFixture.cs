@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
@@ -60,7 +61,7 @@ namespace Halibut.Tests
                 Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
             }
         }
-
+    
         [Test]
         public void OctopusCanSendMessagesToPollingTentacle()
         {
@@ -69,10 +70,10 @@ namespace Halibut.Tests
             using (var octopus = new HalibutRuntime(Certificates.Octopus))
             using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
             {
-                var octopusPort = octopus.Listen();
+                var octopusPort = octopus.Listen(8000);
                 octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
 
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + 8001), Certificates.OctopusPublicThumbprint));
 
                 var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
                 for (var i = 1; i < 100; i++)
