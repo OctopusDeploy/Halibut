@@ -65,22 +65,30 @@ namespace Halibut.Tests
         [Test]
         public void OctopusCanSendMessagesToPollingTentacle()
         {
-            var services = GetDelegateServiceFactory();
-            services.Register<ISupportedServices>(() => new SupportedServices());
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
-            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            try
             {
-                var octopusPort = octopus.Listen(8000);
-                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + 8001), Certificates.OctopusPublicThumbprint));
-
-                var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                for (var i = 1; i < 100; i++)
+                var services = GetDelegateServiceFactory();
+                services.Register<ISupportedServices>(() => new SupportedServices());
+                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
                 {
-                    var i1 = i;
-                    svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    var octopusPort = octopus.Listen(8000);
+                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + 8001), Certificates.OctopusPublicThumbprint));
+
+                    var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                    for (var i = 1; i < 100; i++)
+                    {
+                        var i1 = i;
+                        svc.GetLocation(new MapLocation {Latitude = -i, Longitude = i}).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    }
                 }
+            }
+            catch (Exception)
+            {
+                Thread.Sleep(TimeSpan.FromMinutes(20));
+                throw;
             }
         }
 
