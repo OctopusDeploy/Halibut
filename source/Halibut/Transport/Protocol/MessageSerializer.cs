@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -49,11 +51,11 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public T ReadMessage<T>(Stream stream)
+        public async Task<T> ReadMessage<T>(Stream stream)
         {
             if (stream is IRewindableBuffer rewindable)
             {
-                return ReadCompressedMessageRewindable<T>(stream, rewindable);
+                return await ReadCompressedMessageRewindable<T>(stream, rewindable);
             }
 
             return ReadCompressedMessage<T>(stream);
@@ -69,27 +71,49 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        T ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
+        async Task<T> ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
         {
             rewindable.StartBuffer();
             try
             {
+                MemoryStream ms = new MemoryStream();
                 using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-                using (var bson = new BsonDataReader(zip) { CloseInput = false })
+
                 {
-                    var messageEnvelope = DeserializeMessage<T>(bson);
+
+                    var buffer = new byte[1024]; 
+                    while (true)
+                    {
+                        int read = await zip.ReadAsync(buffer, 0, buffer.Length, CancellationToken.None);
+                        ms.Write(buffer, 0, read);
+                        if(read == 0) break;
+
+                    }
 
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
+                        if (unusedBytesCount == 0)
+                        {
+                            await zip.ReadAsync(buffer, 0, buffer.Length, CancellationToken.None);
+                            deflateReflector.TryGetAvailableInputBufferSize(zip, out unusedBytesCount);
+                        }
                         rewindable.FinishAndRewind(unusedBytesCount);
                     }
                     else
                     {
                         rewindable.CancelBuffer();
                     }
+                    
+                }
+
+                ms.Position = 0;
+                using (var bson = new BsonDataReader(ms) {CloseInput = false})
+                {
+                    var messageEnvelope = DeserializeMessage<T>(bson);
                     return messageEnvelope.Message;
                 }
+                
             }
             catch
             {

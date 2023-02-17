@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
@@ -60,7 +61,7 @@ namespace Halibut.Tests
                 Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
             }
         }
-
+    
         [Test]
         public void OctopusCanSendMessagesToPollingTentacle()
         {
@@ -78,9 +79,10 @@ namespace Halibut.Tests
                 for (var i = 1; i < 100; i++)
                 {
                     var i1 = i;
-                    svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    svc.GetLocation(new MapLocation {Latitude = -i, Longitude = i}).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
                 }
             }
+            
         }
 
         [Test]

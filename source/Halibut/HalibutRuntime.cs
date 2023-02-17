@@ -238,21 +238,21 @@ namespace Halibut
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    return SendOutgoingHttpsRequest(request, cancellationToken);
+                    return await SendOutgoingHttpsRequest(request, cancellationToken);
                 case "poll":
                     return await SendOutgoingPollingRequest(request, cancellationToken);
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
         }
 
-        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
-            client.ExecuteTransaction(protocol =>
+            await client.ExecuteTransaction(async protocol =>
             {
-                response = protocol.ExchangeAsClient(request);
+                response = await protocol.ExchangeAsClient(request);
             }, cancellationToken);
             return response;
         }
