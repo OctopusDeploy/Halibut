@@ -114,7 +114,7 @@ namespace Halibut.Transport
                 return rewoundCount;
             }
 
-            var baseCount = await baseStream.ReadAsync(buffer, offset, count);
+            var baseCount = await baseStream.ReadAsync(buffer, offset, count, cancellationToken);
             WriteToRewindBuffer(buffer, offset, baseCount);
             return baseCount;
         }
