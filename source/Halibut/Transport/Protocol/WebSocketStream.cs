@@ -13,10 +13,12 @@ namespace Halibut.Transport.Protocol
         readonly WebSocket context;
         bool isDisposed;
         readonly CancellationTokenSource cancel = new CancellationTokenSource();
+        HalibutTimeouts halibutTimeouts;
 
-        public WebSocketStream(WebSocket context)
+        public WebSocketStream(WebSocket context, HalibutTimeouts halibutTimeouts)
         {
             this.context = context;
+            this.halibutTimeouts = halibutTimeouts;
         }
 
 
@@ -50,7 +52,7 @@ namespace Halibut.Transport.Protocol
             var buffer = new ArraySegment<byte>(new byte[10000]);
             while (true)
             {
-                using(var cts = new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout))
+                using(var cts = new CancellationTokenSource(halibutTimeouts.TcpClientReceiveTimeout))
                 using(var combined = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancel.Token))
                 {
                     var result = await context.ReceiveAsync(buffer, combined.Token).ConfigureAwait(false);

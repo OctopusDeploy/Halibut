@@ -35,7 +35,7 @@ namespace Halibut.Tests
         [Test]
         public void DiscoverMethodReturnsEndpointDetails()
         {
-            var client = new DiscoveryClient();
+            var client = new DiscoveryClient(new HalibutTimeouts());
             var discovered = client.Discover(new ServiceEndPoint(endpoint.BaseUri, ""));
 
             discovered.RemoteThumbprint.Should().BeEquivalentTo(endpoint.RemoteThumbprint);
@@ -45,7 +45,7 @@ namespace Halibut.Tests
         [Test]
         public void DiscoveringNonExistantEndpointThrows()
         {
-            var client = new DiscoveryClient();
+            var client = new DiscoveryClient(new HalibutTimeouts());
             var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "");
 
             Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint), "No such host is known");

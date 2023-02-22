@@ -14,6 +14,12 @@ namespace Halibut.Transport
 
         public bool IsDisposed { get; private set; }
 
+        private HalibutTimeouts halibutTimeouts;
+        public ConnectionManager(HalibutTimeouts halibutTimeouts)
+        {
+            this.halibutTimeouts = halibutTimeouts;
+        }
+
         public IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
         {
             return AcquireConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, CancellationToken.None);
@@ -35,15 +41,15 @@ namespace Halibut.Transport
                 var existingConnectionFromPool = pool.Take(serviceEndpoint);
                 var openableConnection = existingConnectionFromPool != null 
                     ? Tuple.Create<IConnection, Action>(existingConnectionFromPool, () => { }) // existing connections from the pool are already open
-                    : CreateNewConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+                    : CreateNewConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, halibutTimeouts, log, cancellationToken);
                 AddConnectionToActiveConnections(serviceEndpoint, openableConnection.Item1);
                 return openableConnection;
             }
         }
 
-        Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, HalibutTimeouts halibutTimeouts, ILog log, CancellationToken cancellationToken)
         {
-            var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken));
+            var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, halibutTimeouts, log, cancellationToken));
             var connection = new DisposableNotifierConnection(lazyConnection, OnConnectionDisposed);
             return Tuple.Create<IConnection, Action>(connection, () =>
             {

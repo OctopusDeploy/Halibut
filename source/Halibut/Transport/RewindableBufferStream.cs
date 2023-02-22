@@ -113,8 +113,11 @@ namespace Halibut.Transport
             {
                 return rewoundCount;
             }
+            
+            var readTimeoutCTs = new CancellationTokenSource(TimeSpan.FromMilliseconds(this.baseStream.ReadTimeout));
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, readTimeoutCTs.Token);
 
-            var baseCount = await baseStream.ReadAsync(buffer, offset, count, cancellationToken);
+            var baseCount = await baseStream.ReadAsync(buffer, offset, count, cts.Token);
             WriteToRewindBuffer(buffer, offset, baseCount);
             return baseCount;
         }

@@ -18,16 +18,16 @@ namespace Halibut.Tests
         [SetUp]
         public void SetUp()
         {
-            connection = new SecureConnection(Substitute.For<IDisposable>(), Stream.Null,GetProtocol, Substitute.For<ILog>());
+            connection = new SecureConnection(Substitute.For<IDisposable>(), Stream.Null,GetProtocol, new HalibutTimeouts(), Substitute.For<ILog>());
             connectionFactory = Substitute.For<IConnectionFactory>();
-            connectionFactory.EstablishNewConnection(GetProtocol, Arg.Any<ServiceEndPoint>(), Arg.Any<ILog>()).Returns(connection);
+            connectionFactory.EstablishNewConnection(GetProtocol, Arg.Any<ServiceEndPoint>(), Arg.Any<HalibutTimeouts>(), Arg.Any<ILog>()).Returns(connection);
         }
 
         [Test]
         public void DisposedConnectionsAreRemovedFromActive_WhenMultipleConnectionsAreActive()
         {
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = CreateConnectionManager();
 
             //do it twice because this bug only triggers on multiple enumeration, having 1 in the collection doesn't trigger the bug
             connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
@@ -36,12 +36,17 @@ namespace Halibut.Tests
             connectionManager.Disconnect(serviceEndpoint, null);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
-       
+
+        static ConnectionManager CreateConnectionManager()
+        {
+            return new ConnectionManager(new HalibutTimeouts());
+        }
+
         [Test]
         public void ReleasedConnectionsAreNotActive()
         {
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = CreateConnectionManager();
 
             var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
@@ -54,7 +59,7 @@ namespace Halibut.Tests
         public void DisposedConnectionsAreRemovedFromActive()
         {
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = CreateConnectionManager();
 
             var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
@@ -67,7 +72,7 @@ namespace Halibut.Tests
         public void DisconnectDisposesActiveConnections()
         {
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = CreateConnectionManager();
             
             var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
@@ -78,7 +83,7 @@ namespace Halibut.Tests
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog log)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), log), log);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), new HalibutTimeouts(), log), log);
         }
     }
 }

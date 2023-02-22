@@ -91,20 +91,17 @@ namespace Halibut.Diagnostics
         // when the client goes to the pool to get a connection for the next
         // exchange it can get one that has timed out, so make sure our pool
         // timeout is smaller than the tcp timeout.
-        public static TimeSpan SafeTcpClientPooledConnectionTimeout
+        public static TimeSpan SafeTcpClientPooledConnectionTimeout(HalibutTimeouts halibutTimeouts)
         {
-            get
+            if (TcpClientPooledConnectionTimeout < halibutTimeouts.TcpClientReceiveTimeout)
             {
-                if (TcpClientPooledConnectionTimeout < TcpClientReceiveTimeout)
-                {
-                    return TcpClientPooledConnectionTimeout;
-                }
-                else
-                {
-                    var timeout = TcpClientReceiveTimeout - TimeSpan.FromSeconds(10);
-                    return timeout > TimeSpan.Zero ? timeout : TcpClientReceiveTimeout;
-                }
+                return TcpClientPooledConnectionTimeout;
             }
-        }
+            else
+            {
+                var timeout = halibutTimeouts.TcpClientReceiveTimeout - TimeSpan.FromSeconds(10);
+                return timeout > TimeSpan.Zero ? timeout : halibutTimeouts.TcpClientReceiveTimeout;
+            }}
+        
     }
 }

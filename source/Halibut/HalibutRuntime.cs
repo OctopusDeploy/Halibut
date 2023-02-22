@@ -27,12 +27,13 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
         readonly IServiceInvoker invoker;
         readonly ILogFactory logs;
-        readonly ConnectionManager connectionManager = new ConnectionManager();
+        readonly ConnectionManager connectionManager;
         readonly PollingClientCollection pollingClients = new PollingClientCollection();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly IMessageSerializer messageSerializer;
         readonly ITypeRegistry typeRegistry;
+        readonly HalibutTimeouts halibutTimeouts;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -65,9 +66,11 @@ namespace Halibut
                 .WithTypeRegistry(typeRegistry)
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
+            this.halibutTimeouts = new HalibutTimeouts();
+            this.connectionManager = new ConnectionManager(this.halibutTimeouts);
         }
         
-        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer)
+        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer, HalibutTimeouts halibutTimeouts)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -76,6 +79,8 @@ namespace Halibut
             this.typeRegistry = typeRegistry;
             this.messageSerializer = messageSerializer;
             invoker = new ServiceInvoker(serviceFactory);
+            this.halibutTimeouts = halibutTimeouts;
+            this.connectionManager = new ConnectionManager(this.halibutTimeouts);
         }
 
         public ILogFactory Logs => logs;
@@ -103,12 +108,12 @@ namespace Halibut
         
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, halibutTimeouts, log), log);
         }
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, halibutTimeouts);
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -119,7 +124,7 @@ namespace Halibut
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, halibutTimeouts);
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -176,7 +181,7 @@ namespace Halibut
         
         public ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            var client = new DiscoveryClient();
+            var client = new DiscoveryClient(this.halibutTimeouts);
             return client.Discover(endpoint, cancellationToken);
         }
 

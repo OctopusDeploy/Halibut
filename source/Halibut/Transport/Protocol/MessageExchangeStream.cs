@@ -25,8 +25,9 @@ namespace Halibut.Transport.Protocol
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new Version(1, 0);
         readonly ControlMessageReader controlMessageReader = new ControlMessageReader();
+        readonly HalibutTimeouts halibutTimeouts;
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
+        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, HalibutTimeouts halibutTimeouts, ILog log)
         {
             #if NETFRAMEWORK
             this.stream = stream;
@@ -34,6 +35,7 @@ namespace Halibut.Transport.Protocol
             this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             #endif
             this.log = log;
+            this.halibutTimeouts = halibutTimeouts;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             this.serializer = serializer;
             SetNormalTimeouts();
@@ -297,8 +299,8 @@ namespace Halibut.Transport.Protocol
             if (!stream.CanTimeout)
                 return;
 
-            stream.WriteTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+            stream.WriteTimeout = (int)halibutTimeouts.TcpClientSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int)halibutTimeouts.TcpClientReceiveTimeout.TotalMilliseconds;
         }
 
         void SetShortTimeouts()

@@ -6,7 +6,7 @@ namespace Halibut.Transport
 {
     public interface IConnectionFactory
     {
-        IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log);
-        IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken);
+        IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, HalibutTimeouts halibutTimeouts, ILog log);
+        IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, HalibutTimeouts halibutTimeouts, ILog log, CancellationToken cancellationToken);
     }
 }

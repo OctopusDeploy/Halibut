@@ -16,6 +16,7 @@ namespace Halibut
         ITrustProvider trustProvider;
         Action<MessageSerializerBuilder> configureMessageSerializerBuilder;
         ITypeRegistry typeRegistry;
+        HalibutTimeouts halibutTimeouts = new HalibutTimeouts();
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -59,6 +60,12 @@ namespace Halibut
             return this;
         }
 
+        internal HalibutRuntimeBuilder WithHalibutTimeouts(HalibutTimeouts halibutTimeouts)
+        {
+            this.halibutTimeouts = halibutTimeouts;
+            return this;
+        }
+
         public HalibutRuntime Build()
         {
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
@@ -75,7 +82,7 @@ namespace Halibut
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
 
-            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer);
+            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer, halibutTimeouts);
         }
     }
 }

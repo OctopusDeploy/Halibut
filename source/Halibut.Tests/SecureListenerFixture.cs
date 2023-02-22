@@ -50,7 +50,8 @@ namespace Halibut.Tests
                     null,
                     thumbprint => true,
                     new LogFactory(), 
-                    () => ""
+                    () => "",
+                    new HalibutTimeouts()
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)
