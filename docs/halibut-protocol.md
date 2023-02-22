@@ -53,6 +53,8 @@ In listening mode the *Client* will keep and pool connections for subsequent RPC
 
 ## Polling Service protocol data exchange
 
+In Polling mode the **Service** initiates the connection and does a long poll to the **Client** for Requests. In this mode only a single TCP connection exists at any one time, unlike in listening mode where connections are created as required. This means that in polling mode, only one RPC call can be made at a time.
+
 To make RPC calls the steps are:
 
 1. *Identification:*
