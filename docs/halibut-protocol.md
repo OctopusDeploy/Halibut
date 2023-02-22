@@ -18,8 +18,9 @@ Now that the connections are established, the Service will wait for requests fro
 
 1. The Client sends a `Request` message containing the method to execute, its parameters and 0 or more data streams.
 2. The Service executes the method and sends the result in a `Response` message containing the result and 0 or more data streams.
-3. The Service sends a `NEXT` control message, signalling it is ready for the next action.
-4. The Client sends a `PROCEED` control message, signalling to the Service to be ready for another `Request`.
+3. The Service and Client exchange `NEXT` and `PROCEED` control messages. The direction of these message differes depending on if the service is in polling or listening mode.
+
+
 
 The steps are repeated for both Listening and Polling mode until either Client or Service begins the Ending a connection stage.
 
@@ -29,13 +30,42 @@ The final stage can be entered by either the Client or Service terminating the T
 
 ## Listening Service protocol data exchange
 
-When the **Service** is in  **Listening** mode, the **Client** identifies itself as `MX-CLIENT 1.0` while the `Service` identifies itself as `MX-SERVER 1.0`.
+In listening mode the *Client* will keep and pool connections for subsequent RPC calls. In this mode the "pooled connection" is tested by sending and recieving control messages before sending the Request message. If the control messages can not be exchanaged a new connection is made.
+
+1. *Identification:*
+    1. **Client** identifies itself as `MX-CLIENT 1.0`
+    2. **Service** identifies itself as `MX-SERVER 1.0`
+2. *Message exchange:*
+    1. The **Client** sends a `Request` message containing the method to execute, its parameters and 0 or more data streams.
+    2. The **Service** executes the method and sends the result in a `Response` message containing the result and 0 or more data streams.
+    3. The **Client** places the TCP connection into the pool
+    4. The **Service** waits for a control message.
+3. *Connection re-use: When the Client wants to make a new RPC call:*
+    1. A connection is removed from the pool and tested by:
+        1. The Client sends a `NEXT` control message.
+        2. The Service responds witha `PROCEED` control message.
+    2. If the client is unable to send `NEXT` or recieve the `PROCEED` control message, the TCP connection is clossed and a new one created following the process from step `1.Identification`.
+    3. If the client recieves `PROCEED` the RPC call is made with this TCP connection starting at step `2.Message exchange`.
+
+
 
 ![Listening client protocol data exchange](images/listeningprotocoldata.png)
 
 ## Polling Service protocol data exchange
 
-When the **Service** is in  **Polling** mode, the **Service** identifies itself as `MX-SUBSCRIBER 1.0` while the `Client` identifies itself as `MX-SERVER 1.0`.
+To make RPC calls the steps are:
+
+1. *Identification:*
+    1. **Service** identifies itself as `MX-SUBSCRIBER 1.0`
+    2. **Client** identifies itself as `MX-SERVER 1.0`
+2. *Message exchange:*
+    1. The Client sends a `Request` message containing the method to execute, its parameters and 0 or more data streams.
+    2. The Service executes the method and sends the result in a `Response` message containing the result and 0 or more data streams.
+3. *Connection re-use:*
+    1. The **Service** sends a `NEXT` control message.
+    2. The **Client** responds with a `PROCEED` control message.
+    3. The **Service** Waits for a **Request** message.
+    4. When the **Client** makes a new RPC call the same TCP connection is re-used and the process starts again at step `2.Message exchange`.
 
 Under polling mode, unlike listening, the Client will periodically send a no-op NUL Request to the Service to keep the TCP connection alive.
 
