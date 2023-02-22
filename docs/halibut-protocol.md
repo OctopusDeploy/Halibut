@@ -113,6 +113,7 @@ The resulting response
 
 Halibut's protocol was inspired by JSON-RPC, read its [history here](https://www.codeproject.com/Articles/554692/Halibut-a-secure-communication-stack-for-NET-Mono).
 
-## Links
+## See Also
 
-[Diagrams src](https://whimsical.com/halibut-protocol-S4zyHWADysGLbqcFxUQK3V)
+* [Protocol Fixture](../source/Halibut.Tests/ProtocolFixture.cs) Which documents the protocol in test.
+* [Diagrams src](https://whimsical.com/halibut-protocol-S4zyHWADysGLbqcFxUQK3V)
