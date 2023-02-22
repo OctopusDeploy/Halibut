@@ -66,7 +66,7 @@ To make RPC calls the steps are:
 3. *Connection re-use:*
     1. The **Service** sends a `NEXT` control message.
     2. The **Client** responds with a `PROCEED` control message.
-    3. The **Service** Waits for a **Request** message.
+    3. The **Service** Waits for a **Request** message. If waiting times out the connection is closed and recreated starting again from step `1.Identification`.
     4. When the **Client** makes a new RPC call the same TCP connection is re-used and the process starts again at step `2.Message exchange`.
 
 Under polling mode, unlike listening, the Client will periodically send a no-op NUL Request to the Service to keep the TCP connection alive.
