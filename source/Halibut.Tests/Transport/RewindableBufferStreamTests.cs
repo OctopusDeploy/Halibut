@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Transport;
 using NUnit.Framework;
@@ -42,6 +43,25 @@ namespace Halibut.Tests.Transport
                 {
                     Assert.AreEqual("Test", await streamReader.ReadToEndAsync());
                 }
+            }
+        }
+        
+        [Test]
+        public async Task ReadAsyncShouldPassTheCancellationTokenToTheUnderlyingStream()
+        {
+            using (var baseStream = new MemoryStream(16))
+            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            {
+                var inputBuffer = Encoding.ASCII.GetBytes("Test");
+                await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
+
+                baseStream.Position = 0;
+
+                var readBuffer = new byte[inputBuffer.Length];
+                var cts = new CancellationTokenSource();
+                cts.Cancel();
+                
+                Assert.ThrowsAsync<TaskCanceledException>(async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token));
             }
         }
 
