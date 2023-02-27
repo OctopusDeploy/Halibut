@@ -1,6 +1,7 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut", "Halibut\Halibut.csproj", "{9D8386A2-4F69-4F80-A21F-F646A9828E25}"
 EndProject
@@ -20,20 +21,20 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.OctopusSample", "Ha
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.SampleLoadTest", "Halibut.SampleLoadTest\Halibut.SampleLoadTest.csproj", "{4134E981-01AF-4398-8560-0F9BBA5480FB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.SamplePolling", "Halibut.SamplePolling\Halibut.SamplePolling.csproj", "{0A152095-948F-4075-8FC9-D09B298C4460}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.SamplePolling", "Halibut.SamplePolling\Halibut.SamplePolling.csproj", "{0A152095-948F-4075-8FC9-D09B298C4460}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{B742FF5E-172B-4E39-A542-09C37ED46C16}"
-ProjectSection(SolutionItems) = preProject
-	..\.gitattributes = ..\.gitattributes
-	..\.gitignore = ..\.gitignore
-	..\build.cake = ..\build.cake
-	..\build.cmd = ..\build.cmd
-	..\build.ps1 = ..\build.ps1
-	..\build.sh = ..\build.sh
-	..\gitversion.yml = ..\gitversion.yml
-	..\LICENSE.txt = ..\LICENSE.txt
-	..\README.md = ..\README.md
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		..\.gitattributes = ..\.gitattributes
+		..\.gitignore = ..\.gitignore
+		..\build.cake = ..\build.cake
+		..\build.cmd = ..\build.cmd
+		..\build.ps1 = ..\build.ps1
+		..\build.sh = ..\build.sh
+		..\gitversion.yml = ..\gitversion.yml
+		..\LICENSE.txt = ..\LICENSE.txt
+		..\README.md = ..\README.md
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "..\build\_build.csproj", "{55223D02-0CE9-4325-9A4D-5E88A544B633}"
 EndProject
@@ -47,8 +48,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9D8386A2-4F69-4F80-A21F-F646A9828E25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9D8386A2-4F69-4F80-A21F-F646A9828E25}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D8386A2-4F69-4F80-A21F-F646A9828E25}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -151,6 +150,16 @@ Global
 		{0A152095-948F-4075-8FC9-D09B298C4460}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{0A152095-948F-4075-8FC9-D09B298C4460}.Release|x86.ActiveCfg = Release|Any CPU
 		{0A152095-948F-4075-8FC9-D09B298C4460}.Release|x86.Build.0 = Release|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Debug|x86.Build.0 = Debug|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Release|x86.ActiveCfg = Release|Any CPU
+		{55223D02-0CE9-4325-9A4D-5E88A544B633}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -163,6 +172,9 @@ Global
 		{549CD94C-DC6F-4C6A-B063-372E28726D38} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 		{4134E981-01AF-4398-8560-0F9BBA5480FB} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
 		{0A152095-948F-4075-8FC9-D09B298C4460} = {807A6FA5-EC26-42DF-BBC4-6F572781D94E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1700D804-2CFF-4F97-B1D4-3FE31C10C7E2}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = Halibut.SampleClient\Halibut.SampleClient.csproj
