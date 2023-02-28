@@ -62,7 +62,7 @@ namespace Halibut.Tests.Transport
                 var cts = new CancellationTokenSource();
                 cts.Cancel();
                 
-                var readAsyncCall = async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
+                Func<Task<int>> readAsyncCall = async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
 
                 await readAsyncCall.Should().ThrowAsync<TaskCanceledException>();
             }
