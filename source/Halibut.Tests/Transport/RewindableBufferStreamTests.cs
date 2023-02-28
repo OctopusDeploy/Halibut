@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Halibut.Transport;
 using NUnit.Framework;
 
@@ -61,7 +62,9 @@ namespace Halibut.Tests.Transport
                 var cts = new CancellationTokenSource();
                 cts.Cancel();
                 
-                Assert.ThrowsAsync<TaskCanceledException>(async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token));
+                var readAsyncCall = async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
+
+                await readAsyncCall.Should().ThrowAsync<TaskCanceledException>();
             }
         }
 
