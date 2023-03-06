@@ -28,12 +28,14 @@ namespace Halibut.Transport.Protocol
             this.log = log;
         }
 
-        public ResponseMessage ExchangeAsClient(RequestMessage request)
+        public ResponseMessageWithTransferStatistics ExchangeAsClient(RequestMessage request)
         {
             PrepareExchangeAsClient();
 
-            stream.Send(request);
-            return stream.Receive<ResponseMessage>();
+            var sendStatistics = stream.Send(request);
+            var receiveMessageWithStats = stream.Receive<ResponseMessage>();
+
+            return new ResponseMessageWithTransferStatistics(receiveMessageWithStats.receivedMessage, receiveMessageWithStats.timeWaitingForFirstByteOfResponse, sendStatistics, receiveMessageWithStats.transferStatistics);
         }
 
         public void StopAcceptingClientRequests()
@@ -83,7 +85,7 @@ namespace Halibut.Transport.Protocol
 
         static void ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
-            var request = stream.Receive<RequestMessage>();
+            var request = stream.Receive<RequestMessage>().receivedMessage;
             if (request != null)
             {
                 var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
@@ -132,7 +134,7 @@ namespace Halibut.Transport.Protocol
         {
             while (acceptClientRequests)
             {
-                var request = stream.Receive<RequestMessage>();
+                var request = stream.Receive<RequestMessage>().receivedMessage;
                 if (request == null || !acceptClientRequests)
                     return;
 
@@ -187,11 +189,11 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                stream.Send(nextRequest);
+                var sendStatistics = stream.Send(nextRequest);
                 if (nextRequest != null)
                 {
-                    var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    var receiveMessageWithStats = stream.Receive<ResponseMessage>();
+                    pendingRequests.ApplyResponse(new ResponseMessageWithTransferStatistics(receiveMessageWithStats.receivedMessage, receiveMessageWithStats.timeWaitingForFirstByteOfResponse, sendStatistics, receiveMessageWithStats.transferStatistics), nextRequest.Destination);
                 }
             }
             catch (Exception ex)
@@ -199,7 +201,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = ResponseMessage.FromException(nextRequest, ex);
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    pendingRequests.ApplyResponse(ResponseMessageWithTransferStatistics.WithoutAnyStats(response), nextRequest.Destination);
                 }
                 return false;
             }
@@ -225,11 +227,11 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                stream.Send(nextRequest);
+                var sendStatistics = stream.Send(nextRequest);
                 if (nextRequest != null)
                 {
-                    var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    var receiveMessageWithStats = stream.Receive<ResponseMessage>();
+                    pendingRequests.ApplyResponse(new ResponseMessageWithTransferStatistics(receiveMessageWithStats.receivedMessage, receiveMessageWithStats.timeWaitingForFirstByteOfResponse, sendStatistics, receiveMessageWithStats.transferStatistics), nextRequest.Destination);
                 }
             }
             catch (Exception ex)
@@ -237,7 +239,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = ResponseMessage.FromException(nextRequest, ex);
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    pendingRequests.ApplyResponse(ResponseMessageWithTransferStatistics.WithoutAnyStats(response), nextRequest.Destination);
                 }
                 return false;
             }

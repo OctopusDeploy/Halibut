@@ -2,6 +2,7 @@
 using System.Reflection;
 
 using System.Threading;
+using Halibut.Transport;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
@@ -93,19 +94,19 @@ namespace Halibut.ServiceModel
 #else
     public class HalibutProxy : DispatchProxy
     {
-        Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
+        Func<RequestMessage, CancellationToken, ResponseMessageWithTransferStatistics> messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
         CancellationToken cancellationToken;
 
-        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public void Configure(Func<RequestMessage, ResponseMessageWithTransferStatistics> messageRouter, Type contractType, ServiceEndPoint endPoint)
         {
             Configure((requestMessage, ct) => messageRouter(requestMessage), contractType, endPoint, CancellationToken.None);
         }
 
-        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessageWithTransferStatistics> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
@@ -121,8 +122,10 @@ namespace Halibut.ServiceModel
 
             var request = CreateRequest(targetMethod, args);
 
-            var response = DispatchRequest(request);
+            var responseWithStats = DispatchRequest(request);
+            // TODO maybe we could report the stats here.
 
+            var response = responseWithStats.receivedMessage;
             EnsureNotError(response);
 
             var result = response.Result;
@@ -152,7 +155,7 @@ namespace Halibut.ServiceModel
             return request;
         }
 
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        ResponseMessageWithTransferStatistics DispatchRequest(RequestMessage requestMessage)
         {
             return messageRouter(requestMessage, cancellationToken);
         }
