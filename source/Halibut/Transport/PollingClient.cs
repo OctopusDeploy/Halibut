@@ -51,7 +51,7 @@ namespace Halibut.Transport
             working = false;
         }
 
-        void ExecutePollingLoop(object ignored)
+        void ExecutePollingLoop(object _)
         {
             var retry = RetryPolicy.Create();
             var sleepFor = TimeSpan.Zero;
@@ -62,7 +62,14 @@ namespace Halibut.Transport
                     try
                     {
                         retry.Try();
-                        secureClient.ExecuteTransaction(protocol => { protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest); }, cancellationToken);
+                        secureClient.ExecuteTransaction(protocol =>
+                        {
+                            // We have successfully connected at this point so
+                            // reset the retry policy
+                            retry.Success();
+
+                            protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
+                        }, cancellationToken);
                         retry.Success();
                     }
                     finally
