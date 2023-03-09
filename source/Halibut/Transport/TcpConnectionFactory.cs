@@ -36,6 +36,8 @@ namespace Halibut.Transport
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             var stream = client.GetStream();
+            
+            MessageExchangeStream.SetSuperShortTimeouts(stream);
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
@@ -44,6 +46,8 @@ namespace Halibut.Transport
             ssl.Flush();
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
+            
+            MessageExchangeStream.SetNormalTimeouts(stream);
 
             return new SecureConnection(client, ssl, exchangeProtocolBuilder, log);
         }

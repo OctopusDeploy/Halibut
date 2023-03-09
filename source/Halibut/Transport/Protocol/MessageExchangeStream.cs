@@ -294,6 +294,11 @@ namespace Halibut.Transport.Protocol
 
         void SetNormalTimeouts()
         {
+            SetNormalTimeouts(stream);
+        }
+        
+        public static void SetNormalTimeouts(Stream stream)
+        {
             if (!stream.CanTimeout)
                 return;
 
@@ -303,11 +308,25 @@ namespace Halibut.Transport.Protocol
 
         void SetShortTimeouts()
         {
+            SetShortTimeouts(stream);
+        }
+        
+        public static void SetShortTimeouts(Stream stream)
+        {
             if (!stream.CanTimeout)
                 return;
 
             stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+        }
+        
+        public static void SetSuperShortTimeouts(Stream stream)
+        {
+            if (!stream.CanTimeout)
+                return;
+
+            stream.WriteTimeout = (int)TimeSpan.FromSeconds(15).TotalMilliseconds;
+            stream.ReadTimeout = (int)TimeSpan.FromSeconds(15).TotalMilliseconds;
         }
     }
 }
