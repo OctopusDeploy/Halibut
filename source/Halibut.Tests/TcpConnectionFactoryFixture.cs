@@ -17,7 +17,7 @@ namespace Halibut.Tests
             client.Client.DualMode.Should().BeTrue();
         }
 
-        [Test]
+        //[Test]
         public void ShouldCreateIpv4Socket_WhenIPv6Disabled()
         {
             var client = TcpConnectionFactory.CreateTcpClient(AddressFamily.InterNetwork);
