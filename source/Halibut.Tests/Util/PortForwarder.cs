@@ -86,21 +86,49 @@ namespace Halibut.Tests.Util
 
         public void Dispose()
         {
-            cancellationTokenSource.Cancel();
+            if(!cancellationTokenSource.IsCancellationRequested) cancellationTokenSource.Cancel();
             listeningSocket.Close();
 
+            var exceptions = new List<Exception>();
             lock (Pumps)
             {
                 var clone = Pumps.ToArray();
                 Pumps.Clear();
                 foreach (var portForwarder in clone)
                 {
-                    portForwarder.Dispose();
+                    try
+                    {
+                        portForwarder.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
                 }
             }
 
-            listeningSocket.Dispose();
-            cancellationTokenSource.Dispose();
+            try
+            {
+                listeningSocket.Dispose();
+            }
+            catch (Exception e)
+            {
+                exceptions.Add(e);
+            }
+            
+            try
+            {
+                listeningSocket.Dispose();
+            }
+            catch (Exception e)
+            {
+                exceptions.Add(e);
+            }
+
+            if (exceptions.Count > 0)
+            {
+                throw new AggregateException(exceptions);
+            }
         }
     }
 }
