@@ -118,7 +118,7 @@ namespace Halibut.Tests.Util
             
             try
             {
-                listeningSocket.Dispose();
+                cancellationTokenSource.Dispose();
             }
             catch (Exception e)
             {
