@@ -62,7 +62,11 @@ namespace Halibut.Transport
                     try
                     {
                         retry.Try();
-                        secureClient.ExecuteTransaction(protocol => { protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest); }, cancellationToken);
+                        secureClient.ExecuteTransaction(protocol =>
+                        {
+                            //retry.Success();
+                            protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
+                        }, cancellationToken);
                         retry.Success();
                     }
                     finally
