@@ -208,10 +208,13 @@ namespace Halibut.Transport
             var clientName = client.Client.RemoteEndPoint;
             
             Stream stream = client.GetStream();
+            client.EnableTcpKeepAlive();
+
             if (asyncHalibutFeature.IsEnabled())
             {
                 stream = stream.AsNetworkTimeoutStream();
             }
+
 #if !NETFRAMEWORK
             await
 #endif            

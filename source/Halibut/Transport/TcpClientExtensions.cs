@@ -1,8 +1,10 @@
 using System;
 using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 using Halibut.Util.AsyncEx;
 
 namespace Halibut.Transport
@@ -80,6 +82,78 @@ namespace Halibut.Transport
                 {
                 }
             }
+        }
+
+        /// <summary>
+        /// Enable KeepAlive fot the TcpClient
+        /// </summary>
+        /// <param name="tcpClient">TcpClient</param>
+        internal static void EnableTcpKeepAlive(this TcpClient tcpClient)
+        {
+            // TODO - Use non static options
+#pragma warning disable CS0612 // Type or member is obsolete
+            if (!HalibutLimits.TcpKeepAliveEnabled) return;
+            
+            SetKeepAliveValues(tcpClient.Client, HalibutLimits.TcpKeepAliveTime, HalibutLimits.TcpKeepAliveInterval, HalibutLimits.TcpKeepAliveRetryCount);
+#pragma warning restore CS0612 // Type or member is obsolete
+        }
+
+        /// <summary>
+        /// Configure KeepAliveValues for Socket
+        /// </summary>
+        /// <param name="socket">Socket</param>
+        /// <param name="enabled">Enable or disable keep alive</param>
+        /// <param name="keepAliveTime">The duration a TCP connection will remain alive/idle before keepalive probes are sent to the remote.</param>
+        /// <param name="keepAliveInterval">The duration a TCP connection will wait for a keepalive response before sending another keepalive probe.</param>
+        /// <param name="tcpKeepAliveRetryCount">The number of TCP keep alive probes that will be sent before the connection is terminated.</param>
+        static void SetKeepAliveValues(Socket socket, TimeSpan keepAliveTime, TimeSpan keepAliveInterval, int tcpKeepAliveRetryCount)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+#if HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS
+                try
+                {
+                    // SetSocketOptions are not supported on older versions of Windows
+                    SetSocketOptions();
+                }
+                catch
+                {
+                    // Fallback to IOControl to set keep alive settings
+                    SetIoControl();
+                }
+#else
+                SetIoControl();
+#endif
+
+                // Supported on net48 and net6.0 on Windows
+                void SetIoControl()
+                {
+                    var size = Marshal.SizeOf((uint)0);
+                    var optionInValue = new byte[size * 3];
+
+                    BitConverter.GetBytes((uint)(1)).CopyTo(optionInValue, 0);
+                    BitConverter.GetBytes((uint)keepAliveTime.TotalMilliseconds).CopyTo(optionInValue, size);
+                    BitConverter.GetBytes((uint)keepAliveInterval.TotalMilliseconds).CopyTo(optionInValue, size * 2);
+
+                    socket.IOControl(IOControlCode.KeepAliveValues, optionInValue, null);
+                }
+            }
+            else
+            {
+#if HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS
+                SetSocketOptions();
+#endif
+            }
+
+#if HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS
+            void SetSocketOptions()
+            {
+                socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, (int)keepAliveTime.TotalSeconds);
+                socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, (int)keepAliveInterval.TotalSeconds);
+                socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, tcpKeepAliveRetryCount);
+            }
+#endif
         }
     }
 }

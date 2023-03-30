@@ -52,6 +52,10 @@
     <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
   </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net60' ">
+        <DefineConstants>$(DefineConstants);HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS</DefineConstants>
+    </PropertyGroup>
+
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
   </ItemGroup>

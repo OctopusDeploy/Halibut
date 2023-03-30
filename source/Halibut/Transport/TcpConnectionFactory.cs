@@ -40,7 +40,8 @@ namespace Halibut.Transport
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             var stream = client.GetStream();
-
+            client.EnableTcpKeepAlive();
+            
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
             ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
@@ -61,6 +62,8 @@ namespace Halibut.Transport
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
             
             var networkTimeoutStream = client.GetNetworkTimeoutStream();
+            client.EnableTcpKeepAlive();
+
             var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");

@@ -107,6 +107,24 @@ namespace Halibut.Diagnostics
                 }
             }
         }
+
+        // TODO - Add to non static options
+        public static bool TcpKeepAliveEnabled = true;
+
+        /// <summary>
+        /// The number of TCP keep alive probes that will be sent before the connection is terminated.
+        /// </summary>
+        public static int TcpKeepAliveRetryCount = 10;
+
+        /// <summary>
+        /// The duration a TCP connection will remain alive/idle before keepalive probes are sent to the remote.
+        /// </summary>
+        public static TimeSpan TcpKeepAliveTime = TimeSpan.FromSeconds(15);
+
+        /// <summary>
+        /// The duration a TCP connection will wait for a keepalive response before sending another keepalive probe.
+        /// </summary>
+        public static TimeSpan TcpKeepAliveInterval = TimeSpan.FromSeconds(5);
     }
 #pragma warning disable CS0612
     public class HalibutTimeoutsAndLimits
