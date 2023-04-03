@@ -51,7 +51,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net462' ">
-    <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT</DefineConstants>
+    <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
   </PropertyGroup>
   
   <ItemGroup>

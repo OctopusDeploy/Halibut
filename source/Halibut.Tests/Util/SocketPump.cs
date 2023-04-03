@@ -67,8 +67,14 @@ namespace Halibut.Tests.Util
             var offset = 0;
             while (totalBytesToSend - offset > 0)
             {
-                var outputBuffer = new ArraySegment<byte>(inputBuffer, offset, totalBytesToSend - offset);
+                cancellationToken.ThrowIfCancellationRequested();
+                ArraySegment<byte> outputBuffer = new ArraySegment<byte>(inputBuffer, offset, totalBytesToSend - offset);
+                ReadOnlyMemory<byte> readOnlyMemory = outputBuffer;
+#if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
+                offset += await writeTo.SendAsync(outputBuffer, SocketFlags.None).ConfigureAwait(false);
+#else
                 offset += await writeTo.SendAsync(outputBuffer, SocketFlags.None, cancellationToken).ConfigureAwait(false);
+#endif
             }
 
         }
@@ -77,7 +83,11 @@ namespace Halibut.Tests.Util
         {
             var inputBuffer = new byte[readFrom.ReceiveBufferSize];
             ArraySegment<byte> inputBufferArraySegment = new ArraySegment<byte>(inputBuffer);
+#if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
+            var receivedByteCount = await readFrom.ReceiveAsync(inputBufferArraySegment, SocketFlags.None).ConfigureAwait(false);
+#else
             var receivedByteCount = await readFrom.ReceiveAsync(inputBufferArraySegment, SocketFlags.None, cancellationToken).ConfigureAwait(false);
+#endif
 
             memoryStream.Write(inputBuffer, 0, receivedByteCount);
             return receivedByteCount;
