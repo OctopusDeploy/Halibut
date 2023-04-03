@@ -57,7 +57,7 @@ namespace Halibut.Tests.Util
             cancellationToken.ThrowIfCancellationRequested();
             while (isPumpPaused())
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
             }
         }
