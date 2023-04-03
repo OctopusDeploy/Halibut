@@ -30,7 +30,7 @@ namespace Halibut.Tests.Util
             // Only read if we have nothing to send or if data exists 
             if (readFrom.Available > 0 || buffer.Length == 0)
             {
-                var receivedByteCount = await ReadFromSocket(readFrom, buffer);
+                var receivedByteCount = await ReadFromSocket(readFrom, buffer, cancellationToken);
                 if (receivedByteCount == 0) return SocketStatus.SOCKET_CLOSED;
                 stopwatch = Stopwatch.StartNew();
             }
@@ -41,7 +41,7 @@ namespace Halibut.Tests.Util
             if ((readFrom.Available == 0 && stopwatch.Elapsed >= sendDelay) || buffer.Length > 100 * 1024 * 1024)
             {
                 // Send the data
-                await WriteToSocket(writeTo, buffer.GetBuffer(), (int)buffer.Length);
+                await WriteToSocket(writeTo, buffer.GetBuffer(), (int)buffer.Length, cancellationToken);
                 buffer.SetLength(0);
             }
             else
@@ -54,29 +54,40 @@ namespace Halibut.Tests.Util
 
         async Task PausePump(CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             while (isPumpPaused())
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(100));
+                await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
             }
         }
 
-        static async Task WriteToSocket(Socket writeTo, byte[] inputBuffer, int totalBytesToSend)
+        static async Task WriteToSocket(Socket writeTo, byte[] inputBuffer, int totalBytesToSend, CancellationToken cancellationToken)
         {
             var offset = 0;
             while (totalBytesToSend - offset > 0)
             {
-                var outputBuffer = new ArraySegment<byte>(inputBuffer, offset, totalBytesToSend - offset);
+                cancellationToken.ThrowIfCancellationRequested();
+                ArraySegment<byte> outputBuffer = new ArraySegment<byte>(inputBuffer, offset, totalBytesToSend - offset);
+                ReadOnlyMemory<byte> readOnlyMemory = outputBuffer;
+#if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
                 offset += await writeTo.SendAsync(outputBuffer, SocketFlags.None).ConfigureAwait(false);
+#else
+                offset += await writeTo.SendAsync(outputBuffer, SocketFlags.None, cancellationToken).ConfigureAwait(false);
+#endif
             }
 
         }
 
-        static async Task<int> ReadFromSocket(Socket readFrom, MemoryStream memoryStream)
+        static async Task<int> ReadFromSocket(Socket readFrom, MemoryStream memoryStream, CancellationToken cancellationToken)
         {
             var inputBuffer = new byte[readFrom.ReceiveBufferSize];
             ArraySegment<byte> inputBufferArraySegment = new ArraySegment<byte>(inputBuffer);
+#if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
             var receivedByteCount = await readFrom.ReceiveAsync(inputBufferArraySegment, SocketFlags.None).ConfigureAwait(false);
+#else
+            var receivedByteCount = await readFrom.ReceiveAsync(inputBufferArraySegment, SocketFlags.None, cancellationToken).ConfigureAwait(false);
+#endif
 
             memoryStream.Write(inputBuffer, 0, receivedByteCount);
             return receivedByteCount;

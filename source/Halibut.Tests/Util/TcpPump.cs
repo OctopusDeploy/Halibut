@@ -120,6 +120,9 @@ namespace Halibut.Tests.Util
             cancellationTokenSource.Cancel();
             cancellationTokenSource.Dispose();
             isDisposed = true;
+            
+            clientSocket.Close();
+            originSocket.Close();
         }
 
         public void Pause()
