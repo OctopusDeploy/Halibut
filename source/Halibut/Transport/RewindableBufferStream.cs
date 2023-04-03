@@ -7,7 +7,7 @@ namespace Halibut.Transport
 {
     class RewindableBufferStream : Stream, IRewindableBuffer
     {
-        readonly Stream baseStream;
+        public readonly Stream baseStream;
         readonly byte[] rewindBuffer;
         bool rewindBufferPopulated;
         int rewindBufferOffset;
