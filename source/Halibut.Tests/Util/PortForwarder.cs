@@ -17,14 +17,14 @@ namespace Halibut.Tests.Util
         readonly ILogger logger = Log.ForContext<PortForwarder>();
         readonly TimeSpan sendDelay;
 
-        public PortForwarder(Uri originServer, TimeSpan sendDelay)
+        public PortForwarder(Uri originServer, TimeSpan sendDelay, int? listeningPort = null)
         {
             this.originServer = originServer;
             this.sendDelay = sendDelay;
             var scheme = originServer.Scheme;
 
             listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            listeningSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+            listeningSocket.Bind(new IPEndPoint(IPAddress.Loopback, listeningPort ?? 0));
             listeningSocket.Listen(0);
             logger.Information("Listening on {LoadBalancerEndpoint}", listeningSocket.LocalEndPoint?.ToString());
 
@@ -45,7 +45,7 @@ namespace Halibut.Tests.Util
                 try
                 {
                     var clientSocket = await listeningSocket.AcceptAsync();
-                    
+
                     var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                     var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
@@ -115,7 +115,7 @@ namespace Halibut.Tests.Util
             {
                 exceptions.Add(e);
             }
-            
+
             try
             {
                 cancellationTokenSource.Dispose();
