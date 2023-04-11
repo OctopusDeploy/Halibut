@@ -18,24 +18,24 @@ namespace Halibut.ServiceModel
             this.factory = factory;
         }
 
-        public ResponseMessage Invoke(RequestMessage requestMessage)
+        public IResponseMessage Invoke(IRequestMessage requestMessage)
         {
             using (var lease = factory.CreateService(requestMessage.ServiceName))
             {
                 var methods = lease.Service.GetType().GetHalibutServiceMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (methods.Count == 0)
                 {
-                    return ResponseMessage.FromError(requestMessage, string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
+                    return ResponseMessageFactory.FromError(requestMessage, string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
                 }
 
                 var method = SelectMethod(methods, requestMessage);
                 var args = GetArguments(requestMessage, method);
                 var result = method.Invoke(lease.Service, args);
-                return ResponseMessage.FromResult(requestMessage, result);
+                return ResponseMessageFactory.FromResult(requestMessage, result);
             }
         }
 
-        static MethodInfo SelectMethod(IList<MethodInfo> methods, RequestMessage requestMessage)
+        static MethodInfo SelectMethod(IList<MethodInfo> methods, IRequestMessage requestMessage)
         {
             var argumentTypes = requestMessage.Params.Select(s => s == null ? null : s.GetType()).ToList();
 
@@ -102,7 +102,7 @@ namespace Halibut.ServiceModel
             throw new AmbiguousMatchException(message.ToString());
         }
 
-        static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)
+        static object[] GetArguments(IRequestMessage requestMessage, MethodInfo methodInfo)
         {
             var methodParams = methodInfo.GetParameters();
             var args = new object[methodParams.Length];

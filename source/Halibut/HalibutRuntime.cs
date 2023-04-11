@@ -33,6 +33,7 @@ namespace Halibut
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly IMessageSerializer messageSerializer;
         readonly ITypeRegistry typeRegistry;
+        public Version justForTesting = null;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -55,7 +56,7 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            
+
             // these two are the reason we can't just call our internal ctor.
             logs = new LogFactory();
             queueFactory = new DefaultPendingRequestQueueFactory(logs);
@@ -66,7 +67,7 @@ namespace Halibut
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
         }
-        
+
         internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer)
         {
             this.serverCertificate = serverCertificate;
@@ -81,7 +82,7 @@ namespace Halibut
         public ILogFactory Logs => logs;
 
         public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-        
+
         IPendingRequestQueue GetQueue(Uri target)
         {
             return queues.GetOrAdd(target, u => queueFactory.CreateQueue(target));
@@ -100,10 +101,10 @@ namespace Halibut
 
             return Listen(new IPEndPoint(ipAddress, port));
         }
-        
+
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log, justForTesting), log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -163,7 +164,7 @@ namespace Halibut
         {
             return Discover(uri, CancellationToken.None);
         }
-        
+
         public ServiceEndPoint Discover(Uri uri, CancellationToken cancellationToken)
         {
             return Discover(new ServiceEndPoint(uri, null), cancellationToken);
@@ -173,7 +174,7 @@ namespace Halibut
         {
             return Discover(endpoint, CancellationToken.None);
         }
-        
+
         public ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             var client = new DiscoveryClient();
@@ -194,7 +195,7 @@ namespace Halibut
         {
             return CreateClient<TService>(endpoint, CancellationToken.None);
         }
-        
+
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             typeRegistry.AddToMessageContract(typeof(TService));
@@ -211,15 +212,15 @@ namespace Halibut
             return proxy;
 #endif
         }
-        
+
         // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
         [Obsolete("Consider implementing an async HalibutProxy instead")]
-        ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
+        IResponseMessage SendOutgoingRequest(IRequestMessage request, CancellationToken cancellationToken)
         {
             return SendOutgoingRequestAsync(request, cancellationToken).GetAwaiter().GetResult();
         }
 
-        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
+        async Task<IResponseMessage> SendOutgoingRequestAsync(IRequestMessage request, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
@@ -233,25 +234,45 @@ namespace Halibut
             }
         }
 
-        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
+        IResponseMessage SendOutgoingHttpsRequest(IRequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
-            ResponseMessage response = null;
+            IResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
             {
-                response = protocol.ExchangeAsClient(request);
+                response = protocol.ExchangeAsClient(request, MapToRequiredRequestMessageVersion);
             }, cancellationToken);
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
+        IRequestMessage MapToRequiredRequestMessageVersion(IRequestMessage originalRequestMessage, Version localVersion, Version remoteVersion)
+        {
+            if (localVersion == new Version(2, 0) && remoteVersion == new Version(2, 0))
+            {
+                return new RequestMessageV2
+                {
+                    MethodName = originalRequestMessage.MethodName,
+                    ActivityId = originalRequestMessage.ActivityId,
+                    Destination = originalRequestMessage.Destination,
+                    Id = originalRequestMessage.Id,
+                    Params = originalRequestMessage.Params,
+                    ServiceName = originalRequestMessage.ServiceName
+                };
+            }
+            else
+            {
+                return originalRequestMessage;
+            }
+        }
+
+        async Task<IResponseMessage> SendOutgoingPollingRequest(IRequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
             return await queue.QueueAndWaitAsync(request, cancellationToken);
         }
 
-        ResponseMessage HandleIncomingRequest(RequestMessage request)
+        IResponseMessage HandleIncomingRequest(IRequestMessage request)
         {
             return invoker.Invoke(request);
         }
@@ -349,6 +370,6 @@ namespace Halibut
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                                    Environment.OSVersion.Version >= new Version(6, 2);
 #pragma warning restore DE0009 // API is deprecated
-        
+
     }
 }

@@ -11,15 +11,18 @@ namespace Halibut.Transport.Protocol
     public delegate void ExchangeAction(MessageExchangeProtocol protocol);
 
     public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol);
-    
+
     /// <summary>
     /// Implements the core message exchange protocol for both the client and server.
     /// </summary>
     public class MessageExchangeProtocol
     {
+        public readonly Version VersionTwo = new Version(2, 0);
+
         readonly IMessageExchangeStream stream;
         readonly ILog log;
         bool identified;
+        Version remoteVersion = new Version(1, 0);
         volatile bool acceptClientRequests = true;
 
         public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
@@ -28,12 +31,26 @@ namespace Halibut.Transport.Protocol
             this.log = log;
         }
 
-        public ResponseMessage ExchangeAsClient(RequestMessage request)
+        public IResponseMessage ExchangeAsClient(IRequestMessage request, Func<IRequestMessage, Version, Version, IRequestMessage> mapper)
         {
             PrepareExchangeAsClient();
 
-            stream.Send(request);
-            return stream.Receive<ResponseMessage>();
+            var mappedRequest = mapper(request, stream.LocalVersion, remoteVersion);
+
+            stream.Send(mappedRequest);
+
+            IResponseMessage response;
+
+            if (remoteVersion == VersionTwo && stream.LocalVersion == VersionTwo)
+            {
+                response = stream.Receive<ResponseMessageV2>();
+            }
+            else
+            {
+                response = stream.Receive<ResponseMessage>();
+            }
+
+            return response;
         }
 
         public void StopAcceptingClientRequests()
@@ -52,7 +69,8 @@ namespace Halibut.Transport.Protocol
             {
                 if (!identified)
                 {
-                    stream.IdentifyAsClient();
+                    var identity = stream.IdentifyAsClient();
+                    remoteVersion = identity.Version;
                     identified = true;
                 }
                 else
@@ -67,11 +85,12 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public void ExchangeAsSubscriber(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, int maxAttempts = int.MaxValue)
+        public void ExchangeAsSubscriber(Uri subscriptionId, Func<IRequestMessage, IResponseMessage> incomingRequestProcessor, int maxAttempts = int.MaxValue)
         {
             if (!identified)
             {
-                stream.IdentifyAsSubscriber(subscriptionId.ToString());
+                var identity = stream.IdentifyAsSubscriber(subscriptionId.ToString());
+                remoteVersion = identity.Version;
                 identified = true;
             }
 
@@ -81,9 +100,19 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        static void ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        void ReceiveAndProcessRequest(IMessageExchangeStream stream, Func<IRequestMessage, IResponseMessage> incomingRequestProcessor)
         {
-            var request = stream.Receive<RequestMessage>();
+            IRequestMessage request;
+
+            if (remoteVersion == VersionTwo && stream.LocalVersion == VersionTwo)
+            {
+                request = stream.Receive<RequestMessageV2>();
+            }
+            else
+            {
+                request = stream.Receive<RequestMessage>();
+            }
+
             if (request != null)
             {
                 var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
@@ -94,7 +123,7 @@ namespace Halibut.Transport.Protocol
             stream.ExpectProceeed();
         }
 
-        public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
+        public void ExchangeAsServer(Func<IRequestMessage, IResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
             stream.IdentifyAsServer();
@@ -111,9 +140,10 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task ExchangeAsServerAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
+        public async Task ExchangeAsServerAsync(Func<IRequestMessage, IResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
+            remoteVersion = identity.Version;
             stream.IdentifyAsServer();
             switch (identity.IdentityType)
             {
@@ -128,18 +158,36 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        void ProcessClientRequests(Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        void ProcessClientRequests(Func<IRequestMessage, IResponseMessage> incomingRequestProcessor)
         {
             while (acceptClientRequests)
             {
-                var request = stream.Receive<RequestMessage>();
-                if (request == null || !acceptClientRequests)
-                    return;
+                IRequestMessage request = null;
+                IResponseMessage response;
 
-                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                try
+                {
+                    if (remoteVersion == VersionTwo && stream.LocalVersion == VersionTwo)
+                    {
+                        request = stream.Receive<RequestMessageV2>();
+                    }
+                    else
+                    {
+                        request = stream.Receive<RequestMessage>();
+                    }
 
-                if (!acceptClientRequests)
-                    return;
+                    if (request == null || !acceptClientRequests)
+                        return;
+
+                    response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+
+                    if (!acceptClientRequests)
+                        return;
+                }
+                catch (Exception ex)
+                {
+                    response = ResponseMessageFactory.FromException(request, ex);
+                }
 
                 stream.Send(response);
 
@@ -183,14 +231,24 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        bool ProcessReceiverInternal(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
+        bool ProcessReceiverInternal(IPendingRequestQueue pendingRequests, IRequestMessage nextRequest)
         {
             try
             {
                 stream.Send(nextRequest);
                 if (nextRequest != null)
                 {
-                    var response = stream.Receive<ResponseMessage>();
+                    IResponseMessage response;
+
+                    if (remoteVersion == VersionTwo && stream.LocalVersion == VersionTwo)
+                    {
+                        response = stream.Receive<ResponseMessageV2>();
+                    }
+                    else
+                    {
+                        response = stream.Receive<ResponseMessage>();
+                    }
+
                     pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
             }
@@ -198,7 +256,7 @@ namespace Halibut.Transport.Protocol
             {
                 if (nextRequest != null)
                 {
-                    var response = ResponseMessage.FromException(nextRequest, ex);
+                    var response = ResponseMessageFactory.FromException(nextRequest, ex);
                     pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
                 return false;
@@ -221,14 +279,24 @@ namespace Halibut.Transport.Protocol
             return true;
         }
 
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
+        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, IRequestMessage nextRequest)
         {
             try
             {
                 stream.Send(nextRequest);
                 if (nextRequest != null)
                 {
-                    var response = stream.Receive<ResponseMessage>();
+                    IResponseMessage response;
+
+                    if (remoteVersion == VersionTwo && stream.LocalVersion == VersionTwo)
+                    {
+                        response = stream.Receive<ResponseMessageV2>();
+                    }
+                    else
+                    {
+                        response = stream.Receive<ResponseMessage>();
+                    }
+
                     pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
             }
@@ -236,7 +304,7 @@ namespace Halibut.Transport.Protocol
             {
                 if (nextRequest != null)
                 {
-                    var response = ResponseMessage.FromException(nextRequest, ex);
+                    var response = ResponseMessageFactory.FromException(nextRequest, ex);
                     pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
                 return false;
@@ -259,7 +327,7 @@ namespace Halibut.Transport.Protocol
             return true;
         }
 
-        static ResponseMessage InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
+        static IResponseMessage InvokeAndWrapAnyExceptions(IRequestMessage request, Func<IRequestMessage, IResponseMessage> incomingRequestProcessor)
         {
             try
             {
@@ -267,7 +335,7 @@ namespace Halibut.Transport.Protocol
             }
             catch (Exception ex)
             {
-                return ResponseMessage.FromException(request, ex);
+                return ResponseMessageFactory.FromException(request, ex);
             }
         }
     }

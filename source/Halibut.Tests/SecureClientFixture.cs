@@ -7,6 +7,7 @@ using Halibut.Tests.TestServices;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NSubstitute;
+using NSubstitute.Routing.Handlers;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -59,8 +60,8 @@ namespace Halibut.Tests
             };
 
             var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager);
-            ResponseMessage response = null;
-            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
+            IResponseMessage response = null;
+            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request, (r, lv, rv) => r));
 
             // The pool should be cleared after the second failure
             stream.Received(2).IdentifyAsClient();

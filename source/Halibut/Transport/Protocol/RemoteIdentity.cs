@@ -4,28 +4,23 @@ namespace Halibut.Transport.Protocol
 {
     public class RemoteIdentity
     {
-        readonly RemoteIdentityType identityType;
-        readonly Uri subscriptionId;
-
-        public RemoteIdentity(RemoteIdentityType identityType, Uri subscriptionId)
+        public RemoteIdentity(RemoteIdentityType identityType, Version version, Uri subscriptionId)
         {
-            this.identityType = identityType;
-            this.subscriptionId = subscriptionId;
+            this.IdentityType = identityType;
+            this.Version = version;
+            this.SubscriptionId = subscriptionId;
         }
 
-        public RemoteIdentity(RemoteIdentityType identityType)
+        public RemoteIdentity(RemoteIdentityType identityType, Version version)
         {
-            this.identityType = identityType;
+            this.IdentityType = identityType;
+            this.Version = version;
         }
 
-        public RemoteIdentityType IdentityType
-        {
-            get { return identityType; }
-        }
+        public RemoteIdentityType IdentityType { get; }
 
-        public Uri SubscriptionId
-        {
-            get { return subscriptionId; }
-        }
+        public Uri SubscriptionId { get; }
+
+        public Version Version { get; }
     }
 }

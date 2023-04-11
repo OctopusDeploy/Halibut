@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
 {
-    public class ResponseMessage : IResponseMessage
+    public class ResponseMessageV2 : IResponseMessage
     {
         [JsonProperty("id")]
         public string Id { get; set; }
@@ -14,5 +14,7 @@ namespace Halibut.Transport.Protocol
 
         [JsonProperty("result")]
         public object Result { get; set; }
+
+        public string HalibutProcessIdentifier { get; set; }
     }
 }

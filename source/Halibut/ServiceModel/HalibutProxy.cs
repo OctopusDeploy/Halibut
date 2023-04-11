@@ -11,13 +11,13 @@ namespace Halibut.ServiceModel
     using System.Runtime.Remoting.Proxies;
     class HalibutProxy : RealProxy
     {
-        readonly Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
+        readonly Func<IRequestMessage, CancellationToken, IResponseMessage> messageRouter;
         readonly Type contractType;
         readonly ServiceEndPoint endPoint;
         readonly CancellationToken cancellationToken;
         long callId;
-        
-        public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+
+        public HalibutProxy(Func<IRequestMessage, CancellationToken, IResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
             : base(contractType)
         {
             this.messageRouter = messageRouter;
@@ -56,29 +56,35 @@ namespace Halibut.ServiceModel
             }
         }
 
-        RequestMessage CreateRequest(IMethodMessage methodCall)
+        IRequestMessage CreateRequest(IMethodMessage methodCall)
         {
             var activityId = Guid.NewGuid();
 
             var method = ((MethodInfo) methodCall.MethodBase);
-            var request = new RequestMessage
-            {
-                Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
-                ActivityId = activityId,
-                Destination = endPoint,
-                MethodName = method.Name,
-                ServiceName = contractType.Name,
-                Params = methodCall.Args
-            };
+            var request = new RequestMessage();
+
+            var id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId;
+            var destination = endPoint;
+            var methodName = method.Name;
+            var serviceName = contractType.Name;
+            var @params = methodCall.Args;
+
+            request.Id = id;
+            request.ActivityId = activityId;
+            request.Destination = destination;
+            request.MethodName = methodName;
+            request.ServiceName = serviceName;
+            request.Params = @params;
+
             return request;
         }
 
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        IResponseMessage DispatchRequest(IRequestMessage requestMessage)
         {
             return messageRouter(requestMessage, cancellationToken);
         }
 
-        static void EnsureNotError(ResponseMessage responseMessage)
+        static void EnsureNotError(IResponseMessage responseMessage)
         {
             if (responseMessage == null)
                 throw new HalibutClientException("No response was received from the endpoint within the allowed time.");
@@ -93,19 +99,19 @@ namespace Halibut.ServiceModel
 #else
     public class HalibutProxy : DispatchProxy
     {
-        Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
+        Func<IRequestMessage, CancellationToken, IResponseMessage> messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
         CancellationToken cancellationToken;
 
-        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public void Configure(Func<IRequestMessage, IResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
         {
             Configure((requestMessage, ct) => messageRouter(requestMessage), contractType, endPoint, CancellationToken.None);
         }
 
-        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+        public void Configure(Func<IRequestMessage, CancellationToken, IResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
@@ -136,7 +142,7 @@ namespace Halibut.ServiceModel
             return result;
         }
 
-        RequestMessage CreateRequest(MethodInfo targetMethod, object[] args)
+        IRequestMessage CreateRequest(MethodInfo targetMethod, object[] args)
         {
             var activityId = Guid.NewGuid();
 
@@ -152,12 +158,12 @@ namespace Halibut.ServiceModel
             return request;
         }
 
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        IResponseMessage DispatchRequest(IRequestMessage requestMessage)
         {
             return messageRouter(requestMessage, cancellationToken);
         }
 
-        static void EnsureNotError(ResponseMessage responseMessage)
+        static void EnsureNotError(IResponseMessage responseMessage)
         {
             if (responseMessage == null)
                 throw new HalibutClientException("No response was received from the endpoint within the allowed time.");

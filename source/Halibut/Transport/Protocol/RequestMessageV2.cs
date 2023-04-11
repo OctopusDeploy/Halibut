@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
 {
-    public class RequestMessage : IRequestMessage
+    public class RequestMessageV2 : IRequestMessage
     {
         [JsonProperty("id")]
         public string Id { get; set; }

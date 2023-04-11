@@ -26,8 +26,13 @@ namespace Halibut.Transport.Protocol
         readonly Version currentVersion = new Version(1, 0);
         readonly ControlMessageReader controlMessageReader = new ControlMessageReader();
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
+        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log, Version justForTesting = null)
         {
+            if (justForTesting != null)
+            {
+                currentVersion = justForTesting;
+            }
+
             #if NETFRAMEWORK
             this.stream = stream;
             #else
@@ -41,11 +46,13 @@ namespace Halibut.Transport.Protocol
 
         static int streamCount;
 
-        public void IdentifyAsClient()
+        public RemoteIdentity IdentifyAsClient()
         {
             log.Write(EventType.Diagnostic, "Identifying as a client");
             SendIdentityMessage($"{MxClient} {currentVersion}");
-            ExpectServerIdentity();
+            var identity = ExpectServerIdentity();
+
+            return identity;
         }
 
         void SendControlMessage(string message)
@@ -132,12 +139,14 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
-        
 
-        public void IdentifyAsSubscriber(string subscriptionId)
+
+        public RemoteIdentity IdentifyAsSubscriber(string subscriptionId)
         {
             SendIdentityMessage($"{MxSubscriber} {currentVersion} {subscriptionId}");
-            ExpectServerIdentity();
+            var identity = ExpectServerIdentity();
+
+            return identity;
         }
 
         public void IdentifyAsServer()
@@ -148,16 +157,15 @@ namespace Halibut.Transport.Protocol
         public RemoteIdentity ReadRemoteIdentity()
         {
             var line = controlMessageReader.ReadControlMessage(stream);
-            
-            
+
             if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
-            
+
             var emptyLine = controlMessageReader.ReadControlMessage(stream);
             if (emptyLine.Length != 0)
             {
                 throw new ProtocolException("Unable to receive the remote identity; the following line was not empty.");
             }
-            
+
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             try
             {
@@ -166,9 +174,10 @@ namespace Halibut.Transport.Protocol
                 {
                     if (parts.Length < 3) throw new ProtocolException("Unable to receive the remote identity; the client identified as a subscriber, but did not supply a subscription ID.");
                     var subscriptionId = new Uri(parts[2]);
-                    return new RemoteIdentity(identityType, subscriptionId);
+                    return new RemoteIdentity(identityType, Version.Parse(parts[1]), subscriptionId);
                 }
-                return new RemoteIdentity(identityType);
+
+                return new RemoteIdentity(identityType, Version.Parse(parts[1]));
             }
             catch (ProtocolException)
             {
@@ -202,6 +211,8 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        public Version LocalVersion => currentVersion;
+
         static RemoteIdentityType ParseIdentityType(string identityType)
         {
             switch (identityType)
@@ -217,11 +228,13 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        void ExpectServerIdentity()
+        RemoteIdentity ExpectServerIdentity()
         {
             var identity = ReadRemoteIdentity();
             if (identity.IdentityType != RemoteIdentityType.Server)
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
+
+            return identity;
         }
 
         void ReadStreams(StreamCapture capture)
