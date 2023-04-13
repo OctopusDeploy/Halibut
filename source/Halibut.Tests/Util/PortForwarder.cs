@@ -13,7 +13,7 @@ namespace Halibut.Tests.Util
         readonly Uri originServer;
         readonly Socket listeningSocket;
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        public readonly List<TcpPump> Pumps = new List<TcpPump>();
+        readonly List<TcpPump> pumps = new List<TcpPump>();
         readonly ILogger logger = Log.ForContext<PortForwarder>();
         readonly TimeSpan sendDelay;
 
@@ -45,15 +45,15 @@ namespace Halibut.Tests.Util
                 try
                 {
                     var clientSocket = await listeningSocket.AcceptAsync();
-                    
+
                     var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                     var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
                     var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay);
                     pump.Stopped += OnPortForwarderStopped;
-                    lock (Pumps)
+                    lock (pumps)
                     {
-                        Pumps.Add(pump);
+                        pumps.Add(pump);
                     }
 
                     pump.Start();
@@ -75,30 +75,44 @@ namespace Halibut.Tests.Util
             if (sender is TcpPump portForwarder)
             {
                 portForwarder.Stopped -= OnPortForwarderStopped;
-                lock (Pumps)
+                lock (pumps)
                 {
-                    Pumps.Remove(portForwarder);
+                    pumps.Remove(portForwarder);
                 }
 
                 portForwarder.Dispose();
             }
         }
 
-        public void Dispose()
+        public void PauseExistingConnections()
         {
-            if(!cancellationTokenSource.IsCancellationRequested) cancellationTokenSource.Cancel();
-            listeningSocket.Close();
-
-            var exceptions = new List<Exception>();
-            lock (Pumps)
+            lock (pumps)
             {
-                var clone = Pumps.ToArray();
-                Pumps.Clear();
-                foreach (var portForwarder in clone)
+                foreach (var pump in pumps)
+                {
+                    pump.Pause();
+                }
+            }
+        }
+
+        public void CloseExistingConnections()
+        {
+            DisposePumps();
+        }
+
+        List<Exception> DisposePumps()
+        {
+            var exceptions = new List<Exception>();
+
+            lock (pumps)
+            {
+                var clone = pumps.ToArray();
+                pumps.Clear();
+                foreach (var pump in clone)
                 {
                     try
                     {
-                        portForwarder.Dispose();
+                        pump.Dispose();
                     }
                     catch (Exception e)
                     {
@@ -106,6 +120,16 @@ namespace Halibut.Tests.Util
                     }
                 }
             }
+
+            return exceptions;
+        }
+
+        public void Dispose()
+        {
+            if(!cancellationTokenSource.IsCancellationRequested) cancellationTokenSource.Cancel();
+            listeningSocket.Close();
+
+            var exceptions = DisposePumps();
 
             try
             {
@@ -115,7 +139,7 @@ namespace Halibut.Tests.Util
             {
                 exceptions.Add(e);
             }
-            
+
             try
             {
                 cancellationTokenSource.Dispose();
