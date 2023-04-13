@@ -62,7 +62,14 @@ namespace Halibut.Transport
                     try
                     {
                         retry.Try();
-                        secureClient.ExecuteTransaction(protocol => { protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest); }, cancellationToken);
+                        secureClient.ExecuteTransaction(protocol =>
+                        {
+                            // We have successfully connected at this point so reset the retry policy
+                            // Subsequent connection issues will try and reconnect quickly and then back-off
+                            retry.Success();
+
+                            protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
+                        }, cancellationToken);
                         retry.Success();
                     }
                     finally
