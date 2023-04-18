@@ -21,13 +21,13 @@ namespace Halibut
         public long Length { get; set; }
         public bool Equals(Halibut.DataStream other) { }
         public bool Equals(Object obj) { }
+        public Halibut.IDataStreamReceiver Receiver() { }
+        public int GetHashCode() { }
         public static Halibut.DataStream FromBytes(Byte[] data) { }
-        public static Halibut.DataStream FromStream(Stream source, Action<int> updateProgress) { }
         public static Halibut.DataStream FromStream(Stream source) { }
+        public static Halibut.DataStream FromStream(Stream source, Action<int> updateProgress) { }
         public static Halibut.DataStream FromString(string text) { }
         public static Halibut.DataStream FromString(string text, Encoding encoding) { }
-        public int GetHashCode() { }
-        public Halibut.IDataStreamReceiver Receiver() { }
     }
     public class HalibutClientException : Exception, ISerializable
     {
@@ -45,21 +45,21 @@ namespace Halibut
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public Func<string, string, Halibut.UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
         public static bool OSSupportsWebSockets { get; }
-        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
-        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, System.Threading.CancellationToken cancellationToken) { }
-        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
-        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
-        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
-        public Halibut.ServiceEndPoint Discover(Uri uri) { }
-        public Halibut.ServiceEndPoint Discover(Uri uri, System.Threading.CancellationToken cancellationToken) { }
-        public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
-        public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
-        public void Dispose() { }
         protected Halibut.UnauthorizedClientConnectResponse HandleUnauthorizedClientConnect(string clientName, string thumbPrint) { }
         public bool IsTrusted(string remoteThumbprint) { }
+        public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
+        public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
+        public Halibut.ServiceEndPoint Discover(Uri uri) { }
+        public Halibut.ServiceEndPoint Discover(Uri uri, System.Threading.CancellationToken cancellationToken) { }
         public int Listen() { }
         public int Listen(int port) { }
         public int Listen(IPEndPoint endpoint) { }
+        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
+        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, System.Threading.CancellationToken cancellationToken) { }
+        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
+        public void Dispose() { }
         public void ListenWebSocket(string endpoint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint, System.Threading.CancellationToken cancellationToken) { }
@@ -91,19 +91,19 @@ namespace Halibut
     {
         public Halibut.Diagnostics.ILogFactory Logs { get; }
         public Func<string, string, Halibut.UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
-        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, System.Threading.CancellationToken cancellationToken) { }
-        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
-        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
-        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
-        public Halibut.ServiceEndPoint Discover(Uri uri) { }
-        public Halibut.ServiceEndPoint Discover(Uri uri, System.Threading.CancellationToken cancellationToken) { }
+        public bool IsTrusted(string remoteThumbprint) { }
         public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint) { }
         public Halibut.ServiceEndPoint Discover(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
-        public bool IsTrusted(string remoteThumbprint) { }
+        public Halibut.ServiceEndPoint Discover(Uri uri) { }
+        public Halibut.ServiceEndPoint Discover(Uri uri, System.Threading.CancellationToken cancellationToken) { }
         public int Listen() { }
         public int Listen(int port) { }
         public int Listen(IPEndPoint endpoint) { }
+        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
+        public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
+        public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, System.Threading.CancellationToken cancellationToken) { }
+        public void Disconnect(Halibut.ServiceEndPoint endpoint) { }
         public void ListenWebSocket(string endpoint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint) { }
         public void Poll(Uri subscription, Halibut.ServiceEndPoint endPoint, System.Threading.CancellationToken cancellationToken) { }
@@ -205,8 +205,8 @@ namespace Halibut.Diagnostics
     {
         public Halibut.Diagnostics.ILog ForEndpoint(Uri endpoint) { }
         public Halibut.Diagnostics.ILog ForPrefix(string endPoint) { }
-        public Uri[] GetEndpoints() { }
         public String[] GetPrefixes() { }
+        public Uri[] GetEndpoints() { }
     }
     public class LogEvent
     {
@@ -223,8 +223,8 @@ namespace Halibut.Diagnostics
         public LogFactory() { }
         public Halibut.Diagnostics.ILog ForEndpoint(Uri endpoint) { }
         public Halibut.Diagnostics.ILog ForPrefix(string prefix) { }
-        public Uri[] GetEndpoints() { }
         public String[] GetPrefixes() { }
+        public Uri[] GetEndpoints() { }
     }
 }
 namespace Halibut.Logging
@@ -238,9 +238,9 @@ namespace Halibut.Logging
     public sealed class Logger : MulticastDelegate, ICloneable, ISerializable
     {
         public Logger(Object @object, IntPtr method) { }
-        public IAsyncResult BeginInvoke(Halibut.Logging.LogLevel logLevel, Func<string> messageFunc, Exception exception, Object[] formatParameters, AsyncCallback callback, Object @object) { }
         public bool EndInvoke(IAsyncResult result) { }
         public bool Invoke(Halibut.Logging.LogLevel logLevel, Func<string> messageFunc, Exception exception, Object[] formatParameters) { }
+        public IAsyncResult BeginInvoke(Halibut.Logging.LogLevel logLevel, Func<string> messageFunc, Exception exception, Object[] formatParameters, AsyncCallback callback, Object @object) { }
     }
     public enum LogLevel
     {
@@ -280,17 +280,17 @@ namespace Halibut.ServiceModel
     public class HalibutProxy : DispatchProxy
     {
         public HalibutProxy() { }
+        protected Object Invoke(MethodInfo targetMethod, Object[] args) { }
         public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint) { }
         public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, System.Threading.CancellationToken cancellationToken) { }
-        protected Object Invoke(MethodInfo targetMethod, Object[] args) { }
     }
     public interface IPendingRequestQueue
     {
         public bool IsEmpty { get; }
-        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response, Halibut.ServiceEndPoint destination) { }
         public Halibut.Transport.Protocol.RequestMessage Dequeue() { }
         public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
         public Task<Halibut.Transport.Protocol.ResponseMessage> QueueAndWaitAsync(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
+        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response, Halibut.ServiceEndPoint destination) { }
     }
     public interface IPendingRequestQueueFactory
     {
@@ -315,10 +315,10 @@ namespace Halibut.ServiceModel
     }
     public interface ITrustProvider
     {
-        public void Add(string clientThumbprint) { }
         public bool IsTrusted(string clientThumbprint) { }
-        public void Remove(string clientThumbprint) { }
         public String[] ToArray() { }
+        public void Add(string clientThumbprint) { }
+        public void Remove(string clientThumbprint) { }
         public void TrustOnly(IReadOnlyList<string> thumbprints) { }
     }
     public class NullServiceFactory : Halibut.ServiceModel.IServiceFactory
@@ -331,12 +331,12 @@ namespace Halibut.ServiceModel
     {
         public PendingRequestQueue(Halibut.Diagnostics.ILog log) { }
         public bool IsEmpty { get; }
-        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response, Halibut.ServiceEndPoint destination) { }
         public Halibut.Transport.Protocol.RequestMessage Dequeue() { }
-        public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
         public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request) { }
         public Halibut.Transport.Protocol.ResponseMessage QueueAndWait(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
+        public Task<Halibut.Transport.Protocol.RequestMessage> DequeueAsync() { }
         public Task<Halibut.Transport.Protocol.ResponseMessage> QueueAndWaitAsync(Halibut.Transport.Protocol.RequestMessage request, System.Threading.CancellationToken cancellationToken) { }
+        public void ApplyResponse(Halibut.Transport.Protocol.ResponseMessage response, Halibut.ServiceEndPoint destination) { }
     }
     public class PollingClientCollection
     {
@@ -358,20 +358,20 @@ namespace Halibut.Transport
         public bool IsDisposed { get; }
         public Halibut.Transport.IConnection AcquireConnection(Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Transport.IConnectionFactory connectionFactory, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log) { }
         public Halibut.Transport.IConnection AcquireConnection(Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Transport.IConnectionFactory connectionFactory, Halibut.ServiceEndPoint serviceEndpoint, Halibut.Diagnostics.ILog log, System.Threading.CancellationToken cancellationToken) { }
+        public IReadOnlyCollection<Halibut.Transport.IConnection> GetActiveConnections(Halibut.ServiceEndPoint serviceEndPoint) { }
         public void ClearPooledConnections(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }
         public void Disconnect(Halibut.ServiceEndPoint serviceEndPoint, Halibut.Diagnostics.ILog log) { }
         public void Dispose() { }
-        public IReadOnlyCollection<Halibut.Transport.IConnection> GetActiveConnections(Halibut.ServiceEndPoint serviceEndPoint) { }
         public void ReleaseConnection(Halibut.ServiceEndPoint serviceEndpoint, Halibut.Transport.IConnection connection) { }
     }
     public class ConnectionPool<TKey, TPooledResource>
     {
         public ConnectionPool() { }
+        public int GetTotalConnectionCount() { }
+        public TPooledResource Take(TKey endPoint) { }
         public void Clear(TKey key, Halibut.Diagnostics.ILog log) { }
         public void Dispose() { }
-        public int GetTotalConnectionCount() { }
         public void Return(TKey endPoint, TPooledResource resource) { }
-        public TPooledResource Take(TKey endPoint) { }
     }
     public class DiscoveryClient
     {
@@ -419,8 +419,8 @@ namespace Halibut.Transport
     {
         public SecureConnection(IDisposable client, Stream stream, Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Diagnostics.ILog log) { }
         public Halibut.Transport.Protocol.MessageExchangeProtocol Protocol { get; }
-        public void Dispose() { }
         public bool HasExpired() { }
+        public void Dispose() { }
         public void NotifyUsed() { }
     }
     public class SecureListener : IDisposable
@@ -428,9 +428,9 @@ namespace Halibut.Transport
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Transport.Protocol.ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Transport.Protocol.ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) { }
         public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, Halibut.Transport.Protocol.ExchangeProtocolBuilder exchangeProtocolBuilder, Halibut.Transport.Protocol.ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, Halibut.Diagnostics.ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, Halibut.UnauthorizedClientConnectResponse> unauthorizedClientConnect) { }
+        public int Start() { }
         public void Disconnect(string thumbprint) { }
         public void Dispose() { }
-        public int Start() { }
     }
     public class SecureWebSocketListener : IDisposable
     {
@@ -442,10 +442,10 @@ namespace Halibut.Transport
     }
     public static class TcpClientExtensions
     {
-        public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout) { }
-        public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout, System.Threading.CancellationToken cancellationToken) { }
         public static void ConnectWithTimeout(TcpClient client, string host, int port, TimeSpan timeout) { }
         public static void ConnectWithTimeout(TcpClient client, string host, int port, TimeSpan timeout, System.Threading.CancellationToken cancellationToken) { }
+        public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout) { }
+        public static void ConnectWithTimeout(TcpClient client, Uri remoteUri, TimeSpan timeout, System.Threading.CancellationToken cancellationToken) { }
     }
     public class TcpConnectionFactory : Halibut.Transport.IConnectionFactory
     {
@@ -479,9 +479,9 @@ namespace Halibut.Transport.Protocol
     public sealed class ExchangeProtocolBuilder : MulticastDelegate, ICloneable, ISerializable
     {
         public ExchangeProtocolBuilder(Object @object, IntPtr method) { }
-        public IAsyncResult BeginInvoke(Stream stream, Halibut.Diagnostics.ILog log, AsyncCallback callback, Object @object) { }
         public Halibut.Transport.Protocol.MessageExchangeProtocol EndInvoke(IAsyncResult result) { }
         public Halibut.Transport.Protocol.MessageExchangeProtocol Invoke(Stream stream, Halibut.Diagnostics.ILog log) { }
+        public IAsyncResult BeginInvoke(Stream stream, Halibut.Diagnostics.ILog log, AsyncCallback callback, Object @object) { }
     }
     public class HalibutContractResolver : Newtonsoft.Json.Serialization.DefaultContractResolver, Newtonsoft.Json.Serialization.IContractResolver
     {
@@ -492,18 +492,18 @@ namespace Halibut.Transport.Protocol
     public interface IMessageExchangeStream
     {
         public bool ExpectNextOrEnd() { }
+        public Halibut.Transport.Protocol.RemoteIdentity ReadRemoteIdentity() { }
+        public T Receive<T>() { }
+        public Task SendProceedAsync() { }
         public Task<bool> ExpectNextOrEndAsync() { }
         public void ExpectProceeed() { }
         public void IdentifyAsClient() { }
         public void IdentifyAsServer() { }
         public void IdentifyAsSubscriber(string subscriptionId) { }
-        public Halibut.Transport.Protocol.RemoteIdentity ReadRemoteIdentity() { }
-        public T Receive<T>() { }
         public void Send<T>(T message) { }
         public void SendEnd() { }
         public void SendNext() { }
         public void SendProceed() { }
-        public Task SendProceedAsync() { }
     }
     public interface IMessageSerializer
     {
@@ -518,18 +518,18 @@ namespace Halibut.Transport.Protocol
     }
     public interface ITypeRegistry
     {
-        public void AddToMessageContract(Type[] types) { }
         public bool IsInAllowedTypes(Type type) { }
+        public void AddToMessageContract(Type[] types) { }
         public void Register(Type[] registeredServiceTypes) { }
         public void RegisterType(Type type, string path, bool ignoreObject) { }
     }
     public class MessageExchangeProtocol
     {
         public MessageExchangeProtocol(Halibut.Transport.Protocol.IMessageExchangeStream stream, Halibut.Diagnostics.ILog log) { }
-        public void EndCommunicationWithServer() { }
         public Halibut.Transport.Protocol.ResponseMessage ExchangeAsClient(Halibut.Transport.Protocol.RequestMessage request) { }
-        public void ExchangeAsServer(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> incomingRequestProcessor, Func<Halibut.Transport.Protocol.RemoteIdentity, Halibut.ServiceModel.IPendingRequestQueue> pendingRequests) { }
         public Task ExchangeAsServerAsync(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> incomingRequestProcessor, Func<Halibut.Transport.Protocol.RemoteIdentity, Halibut.ServiceModel.IPendingRequestQueue> pendingRequests) { }
+        public void EndCommunicationWithServer() { }
+        public void ExchangeAsServer(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> incomingRequestProcessor, Func<Halibut.Transport.Protocol.RemoteIdentity, Halibut.ServiceModel.IPendingRequestQueue> pendingRequests) { }
         public void ExchangeAsSubscriber(Uri subscriptionId, Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> incomingRequestProcessor, int maxAttempts) { }
         public void StopAcceptingClientRequests() { }
     }
@@ -537,24 +537,24 @@ namespace Halibut.Transport.Protocol
     {
         public MessageExchangeStream(Stream stream, Halibut.Transport.Protocol.IMessageSerializer serializer, Halibut.Diagnostics.ILog log) { }
         public bool ExpectNextOrEnd() { }
+        public Halibut.Transport.Protocol.RemoteIdentity ReadRemoteIdentity() { }
+        public T Receive<T>() { }
+        public Task SendProceedAsync() { }
         public Task<bool> ExpectNextOrEndAsync() { }
         public void ExpectProceeed() { }
         public void IdentifyAsClient() { }
         public void IdentifyAsServer() { }
         public void IdentifyAsSubscriber(string subscriptionId) { }
-        public Halibut.Transport.Protocol.RemoteIdentity ReadRemoteIdentity() { }
-        public T Receive<T>() { }
         public void Send<T>(T message) { }
         public void SendEnd() { }
         public void SendNext() { }
         public void SendProceed() { }
-        public Task SendProceedAsync() { }
     }
     public class MessageSerializer : Halibut.Transport.Protocol.IMessageSerializer
     {
         public MessageSerializer() { }
-        public void AddToMessageContract(Type[] types) { }
         public T ReadMessage<T>(Stream stream) { }
+        public void AddToMessageContract(Type[] types) { }
         public void WriteMessage<T>(Stream stream, T message) { }
     }
     public class MessageSerializerBuilder
@@ -571,8 +571,8 @@ namespace Halibut.Transport.Protocol
     public class RegisteredSerializationBinder : Newtonsoft.Json.Serialization.ISerializationBinder
     {
         public RegisteredSerializationBinder() { }
-        public void BindToName(Type serializedType, String& assemblyName, String& typeName) { }
         public Type BindToType(string assemblyName, string typeName) { }
+        public void BindToName(Type serializedType, String& assemblyName, String& typeName) { }
         public void Register(Type[] registeredServiceTypes) { }
     }
     public class RemoteIdentity
@@ -621,8 +621,8 @@ namespace Halibut.Transport.Protocol
         public static Halibut.Transport.Protocol.StreamCapture Current { get; }
         public ICollection<Halibut.DataStream> DeserializedStreams { get; }
         public ICollection<Halibut.DataStream> SerializedStreams { get; }
-        public void Dispose() { }
         public static Halibut.Transport.Protocol.StreamCapture New() { }
+        public void Dispose() { }
     }
     public class TemporaryFileDataStreamReceiver : Halibut.IDataStreamReceiver
     {
@@ -652,13 +652,13 @@ namespace Halibut.Transport.Protocol
         public long Length { get; }
         public long Position { get; set; }
         protected void Dispose(bool disposing) { }
-        public void Flush() { }
         public int Read(Byte[] buffer, int offset, int count) { }
-        public Task<string> ReadTextMessage() { }
         public long Seek(long offset, SeekOrigin origin) { }
+        public Task WriteTextMessage(string message) { }
+        public Task<string> ReadTextMessage() { }
+        public void Flush() { }
         public void SetLength(long value) { }
         public void Write(Byte[] buffer, int offset, int count) { }
-        public Task WriteTextMessage(string message) { }
     }
 }
 namespace Halibut.Transport.Proxy
@@ -672,9 +672,9 @@ namespace Halibut.Transport.Proxy
         public int ProxyPort { get; set; }
         public string ProxyUserName { get; set; }
         public TcpClient TcpClient { get; set; }
+        public Halibut.Transport.Proxy.IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory) { }
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout) { }
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, System.Threading.CancellationToken cancellationToken) { }
-        public Halibut.Transport.Proxy.IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory) { }
     }
     public interface IProxyClient
     {
@@ -682,15 +682,15 @@ namespace Halibut.Transport.Proxy
         public string ProxyName { get; }
         public int ProxyPort { get; set; }
         public TcpClient TcpClient { get; }
+        public Halibut.Transport.Proxy.IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory) { }
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout) { }
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, System.Threading.CancellationToken cancellationToken) { }
-        public Halibut.Transport.Proxy.IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory) { }
     }
     public class ProxyClientFactory
     {
         public ProxyClientFactory() { }
-        public Halibut.Transport.Proxy.IProxyClient CreateProxyClient(Halibut.Diagnostics.ILog logger, Halibut.Transport.Proxy.ProxyType type, string proxyHost, int proxyPort, string proxyUsername, string proxyPassword) { }
         public Halibut.Transport.Proxy.IProxyClient CreateProxyClient(Halibut.Diagnostics.ILog logger, Halibut.ProxyDetails proxyDetails) { }
+        public Halibut.Transport.Proxy.IProxyClient CreateProxyClient(Halibut.Diagnostics.ILog logger, Halibut.Transport.Proxy.ProxyType type, string proxyHost, int proxyPort, string proxyUsername, string proxyPassword) { }
     }
     public enum ProxyType
     {

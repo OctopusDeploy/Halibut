@@ -106,12 +106,12 @@ namespace Halibut.Tests
                 .Concat(events.Select(e => $"event {FormatTypeName(e.EventHandlerType)} {e.Name}"))
                 .Concat(ctors.SelectMany(FormatCtor))
                 .Concat(properties.SelectMany(FormatProperty))
-                .Concat(methods.SelectMany(FormatMethods))
+                .Concat(methods.SelectMany(FormatMethods).OrderBy(m => m, StringComparer.OrdinalIgnoreCase))
                 .Concat(other.Select(o => $"UNKNOWN {o.GetType().Name} {o.Name}"))
                 .Concat(types.Where(t => t.IsVisible).SelectMany(FormatType));
 
             return
-                $"{VisibilityString(type.GetVisibility())}{kind} {FormatTypeName(type, true)}{interfaceSeparator}{interfacesList}".InArray()
+                $"{VisibilityString(type.GetVisibility())}{kind} {FormatTypeName(type, shortName: true)}{interfaceSeparator}{interfacesList}".InArray()
                     .Concat("{")
                     .Concat(body.Select(l => "    " + l))
                     .Concat("}");
