@@ -77,19 +77,6 @@ namespace Halibut.ServiceModel
         {
             return messageRouter(requestMessage, cancellationToken);
         }
-
-        static void EnsureNotError(ResponseMessage responseMessage)
-        {
-            if (responseMessage == null)
-                throw new HalibutClientException("No response was received from the endpoint within the allowed time.");
-
-            if (responseMessage.Error == null)
-                return;
-
-            var realException = responseMessage.Error.Details as string;
-            throw new HalibutClientException(responseMessage.Error.Message, realException);
-        }
-    }
 #else
     public class HalibutProxy : DispatchProxy
     {
@@ -156,7 +143,7 @@ namespace Halibut.ServiceModel
         {
             return messageRouter(requestMessage, cancellationToken);
         }
-
+#endif
         static void EnsureNotError(ResponseMessage responseMessage)
         {
             if (responseMessage == null)
@@ -186,5 +173,4 @@ namespace Halibut.ServiceModel
             throw new HalibutClientException(error.Message, realException);
         }
     }
-#endif
 }
