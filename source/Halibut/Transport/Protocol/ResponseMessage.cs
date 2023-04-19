@@ -37,7 +37,7 @@ namespace Halibut.Transport.Protocol
             {
                 ErrorType = ex.GetType().FullName;
             }
-            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), ErrorType = ErrorType };
+            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), HalibutErrorType = ErrorType };
         }
     }
 }

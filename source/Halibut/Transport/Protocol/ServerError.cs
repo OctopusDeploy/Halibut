@@ -11,6 +11,6 @@ namespace Halibut.Transport.Protocol
         [JsonProperty("details")]
         public string Details { get; set; }
         
-        public string ErrorType { get; set; }
+        public string HalibutErrorType { get; set; }
     }
 }

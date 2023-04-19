@@ -22,7 +22,7 @@ namespace Halibut.Tests
         [Test]
         public void ThrowsGenericErrorWhenErrorTypeIsUnknown()
         {
-            ServerError serverError = new ServerError{ Message = "bob", Details = "details", ErrorType = "Foo.BarException" };
+            ServerError serverError = new ServerError{ Message = "bob", Details = "details", HalibutErrorType = "Foo.BarException" };
         
             Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
         
@@ -32,11 +32,69 @@ namespace Halibut.Tests
         [Test]
         public void ThrowsGenericErrorWhenErrorTypeIsNull_EGWhenTalkingToAnOlderHalibutVersion()
         {
-            ServerError serverError = new ServerError{ Message = "bob", Details = "details", ErrorType = null };
+            ServerError serverError = new ServerError{ Message = "bob", Details = "details", HalibutErrorType = null };
         
             Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
         
             errorThrower.Should().Throw<HalibutClientException>();
+        }
+        
+        [Test]
+        public void BackwardCompatibility_ServiceNotFound_IsThrownAsServiceNotFoundHalibutClientException()
+        {
+            ServerError serverError = new ServerError{ 
+                Message = "Service not found: IEchoService", 
+                Details = @"System.Exception: Service not found: IEchoService
+   at Halibut.ServiceModel.DelegateServiceFactory.GetService(String name) in /home/auser/Documents/octopus/Halibut4/source/Halibut/ServiceModel/DelegateServiceFactory.cs:line 32
+   at Halibut.ServiceModel.DelegateServiceFactory.CreateService(String serviceName) in /home/auser/Documents/octopus/Halibut4/source/Halibut/ServiceModel/DelegateServiceFactory.cs:line 24
+   at Halibut.ServiceModel.ServiceInvoker.Invoke(RequestMessage requestMessage) in /home/auser/Documents/octopus/Halibut4/source/Halibut/ServiceModel/ServiceInvoker.cs:line 23
+   at Halibut.HalibutRuntime.HandleIncomingRequest(RequestMessage request) in /home/auser/Documents/octopus/Halibut4/source/Halibut/HalibutRuntime.cs:line 256
+   at Halibut.Transport.Protocol.MessageExchangeProtocol.InvokeAndWrapAnyExceptions(RequestMessage request, Func`2 incomingRequestProcessor) in /home/auser/Documents/octopus/Halibut4/source/Halibut/Transport/Protocol/MessageExchangeProtocol.cs:line 266",
+                HalibutErrorType = null };
+        
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+        
+            errorThrower.Should().Throw<ServiceNotFoundHalibutClientException>();
+        }
+        
+        [Test]
+        public void BackwardCompatibility_MethodNotFound_IsThrownAsMethodNotFoundHalibutClientException()
+        {
+            ServerError serverError = new ServerError{ 
+                Message = "Service System.Object::SayHello not found", 
+                Details = null,
+                HalibutErrorType = null };
+        
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+        
+            errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
+        }
+        
+        [Test]
+        public void BackwardCompatibility_AmbiguousMethodMatch_IsThrownAsNoMatchingServiceOrMethodHalibutClientException()
+        {
+            ServerError serverError = new ServerError{ 
+                Message = @"More than one possible match for the requested service method was found given the argument types. The matches were:
+ - System.String Ambiguous(System.String, System.String)
+ - System.String Ambiguous(System.String, System.Tuple`2[System.String,System.String])
+The request arguments were:
+String, <null>
+", 
+                Details = @"System.Reflection.AmbiguousMatchException: More than one possible match for the requested service method was found given the argument types. The matches were:
+ - System.String Ambiguous(System.String, System.String)
+ - System.String Ambiguous(System.String, System.Tuple`2[System.String,System.String])
+The request arguments were:
+String, <null>
+
+   at Halibut.ServiceModel.ServiceInvoker.SelectMethod(IList`1 methods, RequestMessage requestMessage) in /home/auser/Documents/octopus/Halibut4/source/Halibut/ServiceModel/ServiceInvoker.cs:line 102
+   at Halibut.ServiceModel.ServiceInvoker.Invoke(RequestMessage requestMessage) in /home/auser/Documents/octopus/Halibut4/source/Halibut/ServiceModel/ServiceInvoker.cs:line 31
+   at Halibut.HalibutRuntime.HandleIncomingRequest(RequestMessage request) in /home/auser/Documents/octopus/Halibut4/source/Halibut/HalibutRuntime.cs:line 256
+   at Halibut.Transport.Protocol.MessageExchangeProtocol.InvokeAndWrapAnyExceptions(RequestMessage request, Func`2 incomingRequestProcessor) in /home/auser/Documents/octopus/Halibut4/source/Halibut/Transport/Protocol/MessageExchangeProtocol.cs:line 266",
+                HalibutErrorType = null };
+        
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+        
+            errorThrower.Should().Throw<NoMatchingServiceOrMethodHalibutClientException>();
         }
     }
 }

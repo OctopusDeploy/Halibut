@@ -2,6 +2,7 @@
 using System.Reflection;
 
 using System.Threading;
+using Halibut.Exceptions;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
@@ -158,15 +159,30 @@ namespace Halibut.ServiceModel
         internal static void ThrowExceptionFromError(ServerError error)
         {
             var realException = error.Details as string;
-            if (!string.IsNullOrEmpty(error.ErrorType))
+            if (!string.IsNullOrEmpty(error.HalibutErrorType))
             {
-                var theType = Type.GetType(error.ErrorType);
-                if (theType != null)
+                var theType = Type.GetType(error.HalibutErrorType);
+                if (theType != null && theType != typeof(HalibutClientException))
                 {
                     var ctor = theType.GetConstructor(new[] { typeof(string), typeof(string) });
                     Exception e = (Exception) ctor.Invoke(new object[] { error.Message, realException });
                     throw e;
                 }
+            }
+
+            if (error.Message.StartsWith("Service not found: "))
+            {
+                throw new ServiceNotFoundHalibutClientException(error.Message, realException);
+            }
+            
+            if (error.Message.StartsWith("Service ") && error.Message.EndsWith(" not found"))
+            {
+                throw new MethodNotFoundHalibutClientException(error.Message, realException);
+            }
+            
+            if (error.Details.StartsWith("System.Reflection.AmbiguousMatchException: "))
+            {
+                throw new NoMatchingServiceOrMethodHalibutClientException(error.Message, realException);
             }
 
             throw new HalibutClientException(error.Message, realException);

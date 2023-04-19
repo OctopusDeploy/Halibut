@@ -2,7 +2,7 @@ using System;
 
 namespace Halibut.Exceptions
 {
-    public class MethodNotFoundHalibutClientException : HalibutClientException
+    public class MethodNotFoundHalibutClientException : NoMatchingServiceOrMethodHalibutClientException
     {
         public MethodNotFoundHalibutClientException(string message) : base(message)
         {

@@ -100,8 +100,7 @@ namespace Halibut.ServiceModel
             message.AppendLine("The request arguments were:");
             message.AppendLine(string.Join(", ", argumentTypes.Select(t => t == null ? "<null>" : t.Name)));
 
-            throw new MethodNotFoundHalibutClientException("", new AmbiguousMatchException(message.ToString()));
-            throw new AmbiguousMatchException(message.ToString());
+            throw new NoMatchingServiceOrMethodHalibutClientException("", new AmbiguousMatchException(message.ToString()));
         }
 
         static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)
