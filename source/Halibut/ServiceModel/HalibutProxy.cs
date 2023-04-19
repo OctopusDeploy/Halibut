@@ -166,6 +166,17 @@ namespace Halibut.ServiceModel
                 return;
 
             var realException = responseMessage.Error.Details as string;
+            if (!string.IsNullOrEmpty(responseMessage.Error.ErrorType))
+            {
+                var theType = Type.GetType(responseMessage.Error.ErrorType);
+                if (theType != null)
+                {
+                    var ctor = theType.GetConstructor(new[] { typeof(string), typeof(string) });
+                    Exception e = (Exception)ctor.Invoke(new object[] { responseMessage.Error.Message, realException });
+                    throw e;
+                }
+            }
+            
             throw new HalibutClientException(responseMessage.Error.Message, realException);
         }
     }

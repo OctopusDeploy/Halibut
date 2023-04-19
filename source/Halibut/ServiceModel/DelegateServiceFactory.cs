@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Halibut.Exceptions;
 
 namespace Halibut.ServiceModel
 {
@@ -29,7 +30,7 @@ namespace Halibut.ServiceModel
         {
             if (!services.TryGetValue(name, out var result))
             {
-                throw new Exception("Service not found: " + name);
+                throw new ServiceNotFoundHalibutClientException("Service not found: " + name);
             }
 
             return result;
