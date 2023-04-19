@@ -94,7 +94,7 @@ String, <null>
         
             Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
         
-            errorThrower.Should().Throw<NoMatchingServiceOrMethodHalibutClientException>();
+            errorThrower.Should().Throw<AmbiguousMethodMatchHalibutClientException>();
         }
     }
 }

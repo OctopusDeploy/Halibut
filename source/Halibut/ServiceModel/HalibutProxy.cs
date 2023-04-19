@@ -182,7 +182,7 @@ namespace Halibut.ServiceModel
             
             if (error.Details.StartsWith("System.Reflection.AmbiguousMatchException: "))
             {
-                throw new NoMatchingServiceOrMethodHalibutClientException(error.Message, realException);
+                throw new AmbiguousMethodMatchHalibutClientException(error.Message, realException);
             }
 
             throw new HalibutClientException(error.Message, realException);
