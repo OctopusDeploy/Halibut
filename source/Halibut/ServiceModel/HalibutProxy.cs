@@ -165,19 +165,24 @@ namespace Halibut.ServiceModel
             if (responseMessage.Error == null)
                 return;
 
-            var realException = responseMessage.Error.Details as string;
-            if (!string.IsNullOrEmpty(responseMessage.Error.ErrorType))
+            ThrowExceptionFromError(responseMessage.Error);
+        }
+
+        internal static void ThrowExceptionFromError(ServerError error)
+        {
+            var realException = error.Details as string;
+            if (!string.IsNullOrEmpty(error.ErrorType))
             {
-                var theType = Type.GetType(responseMessage.Error.ErrorType);
+                var theType = Type.GetType(error.ErrorType);
                 if (theType != null)
                 {
                     var ctor = theType.GetConstructor(new[] { typeof(string), typeof(string) });
-                    Exception e = (Exception)ctor.Invoke(new object[] { responseMessage.Error.Message, realException });
+                    Exception e = (Exception) ctor.Invoke(new object[] { error.Message, realException });
                     throw e;
                 }
             }
-            
-            throw new HalibutClientException(responseMessage.Error.Message, realException);
+
+            throw new HalibutClientException(error.Message, realException);
         }
     }
 #endif

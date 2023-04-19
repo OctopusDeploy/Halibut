@@ -27,7 +27,12 @@ namespace Halibut.Transport.Protocol
 
         public static ResponseMessage FromException(RequestMessage request, Exception ex)
         {
-            return new ResponseMessage {Id = request.Id, Error = new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), ErrorType = ex.GetType().FullName}};
+            return new ResponseMessage {Id = request.Id, Error = ServerErrorFromException(ex)};
+        }
+
+        internal static ServerError ServerErrorFromException(Exception ex)
+        {
+            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), ErrorType = ex.GetType().FullName };
         }
     }
 }
