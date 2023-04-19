@@ -229,13 +229,19 @@ namespace Halibut.Diagnostics
 }
 namespace Halibut.Exceptions
 {
-    public class MethodNotFoundHalibutClientException : Halibut.HalibutClientException, ISerializable, _Exception
+    public class MethodNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable, _Exception
     {
         public MethodNotFoundHalibutClientException(string message) { }
         public MethodNotFoundHalibutClientException(string message, Exception inner) { }
         public MethodNotFoundHalibutClientException(string message, string serverException) { }
     }
-    public class ServiceNotFoundHalibutClientException : Halibut.HalibutClientException, ISerializable, _Exception
+    public class NoMatchingServiceOrMethodHalibutClientException : Halibut.HalibutClientException, ISerializable, _Exception
+    {
+        public NoMatchingServiceOrMethodHalibutClientException(string message) { }
+        public NoMatchingServiceOrMethodHalibutClientException(string message, Exception inner) { }
+        public NoMatchingServiceOrMethodHalibutClientException(string message, string serverException) { }
+    }
+    public class ServiceNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable, _Exception
     {
         public ServiceNotFoundHalibutClientException(string message) { }
         public ServiceNotFoundHalibutClientException(string message, Exception inner) { }
@@ -635,7 +641,7 @@ namespace Halibut.Transport.Protocol
     {
         public ServerError() { }
         public string Details { get; set; }
-        public string ErrorType { get; set; }
+        public string HalibutErrorType { get; set; }
         public string Message { get; set; }
     }
     public class StreamCapture : IDisposable
