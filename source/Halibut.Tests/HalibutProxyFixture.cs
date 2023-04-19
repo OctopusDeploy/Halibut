@@ -1,40 +1,42 @@
+using System;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
-namespace Halibut.Tests;
-
-public class HalibutProxyFixture
+namespace Halibut.Tests
 {
-    [Test]
-    public void ThrowsSpecificErrorWhenErrorTypeIsSet()
+    public class HalibutProxyFixture
     {
-        ServerError serverError = ResponseMessage.ServerErrorFromException(new MethodNotFoundHalibutClientException("not found", "not even mum could find it"));
+        [Test]
+        public void ThrowsSpecificErrorWhenErrorTypeIsSet()
+        {
+            ServerError serverError = ResponseMessage.ServerErrorFromException(new MethodNotFoundHalibutClientException("not found", "not even mum could find it"));
         
-        var errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
         
-        errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
-    }
+            errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
+        }
     
-    [Test]
-    public void ThrowsGenericErrorWhenErrorTypeIsUnknown()
-    {
-        ServerError serverError = new ServerError{ Message = "bob", Details = "details", ErrorType = "Foo.BarException" };
+        [Test]
+        public void ThrowsGenericErrorWhenErrorTypeIsUnknown()
+        {
+            ServerError serverError = new ServerError{ Message = "bob", Details = "details", ErrorType = "Foo.BarException" };
         
-        var errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
         
-        errorThrower.Should().Throw<HalibutClientException>();
-    }
+            errorThrower.Should().Throw<HalibutClientException>();
+        }
     
-    [Test]
-    public void ThrowsGenericErrorWhenErrorTypeIsNull_EGWhenTalkingToAnOlderHalibutVersion()
-    {
-        ServerError serverError = new ServerError{ Message = "bob", Details = "details", ErrorType = null };
+        [Test]
+        public void ThrowsGenericErrorWhenErrorTypeIsNull_EGWhenTalkingToAnOlderHalibutVersion()
+        {
+            ServerError serverError = new ServerError{ Message = "bob", Details = "details", ErrorType = null };
         
-        var errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
         
-        errorThrower.Should().Throw<HalibutClientException>();
+            errorThrower.Should().Throw<HalibutClientException>();
+        }
     }
 }

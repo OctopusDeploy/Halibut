@@ -29,7 +29,7 @@ namespace Halibut.Tests
 
                         var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
 
-                        var readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
+                        Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
 
                         readAsyncCall.Should().Throw<MethodNotFoundHalibutClientException>();
                     }
@@ -50,7 +50,7 @@ namespace Halibut.Tests
                     tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                     var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                    var readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
+                    Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
 
                     readAsyncCall.Should().Throw<MethodNotFoundHalibutClientException>();
                 }
