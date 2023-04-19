@@ -227,6 +227,21 @@ namespace Halibut.Diagnostics
         public Uri[] GetEndpoints() { }
     }
 }
+namespace Halibut.Exceptions
+{
+    public class MethodNotFoundHalibutClientException : Halibut.HalibutClientException, ISerializable, _Exception
+    {
+        public MethodNotFoundHalibutClientException(string message) { }
+        public MethodNotFoundHalibutClientException(string message, Exception inner) { }
+        public MethodNotFoundHalibutClientException(string message, string serverException) { }
+    }
+    public class ServiceNotFoundHalibutClientException : Halibut.HalibutClientException, ISerializable, _Exception
+    {
+        public ServiceNotFoundHalibutClientException(string message) { }
+        public ServiceNotFoundHalibutClientException(string message, Exception inner) { }
+        public ServiceNotFoundHalibutClientException(string message, string serverException) { }
+    }
+}
 namespace Halibut.Logging
 {
     public interface ILogProvider
@@ -620,6 +635,7 @@ namespace Halibut.Transport.Protocol
     {
         public ServerError() { }
         public string Details { get; set; }
+        public string ErrorType { get; set; }
         public string Message { get; set; }
     }
     public class StreamCapture : IDisposable

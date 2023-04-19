@@ -27,7 +27,7 @@ namespace Halibut.Tests
             "System.Threading.Tasks"
         };
 
-        //[Test] TODO
+        [Test]
         public void ThePublicSurfaceAreaShouldNotRegress()
         {
             var usings = commonNamespaces.Select(ns => $"using {ns};").Concat("".InArray());
