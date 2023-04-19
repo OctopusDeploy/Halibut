@@ -16,7 +16,7 @@ namespace Halibut.Transport.Protocol
         void IdentifyAsSubscriber(string subscriptionId);
         void IdentifyAsServer();
         RemoteIdentity ReadRemoteIdentity();
-        void Send<T>(T message);
-        T Receive<T>();
+        TransferStatistics Send<T>(T message);
+        ReceiveMessageWithStatistics<T> Receive<T>();
     }
 }

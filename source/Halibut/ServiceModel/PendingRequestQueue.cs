@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using Halibut.Util.AsyncEx;
 
@@ -22,13 +23,13 @@ namespace Halibut.ServiceModel
         }
 
         [Obsolete]
-        public ResponseMessage QueueAndWait(RequestMessage request)
+        public ResponseMessageWithTransferStatistics QueueAndWait(RequestMessage request)
         {
             return QueueAndWait(request, CancellationToken.None);
         }
         
         [Obsolete]
-        public ResponseMessage QueueAndWait(RequestMessage request, CancellationToken cancellationToken)
+        public ResponseMessageWithTransferStatistics QueueAndWait(RequestMessage request, CancellationToken cancellationToken)
         {
             var pending = new PendingRequest(request, log);
 
@@ -49,7 +50,7 @@ namespace Halibut.ServiceModel
             return pending.Response;
         }
 
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+        public async Task<ResponseMessageWithTransferStatistics> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
         {
 #pragma warning disable 612
             var responseMessage = QueueAndWait(request, cancellationToken);
@@ -120,7 +121,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination)
+        public void ApplyResponse(ResponseMessageWithTransferStatistics response, ServiceEndPoint destination)
         {
             if (response == null)
                 return;
@@ -128,7 +129,7 @@ namespace Halibut.ServiceModel
             lock (sync)
             {
                 PendingRequest pending;
-                if (inProgress.TryGetValue(response.Id, out pending))
+                if (inProgress.TryGetValue(response.receivedMessage.Id, out pending))
                 {
                     pending.SetResponse(response);
                 }
@@ -189,13 +190,16 @@ namespace Halibut.ServiceModel
                     }
                     else
                     {
-                        SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestMaximumMessageProcessingTimeout))));
+                        var response = ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestMaximumMessageProcessingTimeout)));
+                        
+                        SetResponse(new ResponseMessageWithTransferStatistics(response, null, null, null));
                     }
                 }
                 else
                 {
                     log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
-                    SetResponse(ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestQueueTimeout))));
+                    var response = ResponseMessage.FromException(request, new TimeoutException(string.Format("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({0}), so the request timed out.", request.Destination.PollingRequestQueueTimeout)));
+                    SetResponse(new ResponseMessageWithTransferStatistics(response, null, null, null));
                 }
             }
 
@@ -211,9 +215,9 @@ namespace Halibut.ServiceModel
                 }
             }
 
-            public ResponseMessage Response { get; private set; }
+            public ResponseMessageWithTransferStatistics Response { get; private set; }
 
-            public void SetResponse(ResponseMessage response)
+            public void SetResponse(ResponseMessageWithTransferStatistics response)
             {
                 Response = response;
                 waiter.Set();

@@ -214,12 +214,12 @@ namespace Halibut
         
         // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
         [Obsolete("Consider implementing an async HalibutProxy instead")]
-        ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
+        ResponseMessageWithTransferStatistics SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             return SendOutgoingRequestAsync(request, cancellationToken).GetAwaiter().GetResult();
         }
 
-        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
+        async Task<ResponseMessageWithTransferStatistics> SendOutgoingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
@@ -233,11 +233,11 @@ namespace Halibut
             }
         }
 
-        ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
+        ResponseMessageWithTransferStatistics SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
-            ResponseMessage response = null;
+            ResponseMessageWithTransferStatistics response = null;
             client.ExecuteTransaction(protocol =>
             {
                 response = protocol.ExchangeAsClient(request);
@@ -245,7 +245,7 @@ namespace Halibut
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
+        async Task<ResponseMessageWithTransferStatistics> SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
             return await queue.QueueAndWaitAsync(request, cancellationToken);

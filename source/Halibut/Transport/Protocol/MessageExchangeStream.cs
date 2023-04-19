@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Authentication;
@@ -180,26 +181,36 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public void Send<T>(T message)
+        public TransferStatistics Send<T>(T message)
         {
+
+            var stopwatch = Stopwatch.StartNew();
+            var stream = new TransferredBytesCountingStream(this.stream);
             using (var capture = StreamCapture.New())
             {
                 serializer.WriteMessage(stream, message);
-                WriteEachStream(capture.SerializedStreams);
+                WriteEachStream(capture.SerializedStreams, stream);
             }
+            stopwatch.Stop();
 
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
+            return new TransferStatistics(stopwatch.Elapsed, stream.TotalTransferred());
         }
 
-        public T Receive<T>()
+        public ReceiveMessageWithStatistics<T> Receive<T>()
         {
+            var stopwatch = Stopwatch.StartNew();
+            var stream = new TransferredBytesCountingStream(this.stream);
+            T result;
             using (var capture = StreamCapture.New())
             {
-                var result = serializer.ReadMessage<T>(stream);
+                result = serializer.ReadMessage<T>(stream);
                 ReadStreams(capture);
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
-                return result;
             }
+            stopwatch.Stop();
+            // TODO time waiting.
+            return new ReceiveMessageWithStatistics<T>(result, new TransferStatistics(stopwatch.Elapsed, stream.TotalTransferred()), TimeSpan.Zero);
         }
 
         static RemoteIdentityType ParseIdentityType(string identityType)
@@ -275,7 +286,7 @@ namespace Halibut.Transport.Protocol
             return dataStream;
         }
 
-        void WriteEachStream(IEnumerable<DataStream> streams)
+        void WriteEachStream(IEnumerable<DataStream> streams, Stream stream)
         {
             foreach (var dataStream in streams)
             {
