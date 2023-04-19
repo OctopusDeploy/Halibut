@@ -32,7 +32,12 @@ namespace Halibut.Transport.Protocol
 
         internal static ServerError ServerErrorFromException(Exception ex)
         {
-            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), ErrorType = ex.GetType().FullName };
+            string ErrorType = null;
+            if (ex is HalibutClientException)
+            {
+                ErrorType = ex.GetType().FullName;
+            }
+            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), ErrorType = ErrorType };
         }
     }
 }
