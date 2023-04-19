@@ -110,6 +110,7 @@ namespace Halibut.Util.AsyncEx
             {
                 //Enlightenment.Trace.AsyncManualResetEvent_Set(this, _tcs.Task);
                 _tcs.TrySetResultWithBackgroundContinuations();
+                //_tcs.TrySetResult();
             }
         }
 

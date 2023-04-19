@@ -26,9 +26,11 @@ namespace Halibut
         ServiceEndPoint Discover(ServiceEndPoint endpoint);
         ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken);
         TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint);
+        TReturnService CreateClient<TService, TReturnService>(String endpointBaseUri, string publicThumbprint);
         TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, CancellationToken cancellationToken);
         TService CreateClient<TService>(ServiceEndPoint endpoint);
         TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken);
+        TReturnService CreateClient<TService, TReturnService>(ServiceEndPoint endpoint, CancellationToken cancellationToken);
         void Trust(string clientThumbprint);
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);

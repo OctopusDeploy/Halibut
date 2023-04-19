@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
@@ -13,7 +14,7 @@ namespace Halibut.ServiceModel
         readonly List<PendingRequest> queue = new List<PendingRequest>();
         readonly Dictionary<string, PendingRequest> inProgress = new Dictionary<string, PendingRequest>();
         readonly object sync = new object();
-        readonly AsyncManualResetEvent hasItems = new AsyncManualResetEvent();
+        readonly Nito.AsyncEx.AsyncManualResetEvent hasItems = new Nito.AsyncEx.AsyncManualResetEvent();
         readonly ILog log;
 
         public PendingRequestQueue(ILog log)
@@ -39,7 +40,7 @@ namespace Halibut.ServiceModel
                 hasItems.Set();
             }
 
-            pending.WaitUntilComplete(cancellationToken);
+            pending.WaitUntilComplete(cancellationToken).GetAwaiter().GetResult();
 
             lock (sync)
             {
@@ -51,10 +52,24 @@ namespace Halibut.ServiceModel
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
         {
-#pragma warning disable 612
-            var responseMessage = QueueAndWait(request, cancellationToken);
-#pragma warning restore 612
-            return await Task.FromResult(responseMessage);
+            var pending = new PendingRequest(request, log);
+
+            lock (sync)
+            {
+                queue.Add(pending);
+                inProgress.Add(request.Id, pending);
+                hasItems.Set();
+            }
+
+            await pending.WaitUntilComplete(cancellationToken);
+
+            lock (sync)
+            {
+                inProgress.Remove(request.Id);
+            }
+
+            return pending.Response;
+            
         }
 
         public bool IsEmpty
@@ -139,7 +154,8 @@ namespace Halibut.ServiceModel
         {
             readonly RequestMessage request;
             readonly ILog log;
-            readonly ManualResetEventSlim waiter;
+            //readonly ManualResetEventSlim waiter;
+            readonly Nito.AsyncEx.AsyncManualResetEvent waiter = new Nito.AsyncEx.AsyncManualResetEvent(false);
             readonly object sync = new object();
             bool transferBegun;
             bool completed;
@@ -148,7 +164,7 @@ namespace Halibut.ServiceModel
             {
                 this.request = request;
                 this.log = log;
-                waiter = new ManualResetEventSlim(false);
+                //waiter = new ManualResetEventSlim(false);
             }
 
             public RequestMessage Request
@@ -156,12 +172,15 @@ namespace Halibut.ServiceModel
                 get { return request; }
             }
 
-            public void WaitUntilComplete(CancellationToken cancellationToken)
+            public async Task WaitUntilComplete(CancellationToken cancellationToken)
             {
+                await Task.CompletedTask;
                 log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-                var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout, cancellationToken);
-                if (success)
+                //var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout, cancellationToken);
+                await Task.WhenAny(waiter.WaitAsync(), Task.Delay(request.Destination.PollingRequestQueueTimeout));
+                
+                if (waiter.IsSet)
                 {
                     log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
                     return;
@@ -182,8 +201,8 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    success = waiter.Wait(request.Destination.PollingRequestMaximumMessageProcessingTimeout);
-                    if (success)
+                    await Task.WhenAny(waiter.WaitAsync(), Task.Delay(request.Destination.PollingRequestMaximumMessageProcessingTimeout));
+                    if (waiter.IsSet)
                     {
                         log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
                     }
