@@ -154,9 +154,8 @@ namespace Halibut.ServiceModel
 
             ThrowExceptionFromError(responseMessage.Error);
         }
-
-        // TODO does this need to be public for testing?
-        public static void ThrowExceptionFromError(ServerError error)
+        
+        internal static void ThrowExceptionFromError(ServerError error)
         {
             var realException = error.Details as string;
             if (!string.IsNullOrEmpty(error.ErrorType))
