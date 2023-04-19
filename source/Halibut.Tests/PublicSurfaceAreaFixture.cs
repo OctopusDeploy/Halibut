@@ -27,7 +27,7 @@ namespace Halibut.Tests
             "System.Threading.Tasks"
         };
 
-        // [Test] Why do we even have this test.
+        [Test]
         public void ThePublicSurfaceAreaShouldNotRegress()
         {
             var usings = commonNamespaces.Select(ns => $"using {ns};").Concat("".InArray());
