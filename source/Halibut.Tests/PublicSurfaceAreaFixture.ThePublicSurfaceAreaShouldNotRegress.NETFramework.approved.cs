@@ -229,6 +229,12 @@ namespace Halibut.Diagnostics
 }
 namespace Halibut.Exceptions
 {
+    public class AmbiguousMethodMatchHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable, _Exception
+    {
+        public AmbiguousMethodMatchHalibutClientException(string message) { }
+        public AmbiguousMethodMatchHalibutClientException(string message, Exception inner) { }
+        public AmbiguousMethodMatchHalibutClientException(string message, string serverException) { }
+    }
     public class MethodNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable, _Exception
     {
         public MethodNotFoundHalibutClientException(string message) { }
