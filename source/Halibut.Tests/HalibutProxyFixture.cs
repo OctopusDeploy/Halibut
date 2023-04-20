@@ -14,7 +14,7 @@ namespace Halibut.Tests
         {
             ServerError serverError = ResponseMessage.ServerErrorFromException(new MethodNotFoundHalibutClientException("not found", "not even mum could find it"));
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
         
             errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
         }
@@ -24,23 +24,23 @@ namespace Halibut.Tests
         {
             ServerError serverError = new ServerError{ Message = "bob", Details = "details", HalibutErrorType = "Foo.BarException" };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
         
             errorThrower.Should().Throw<HalibutClientException>();
         }
     
         [Test]
-        public void ThrowsGenericErrorWhenErrorTypeIsNull_EGWhenTalkingToAnOlderHalibutVersion()
+        public void ThrowsGenericErrorWhenErrorTypeIsNull_ForExampleWhenTalkingToAnOlderHalibutVersion()
         {
             ServerError serverError = new ServerError{ Message = "bob", Details = "details", HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
         
             errorThrower.Should().Throw<HalibutClientException>();
         }
         
         [Test]
-        public void BackwardCompatibility_ServiceNotFound_IsThrownAsServiceNotFoundHalibutClientException()
+        public void BackwardCompatibility_ServiceNotFound_IsThrownAsA_ServiceNotFoundHalibutClientException()
         {
             ServerError serverError = new ServerError{ 
                 Message = "Service not found: IEchoService", 
@@ -52,26 +52,26 @@ namespace Halibut.Tests
    at Halibut.Transport.Protocol.MessageExchangeProtocol.InvokeAndWrapAnyExceptions(RequestMessage request, Func`2 incomingRequestProcessor) in /home/auser/Documents/octopus/Halibut4/source/Halibut/Transport/Protocol/MessageExchangeProtocol.cs:line 266",
                 HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
         
             errorThrower.Should().Throw<ServiceNotFoundHalibutClientException>();
         }
         
         [Test]
-        public void BackwardCompatibility_MethodNotFound_IsThrownAsMethodNotFoundHalibutClientException()
+        public void BackwardsCompatibility_MethodNotFound_IsThrownAsA_MethodNotFoundHalibutClientException()
         {
             ServerError serverError = new ServerError{ 
                 Message = "Service System.Object::SayHello not found", 
                 Details = null,
                 HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
         
             errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
         }
         
         [Test]
-        public void BackwardCompatibility_AmbiguousMethodMatch_IsThrownAsNoMatchingServiceOrMethodHalibutClientException()
+        public void BackwardCompatibility_AmbiguousMethodMatch_IsThrownAsA_NoMatchingServiceOrMethodHalibutClientException()
         {
             ServerError serverError = new ServerError{ 
                 Message = @"More than one possible match for the requested service method was found given the argument types. The matches were:
@@ -92,7 +92,7 @@ String, <null>
    at Halibut.Transport.Protocol.MessageExchangeProtocol.InvokeAndWrapAnyExceptions(RequestMessage request, Func`2 incomingRequestProcessor) in /home/auser/Documents/octopus/Halibut4/source/Halibut/Transport/Protocol/MessageExchangeProtocol.cs:line 266",
                 HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
         
             errorThrower.Should().Throw<AmbiguousMethodMatchHalibutClientException>();
         }

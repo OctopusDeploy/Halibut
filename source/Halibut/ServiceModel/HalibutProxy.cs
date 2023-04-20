@@ -153,10 +153,10 @@ namespace Halibut.ServiceModel
             if (responseMessage.Error == null)
                 return;
 
-            ThrowExceptionFromError(responseMessage.Error);
+            ThrowExceptionFromReceivedError(responseMessage.Error);
         }
         
-        internal static void ThrowExceptionFromError(ServerError error)
+        internal static void ThrowExceptionFromReceivedError(ServerError error)
         {
             var realException = error.Details as string;
             if (!string.IsNullOrEmpty(error.HalibutErrorType))
