@@ -1,5 +1,6 @@
 using System;
 using FluentAssertions;
+using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -14,7 +15,7 @@ namespace Halibut.Tests
         {
             ServerError serverError = ResponseMessage.ServerErrorFromException(new MethodNotFoundHalibutClientException("not found", "not even mum could find it"));
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
         
             errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
         }
@@ -24,7 +25,7 @@ namespace Halibut.Tests
         {
             ServerError serverError = new ServerError{ Message = "bob", Details = "details", HalibutErrorType = "Foo.BarException" };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
         
             errorThrower.Should().Throw<HalibutClientException>();
         }
@@ -34,7 +35,7 @@ namespace Halibut.Tests
         {
             ServerError serverError = new ServerError{ Message = "bob", Details = "details", HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
         
             errorThrower.Should().Throw<HalibutClientException>();
         }
@@ -52,7 +53,7 @@ namespace Halibut.Tests
    at Halibut.Transport.Protocol.MessageExchangeProtocol.InvokeAndWrapAnyExceptions(RequestMessage request, Func`2 incomingRequestProcessor) in /home/auser/Documents/octopus/Halibut4/source/Halibut/Transport/Protocol/MessageExchangeProtocol.cs:line 266",
                 HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
         
             errorThrower.Should().Throw<ServiceNotFoundHalibutClientException>();
         }
@@ -65,7 +66,7 @@ namespace Halibut.Tests
                 Details = null,
                 HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
         
             errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
         }
@@ -92,7 +93,7 @@ String, <null>
    at Halibut.Transport.Protocol.MessageExchangeProtocol.InvokeAndWrapAnyExceptions(RequestMessage request, Func`2 incomingRequestProcessor) in /home/auser/Documents/octopus/Halibut4/source/Halibut/Transport/Protocol/MessageExchangeProtocol.cs:line 266",
                 HalibutErrorType = null };
         
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError);
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
         
             errorThrower.Should().Throw<AmbiguousMethodMatchHalibutClientException>();
         }

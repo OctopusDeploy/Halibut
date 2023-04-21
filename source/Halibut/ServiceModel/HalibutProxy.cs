@@ -2,6 +2,7 @@
 using System.Reflection;
 
 using System.Threading;
+using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.Transport.Protocol;
 
@@ -17,14 +18,16 @@ namespace Halibut.ServiceModel
         readonly ServiceEndPoint endPoint;
         readonly CancellationToken cancellationToken;
         long callId;
+        ILog logger;
         
-        public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+        public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, ILog logger, CancellationToken cancellationToken)
             : base(contractType)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
             this.cancellationToken = cancellationToken;
+            this.logger = logger;
         }
 
         public override IMessage Invoke(IMessage msg)
@@ -87,19 +90,21 @@ namespace Halibut.ServiceModel
         long callId;
         bool configured;
         CancellationToken cancellationToken;
+        ILog logger;
 
-        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint)
+        public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint,  ILog logger)
         {
-            Configure((requestMessage, ct) => messageRouter(requestMessage), contractType, endPoint, CancellationToken.None);
+            Configure((requestMessage, ct) => messageRouter(requestMessage), contractType, endPoint, logger, CancellationToken.None);
         }
 
-        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, CancellationToken cancellationToken)
+        public void Configure(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, ILog logger, CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
             this.cancellationToken = cancellationToken;
             this.configured = true;
+            this.logger = logger;
         }
 
         protected override object Invoke(MethodInfo targetMethod, object[] args)
@@ -145,47 +150,58 @@ namespace Halibut.ServiceModel
             return messageRouter(requestMessage, cancellationToken);
         }
 #endif
-        static void EnsureNotError(ResponseMessage responseMessage)
+        void EnsureNotError(ResponseMessage responseMessage)
         {
             if (responseMessage == null)
                 throw new HalibutClientException("No response was received from the endpoint within the allowed time.");
 
             if (responseMessage.Error == null)
                 return;
-
-            ThrowExceptionFromReceivedError(responseMessage.Error);
+            
+            ThrowExceptionFromReceivedError(responseMessage.Error, logger);
         }
         
-        internal static void ThrowExceptionFromReceivedError(ServerError error)
+        internal static void ThrowExceptionFromReceivedError(ServerError error, ILog logger)
         {
             var realException = error.Details as string;
-            if (!string.IsNullOrEmpty(error.HalibutErrorType))
-            {
-                var theType = Type.GetType(error.HalibutErrorType);
-                if (theType != null && theType != typeof(HalibutClientException))
-                {
-                    var ctor = theType.GetConstructor(new[] { typeof(string), typeof(string) });
-                    Exception e = (Exception) ctor.Invoke(new object[] { error.Message, realException });
-                    throw e;
-                }
-            }
 
-            if (error.Message.StartsWith("Service not found: "))
+            try
             {
-                throw new ServiceNotFoundHalibutClientException(error.Message, realException);
+                if (!string.IsNullOrEmpty(error.HalibutErrorType))
+                {
+                    var theType = Type.GetType(error.HalibutErrorType);
+                    if (theType != null && theType != typeof(HalibutClientException))
+                    {
+                        var ctor = theType.GetConstructor(new[] { typeof(string), typeof(string) });
+                        Exception e = (Exception)ctor.Invoke(new object[] { error.Message, realException });
+                        throw e;
+                    }
+                }
+
+                if (error.Message.StartsWith("Service not found: "))
+                {
+                    throw new ServiceNotFoundHalibutClientException(error.Message, realException);
+                }
+
+                if (error.Message.StartsWith("Service ") && error.Message.EndsWith(" not found"))
+                {
+                    throw new MethodNotFoundHalibutClientException(error.Message, realException);
+                }
+
+                if (error.Details.StartsWith("System.Reflection.AmbiguousMatchException: "))
+                {
+                    throw new AmbiguousMethodMatchHalibutClientException(error.Message, realException);
+                }
+
             }
-            
-            if (error.Message.StartsWith("Service ") && error.Message.EndsWith(" not found"))
+            catch (Exception exception) when (!(exception is HalibutClientException))
             {
-                throw new MethodNotFoundHalibutClientException(error.Message, realException);
-            }
-            
-            if (error.Details.StartsWith("System.Reflection.AmbiguousMatchException: "))
-            {
-                throw new AmbiguousMethodMatchHalibutClientException(error.Message, realException);
+                // Something when wrong trying to understand the ServerError revert back to throwing a standard halibut client exception.
+                logger.Write(EventType.Error, "Error {0} when processing ServerError", exception);
             }
 
             throw new HalibutClientException(error.Message, realException);
+            
         }
     }
 }
