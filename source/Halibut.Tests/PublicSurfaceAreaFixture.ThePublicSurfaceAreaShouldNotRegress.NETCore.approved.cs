@@ -227,6 +227,33 @@ namespace Halibut.Diagnostics
         public Uri[] GetEndpoints() { }
     }
 }
+namespace Halibut.Exceptions
+{
+    public class AmbiguousMethodMatchHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable
+    {
+        public AmbiguousMethodMatchHalibutClientException(string message) { }
+        public AmbiguousMethodMatchHalibutClientException(string message, Exception inner) { }
+        public AmbiguousMethodMatchHalibutClientException(string message, string serverException) { }
+    }
+    public class MethodNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable
+    {
+        public MethodNotFoundHalibutClientException(string message) { }
+        public MethodNotFoundHalibutClientException(string message, Exception inner) { }
+        public MethodNotFoundHalibutClientException(string message, string serverException) { }
+    }
+    public class NoMatchingServiceOrMethodHalibutClientException : Halibut.HalibutClientException, ISerializable
+    {
+        public NoMatchingServiceOrMethodHalibutClientException(string message) { }
+        public NoMatchingServiceOrMethodHalibutClientException(string message, Exception inner) { }
+        public NoMatchingServiceOrMethodHalibutClientException(string message, string serverException) { }
+    }
+    public class ServiceNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable
+    {
+        public ServiceNotFoundHalibutClientException(string message) { }
+        public ServiceNotFoundHalibutClientException(string message, Exception inner) { }
+        public ServiceNotFoundHalibutClientException(string message, string serverException) { }
+    }
+}
 namespace Halibut.Logging
 {
     public interface ILogProvider
@@ -281,8 +308,8 @@ namespace Halibut.ServiceModel
     {
         public HalibutProxy() { }
         protected Object Invoke(MethodInfo targetMethod, Object[] args) { }
-        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint) { }
-        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, System.Threading.CancellationToken cancellationToken) { }
+        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, Halibut.Diagnostics.ILog logger) { }
+        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, Halibut.Diagnostics.ILog logger, System.Threading.CancellationToken cancellationToken) { }
     }
     public interface IPendingRequestQueue
     {
@@ -613,6 +640,7 @@ namespace Halibut.Transport.Protocol
     {
         public ServerError() { }
         public string Details { get; set; }
+        public string HalibutErrorType { get; set; }
         public string Message { get; set; }
     }
     public class StreamCapture : IDisposable

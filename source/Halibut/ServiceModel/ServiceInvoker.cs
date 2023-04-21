@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Halibut.Exceptions;
 using Halibut.Portability;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
@@ -25,7 +26,7 @@ namespace Halibut.ServiceModel
                 var methods = lease.Service.GetType().GetHalibutServiceMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
                 if (methods.Count == 0)
                 {
-                    return ResponseMessage.FromError(requestMessage, string.Format("Service {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
+                    throw new MethodNotFoundHalibutClientException(string.Format("Method {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
                 }
 
                 var method = SelectMethod(methods, requestMessage);
@@ -99,7 +100,7 @@ namespace Halibut.ServiceModel
             message.AppendLine("The request arguments were:");
             message.AppendLine(string.Join(", ", argumentTypes.Select(t => t == null ? "<null>" : t.Name)));
 
-            throw new AmbiguousMatchException(message.ToString());
+            throw new AmbiguousMethodMatchHalibutClientException(message.ToString(), new AmbiguousMatchException(message.ToString()));
         }
 
         static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)

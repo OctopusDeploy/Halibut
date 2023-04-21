@@ -227,6 +227,33 @@ namespace Halibut.Diagnostics
         public Uri[] GetEndpoints() { }
     }
 }
+namespace Halibut.Exceptions
+{
+    public class AmbiguousMethodMatchHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable, _Exception
+    {
+        public AmbiguousMethodMatchHalibutClientException(string message) { }
+        public AmbiguousMethodMatchHalibutClientException(string message, Exception inner) { }
+        public AmbiguousMethodMatchHalibutClientException(string message, string serverException) { }
+    }
+    public class MethodNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable, _Exception
+    {
+        public MethodNotFoundHalibutClientException(string message) { }
+        public MethodNotFoundHalibutClientException(string message, Exception inner) { }
+        public MethodNotFoundHalibutClientException(string message, string serverException) { }
+    }
+    public class NoMatchingServiceOrMethodHalibutClientException : Halibut.HalibutClientException, ISerializable, _Exception
+    {
+        public NoMatchingServiceOrMethodHalibutClientException(string message) { }
+        public NoMatchingServiceOrMethodHalibutClientException(string message, Exception inner) { }
+        public NoMatchingServiceOrMethodHalibutClientException(string message, string serverException) { }
+    }
+    public class ServiceNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable, _Exception
+    {
+        public ServiceNotFoundHalibutClientException(string message) { }
+        public ServiceNotFoundHalibutClientException(string message, Exception inner) { }
+        public ServiceNotFoundHalibutClientException(string message, string serverException) { }
+    }
+}
 namespace Halibut.Logging
 {
     public interface ILogProvider
@@ -620,6 +647,7 @@ namespace Halibut.Transport.Protocol
     {
         public ServerError() { }
         public string Details { get; set; }
+        public string HalibutErrorType { get; set; }
         public string Message { get; set; }
     }
     public class StreamCapture : IDisposable

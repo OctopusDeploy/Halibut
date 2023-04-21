@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
@@ -295,7 +296,7 @@ namespace Halibut.Tests
                 echo.Ambiguous("a", "b").Should().Be("Hello string");
                 echo.Ambiguous("a", new Tuple<string, string>("a", "b")).Should().Be("Hello tuple");
 
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Ambiguous("a", (string)null));
+                var ex = Assert.Throws<AmbiguousMethodMatchHalibutClientException>(() => echo.Ambiguous("a", (string)null));
                 ex.Message.Should().Contain("Ambiguous");
 
                 echo.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
