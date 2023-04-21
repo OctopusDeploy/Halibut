@@ -308,8 +308,8 @@ namespace Halibut.ServiceModel
     {
         public HalibutProxy() { }
         protected Object Invoke(MethodInfo targetMethod, Object[] args) { }
-        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint) { }
-        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, System.Threading.CancellationToken cancellationToken) { }
+        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, Halibut.Diagnostics.ILog logger) { }
+        public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, Halibut.Diagnostics.ILog logger, System.Threading.CancellationToken cancellationToken) { }
     }
     public interface IPendingRequestQueue
     {
