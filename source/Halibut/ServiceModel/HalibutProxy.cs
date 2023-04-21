@@ -196,7 +196,8 @@ namespace Halibut.ServiceModel
             }
             catch (Exception exception) when (!(exception is HalibutClientException))
             {
-                // Something when wrong trying to understand the ServerError revert back to throwing a standard halibut client exception.
+                // Something went wrong trying to understand the ServerError revert back to the old behaviour of just
+                // throwing a standard halibut client exception.
                 logger.Write(EventType.Error, "Error {0} when processing ServerError", exception);
             }
 
