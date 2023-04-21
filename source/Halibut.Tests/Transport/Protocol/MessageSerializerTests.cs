@@ -1,5 +1,8 @@
-﻿using System.IO;
+﻿using System.Buffers.Text;
+using System.IO;
 using System.Text;
+using FluentAssertions;
+using Halibut.Exceptions;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -18,6 +21,23 @@ namespace Halibut.Tests.Transport.Protocol
                 stream.Position = 0;
                 var result = sut.ReadMessage<string>(stream);
                 Assert.AreEqual("Test", result);
+            }
+        }
+
+        [Test]
+        public void BackwardsCompatability_ExtraParametersInServerErrorAreIgnored()
+        {
+            var sut = MessageSerializerBuilder.Build();
+            // This is bson of a RequestMessage which contains a hacked ServerError which has an extra field which no version of Halibut will ever have.
+            // The test expects that the serializer will ignore the extra field. 
+            // This is to show that as extra fields can be added to the ServerError and they will be ignored.
+            var base64Bson = "nY6xTgNBDESHDTR8xRakQ1dRICSaRIfSBCHIDyxZk1tpsz6tfQE+mP/AgQVRU7gYe96Mn06A2ZpEwo7Qm3AX+j4SrgCsQk7Pk3abGoqMXLV7qKy85dw9ki2KUCMvffPCpYgzYyVKxIxq5YoP027fOk5NvDDDRdKQsuD2T1P/tqVRkyV3a9KB4z3rHU8lNsMyJyr667rxX0nt2B/LNsfnr/8fCbfIYfgZzC3JAC+8NziVnR++Mf+acvZ0oGqbAwHnlWTKav5P";
+            using (var stream = new MemoryStream(System.Convert.FromBase64String(base64Bson)))
+            {
+                var result = sut.ReadMessage<ResponseMessage>(stream);
+                result.Error.Should().NotBeNull();
+                result.Error.Message = "foo";
+                result.Error.HalibutErrorType = "MethodNotFoundHalibutClientException";
             }
         }
 
