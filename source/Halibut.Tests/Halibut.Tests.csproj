@@ -8,13 +8,13 @@
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
   </PropertyGroup>
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
-    <TargetFrameworks>net462;netcoreapp3.1</TargetFrameworks>
+    <TargetFrameworks>net48;net6.0</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NETCore.approved.cs" />
+    <Compile Remove="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NET6.0.approved.cs" />
     <Compile Remove="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NETFramework.approved.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -22,7 +22,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="App.config" />
-    <None Include="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NETCore.approved.cs">
+    <None Include="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NET6.0.approved.cs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NETFramework.approved.cs">
@@ -50,7 +50,7 @@
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="3.0.1" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net462' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
     <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
   </PropertyGroup>
   

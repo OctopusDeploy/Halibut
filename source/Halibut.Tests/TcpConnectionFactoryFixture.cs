@@ -22,10 +22,15 @@ namespace Halibut.Tests
         {
             var client = TcpConnectionFactory.CreateTcpClient(AddressFamily.InterNetwork);
             client.Client.AddressFamily.Should().Be(AddressFamily.InterNetwork);
+
+#if NETFRAMEWORK
             client.Invoking(c =>
             {
                 var dualMode = c.Client.DualMode;
             }).Should().Throw<NotSupportedException>();
+#else
+            client.Client.DualMode.Should().BeFalse();
+#endif
         }
     }
 }

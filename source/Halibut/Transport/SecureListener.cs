@@ -124,7 +124,7 @@ namespace Halibut.Transport
                         if (!IsWindows())
                         {
                             WaitForPendingConnectionOrCancellation();
-                            
+
                             if (cts.IsCancellationRequested)
                             {
                                 return;
@@ -163,11 +163,7 @@ namespace Halibut.Transport
 
         bool IsWindows()
         {
-#if !NETSTANDARD2_0
             return Environment.OSVersion.Platform == PlatformID.Win32NT;
-#else
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-#endif
         }
 
         async Task HandleClient(TcpClient client)

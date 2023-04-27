@@ -24,14 +24,11 @@ namespace Halibut.Transport.Protocol
 
             AttemptToDelete(filePath);
             File.Move(path, filePath);
-#if NETSTANDARD2_0
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 SetFilePermissionsToInheritFromParent(filePath);
             }
-#else
-            SetFilePermissionsToInheritFromParent(filePath);
-#endif
 
             moved = true;
             GC.SuppressFinalize(this);
@@ -42,14 +39,14 @@ namespace Halibut.Transport.Protocol
             try
             {
                 var fileInfo = new FileInfo(filePath);
-#pragma warning disable PC001 // API not supported on all platforms
+#pragma warning disable CA1416 // API not supported on all platforms
                 var fileSecurity = fileInfo.GetAccessControl();
 
-                //When isProtected (first param) is false, SetAccessRuleProtection changes the permissions of the file to allow inherited permissions. 
+                //When isProtected (first param) is false, SetAccessRuleProtection changes the permissions of the file to allow inherited permissions.
                 //preserveInheritance (second param) is ignored when isProtected is false.
                 fileSecurity.SetAccessRuleProtection(false, false);
                 fileInfo.SetAccessControl(fileSecurity);
-#pragma warning restore PC001 // API not supported on all platforms
+#pragma warning restore CA1416 // API not supported on all platforms
             }
             catch (UnauthorizedAccessException ex)
             {
@@ -93,7 +90,7 @@ namespace Halibut.Transport.Protocol
         // Ensure that if a receiver doesn't process a file, we still clean ourselves up
         ~TemporaryFileStream()
         {
-            if (moved) 
+            if (moved)
                 return;
 
             try

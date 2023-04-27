@@ -40,7 +40,16 @@ namespace Halibut.Tests
                 .SelectMany(g => FormatNamespace(g.Key, g))
                 .ToArray();
 
-            var framework = string.Concat(RuntimeInformation.FrameworkDescription.Split(' ').Take(2));
+            string framework;
+            if (RuntimeInformation.FrameworkDescription.StartsWith(".NET 6.0"))
+            {
+                framework = "NET6.0";
+            }
+            else
+            {
+                framework = string.Concat(RuntimeInformation.FrameworkDescription.Split(' ').Take(2));
+            }
+
             this.Assent(
                 string.Join("\r\n", usings.Concat(lines)),
                 new Configuration().UsingNamer(new PostfixNamer(framework.Trim('.'))).UsingExtension("cs")
