@@ -752,9 +752,10 @@ namespace Halibut.Transport.Proxy.Exceptions
     public class ProxyException : Exception, ISerializable, _Exception
     {
         public ProxyException() { }
-        public ProxyException(string message) { }
-        public ProxyException(string message, Exception innerException) { }
+        public ProxyException(string message, bool causedByNetworkError) { }
+        public ProxyException(string message, Exception innerException, bool causedByNetworkError) { }
         protected ProxyException(SerializationInfo info, StreamingContext context) { }
+        public bool CausedByNetworkError { get; protected set; }
     }
 }
 namespace Halibut.Util

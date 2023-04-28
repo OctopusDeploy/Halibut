@@ -37,7 +37,7 @@ namespace Halibut.Tests.Util
 
                 try
                 {
-                    var clientSocket = await listeningSocket.AcceptAsync(cancellationToken);
+                    var clientSocket = await listeningSocket.AcceptAsync();
                     clientSocket.Close();
                 }
                 catch (SocketException ex)
