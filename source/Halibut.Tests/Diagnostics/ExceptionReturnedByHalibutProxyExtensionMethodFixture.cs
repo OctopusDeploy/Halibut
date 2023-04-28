@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
+using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
@@ -13,6 +14,32 @@ namespace Halibut.Tests.Diagnostics
 {
     public static class ExceptionReturnedByHalibutProxyExtensionMethodFixture
     {
+        public class WhenGivenA
+        {
+            [Test]
+            public void MethodNotFoundHalibutClientException_ItIsNotANetworkError()
+            {
+                new MethodNotFoundHalibutClientException("").IsNetworkError()
+                    .Should()
+                    .Be(HalibutNetworkExceptionType.NotANetworkError);
+            }
+            
+            [Test]
+            public void ServiceNotFoundHalibutClientException_ItIsNotANetworkError()
+            {
+                new ServiceNotFoundHalibutClientException("").IsNetworkError()
+                    .Should()
+                    .Be(HalibutNetworkExceptionType.NotANetworkError);
+            }
+            
+            [Test]
+            public void AmbiguousMethodMatchHalibutClientException_ItIsNotANetworkError()
+            {
+                new AmbiguousMethodMatchHalibutClientException("").IsNetworkError()
+                    .Should()
+                    .Be(HalibutNetworkExceptionType.NotANetworkError);
+            }
+        }
         public class WhenTheHalibutProxyThrowsAnException
         {
             [Test]
