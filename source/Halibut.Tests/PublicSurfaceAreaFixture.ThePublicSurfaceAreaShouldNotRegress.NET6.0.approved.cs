@@ -179,7 +179,6 @@ namespace Halibut.Diagnostics
     }
     public static class ExceptionReturnedByHalibutProxyExtensionMethod
     {
-        public static bool IsErrorInService(Exception exception) { }
         public static Halibut.Diagnostics.HalibutNetworkExceptionType IsNetworkError(Exception exception) { }
     }
     public class HalibutLimits
@@ -257,6 +256,12 @@ namespace Halibut.Exceptions
         public NoMatchingServiceOrMethodHalibutClientException(string message) { }
         public NoMatchingServiceOrMethodHalibutClientException(string message, Exception inner) { }
         public NoMatchingServiceOrMethodHalibutClientException(string message, string serverException) { }
+    }
+    public class ServiceInvocationHalibutClientException : Halibut.HalibutClientException, ISerializable
+    {
+        public ServiceInvocationHalibutClientException(string message) { }
+        public ServiceInvocationHalibutClientException(string message, Exception inner) { }
+        public ServiceInvocationHalibutClientException(string message, string serverException) { }
     }
     public class ServiceNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable
     {
