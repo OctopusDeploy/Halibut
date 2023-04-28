@@ -66,11 +66,11 @@ namespace Halibut.Diagnostics
         }
 
         /// <summary>
-        /// Did the exception thrown from a HalibutProxy object one which was caused by the service e.g. Tentacle
+        /// Is the exception thrown from a HalibutProxy object one which was caused by the service e.g. Tentacle
         /// throwing an exception?
         /// </summary>
         /// <param name="exception">The exception thrown from a Halibut proxy object/param>
-        /// <returns>true the exception indicates an exception was raised within the execution of the remote method</returns>
+        /// <returns>true if the exception indicates an exception was raised within the execution of the remote method</returns>
         public static bool IsErrorInService(this Exception exception)
         {
             if (exception is HalibutClientException)
