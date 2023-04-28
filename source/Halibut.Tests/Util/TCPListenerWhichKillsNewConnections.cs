@@ -7,6 +7,11 @@ using Serilog;
 
 namespace Halibut.Tests.Util
 {
+    
+    /// <summary>
+    /// A TCP listener which when a client connects (and so a new TCP connection is created) this
+    /// immediately kills that new connection.
+    /// </summary>
     public class TCPListenerWhichKillsNewConnections : IDisposable
     {
         readonly Socket listeningSocket;
