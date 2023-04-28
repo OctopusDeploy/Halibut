@@ -35,6 +35,9 @@ namespace Halibut.Transport.Proxy.Exceptions
     [Serializable()]
     public class ProxyException : Exception
     {
+
+        public bool CausedByNetworkError { get; protected set; }
+        
         /// <summary>
         /// Constructor.
         /// </summary>
@@ -46,9 +49,10 @@ namespace Halibut.Transport.Proxy.Exceptions
         /// Constructor.
         /// </summary>
         /// <param name="message">Exception message text.</param>
-        public ProxyException(string message)
+        public ProxyException(string message, bool causedByNetworkError)
             : base(message)
         {
+            this.CausedByNetworkError = causedByNetworkError;
         }
 
         /// <summary>
@@ -56,10 +60,11 @@ namespace Halibut.Transport.Proxy.Exceptions
         /// </summary>
         /// <param name="message">Exception message text.</param>
         /// <param name="innerException">The inner exception object.</param>
-        public ProxyException(string message, Exception innerException)
+        public ProxyException(string message, Exception innerException, bool causedByNetworkError)
             :
            base(message, innerException)
         {
+            CausedByNetworkError = causedByNetworkError;
         }
 
         /// <summary>

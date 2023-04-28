@@ -95,7 +95,7 @@ namespace Halibut.Transport.Proxy
                 case ProxyType.HTTP:
                     return new HttpProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
                 default:
-                    throw new ProxyException(string.Format("Unknown proxy type {0}.", type.ToString()));
+                    throw new ProxyException(string.Format("Unknown proxy type {0}.", type.ToString()), false);
             }
         }
 

@@ -214,13 +214,13 @@ namespace Halibut.Transport.Proxy
                 if (TcpClient == null)
                 {
                     if (string.IsNullOrEmpty(ProxyHost))
-                        throw new ProxyException("ProxyHost property must contain a value");
+                        throw new ProxyException("ProxyHost property must contain a value", false);
 
                     if (ProxyPort <= 0 || ProxyPort > 65535)
-                        throw new ProxyException("ProxyPort value must be greater than zero and less than 65535");
+                        throw new ProxyException("ProxyPort value must be greater than zero and less than 65535", false);
 
                     if(ProxyHost.Contains("://"))
-                        throw new ProxyException("The proxy's hostname cannot contain a protocol prefix (eg http://)");
+                        throw new ProxyException("The proxy's hostname cannot contain a protocol prefix (eg http://)", false);
 
 
                     //  create new tcp client object to the proxy server
@@ -241,13 +241,13 @@ namespace Halibut.Transport.Proxy
             {
                 var se = ae.InnerExceptions.OfType<SocketException>().FirstOrDefault();
                 if (se != null)
-                    throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {se.Message}", se);
+                    throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {se.Message}", se, true);
 
                 throw;
             }
             catch (SocketException ex)
             {
-                throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {ex.Message}", ex);
+                throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {ex.Message}", ex, true);
             }
         }
 
@@ -330,7 +330,7 @@ namespace Halibut.Transport.Proxy
             }
 
             //  throw a new application exception 
-            throw new ProxyException(msg);
+            throw new ProxyException(msg, false);
         }
 
         void WaitForData(NetworkStream stream)
@@ -341,7 +341,7 @@ namespace Halibut.Transport.Proxy
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
-                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)));
+                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), true);
             }
         }
 
@@ -356,7 +356,7 @@ namespace Halibut.Transport.Proxy
         void ParseCodeAndText(string line)
         {
             if (line.IndexOf("HTTP") == -1)
-                throw new ProxyException(string.Format("No HTTP response received from proxy destination.  Server response: {0}.", line));
+                throw new ProxyException(string.Format("No HTTP response received from proxy destination.  Server response: {0}.", line), false);
 
             var begin = line.IndexOf(" ") + 1;
             var end = line.IndexOf(" ", begin);
@@ -365,7 +365,7 @@ namespace Halibut.Transport.Proxy
 
             int code;
             if (!int.TryParse(val, out code))
-                throw new ProxyException(string.Format("An invalid response code was received from proxy destination.  Server response: {0}.", line));
+                throw new ProxyException(string.Format("An invalid response code was received from proxy destination.  Server response: {0}.", line), false);
 
             _respCode = (HttpResponseCodes)code;
             _respText = line.Substring(end + 1).Trim();

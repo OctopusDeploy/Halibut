@@ -22,12 +22,17 @@ namespace Halibut.Diagnostics
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
 
-            if (exception is ProtocolException 
-                || exception is ProxyException 
+            if (exception is ProtocolException
                 || exception is SocketException
                 || exception is IOException)
             {
                 return HalibutNetworkExceptionType.IsNetworkError;
+            }
+
+            if (exception is ProxyException)
+            {
+                if ((exception as ProxyException).CausedByNetworkError) return HalibutNetworkExceptionType.IsNetworkError;
+                return HalibutNetworkExceptionType.NotANetworkError;
             }
 
             if (exception is HalibutClientException && exception.InnerException != null)
@@ -36,7 +41,6 @@ namespace Halibut.Diagnostics
             }
 
             return HalibutNetworkExceptionType.UnknownError;
-
         }
 
         /// <summary>
