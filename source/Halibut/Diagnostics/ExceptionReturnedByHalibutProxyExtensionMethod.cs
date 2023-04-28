@@ -70,7 +70,7 @@ namespace Halibut.Diagnostics
         /// throwing an exception?
         /// </summary>
         /// <param name="exception">The exception thrown from a Halibut proxy object/param>
-        /// <returns></returns>
+        /// <returns>true the exception indicates an exception was raised within the execution of the remote method</returns>
         public static bool IsErrorInService(this Exception exception)
         {
             if (exception is HalibutClientException)
