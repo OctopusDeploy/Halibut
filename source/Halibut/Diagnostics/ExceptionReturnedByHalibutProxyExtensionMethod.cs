@@ -11,6 +11,12 @@ namespace Halibut.Diagnostics
 
     public static class ExceptionReturnedByHalibutProxyExtensionMethod
     {
+        /// <summary>
+        /// Classifies the exception thrown from a halibut proxy as a network error or not.
+        /// In some cases it is not possible to tell if the exception is a network error. 
+        /// </summary>
+        /// <param name="exception">The exception thrown from a Halibut proxy object/param>
+        /// <returns></returns>
         public static HalibutNetworkExceptionType IsNetworkError(this Exception exception)
         {
             if (exception is NoMatchingServiceOrMethodHalibutClientException)
@@ -63,14 +69,14 @@ namespace Halibut.Diagnostics
         /// Did the exception thrown from a HalibutProxy object one which was caused by the service e.g. Tentacle
         /// throwing an exception?
         /// </summary>
-        /// <param name="e"></param>
+        /// <param name="exception">The exception thrown from a Halibut proxy object/param>
         /// <returns></returns>
-        public static bool IsErrorInService(this Exception e)
+        public static bool IsErrorInService(this Exception exception)
         {
-            if (e is HalibutClientException)
+            if (exception is HalibutClientException)
             {
                 // This message is returned when the service e.g. tentacle itself throws an error
-                return e.Message.Contains("System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.");
+                return exception.Message.Contains("System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.");
             }
 
             return false;
