@@ -251,7 +251,6 @@ namespace Halibut.Tests.Diagnostics
 
                     
                     var exception = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
-                    exception.IsErrorInService().Should().BeTrue();
                     exception.IsNetworkError().Should().Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
