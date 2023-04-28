@@ -132,7 +132,7 @@ namespace Halibut.Tests.Diagnostics
             }
             
             [Test]
-            public void BecauseTheDataStreamHadAnError_WhenSendingToListening_ItIsNotANetworkError()
+            public void BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSendingToListening_ItIsNotANetworkError()
             {
                 var services = new DelegateServiceFactory();
                 services.Register<IEchoService>(() => new EchoService());
@@ -156,7 +156,7 @@ namespace Halibut.Tests.Diagnostics
             }
             
             [Test]
-            public void BecauseTheDataStreamHadAnError_WhenSendingToPolling_ItIsNotANetworkError()
+            public void BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSendingToPolling_ItIsNotANetworkError()
             {
                 var services = new DelegateServiceFactory();
                 services.Register<IEchoService>(() => new EchoService());
@@ -173,6 +173,32 @@ namespace Halibut.Tests.Diagnostics
                     var dataStream = new DataStream(10, stream =>
                     {
                         new FileStream("DoesNotExist2497546", FileMode.Open).Dispose();
+                    });
+                    Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
+                        .IsNetworkError()
+                        .Should()
+                        .Be(HalibutNetworkExceptionType.NotANetworkError);
+                }
+            }
+            
+            [Test]
+            public void BecauseTheDataStreamThrowAFileNotFoundException_WhenSendingToPolling_ItIsNotANetworkError()
+            {
+                var services = new DelegateServiceFactory();
+                services.Register<IEchoService>(() => new EchoService());
+                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+                {
+                    var octopusPort = octopus.Listen();
+                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+
+                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+
+                    var dataStream = new DataStream(10, stream =>
+                    {
+                        throw new FileNotFoundException();
                     });
                     Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
                         .IsNetworkError()

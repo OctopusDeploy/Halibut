@@ -23,10 +23,13 @@ namespace Halibut.Diagnostics
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
 
-            if (exception is UnexpectedCertificateException)
+            if (exception is UnexpectedCertificateException
+                || exception is FileNotFoundException)
             {
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
+            
+            
 
             if (exception is ProtocolException
                 || exception is SocketException
@@ -41,7 +44,7 @@ namespace Halibut.Diagnostics
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
             
-            if (exception is HalibutClientException && exception.Message.Contains("Could not find file"))
+            if (exception is HalibutClientException && exception.Message.Contains("System.IO.FileNotFoundException"))
             {
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
