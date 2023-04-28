@@ -250,7 +250,7 @@ namespace Halibut.Tests.Diagnostics
                     var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
 
                     
-                    var exception = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                    var exception = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
                     exception.IsErrorInService().Should().BeTrue();
                     exception.IsNetworkError().Should().Be(HalibutNetworkExceptionType.NotANetworkError);
                 }

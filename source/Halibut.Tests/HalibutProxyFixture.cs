@@ -97,5 +97,30 @@ String, <null>
         
             errorThrower.Should().Throw<AmbiguousMethodMatchHalibutClientException>();
         }
+        
+        
+        [Test]
+        public void BackwardsCompatibility_ServiceThrewAnException_IsThrownAsA_ServiceInvocationHalibutClientException()
+        {
+            ServerError serverError = new ServerError{ 
+                Message = "Attempted to divide by zero.", 
+                Details = @"System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.
+ ---> System.DivideByZeroException: Attempted to divide by zero.
+   at Halibut.Tests.TestServices.EchoService.Crash() in /home/auser/Documents/octopus/Halibut4/source/Halibut.Tests/TestServices/EchoService.cs:line 16
+   --- End of inner exception stack trace ---
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Span`1& arguments, Signature sig, Boolean constructor, Boolean wrapExceptions)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at System.Reflection.MethodBase.Invoke(Object obj, Object[] parameters)
+   at Halibut.ServiceModel.ServiceInvoker.Invoke(RequestMessage requestMessage) in /home/auser/Documents/octopus/Halibut4/source/Halibut/ServiceModel/ServiceInvoker.cs:line 34
+   at Halibut.HalibutRuntime.HandleIncomingRequest(RequestMessage request) in /home/auser/Documents/octopus/Halibut4/source/Halibut/HalibutRuntime.cs:line 256
+   at Halibut.Transport.Protocol.MessageExchangeProtocol.InvokeAndWrapAnyExceptions(RequestMessage request, Func`2 incomingRequestProcessor) in /home/auser/Documents/octopus/Halibut4/source/Halibut/Transport/Protocol/MessageExchangeProtocol.cs:line 266",
+                HalibutErrorType = null };
+        
+            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+        
+            errorThrower.Should().Throw<ServiceInvocationHalibutClientException>();
+        }
+        
+        
     }
 }
