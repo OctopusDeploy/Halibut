@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using Halibut.Exceptions;
+using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy.Exceptions;
 
@@ -22,6 +23,11 @@ namespace Halibut.Diagnostics
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
 
+            if (exception is UnexpectedCertificateException)
+            {
+                return HalibutNetworkExceptionType.NotANetworkError;
+            }
+
             if (exception is ProtocolException
                 || exception is SocketException
                 || exception is IOException)
@@ -34,11 +40,18 @@ namespace Halibut.Diagnostics
                 if ((exception as ProxyException).CausedByNetworkError) return HalibutNetworkExceptionType.IsNetworkError;
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
-
+            
+            if (exception is HalibutClientException && exception.Message.Contains("Could not find file"))
+            {
+                return HalibutNetworkExceptionType.NotANetworkError;
+            }
+            
             if (exception is HalibutClientException && exception.InnerException != null)
             {
                 return IsNetworkError(exception.InnerException);
             }
+
+            
 
             return HalibutNetworkExceptionType.UnknownError;
         }

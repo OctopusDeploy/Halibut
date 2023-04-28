@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
@@ -107,6 +108,76 @@ namespace Halibut.Tests.Diagnostics
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
+                }
+            }
+            
+            [Test]
+            public void BecauseOfAInvalidCertificateException_ItIsNotANetworkError()
+            {
+                var services = new DelegateServiceFactory();
+                services.Register<IEchoService>(() => new EchoService());
+                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+                {
+                    var tentaclePort = tentacleListening.Listen();
+                    tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                    var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, "Wrong Thumbrprint");
+
+                    Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
+                        .IsNetworkError()
+                        .Should()
+                        .Be(HalibutNetworkExceptionType.NotANetworkError);
+                }
+            }
+            
+            [Test]
+            public void BecauseTheDataStreamHadAnError_WhenSendingToListening_ItIsNotANetworkError()
+            {
+                var services = new DelegateServiceFactory();
+                services.Register<IEchoService>(() => new EchoService());
+                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+                {
+                    var tentaclePort = tentacleListening.Listen();
+                    tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+
+                    var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+
+                    var dataStream = new DataStream(10, stream =>
+                    {
+                        new FileStream("DoesNotExist2497546", FileMode.Open).Dispose();
+                    });
+                    Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
+                        .IsNetworkError()
+                        .Should()
+                        .Be(HalibutNetworkExceptionType.NotANetworkError);
+                }
+            }
+            
+            [Test]
+            public void BecauseTheDataStreamHadAnError_WhenSendingToPolling_ItIsNotANetworkError()
+            {
+                var services = new DelegateServiceFactory();
+                services.Register<IEchoService>(() => new EchoService());
+                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+                {
+                    var octopusPort = octopus.Listen();
+                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+
+                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+
+                    var dataStream = new DataStream(10, stream =>
+                    {
+                        new FileStream("DoesNotExist2497546", FileMode.Open).Dispose();
+                    });
+                    Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
+                        .IsNetworkError()
+                        .Should()
+                        .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
         }
