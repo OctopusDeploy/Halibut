@@ -179,7 +179,7 @@ namespace Halibut.Diagnostics
     }
     public static class ExceptionReturnedByHalibutProxyExtensionMethod
     {
-        public static bool IsErrorInService(Exception e) { }
+        public static bool IsErrorInService(Exception exception) { }
         public static Halibut.Diagnostics.HalibutNetworkExceptionType IsNetworkError(Exception exception) { }
     }
     public class HalibutLimits
