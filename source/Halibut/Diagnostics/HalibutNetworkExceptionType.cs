@@ -1,8 +1,9 @@
-namespace Halibut.Diagnostics;
-
-public enum HalibutNetworkExceptionType
+namespace Halibut.Diagnostics
 {
-    IsNetworkError,
-    UnknownError,
-    NotANetworkError
+    public enum HalibutNetworkExceptionType
+    {
+        IsNetworkError,
+        UnknownError,
+        NotANetworkError
+    }   
 }

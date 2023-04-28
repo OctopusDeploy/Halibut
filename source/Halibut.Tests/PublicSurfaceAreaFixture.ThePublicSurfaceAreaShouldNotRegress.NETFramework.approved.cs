@@ -177,6 +177,11 @@ namespace Halibut.Diagnostics
         public static bool IsSocketTimeout(Exception exception) { }
         public static Exception UnpackFromContainers(Exception error) { }
     }
+    public static class ExceptionReturnedByHalibutProxyExtensionMethod
+    {
+        public static bool IsErrorInService(Exception e) { }
+        public static Halibut.Diagnostics.HalibutNetworkExceptionType IsNetworkError(Exception exception) { }
+    }
     public class HalibutLimits
     {
         public static TimeSpan ConnectionErrorRetryTimeout;
@@ -194,6 +199,12 @@ namespace Halibut.Diagnostics
         public static TimeSpan TcpClientSendTimeout;
         public HalibutLimits() { }
         public static TimeSpan SafeTcpClientPooledConnectionTimeout { get; }
+    }
+    public enum HalibutNetworkExceptionType
+    {
+        IsNetworkError = 0,
+        UnknownError = 1,
+        NotANetworkError = 2
     }
     public interface ILog
     {
