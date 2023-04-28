@@ -16,7 +16,7 @@ public static class ExceptionReturnedByHalibutProxyExtensionMethod
             return HalibutNetworkExceptionType.NotANetworkError;
         }
 
-        if (IsErrorInTentacle(exception))
+        if (IsErrorInService(exception))
         {
             return HalibutNetworkExceptionType.NotANetworkError;
         }
@@ -35,11 +35,17 @@ public static class ExceptionReturnedByHalibutProxyExtensionMethod
             
     }
     
-    public static bool IsErrorInTentacle(this Exception e) 
+    /// <summary>
+    /// Did the exception thrown from a HalibutProxy object one which was caused by the service e.g. Tentacle
+    /// throwing an exception?
+    /// </summary>
+    /// <param name="e"></param>
+    /// <returns></returns>
+    public static bool IsErrorInService(this Exception e) 
     {
         if (e is HalibutClientException)
         {
-            // This message is returned when tentacle itself throws an error
+            // This message is returned when the service e.g. tentacle itself throws an error
             return e.Message.Contains("System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.");
         }
 
