@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FluentAssertions;
+using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
@@ -47,7 +48,7 @@ namespace Halibut.Tests
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
                 var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
                 ex.Message.Should().Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contain("divide by zero");
             }
         }
@@ -65,7 +66,7 @@ namespace Halibut.Tests
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
 
                 var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
                 ex.Message.Should().Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contain("divide by zero");
             }
         }
