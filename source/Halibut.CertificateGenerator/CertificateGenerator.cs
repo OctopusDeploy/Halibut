@@ -69,7 +69,7 @@ namespace Halibut.CertificateGenerator
             certGen.SetPublicKey(cerKp.Public);
             certGen.AddExtension(X509Extensions.BasicConstraints, true, new BasicConstraints(false));
             certGen.AddExtension(X509Extensions.AuthorityKeyIdentifier, true, new AuthorityKeyIdentifier(SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(cerKp.Public)));
-            
+
             var signatureFactory = new Asn1SignatureFactory("SHA1WithRSA", cerKp.Private);
             var x509 = certGen.Generate(signatureFactory);
 
@@ -80,7 +80,6 @@ namespace Halibut.CertificateGenerator
                    };
         }
 
-#if !__MonoCS__
         static RSACryptoServiceProvider AddPrivateKey(AsymmetricCipherKeyPair cerKp)
         {
             var tempRcsp = (RSACryptoServiceProvider) DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters) cerKp.Private);
@@ -91,11 +90,5 @@ namespace Halibut.CertificateGenerator
             rcsp.ImportCspBlob(tempRcsp.ExportCspBlob(true));
             return rcsp;
         }
-#else
-        private static RSA AddPrivateKey(AsymmetricCipherKeyPair cerKp)
-        {
-            return DotNetUtilities.ToRSA((RsaPrivateCrtKeyParameters) cerKp.Private);
-        }
-#endif
     }
 }
