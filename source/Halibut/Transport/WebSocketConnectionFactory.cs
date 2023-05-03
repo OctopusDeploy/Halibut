@@ -95,7 +95,7 @@ namespace Halibut.Transport
         public WebSocketProxy(ProxyDetails proxy)
         {
             if (proxy.Type != ProxyType.HTTP)
-                throw new ProxyException(string.Format("Unknown proxy type {0}.", proxy.Type.ToString()));
+                throw new ProxyException(string.Format("Unknown proxy type {0}.", proxy.Type.ToString()), false);
 
             uri = new Uri($"http://{proxy.Host}:{proxy.Port}");
 

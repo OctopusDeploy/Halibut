@@ -177,6 +177,10 @@ namespace Halibut.Diagnostics
         public static bool IsSocketTimeout(Exception exception) { }
         public static Exception UnpackFromContainers(Exception error) { }
     }
+    public static class ExceptionReturnedByHalibutProxyExtensionMethod
+    {
+        public static Halibut.Diagnostics.HalibutNetworkExceptionType IsNetworkError(Exception exception) { }
+    }
     public class HalibutLimits
     {
         public static TimeSpan ConnectionErrorRetryTimeout;
@@ -194,6 +198,12 @@ namespace Halibut.Diagnostics
         public static TimeSpan TcpClientSendTimeout;
         public HalibutLimits() { }
         public static TimeSpan SafeTcpClientPooledConnectionTimeout { get; }
+    }
+    public enum HalibutNetworkExceptionType
+    {
+        IsNetworkError = 0,
+        UnknownError = 1,
+        NotANetworkError = 2
     }
     public interface ILog
     {
@@ -246,6 +256,12 @@ namespace Halibut.Exceptions
         public NoMatchingServiceOrMethodHalibutClientException(string message) { }
         public NoMatchingServiceOrMethodHalibutClientException(string message, Exception inner) { }
         public NoMatchingServiceOrMethodHalibutClientException(string message, string serverException) { }
+    }
+    public class ServiceInvocationHalibutClientException : Halibut.HalibutClientException, ISerializable
+    {
+        public ServiceInvocationHalibutClientException(string message) { }
+        public ServiceInvocationHalibutClientException(string message, Exception inner) { }
+        public ServiceInvocationHalibutClientException(string message, string serverException) { }
     }
     public class ServiceNotFoundHalibutClientException : Halibut.Exceptions.NoMatchingServiceOrMethodHalibutClientException, ISerializable
     {
@@ -734,9 +750,10 @@ namespace Halibut.Transport.Proxy.Exceptions
     public class ProxyException : Exception, ISerializable
     {
         public ProxyException() { }
-        public ProxyException(string message) { }
-        public ProxyException(string message, Exception innerException) { }
+        public ProxyException(string message, bool causedByNetworkError) { }
+        public ProxyException(string message, Exception innerException, bool causedByNetworkError) { }
         protected ProxyException(SerializationInfo info, StreamingContext context) { }
+        public bool CausedByNetworkError { get; protected set; }
     }
 }
 namespace Halibut.Util

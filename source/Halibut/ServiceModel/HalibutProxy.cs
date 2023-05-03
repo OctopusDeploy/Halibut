@@ -192,6 +192,11 @@ namespace Halibut.ServiceModel
                 {
                     throw new AmbiguousMethodMatchHalibutClientException(error.Message, realException);
                 }
+                
+                if (error.Details.StartsWith("System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation."))
+                {
+                    throw new ServiceInvocationHalibutClientException(error.Message, realException);
+                }
 
             }
             catch (Exception exception) when (!(exception is HalibutClientException))
