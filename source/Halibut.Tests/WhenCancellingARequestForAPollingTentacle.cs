@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
+using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -15,35 +17,25 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued
         {
             [Test]
-            public async Task TheRequestShouldBeCancelled()
+            public void TheRequestShouldBeCancelled()
             {
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 // No Tentacle
-                using (var server = SetupServer())
+                // CancelWhenRequestQueuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
+                using (var server = SetupServer(logFactory => new CancelWhenRequestQueuedPendingRequestQueueFactory(logFactory, cancellationTokenSource)))
                 {
                     server.Listen();
-                    var doSomeActionService = server.CreateClient<IDoSomeActionService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint, cancellationTokenSource.Token);
-
-                    var waitForActionToBeCalled = new SemaphoreSlim(0, 1);
-                    var task = Task.Run(() =>
-                        {
-                            waitForActionToBeCalled.Release(1);
-                            doSomeActionService.Action();
-                        },
-                        CancellationToken.None);
-
-                    // Try and ensure the request has been queued in Halibut
-                    await waitForActionToBeCalled.WaitAsync(CancellationToken.None);
-                    await Task.Delay(TimeSpan.FromSeconds(5), CancellationToken.None);
-
-                    cancellationTokenSource.Cancel();
+                    var doSomeActionService = server.CreateClient<IDoSomeActionService>(
+                        "poll://SQ-TENTAPOLL",
+                        Certificates.TentaclePollingPublicThumbprint,
+                        cancellationTokenSource.Token);
 
                     Exception actualException = null;
 
                     try
                     {
-                        await task;
+                        doSomeActionService.Action();
                     }
                     catch (Exception ex)
                     {
@@ -59,42 +51,43 @@ namespace Halibut.Tests
         public class AndTheRequestHasBeenDequeuedButNoResponseReceived
         {
             [Test]
-            public async Task TheRequestShouldNotBeCancelled()
+            public void TheRequestShouldNotBeCancelled()
             {
-                var waitForActionToBeCalled = new SemaphoreSlim(0, 1);
                 var calls = new List<DateTime>();
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                var (server, tentacle, doSomeActionService) = SetupPollingServerAndTentacle(() =>
-                {
-                    calls.Add(DateTime.UtcNow);
-                    waitForActionToBeCalled.Release(1);
-                }, cancellationTokenSource.Token);
+                // CancelWhenRequestDequeuedPendingRequestQueueFactory cancels the cancellation token source when a request is dequeued
+                var (server, tentacle, doSomeActionService) = SetupPollingServerAndTentacle(
+                    logFactory => new CancelWhenRequestDequeuedPendingRequestQueueFactory(logFactory, cancellationTokenSource),
+                    doSomeActionServiceAction: () =>
+                    {
+                        calls.Add(DateTime.UtcNow);
+
+                        while (!cancellationTokenSource.IsCancellationRequested)
+                        {
+                            Thread.Sleep(TimeSpan.FromMilliseconds(10));
+                        }
+
+                        Thread.Sleep(TimeSpan.FromSeconds(1));
+                    },
+                    cancellationTokenSource.Token);
 
                 using (server)
                 using (tentacle)
                 {
-                    var task = Task.Run(() =>
-                        {
-                            doSomeActionService.Action();
-                        },
-                        CancellationToken.None);
-
-                    await waitForActionToBeCalled.WaitAsync(CancellationToken.None);
-                    cancellationTokenSource.Cancel();
-                    await task;
+                    doSomeActionService.Action();
                 }
 
                 calls.Should().HaveCount(1);
             }
         }
 
-        static (HalibutRuntime server,
-            IHalibutRuntime tentacle,
-            IDoSomeActionService doSomeActionService)
-            SetupPollingServerAndTentacle(Action doSomeActionServiceAction, CancellationToken cancellationToken)
+        static (HalibutRuntime server, IHalibutRuntime tentacle, IDoSomeActionService doSomeActionService) SetupPollingServerAndTentacle(
+                Func<ILogFactory, IPendingRequestQueueFactory> factory,
+                Action doSomeActionServiceAction,
+                CancellationToken cancellationToken)
         {
-            var server = SetupServer();
+            var server = SetupServer(factory);
 
             var serverPort = server.Listen();
 
@@ -125,16 +118,125 @@ namespace Halibut.Tests
             return pollingTentacle;
         }
 
-        static HalibutRuntime SetupServer()
+        static HalibutRuntime SetupServer(Func<ILogFactory, IPendingRequestQueueFactory> factory = null)
         {
-            var octopus = new HalibutRuntimeBuilder()
-                .WithLogFactory(new TestContextLogFactory("Server"))
-                .WithServerCertificate(Certificates.Octopus)
-                .Build();
+            var logFactory = new TestContextLogFactory("Server");
 
-            octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+            var builder = new HalibutRuntimeBuilder()
+                .WithLogFactory(logFactory)
+                .WithServerCertificate(Certificates.Octopus);
 
-            return octopus;
+            if (factory != null)
+            {
+                builder = builder.WithPendingRequestQueueFactory(factory(logFactory));
+            }
+
+            var server = builder.Build();
+
+            server.Trust(Certificates.TentaclePollingPublicThumbprint);
+
+            return server;
+        }
+
+        internal class CancelWhenRequestQueuedPendingRequestQueueFactory : IPendingRequestQueueFactory
+        {
+            readonly CancellationTokenSource cancellationTokenSource;
+            readonly DefaultPendingRequestQueueFactory inner;
+
+            public CancelWhenRequestQueuedPendingRequestQueueFactory(ILogFactory logFactory, CancellationTokenSource cancellationTokenSource)
+            {
+                this.cancellationTokenSource = cancellationTokenSource;
+                this.inner = new DefaultPendingRequestQueueFactory(logFactory);
+            }
+
+            public IPendingRequestQueue CreateQueue(Uri endpoint)
+            {
+                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSource);
+            }
+
+            class Decorator : IPendingRequestQueue
+            {
+                readonly CancellationTokenSource cancellationTokenSource;
+                readonly IPendingRequestQueue inner;
+
+                public Decorator(IPendingRequestQueue inner, CancellationTokenSource cancellationTokenSource)
+                {
+                    this.inner = inner;
+                    this.cancellationTokenSource = cancellationTokenSource;
+                }
+
+                public bool IsEmpty => inner.IsEmpty;
+                public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
+                public RequestMessage Dequeue() => inner.Dequeue();
+                public async Task<RequestMessage> DequeueAsync() => await inner.DequeueAsync();
+
+                public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+                {
+                    var task = Task.Run(async () =>
+                        {
+                            while (inner.IsEmpty)
+                            {
+                                await Task.Delay(TimeSpan.FromMilliseconds(10), CancellationToken.None);
+                            }
+
+                            cancellationTokenSource.Cancel();
+                        },
+                        CancellationToken.None);
+
+                    var result = await inner.QueueAndWaitAsync(request, cancellationToken);
+                    await task;
+                    return result;
+                }
+            }
+        }
+
+        internal class CancelWhenRequestDequeuedPendingRequestQueueFactory : IPendingRequestQueueFactory
+        {
+            readonly CancellationTokenSource cancellationTokenSource;
+            readonly DefaultPendingRequestQueueFactory inner;
+
+            public CancelWhenRequestDequeuedPendingRequestQueueFactory(ILogFactory logFactory, CancellationTokenSource cancellationTokenSource)
+            {
+                this.cancellationTokenSource = cancellationTokenSource;
+                this.inner = new DefaultPendingRequestQueueFactory(logFactory);
+            }
+
+            public IPendingRequestQueue CreateQueue(Uri endpoint)
+            {
+                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSource);
+            }
+
+            class Decorator : IPendingRequestQueue
+            {
+                readonly CancellationTokenSource cancellationTokenSource;
+                readonly IPendingRequestQueue inner;
+
+                public Decorator(IPendingRequestQueue inner, CancellationTokenSource cancellationTokenSource)
+                {
+                    this.inner = inner;
+                    this.cancellationTokenSource = cancellationTokenSource;
+                }
+
+                public bool IsEmpty => inner.IsEmpty;
+                public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
+
+                public RequestMessage Dequeue()
+                {
+                    var response = inner.Dequeue();
+                    cancellationTokenSource.Cancel();
+                    return response;
+                }
+
+                public async Task<RequestMessage> DequeueAsync()
+                {
+                    var response = await inner.DequeueAsync();
+                    cancellationTokenSource.Cancel();
+                    return response;
+                }
+
+                public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+                    => await inner.QueueAndWaitAsync(request, cancellationToken);
+            }
         }
     }
 }

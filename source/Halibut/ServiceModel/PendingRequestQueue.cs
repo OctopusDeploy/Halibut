@@ -183,7 +183,7 @@ namespace Halibut.ServiceModel
                 catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
                 {
                     // waiter.Set is only called when the request has been collected and the response received.
-                    // It is possible that the transfer has already stated once the cancellationToken is cancelled
+                    // It is possible that the transfer has already started once the cancellationToken is cancelled
                     // In this case we cannot walk away from the request as it is already in progress and no longer in the connecting phase
                     cancelled = true;
 
