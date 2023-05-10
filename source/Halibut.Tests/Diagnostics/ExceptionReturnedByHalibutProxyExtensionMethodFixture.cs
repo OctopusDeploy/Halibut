@@ -97,15 +97,10 @@ namespace Halibut.Tests.Diagnostics
             [Test]
             public void BecauseTheTentacleIsNotResponding()
             {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
-
-                using (var tcpKiller = new TCPListenerWhichKillsNewConnections())
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var clientAndService = ClientServiceBuilder.Listening().NoService().Build())
                 {
-                    var serviceEndPoint = new ServiceEndPoint(new Uri("https://localhost:" + tcpKiller.Port), Certificates.TentacleListeningPublicThumbprint);
-                    serviceEndPoint.RetryCountLimit = 1;
-                    var echo = octopus.CreateClient<IEchoService>(serviceEndPoint);
+                    var echo = clientAndService.CreateClient<IEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
+
                     Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
                         .IsNetworkError()
                         .Should()

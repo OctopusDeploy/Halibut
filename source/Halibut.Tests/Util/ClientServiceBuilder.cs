@@ -146,13 +146,22 @@ public class ClientServiceBuilder
 
         public TService CreateClient<TService>()
         {
-            return CreateClient<TService>(CancellationToken.None);
+            return CreateClient<TService>(s => { }, CancellationToken.None);
+        }
+        
+        public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint)
+        {
+            return CreateClient<TService>(modifyServiceEndpoint, CancellationToken.None);
         }
 
-        public TService CreateClient<TService>(CancellationToken cancellationToken)
+        public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
         {
-            return octopus.CreateClient<TService>(new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint), cancellationToken);
+            var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+            modifyServiceEndpoint(serviceEndpoint);
+            return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
         }
+        
+        
 
         public void Dispose()
         {
