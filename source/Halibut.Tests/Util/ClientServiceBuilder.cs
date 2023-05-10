@@ -32,9 +32,9 @@ public class ClientServiceBuilder
     }
 
     /// <summary>
-    /// Ie no tentacle.
-    ///
-    /// In the case of listening, a TCPListenerWhichKillsNewConnections will be created. This will cause connections to that port to be killed immediately. 
+    ///     Ie no tentacle.
+    ///     In the case of listening, a TCPListenerWhichKillsNewConnections will be created. This will cause connections to
+    ///     that port to be killed immediately.
     /// </summary>
     /// <returns></returns>
     public ClientServiceBuilder NoService()
@@ -74,10 +74,9 @@ public class ClientServiceBuilder
         serviceFactory = serviceFactory ?? new DelegateServiceFactory();
         var octopus = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
         octopus.Trust(serviceCertAndThumbprint.Thumbprint);
-        
-        
+
         HalibutRuntime? tentacle = null;
-        if(HasService) tentacle = new HalibutRuntime(serviceFactory, serviceCertAndThumbprint.Certificate2);
+        if (HasService) tentacle = new HalibutRuntime(serviceFactory, serviceCertAndThumbprint.Certificate2);
 
         DisposableCollection disposableCollection = new DisposableCollection();
 
@@ -101,7 +100,6 @@ public class ClientServiceBuilder
             {
                 tentacle.Trust(clientCertAndThumbprint.Thumbprint);
                 listenPort = tentacle.Listen();
-                
             }
             else
             {
@@ -109,6 +107,7 @@ public class ClientServiceBuilder
                 disposableCollection.Add(dummyTentacle);
                 listenPort = dummyTentacle.Port;
             }
+
             portForwarder = portForwarderFactory(listenPort);
             serviceUri = new Uri("https://localhost:" + portForwarder.ListeningPort);
         }
@@ -129,12 +128,12 @@ public class ClientServiceBuilder
         public readonly IPortForwarder portForwarder;
         readonly Uri serviceUri;
         readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
-        DisposableCollection disposableCollection;
+        readonly DisposableCollection disposableCollection;
 
-        public ClientAndService(HalibutRuntime octopus, 
-            HalibutRuntime tentacle, 
-            Uri serviceUri, 
-            CertAndThumbprint serviceCertAndThumbprint, 
+        public ClientAndService(HalibutRuntime octopus,
+            HalibutRuntime tentacle,
+            Uri serviceUri,
+            CertAndThumbprint serviceCertAndThumbprint,
             IPortForwarder portForwarder, DisposableCollection disposableCollection)
         {
             this.octopus = octopus;
