@@ -1,8 +1,9 @@
 using System;
 
-namespace Halibut.Tests.Util;
-
-public interface IPortForwarder : IDisposable
+namespace Halibut.Tests.Util
 {
-    public int ListeningPort { get; }
+    public interface IPortForwarder : IDisposable
+    {
+        public int ListeningPort { get; }
+    }
 }
