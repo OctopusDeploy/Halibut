@@ -67,15 +67,9 @@ namespace Halibut.Tests
         {
             var services = GetDelegateServiceFactory();
             services.Register<ISupportedServices>(() => new SupportedServices());
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
-            using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+            using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).Build())
             {
-                var octopusPort = octopus.Listen();
-                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
-
-                var svc = octopus.CreateClient<ISupportedServices>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                var svc = clientAndService.CreateClient<ISupportedServices>();
                 for (var i = 1; i < 100; i++)
                 {
                     var i1 = i;
@@ -183,21 +177,16 @@ namespace Halibut.Tests
                 RemoveSslCertBindingFor("0.0.0.0:" + octopusPort);
             }
         }
-        
+
         [Test]
         public void StreamsCanBeSentToListening()
         {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
             {
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                var echo = clientAndService.CreateClient<IEchoService>();
 
                 for (var i = 0; i < 100; i++)
                 {

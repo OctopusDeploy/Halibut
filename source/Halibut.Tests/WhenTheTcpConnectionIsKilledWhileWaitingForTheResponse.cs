@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
@@ -12,33 +11,24 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse
     {
         [Test]
-        public async Task ToPolling_AResponseShouldBeQuicklyReturned()
+        public async Task ToPolling_AResponseShouldBeQuicklyReturned2()
         {
-            var services = new DelegateServiceFactory();
             DoSomeActionService doSomeActionService = new DoSomeActionService();
-            services.Register<IDoSomeActionService>(() => doSomeActionService);
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var clientAndService = ClientServiceBuilder.Polling()
+                       .WithService<IDoSomeActionService>(doSomeActionService)
+                       .WithPortForwarding(port => new PortForwarder(new Uri("https://localhost:" + port), TimeSpan.Zero))
+                       .Build())
             {
-                var octopusPort = octopus.Listen();
-                using (var portForwarder = new PortForwarder(new Uri("https://localhost:" + octopusPort), TimeSpan.Zero))
-                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
-                {
-                        
-                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+                var svc = clientAndService.CreateClient<IDoSomeActionService>();
 
-                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + portForwarder.PublicEndpoint.Port), Certificates.OctopusPublicThumbprint));
+                doSomeActionService.ActionDelegate = () => clientAndService.portForwarder.Dispose();
 
-                    var svc = octopus.CreateClient<IDoSomeActionService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
-                    doSomeActionService.ActionDelegate = () => portForwarder.Dispose();
-                    
-                    // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
-                    var killPortForwarderTask = Task.Run(() => svc.Action());
-                    
-                    await Task.WhenAny(killPortForwarderTask, Task.Delay(TimeSpan.FromSeconds(10)));
-                    
-                    killPortForwarderTask.Status.Should().Be(TaskStatus.Faulted, "We should immediately get an error response.");
-                }
+                // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
+                var killPortForwarderTask = Task.Run(() => svc.Action());
+                
+                await Task.WhenAny(killPortForwarderTask, Task.Delay(TimeSpan.FromSeconds(10)));
+                
+                killPortForwarderTask.Status.Should().Be(TaskStatus.Faulted, "We should immediately get an error response.");
             }
         }
     }
