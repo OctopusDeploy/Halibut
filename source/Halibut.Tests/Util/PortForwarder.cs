@@ -8,7 +8,7 @@ using Serilog;
 
 namespace Halibut.Tests.Util
 {
-    sealed class PortForwarder : IDisposable
+    sealed class PortForwarder : IDisposable, IPortForwarder
     {
         readonly Uri originServer;
         readonly Socket listeningSocket;
@@ -16,6 +16,8 @@ namespace Halibut.Tests.Util
         readonly List<TcpPump> pumps = new List<TcpPump>();
         readonly ILogger logger = Log.ForContext<PortForwarder>();
         readonly TimeSpan sendDelay;
+        
+        public int ListeningPort { get; }
 
         public PortForwarder(Uri originServer, TimeSpan sendDelay)
         {
@@ -28,8 +30,8 @@ namespace Halibut.Tests.Util
             listeningSocket.Listen(0);
             logger.Information("Listening on {LoadBalancerEndpoint}", listeningSocket.LocalEndPoint?.ToString());
 
-            var port = ((IPEndPoint)listeningSocket.LocalEndPoint).Port;
-            PublicEndpoint = new UriBuilder(scheme, "localhost", port).Uri;
+            ListeningPort = ((IPEndPoint)listeningSocket.LocalEndPoint).Port;
+            PublicEndpoint = new UriBuilder(scheme, "localhost", ListeningPort).Uri;
 
             Task.Factory.StartNew(() => WorkerTask(cancellationTokenSource.Token).ConfigureAwait(false), TaskCreationOptions.LongRunning);
         }
