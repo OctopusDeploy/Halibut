@@ -11,12 +11,12 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse
     {
         [Test]
-        public async Task ToPolling_AResponseShouldBeQuicklyReturned2()
+        public async Task ToPolling_AResponseShouldBeQuicklyReturned()
         {
             DoSomeActionService doSomeActionService = new DoSomeActionService();
             using (var clientAndService = ClientServiceBuilder.Polling()
                        .WithService<IDoSomeActionService>(doSomeActionService)
-                       .WithPortForwarding(port => new PortForwarder(new Uri("https://localhost:" + port), TimeSpan.Zero))
+                       .WithPortForwarding()
                        .Build())
             {
                 var svc = clientAndService.CreateClient<IDoSomeActionService>();

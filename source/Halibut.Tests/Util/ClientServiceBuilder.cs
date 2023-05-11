@@ -63,6 +63,10 @@ namespace Halibut.Tests.Util
             return this;
         }
 
+        public ClientServiceBuilder WithPortForwarding()
+        {
+            return WithPortForwarding(port => new PortForwarder(new Uri("https://localhost:" + port), TimeSpan.Zero));
+        }
         public ClientServiceBuilder WithPortForwarding(Func<int, IPortForwarder> portForwarderFactory)
         {
             this.portForwarderFactory = portForwarderFactory;
