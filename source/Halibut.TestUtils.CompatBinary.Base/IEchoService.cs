@@ -1,6 +1,6 @@
 using System;
 
-namespace Halibut.TestUtils.SampleProgram.v5_0_429
+namespace Halibut.TestUtils.SampleProgram.Base
 {
     public interface IEchoService
     {

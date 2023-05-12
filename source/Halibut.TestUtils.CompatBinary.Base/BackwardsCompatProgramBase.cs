@@ -2,7 +2,6 @@ using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Halibut.ServiceModel;
-using Halibut.TestUtils.SampleProgram.v5_0_429;
 
 namespace Halibut.TestUtils.SampleProgram.Base
 {
