@@ -21,8 +21,8 @@ namespace Halibut.Tests.BackwardsCompatibility
                 {
                     var se = new ServiceEndPoint("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
 
-                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1);
-                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(1);
+                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
+                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
                     var echo = octopus.CreateClient<IEchoService>(se);
 
                     var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
