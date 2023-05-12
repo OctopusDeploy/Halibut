@@ -5,28 +5,28 @@ using Halibut.Exceptions;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 
-namespace Halibut.Tests.BackwardsCompatibility;
-
-public class InvocationExceptionsAreMappedCorrectly
+namespace Halibut.Tests.BackwardsCompatibility
 {
-    [Test]
-    public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException()
+    public class InvocationExceptionsAreMappedCorrectly
     {
-        using (var octopus = new HalibutRuntime(Certificates.Octopus))
+        [Test]
+        public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException()
         {
-            var octopusPort = octopus.Listen();
-            octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
-            using (var foo = await new HalibutTestBinaryRunner().Run(octopusPort))
+            using (var octopus = new HalibutRuntime(Certificates.Octopus))
             {
-                var se = new ServiceEndPoint("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
+                var octopusPort = octopus.Listen();
+                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+                using (var foo = await new HalibutTestBinaryRunner().Run(octopusPort))
+                {
+                    var se = new ServiceEndPoint("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
 
-                se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1);
-                se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(1);
-                var echo = octopus.CreateClient<IEchoService>(se);
+                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1);
+                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(1);
+                    var echo = octopus.CreateClient<IEchoService>(se);
 
-                var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
+                    var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
+                }
             }
         }
-    }
-    
+    }   
 }

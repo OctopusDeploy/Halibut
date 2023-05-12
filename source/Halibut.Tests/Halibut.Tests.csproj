@@ -33,6 +33,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
+    <ProjectReference Include="..\Halibut.TestUtils.SampleProgram.v5_0_429\Halibut.TestUtils.SampleProgram.v5_0_429.csproj" 
+        ReferenceOutputAssembly="false"/>
   </ItemGroup>
 
   <ItemGroup>

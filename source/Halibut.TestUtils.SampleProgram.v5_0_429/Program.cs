@@ -7,11 +7,8 @@ namespace Halibut.TestUtils.SampleProgram.v5_0_429
 {
     public class Program
     {
-
-        
         public static int Main(string[] args)
         {
-
             var tentacleCertPath = Environment.GetEnvironmentVariable("tentaclecertpath");
             Console.WriteLine($"Using tentacle cert path: {tentacleCertPath}");
             var TentacleCert = new X509Certificate2(tentacleCertPath);
@@ -21,21 +18,20 @@ namespace Halibut.TestUtils.SampleProgram.v5_0_429
 
             var addressToPoll = Environment.GetEnvironmentVariable("octopusservercommsport");
             Console.WriteLine($"Will poll: {addressToPoll}");
-            
+
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             using (var tentaclePolling = new HalibutRuntime(services, TentacleCert))
             {
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), octopusThumbprint));
-                
+
                 Console.WriteLine("RunningAndReady");
                 Console.WriteLine("Will Now sleep");
                 Console.Out.Flush();
                 Thread.Sleep(1000000);
             }
+
             return 1;
         }
-
-        
     }
 }
