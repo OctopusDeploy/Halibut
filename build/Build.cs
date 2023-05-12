@@ -86,7 +86,6 @@ class Build : NukeBuild
                 .EnableNoRestore()
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut))
-                .CombineWith(ss => ss.SetProjectFile(Solution.Halibut_TestUtils_SampleProgram_v5_0_429))
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut_Tests)));
         });

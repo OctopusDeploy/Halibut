@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
+using Halibut.Tests.BackwardsCompatibility.Util;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 

@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Threading;
-using Halibut;
 
 namespace Halibut.TestUtils.SampleProgram.v5_0_429
 {

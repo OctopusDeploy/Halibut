@@ -8,7 +8,7 @@ using Halibut.Tests.Util;
 using NUnit.Framework;
 using Octopus.Shellfish;
 
-namespace Halibut.Tests.BackwardsCompatibility
+namespace Halibut.Tests.BackwardsCompatibility.Util
 {
     public class HalibutTestBinaryRunner
     {
