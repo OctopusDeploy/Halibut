@@ -11,22 +11,33 @@ namespace Halibut.Tests.BackwardsCompatibility
     public class InvocationExceptionsAreMappedCorrectly
     {
         [Test]
-        public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException()
+        public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException_Polling()
         {
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
+            using (var clientAndService = await ClientAndOldServiceBuilder.Polling().Build())
             {
-                var octopusPort = octopus.Listen();
-                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
-                using (var foo = await new HalibutTestBinaryRunner().Run(octopusPort))
+                var echo = clientAndService.CreateClient<IEchoService>(se =>
                 {
-                    var se = new ServiceEndPoint("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
                     se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
                     se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
-                    var echo = octopus.CreateClient<IEchoService>(se);
+                });
 
-                    var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
-                }
+                var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
+            }
+        }
+        
+        
+        [Test]
+        public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException_Listening()
+        {
+            using (var clientAndService = await ClientAndOldServiceBuilder.Listening().Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>(se =>
+                {
+                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
+                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
+                });
+
+                var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
             }
         }
     }   

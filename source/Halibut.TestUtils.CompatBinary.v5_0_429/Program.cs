@@ -7,7 +7,7 @@ namespace Halibut.TestUtils.SampleProgram.v5_0_429
     {
         public static int Main(string[] args)
         {
-           return ProgramBase.Main(args);
+           return BackwardsCompatProgramBase.Main(args);
         }
     }
 }

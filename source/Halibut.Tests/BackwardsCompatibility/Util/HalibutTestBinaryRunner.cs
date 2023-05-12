@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Tests.Util;
@@ -12,6 +13,23 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
 {
     public class HalibutTestBinaryRunner
     {
+
+        // The port the binary should poll.
+        ServiceConnectionType serviceConnectionType;
+        int? clientServicePort;
+        CertAndThumbprint clientCertAndThumbprint;
+        CertAndThumbprint serviceCertAndThumbprint;
+
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint)
+        {
+            this.serviceConnectionType = serviceConnectionType;
+            this.clientServicePort = clientServicePort;
+            this.clientCertAndThumbprint = clientCertAndThumbprint;
+            this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+        }
+        
+        
+
         string BinaryDir(string version)
         {
             var onDiskVersion = version.Replace(".", "_");
@@ -37,28 +55,41 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             return path;
         }
 
-        public async Task<RunningOldHalibutBinary> Run(int octopusPort)
+        public async Task<RunningOldHalibutBinary> Run()
         {
-            var commsUri = "https://localhost:" + octopusPort;
+            
             var envs = new Dictionary<string, string>();
-            envs.Add("tentaclecertpath", Certificates.TentaclePollingPfxPath);
-            envs.Add("octopusthumbprint", Certificates.OctopusPublicThumbprint);
-            envs.Add("octopusservercommsport", commsUri);
+            envs.Add("tentaclecertpath", serviceCertAndThumbprint.FilePath);
+            envs.Add("octopusthumbprint", clientCertAndThumbprint.Thumbprint);
+            if (clientServicePort != null)
+            {
+                envs.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
+            }
+            envs.Add("ServiceConnectionType", serviceConnectionType.ToString());
 
             CancellationTokenSource cts = new CancellationTokenSource();
 
-            var tmp = new TmpDirectory();
+            try
+            {
+                var tmp = new TmpDirectory();
 
-            var task = await StartHalibutTestBinary(envs, tmp, cts.Token);
+                var (task, serviceListenPort) = await StartHalibutTestBinary(envs, tmp, cts.Token);
 
-            return new RunningOldHalibutBinary(cts, task, tmp);
+                return new RunningOldHalibutBinary(cts, task, tmp, serviceListenPort);
+            }
+            catch (Exception)
+            {
+                cts.Cancel();
+                throw;
+            }
         }
 
-        async Task<Task> StartHalibutTestBinary(Dictionary<string, string> envs, TmpDirectory tmp, CancellationToken cancellationToken)
+        async Task<(Task, int?)> StartHalibutTestBinary(Dictionary<string, string> envs, TmpDirectory tmp, CancellationToken cancellationToken)
         {
             var hasTentacleStarted = new ManualResetEventSlim();
             hasTentacleStarted.Reset();
 
+            int? serviceListenPort = null;
             var runningTentacle = Task.Run(() =>
             {
                 try
@@ -66,6 +97,10 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                     Action<string> processLogs = s =>
                     {
                         TestContext.WriteLine(s);
+                        if (s.StartsWith("Listening on port: "))
+                        {
+                            serviceListenPort = Int32.Parse(Regex.Match(s, @"\d+").Value);
+                        }
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                     };
 
@@ -96,7 +131,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 throw new Exception("Halibut test binary did not appear to start correctly");
             }
 
-            return runningTentacle;
+            return (runningTentacle, serviceListenPort);
         }
 
         public class RunningOldHalibutBinary : IDisposable
@@ -104,12 +139,14 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             readonly CancellationTokenSource cts;
             readonly Task runningOldHalibutTask;
             readonly TmpDirectory tmpDirectory;
+            public readonly int? serviceListenPort;
 
-            public RunningOldHalibutBinary(CancellationTokenSource cts, Task runningOldHalibutTask, TmpDirectory tmpDirectory)
+            public RunningOldHalibutBinary(CancellationTokenSource cts, Task runningOldHalibutTask, TmpDirectory tmpDirectory, int? serviceListenPort)
             {
                 this.cts = cts;
                 this.runningOldHalibutTask = runningOldHalibutTask;
                 this.tmpDirectory = tmpDirectory;
+                this.serviceListenPort = serviceListenPort;
             }
 
             public void Dispose()
