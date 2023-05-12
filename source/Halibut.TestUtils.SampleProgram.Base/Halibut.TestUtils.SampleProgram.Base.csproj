@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Earlier versions contain bugs that can cause Halibut to hang
+            See https://github.com/OctopusDeploy/Halibut/commit/cf9cb8a4478b59f95b35c2606d4352c364d3dcb2
+            It is probably best to never test versions earlier than this, since those tests will be unreliable.
+        -->
+        <PackageReference Include="Halibut" Version="5.0.205" />
+    </ItemGroup>
+
+</Project>
