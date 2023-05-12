@@ -33,7 +33,6 @@
             "AppVeyor",
             "AzurePipelines",
             "Bamboo",
-            "Bitbucket",
             "Bitrise",
             "GitHubActions",
             "GitLab",
