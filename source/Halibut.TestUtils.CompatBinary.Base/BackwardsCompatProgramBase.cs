@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Halibut.ServiceModel;
@@ -18,7 +17,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
             var octopusThumbprint = Environment.GetEnvironmentVariable("octopusthumbprint");
             Console.WriteLine($"Using octopus thumbprint: {octopusThumbprint}");
 
-
             ServiceConnectionType serviceConnectionType = ServiceConnectionTypeFromString(Environment.GetEnvironmentVariable("ServiceConnectionType"));
             string addressToPoll = null;
             if (serviceConnectionType == ServiceConnectionType.Polling)
@@ -26,7 +24,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 addressToPoll = Environment.GetEnvironmentVariable("octopusservercommsport");
                 Console.WriteLine($"Will poll: {addressToPoll}");
             }
-            
 
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
@@ -54,8 +51,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
             return 1;
         }
-        
-        public static ServiceConnectionType ServiceConnectionTypeFromString(string s) {
+
+        public static ServiceConnectionType ServiceConnectionTypeFromString(string s)
+        {
             if (Enum.TryParse(s, out ServiceConnectionType serviceConnectionType))
             {
                 return serviceConnectionType;
@@ -64,12 +62,10 @@ namespace Halibut.TestUtils.SampleProgram.Base
             throw new Exception($"Unknown service type '{s}'");
         }
     }
-    
-    
+
     public enum ServiceConnectionType
     {
         Polling,
         Listening
-        
     }
 }

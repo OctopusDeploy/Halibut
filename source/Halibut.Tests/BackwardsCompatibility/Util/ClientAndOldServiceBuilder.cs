@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.ServiceModel;
 using Halibut.Tests.Util;
 
 namespace Halibut.Tests.BackwardsCompatibility.Util
@@ -34,12 +33,12 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             this.version = version;
             return this;
         }
-        
+
         public async Task<ClientAndService> Build()
         {
             var octopus = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
             octopus.Trust(serviceCertAndThumbprint.Thumbprint);
-            
+
             Uri serviceUri;
             HalibutTestBinaryRunner.RunningOldHalibutBinary runningOldHalibutBinary;
             if (serviceConnectionType == ServiceConnectionType.Polling)

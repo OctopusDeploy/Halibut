@@ -13,13 +13,12 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
 {
     public class HalibutTestBinaryRunner
     {
-
         // The port the binary should poll.
-        ServiceConnectionType serviceConnectionType;
-        int? clientServicePort;
-        CertAndThumbprint clientCertAndThumbprint;
-        CertAndThumbprint serviceCertAndThumbprint;
-        string version;
+        readonly ServiceConnectionType serviceConnectionType;
+        readonly int? clientServicePort;
+        readonly CertAndThumbprint clientCertAndThumbprint;
+        readonly CertAndThumbprint serviceCertAndThumbprint;
+        readonly string version;
 
         public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version)
         {
@@ -29,8 +28,6 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.version = version;
         }
-        
-        
 
         string BinaryDir(string version)
         {
@@ -59,7 +56,6 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
 
         public async Task<RunningOldHalibutBinary> Run()
         {
-            
             var envs = new Dictionary<string, string>();
             envs.Add("tentaclecertpath", serviceCertAndThumbprint.FilePath);
             envs.Add("octopusthumbprint", clientCertAndThumbprint.Thumbprint);
@@ -67,6 +63,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             {
                 envs.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
             }
+
             envs.Add("ServiceConnectionType", serviceConnectionType.ToString());
 
             CancellationTokenSource cts = new CancellationTokenSource();
@@ -103,6 +100,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                         {
                             serviceListenPort = Int32.Parse(Regex.Match(s, @"\d+").Value);
                         }
+
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                     };
 

@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.Tests.BackwardsCompatibility.Util;
 using Halibut.Tests.TestServices;
@@ -24,12 +23,11 @@ namespace Halibut.Tests.BackwardsCompatibility
                 var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
             }
         }
-        
-        
+
         [Test]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException_Listening()
         {
-            using (var clientAndService = await ClientAndOldServiceBuilder.Listening().WithVersion("5.0.429").Build())
+            using (var clientAndService = await ClientAndOldServiceBuilder.Listening().Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>(se =>
                 {
@@ -40,5 +38,5 @@ namespace Halibut.Tests.BackwardsCompatibility
                 var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
             }
         }
-    }   
+    }
 }

@@ -1,4 +1,4 @@
-using Halibut;
+using System;
 
 namespace Halibut.TestUtils.SampleProgram.v5_0_429
 {
