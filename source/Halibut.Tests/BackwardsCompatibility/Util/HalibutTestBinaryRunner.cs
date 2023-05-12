@@ -17,13 +17,14 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             var onDiskVersion = version.Replace(".", "_");
             var assemblyDir = new DirectoryInfo(Path.GetDirectoryName(typeof(HalibutTestBinaryRunner).Assembly.Location)!);
             var upAt = assemblyDir.Parent.Parent.Parent.Parent;
-            var executable = Path.Combine(upAt.FullName, $"Halibut.TestUtils.CompatBinary.v{onDiskVersion}", assemblyDir.Parent.Parent.Name, assemblyDir.Parent.Name, assemblyDir.Name, $"Halibut.TestUtils.CompatBinary.v{onDiskVersion}");
+            var projectName = $"Halibut.TestUtils.CompatBinary.v{onDiskVersion}";
+            var executable = Path.Combine(upAt.FullName, projectName, assemblyDir.Parent.Parent.Name, assemblyDir.Parent.Name, assemblyDir.Name, projectName);
             executable = AddExeForWindows(executable);
             if (!File.Exists(executable))
             {
                 throw new Exception("Could not executable at path:\n" +
                                     executable + "\n" +
-                                    "Do you need to ask your IDE to build it?\n" +
+                                    $"Did you forget to update the csproj to depend on {projectName}\n" +
                                     "If testing a previously untested version of Halibut a new project may be required.");
             }
 
