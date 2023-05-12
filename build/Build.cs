@@ -58,10 +58,6 @@ class Build : NukeBuild
         {
             DotNetRestore(s => s
                 .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut_TestUtils_CompatBinary_v5_0_429)));
-                
-            DotNetRestore(s => s
-                .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut))
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut_Tests)));
@@ -71,14 +67,6 @@ class Build : NukeBuild
         .DependsOn(Restore)
         .Executes(() =>
         {
-            DotNetBuild(s => s
-                .SetConfiguration(Configuration)
-                .SetVersion(OctoVersionInfo.FullSemVer)
-                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
-                .EnableNoRestore()
-                .CombineWith(ss => ss.SetProjectFile(Solution.Halibut_TestUtils_CompatBinary_v5_0_429))
-            );
-                
             DotNetBuild(s => s
                 .SetConfiguration(Configuration)
                 .SetVersion(OctoVersionInfo.FullSemVer)
