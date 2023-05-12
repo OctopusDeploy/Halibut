@@ -3,6 +3,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <LangVersion>9.0</LangVersion>
+        <RootNamespace>Halibut.TestUtils.SampleProgram.v5_0_429</RootNamespace>
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
@@ -17,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Halibut.TestUtils.SampleProgram.Base\Halibut.TestUtils.SampleProgram.Base.csproj" />
+      <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.Base\Halibut.TestUtils.CompatBinary.Base.csproj" />
     </ItemGroup>
 
 </Project>
