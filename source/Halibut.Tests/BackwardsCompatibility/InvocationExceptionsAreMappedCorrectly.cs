@@ -29,7 +29,7 @@ namespace Halibut.Tests.BackwardsCompatibility
         [Test]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException_Listening()
         {
-            using (var clientAndService = await ClientAndOldServiceBuilder.Listening().Build())
+            using (var clientAndService = await ClientAndOldServiceBuilder.Listening().WithVersion("5.0.429").Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>(se =>
                 {

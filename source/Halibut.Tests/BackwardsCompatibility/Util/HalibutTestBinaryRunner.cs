@@ -19,13 +19,15 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
         int? clientServicePort;
         CertAndThumbprint clientCertAndThumbprint;
         CertAndThumbprint serviceCertAndThumbprint;
+        string version;
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientServicePort = clientServicePort;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+            this.version = version;
         }
         
         
@@ -73,7 +75,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             {
                 var tmp = new TmpDirectory();
 
-                var (task, serviceListenPort) = await StartHalibutTestBinary(envs, tmp, cts.Token);
+                var (task, serviceListenPort) = await StartHalibutTestBinary(version, envs, tmp, cts.Token);
 
                 return new RunningOldHalibutBinary(cts, task, tmp, serviceListenPort);
             }
@@ -84,7 +86,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             }
         }
 
-        async Task<(Task, int?)> StartHalibutTestBinary(Dictionary<string, string> envs, TmpDirectory tmp, CancellationToken cancellationToken)
+        async Task<(Task, int?)> StartHalibutTestBinary(string version, Dictionary<string, string> envs, TmpDirectory tmp, CancellationToken cancellationToken)
         {
             var hasTentacleStarted = new ManualResetEventSlim();
             hasTentacleStarted.Reset();
@@ -104,7 +106,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                     };
 
-                    ShellExecutor.ExecuteCommand(BinaryDir("5.0.429"),
+                    ShellExecutor.ExecuteCommand(BinaryDir(version),
                         "",
                         tmp.FullPath,
                         processLogs,
