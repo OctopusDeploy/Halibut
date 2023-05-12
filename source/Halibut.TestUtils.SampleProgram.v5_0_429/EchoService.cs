@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using Halibut;
 
-namespace OldMate
+namespace Halibut.TestUtils.SampleProgram.v5_0_429
 {
     public class EchoService : IEchoService
     {

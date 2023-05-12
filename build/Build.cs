@@ -58,7 +58,7 @@ class Build : NukeBuild
         {
             DotNetRestore(s => s
                 .CombineWith(ss => ss
-                    .SetProjectFile(Solution.OldMate)));
+                    .SetProjectFile(Solution.Halibut_TestUtils_SampleProgram_v5_0_429)));
                 
             DotNetRestore(s => s
                 .CombineWith(ss => ss
@@ -76,7 +76,7 @@ class Build : NukeBuild
                 .SetVersion(OctoVersionInfo.FullSemVer)
                 .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
                 .EnableNoRestore()
-                .CombineWith(ss => ss.SetProjectFile(Solution.OldMate))
+                .CombineWith(ss => ss.SetProjectFile(Solution.Halibut_TestUtils_SampleProgram_v5_0_429))
             );
                 
             DotNetBuild(s => s
@@ -86,7 +86,7 @@ class Build : NukeBuild
                 .EnableNoRestore()
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut))
-                .CombineWith(ss => ss.SetProjectFile(Solution.OldMate))
+                .CombineWith(ss => ss.SetProjectFile(Solution.Halibut_TestUtils_SampleProgram_v5_0_429))
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut_Tests)));
         });

@@ -1,6 +1,6 @@
 using Halibut;
 
-namespace OldMate
+namespace Halibut.TestUtils.SampleProgram.v5_0_429
 {
     public interface IEchoService
     {

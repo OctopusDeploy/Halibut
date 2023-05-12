@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using Halibut;
 using Halibut.ServiceModel;
 
-namespace OldMate
+namespace Halibut.TestUtils.SampleProgram.v5_0_429
 {
     public class Program
     {
@@ -28,6 +27,10 @@ namespace OldMate
             using (var tentaclePolling = new HalibutRuntime(services, TentacleCert))
             {
                 tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), octopusThumbprint));
+                
+                Console.WriteLine("RunningAndReady");
+                Console.WriteLine("Will Now sleep");
+                Console.Out.Flush();
                 Thread.Sleep(1000000);
             }
             return 1;
