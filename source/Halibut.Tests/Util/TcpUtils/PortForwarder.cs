@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -8,7 +9,7 @@ using Serilog;
 
 namespace Halibut.Tests.Util.TcpUtils
 {
-    sealed class PortForwarder : IDisposable, IPortForwarder
+    public class PortForwarder : IDisposable, IPortForwarder
     {
         readonly Uri originServer;
         readonly Socket listeningSocket;
