@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using Halibut.ServiceModel;
+using Halibut.Tests.Util.TcpUtils;
 
 namespace Halibut.Tests.Util
 {

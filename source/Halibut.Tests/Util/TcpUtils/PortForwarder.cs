@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 
-namespace Halibut.Tests.Util
+namespace Halibut.Tests.Util.TcpUtils
 {
     sealed class PortForwarder : IDisposable, IPortForwarder
     {

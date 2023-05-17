@@ -1,14 +1,11 @@
 using System;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 
-namespace Halibut.Tests.Util
+namespace Halibut.Tests.Util.TcpUtils
 {
     public class TcpPump : IDisposable
     {
