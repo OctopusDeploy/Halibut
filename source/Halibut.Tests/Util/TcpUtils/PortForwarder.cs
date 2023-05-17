@@ -14,13 +14,14 @@ namespace Halibut.Tests.Util.TcpUtils
         readonly Socket listeningSocket;
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly List<TcpPump> pumps = new List<TcpPump>();
-        readonly ILogger logger = Log.ForContext<PortForwarder>();
+        readonly ILogger logger;
         readonly TimeSpan sendDelay;
         
         public int ListeningPort { get; }
 
         public PortForwarder(Uri originServer, TimeSpan sendDelay)
         {
+            logger = new SerilogLoggerBuilder().Build().ForContext<PortForwarder>();
             this.originServer = originServer;
             this.sendDelay = sendDelay;
             var scheme = originServer.Scheme;
@@ -51,7 +52,7 @@ namespace Halibut.Tests.Util.TcpUtils
                     var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                     var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
-                    var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay);
+                    var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, logger);
                     pump.Stopped += OnPortForwarderStopped;
                     lock (pumps)
                     {
