@@ -116,12 +116,6 @@ namespace Halibut.Tests.Util
             return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection);
         }
 
-        public enum ServiceConnectionType
-        {
-            Polling,
-            Listening
-        }
-
         public class ClientAndService : IDisposable
         {
             readonly HalibutRuntime octopus;

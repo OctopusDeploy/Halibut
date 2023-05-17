@@ -9,10 +9,16 @@ namespace Halibut.Tests
     {
         public static X509Certificate2 TentacleListening;
         public static string TentacleListeningPublicThumbprint;
+        public static string TentacleListeningPfxPath;
+        
         public static X509Certificate2 Octopus;
         public static string OctopusPublicThumbprint;
+        public static string OctopusPfxPath;
+        
         public static X509Certificate2 TentaclePolling;
         public static string TentaclePollingPublicThumbprint;
+        public static string TentaclePollingPfxPath;
+        
         public static X509Certificate2 Ssl;
         public static string SslThumbprint;
 
@@ -20,11 +26,16 @@ namespace Halibut.Tests
         {
             //jump through hoops to find certs because the nunit test runner is messing with directories
             var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).Assembly.CodeBase).LocalPath), "Certificates");
-            TentacleListening = new X509Certificate2(Path.Combine(directory, "TentacleListening.pfx"));
+            TentacleListeningPfxPath = Path.Combine(directory, "TentacleListening.pfx");
+            TentacleListening = new X509Certificate2(TentacleListeningPfxPath);
             TentacleListeningPublicThumbprint = TentacleListening.Thumbprint;
-            Octopus = new X509Certificate2(Path.Combine(directory, "Octopus.pfx"));
+
+            OctopusPfxPath = Path.Combine(directory, "Octopus.pfx");
+            Octopus = new X509Certificate2(OctopusPfxPath);
             OctopusPublicThumbprint = Octopus.Thumbprint;
-            TentaclePolling = new X509Certificate2(Path.Combine(directory, "TentaclePolling.pfx"));
+            
+            TentaclePollingPfxPath = Path.Combine(directory, "TentaclePolling.pfx");
+            TentaclePolling = new X509Certificate2(TentaclePollingPfxPath);
             TentaclePollingPublicThumbprint = TentaclePolling.Thumbprint;
             Ssl = new X509Certificate2(Path.Combine(directory, "Ssl.pfx"), "password");
             SslThumbprint = Ssl.Thumbprint;
