@@ -9,15 +9,15 @@ namespace Halibut.Tests.Util
         public static CertAndThumbprint TentaclePolling = new(Certificates.TentaclePollingPfxPath, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
         public static CertAndThumbprint Octopus = new(Certificates.OctopusPfxPath, Certificates.Octopus, Certificates.OctopusPublicThumbprint);
 
-        public CertAndThumbprint(string filePath, X509Certificate2 certificate2, string thumbprint)
+        public CertAndThumbprint(string certificatePfxPath, X509Certificate2 certificate2, string thumbprint)
         {
             Certificate2 = certificate2;
             Thumbprint = thumbprint;
-            FilePath = filePath;
+            CertificatePfxPath = certificatePfxPath;
         }
 
         public X509Certificate2 Certificate2 { get; }
-        public string FilePath { get; }
+        public string CertificatePfxPath { get; }
         public string Thumbprint { get; }
     }
 }

@@ -57,7 +57,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
         public async Task<RunningOldHalibutBinary> Run()
         {
             var envs = new Dictionary<string, string>();
-            envs.Add("tentaclecertpath", serviceCertAndThumbprint.FilePath);
+            envs.Add("tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath);
             envs.Add("octopusthumbprint", clientCertAndThumbprint.Thumbprint);
             if (clientServicePort != null)
             {

@@ -5,30 +5,30 @@ using Halibut.Tests.Util;
 
 namespace Halibut.Tests.BackwardsCompatibility.Util
 {
-    public class ClientAndOldServiceBuilder
+    public class ClientAndPreviousVersionServiceBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         string version = "5.0.429";
 
-        ClientAndOldServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        ClientAndPreviousVersionServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
         }
 
-        public static ClientAndOldServiceBuilder Polling()
+        public static ClientAndPreviousVersionServiceBuilder WithPollingService()
         {
-            return new ClientAndOldServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            return new ClientAndPreviousVersionServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
-        public static ClientAndOldServiceBuilder Listening()
+        public static ClientAndPreviousVersionServiceBuilder WithListeningService()
         {
-            return new ClientAndOldServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            return new ClientAndPreviousVersionServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
-        public ClientAndOldServiceBuilder WithVersion(string version)
+        public ClientAndPreviousVersionServiceBuilder WithServiceVersion(string version)
         {
             this.version = version;
             return this;
@@ -36,6 +36,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
 
         public async Task<ClientAndService> Build()
         {
+            if (version == null) throw new Exception("The version of the service must be set.");
             var octopus = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
             octopus.Trust(serviceCertAndThumbprint.Thumbprint);
 

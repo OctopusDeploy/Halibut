@@ -16,11 +16,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
             throw new Exception();
         }
 
-        public static Action OnLongRunningOperation { get; set; }
-
         public int LongRunningOperation()
         {
-            OnLongRunningOperation();
             Thread.Sleep(10000);
             return 12;
         }
