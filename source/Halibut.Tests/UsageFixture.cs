@@ -12,6 +12,7 @@ using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
+using Halibut.Tests.Util.TcpUtils;
 using NUnit.Framework;
 
 namespace Halibut.Tests

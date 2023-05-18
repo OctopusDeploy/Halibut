@@ -5,7 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Halibut.Tests.Util
+namespace Halibut.Tests.Util.TcpUtils
 {
 
     public class SocketPump
@@ -69,7 +69,6 @@ namespace Halibut.Tests.Util
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 ArraySegment<byte> outputBuffer = new ArraySegment<byte>(inputBuffer, offset, totalBytesToSend - offset);
-                ReadOnlyMemory<byte> readOnlyMemory = outputBuffer;
 #if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
                 offset += await writeTo.SendAsync(outputBuffer, SocketFlags.None).ConfigureAwait(false);
 #else

@@ -7,6 +7,7 @@ using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
+using Halibut.Tests.Util.TcpUtils;
 using Halibut.Transport.Proxy;
 using NUnit.Framework;
 

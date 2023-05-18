@@ -1,14 +1,11 @@
 using System;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 
-namespace Halibut.Tests.Util
+namespace Halibut.Tests.Util.TcpUtils
 {
     public class TcpPump : IDisposable
     {
@@ -17,15 +14,16 @@ namespace Halibut.Tests.Util
         readonly Socket originSocket;
         readonly EndPoint originEndPoint;
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        readonly ILogger logger = Log.ForContext<TcpPump>();
+        readonly ILogger logger;
         readonly TimeSpan sendDelay;
         bool isDisposing;
         bool isDisposed;
         public bool IsPaused { get; set; }
         
 
-        public TcpPump(Socket clientSocket, Socket originSocket, EndPoint originEndPoint, TimeSpan sendDelay)
+        public TcpPump(Socket clientSocket, Socket originSocket, EndPoint originEndPoint, TimeSpan sendDelay, ILogger logger)
         {
+            this.logger = logger.ForContext<TcpPump>(); 
             this.clientSocket = clientSocket ?? throw new ArgumentNullException(nameof(clientSocket));
             this.originSocket = originSocket ?? throw new ArgumentNullException(nameof(originSocket));
             this.originEndPoint = originEndPoint ?? throw new ArgumentNullException(nameof(originEndPoint));

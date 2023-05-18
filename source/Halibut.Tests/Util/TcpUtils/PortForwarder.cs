@@ -1,26 +1,28 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 
-namespace Halibut.Tests.Util
+namespace Halibut.Tests.Util.TcpUtils
 {
-    sealed class PortForwarder : IDisposable, IPortForwarder
+    public class PortForwarder : IDisposable, IPortForwarder
     {
         readonly Uri originServer;
         readonly Socket listeningSocket;
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly List<TcpPump> pumps = new List<TcpPump>();
-        readonly ILogger logger = Log.ForContext<PortForwarder>();
+        readonly ILogger logger;
         readonly TimeSpan sendDelay;
         
         public int ListeningPort { get; }
 
         public PortForwarder(Uri originServer, TimeSpan sendDelay)
         {
+            logger = new SerilogLoggerBuilder().Build().ForContext<PortForwarder>();
             this.originServer = originServer;
             this.sendDelay = sendDelay;
             var scheme = originServer.Scheme;
@@ -51,7 +53,7 @@ namespace Halibut.Tests.Util
                     var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                     var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
-                    var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay);
+                    var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, logger);
                     pump.Stopped += OnPortForwarderStopped;
                     lock (pumps)
                     {
