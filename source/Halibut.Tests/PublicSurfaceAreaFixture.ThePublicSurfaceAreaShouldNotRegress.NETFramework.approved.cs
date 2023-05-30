@@ -326,6 +326,9 @@ namespace Halibut.ServiceModel
         public HalibutProxyRequestOptions(Nullable<System.Threading.CancellationToken> connectCancellationToken) { }
         public Nullable<System.Threading.CancellationToken> ConnectCancellationToken { get; }
     }
+    public interface IHalibutProxy
+    {
+    }
     public interface IPendingRequestQueue
     {
         public bool IsEmpty { get; }
