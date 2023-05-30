@@ -328,6 +328,14 @@ namespace Halibut.ServiceModel
         public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, Halibut.Diagnostics.ILog logger) { }
         public void Configure(Func<Halibut.Transport.Protocol.RequestMessage, System.Threading.CancellationToken, Halibut.Transport.Protocol.ResponseMessage> messageRouter, Type contractType, Halibut.ServiceEndPoint endPoint, Halibut.Diagnostics.ILog logger, System.Threading.CancellationToken cancellationToken) { }
     }
+    public class HalibutProxyRequestOptions
+    {
+        public HalibutProxyRequestOptions(Nullable<System.Threading.CancellationToken> connectCancellationToken) { }
+        public Nullable<System.Threading.CancellationToken> ConnectCancellationToken { get; }
+    }
+    public interface IHalibutProxy
+    {
+    }
     public interface IPendingRequestQueue
     {
         public bool IsEmpty { get; }
