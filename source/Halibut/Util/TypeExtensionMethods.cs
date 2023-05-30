@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Halibut.ServiceModel;
 
 namespace Halibut.Util
 {
@@ -20,7 +21,7 @@ namespace Halibut.Util
 
         public static bool AllowedOnHalibutInterface(this Type type)
         {
-            if (type == typeof(object) || type == typeof(Task))
+            if (type == typeof(object) || type == typeof(Task) || type == typeof(HalibutProxyRequestOptions))
             {
                 return false;
             }

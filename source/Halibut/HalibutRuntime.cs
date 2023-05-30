@@ -206,7 +206,7 @@ namespace Halibut
             var logger = logs.ForEndpoint(endpoint.BaseUri);
 #if HAS_REAL_PROXY
 #pragma warning disable 618
-            return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, logger, cancellationToken).GetTransparentProxy();
+            return (TClientService)new HalibutProxy(SendOutgoingRequest, typeof(TService), typeof(TClientService), endpoint, logger, cancellationToken).GetTransparentProxy();
 #pragma warning restore 618
 #else
             var proxy = DispatchProxy.Create<TClientService, HalibutProxy>();

@@ -54,6 +54,7 @@ namespace Halibut
         public int Listen() { }
         public int Listen(int port) { }
         public int Listen(IPEndPoint endpoint) { }
+        public TClientService CreateClient<TService, TClientService>(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint) { }
         public TService CreateClient<TService>(Halibut.ServiceEndPoint endpoint, System.Threading.CancellationToken cancellationToken) { }
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint) { }
@@ -319,6 +320,11 @@ namespace Halibut.ServiceModel
         public IReadOnlyList<Type> RegisteredServiceTypes { get; }
         public Halibut.ServiceModel.IServiceLease CreateService(string serviceName) { }
         public void Register<TContract>(Func<TContract> implementation) { }
+    }
+    public class HalibutProxyRequestOptions
+    {
+        public HalibutProxyRequestOptions(Nullable<System.Threading.CancellationToken> connectCancellationToken) { }
+        public Nullable<System.Threading.CancellationToken> ConnectCancellationToken { get; }
     }
     public interface IPendingRequestQueue
     {
