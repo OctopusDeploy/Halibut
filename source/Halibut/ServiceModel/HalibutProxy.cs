@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 
 using System.Threading;
@@ -89,7 +90,7 @@ namespace Halibut.ServiceModel
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
-        CancellationToken cancellationToken;
+        CancellationToken globalCancellationToken;
         ILog logger;
 
         public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint,  ILog logger)
@@ -102,7 +103,7 @@ namespace Halibut.ServiceModel
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
-            this.cancellationToken = cancellationToken;
+            this.globalCancellationToken = cancellationToken;
             this.configured = true;
             this.logger = logger;
         }
@@ -112,9 +113,13 @@ namespace Halibut.ServiceModel
             if (!configured)
                 throw new Exception("Proxy not configured");
 
+            var bits = TrimOffHalibutProxyRequestOptions(args);
+            args = bits.args;
+            var halibutProxyRequestOptions = bits.halibutProxyRequestOptions;
+
             var request = CreateRequest(targetMethod, args);
 
-            var response = DispatchRequest(request);
+            var response = DispatchRequest(request, ConnectingCancellationToken(halibutProxyRequestOptions));
 
             EnsureNotError(response);
 
@@ -145,11 +150,23 @@ namespace Halibut.ServiceModel
             return request;
         }
 
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
+        ResponseMessage DispatchRequest(RequestMessage requestMessage, CancellationToken connectCancellationToken)
         {
-            return messageRouter(requestMessage, cancellationToken);
+            return messageRouter(requestMessage, connectCancellationToken);
         }
 #endif
+        
+        CancellationToken ConnectingCancellationToken(HalibutProxyRequestOptions halibutProxyRequestOptions)
+        {
+            if (halibutProxyRequestOptions == null || halibutProxyRequestOptions.ConnectCancellationToken == null)
+            {
+                return globalCancellationToken;
+            }
+
+            CancellationToken ct = (CancellationToken) halibutProxyRequestOptions.ConnectCancellationToken;
+            return CancellationTokenSource.CreateLinkedTokenSource(globalCancellationToken, ct).Token;
+        }
+        
         void EnsureNotError(ResponseMessage responseMessage)
         {
             if (responseMessage == null)
@@ -208,6 +225,17 @@ namespace Halibut.ServiceModel
 
             throw new HalibutClientException(error.Message, realException);
             
+        }
+
+        internal static (object[] args, HalibutProxyRequestOptions halibutProxyRequestOptions) TrimOffHalibutProxyRequestOptions(object[] args)
+        {
+            if (args.Length == 0) return (args, null);
+            object last = args.Last();
+            if (last is not HalibutProxyRequestOptions) return (args, null);
+
+            args = args[..^1];
+
+            return (args, (HalibutProxyRequestOptions) last);
         }
     }
 }

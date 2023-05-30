@@ -194,8 +194,13 @@ namespace Halibut
         {
             return CreateClient<TService>(endpoint, CancellationToken.None);
         }
-        
+
         public TService CreateClient<TService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
+            return CreateClient<TService, TService>(endpoint, cancellationToken);
+        }
+
+        public TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             typeRegistry.AddToMessageContract(typeof(TService));
             var logger = logs.ForEndpoint(endpoint.BaseUri);
@@ -204,7 +209,7 @@ namespace Halibut
             return (TService)new HalibutProxy(SendOutgoingRequest, typeof(TService), endpoint, logger, cancellationToken).GetTransparentProxy();
 #pragma warning restore 618
 #else
-            var proxy = DispatchProxy.Create<TService, HalibutProxy>();
+            var proxy = DispatchProxy.Create<TClientService, HalibutProxy>();
 #pragma warning disable 618
             (proxy as HalibutProxy).Configure(SendOutgoingRequest, typeof(TService), endpoint, logger, cancellationToken);
 #pragma warning restore 618
