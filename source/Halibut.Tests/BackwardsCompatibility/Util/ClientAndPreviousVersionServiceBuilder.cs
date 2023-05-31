@@ -28,6 +28,19 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             return new ClientAndPreviousVersionServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
+        public static ClientAndPreviousVersionServiceBuilder WithService(ServiceConnectionType connectionType)
+        {
+            switch (connectionType)
+            {
+                case ServiceConnectionType.Polling:
+                    return WithPollingService();
+                case ServiceConnectionType.Listening:
+                    return WithListeningService();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(connectionType), connectionType, null);
+            }
+        }
+
         public ClientAndPreviousVersionServiceBuilder WithServiceVersion(string version)
         {
             this.version = version;
@@ -90,6 +103,13 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
                 return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
+            }
+            
+            public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
+            {
+                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                modifyServiceEndpoint(serviceEndpoint);
+                return octopus.CreateClient<TService, TClientService>(serviceEndpoint, cancellationToken);
             }
 
             public void Dispose()
