@@ -159,8 +159,7 @@ namespace Halibut.ServiceModel
                 return globalCancellationToken;
             }
 
-            CancellationToken ct = (CancellationToken) halibutProxyRequestOptions.ConnectCancellationToken;
-            return CancellationTokenSource.CreateLinkedTokenSource(globalCancellationToken, ct).Token;
+            return (CancellationToken) halibutProxyRequestOptions.ConnectCancellationToken;
         }
         
         void EnsureNotError(ResponseMessage responseMessage)

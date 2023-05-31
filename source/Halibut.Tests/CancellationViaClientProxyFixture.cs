@@ -62,7 +62,7 @@ namespace Halibut.Tests
                         se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
                         se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
                     });
-
+                
                 var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
                 res.Should().Be("Hello!!");
             }
