@@ -34,7 +34,6 @@ namespace Halibut
         /// Creates a Halibut client mapping the methods from TClientService to TService.
         /// </summary>
         /// <param name="endpoint"></param>
-        /// <param name="cancellationToken"></param>
         /// <typeparam name="TService">The interface the remote service implements.</typeparam>
         /// <typeparam name="TClientService">The type that will be returned. Must have the same methods as TService except
         /// that each method may have an additional argument at the end of HalibutProxyRequestOptions. When requests are made
@@ -45,7 +44,7 @@ namespace Halibut
         /// TClientService would be: IClientFoo { void Bar(string, HalibutProxyRequestOptions); }
         /// </typeparam>
         /// <returns></returns>
-        public TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint, CancellationToken cancellationToken);
+        public TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint);
         void Trust(string clientThumbprint);
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);

@@ -200,7 +200,12 @@ namespace Halibut
             return CreateClient<TService, TService>(endpoint, cancellationToken);
         }
 
-        public TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        public TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint)
+        {
+            return CreateClient<TService, TClientService>(endpoint, CancellationToken.None);
+        }
+
+        private TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             typeRegistry.AddToMessageContract(typeof(TService));
             var logger = logs.ForEndpoint(endpoint.BaseUri);

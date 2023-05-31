@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.BackwardsCompatibility.Util;
 using Halibut.Tests.TestServices;
@@ -26,20 +25,19 @@ namespace Halibut.Tests
                 new Random().NextBytes(data);
 
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(point =>
-                {
-                    point.RetryCountLimit = 1000000;
-                    point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
-                },
-                    CancellationToken.None);
+                    {
+                        point.RetryCountLimit = 1000000;
+                        point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
+                    });
 
-                CancellationTokenSource cts = new CancellationTokenSource();
+                var cts = new CancellationTokenSource();
                 cts.CancelAfter(TimeSpan.FromMilliseconds(100));
                 var func = new Func<string>(() => echo.SayHello("hello", new HalibutProxyRequestOptions(cts.Token)));
-                var ex = Assert.Throws<Halibut.HalibutClientException>(() => echo.SayHello("hello", new HalibutProxyRequestOptions(cts.Token)));
+                var ex = Assert.Throws<HalibutClientException>(() => echo.SayHello("hello", new HalibutProxyRequestOptions(cts.Token)));
                 ex.Message.Should().ContainAny("The operation was canceled");
             }
         }
-        
+
         [Test]
         public void CannotHaveServiceWithHalibutProxyRequestOptions()
         {
@@ -48,7 +46,6 @@ namespace Halibut.Tests
                        .WithService(new AmNotAllowed())
                        .Build())
             {
-
                 Assert.Throws<TypeNotAllowedException>(() => clientAndService.CreateClient<IAmNotAllowed>());
             }
         }
@@ -61,11 +58,10 @@ namespace Halibut.Tests
             using (var clientAndService = await ClientAndPreviousVersionServiceBuilder.WithService(serviceConnectionType).WithServiceVersion("5.0.429").Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
-                {
-                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
-                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
-                },
-                    CancellationToken.None);
+                    {
+                        se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
+                        se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
+                    });
 
                 var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
                 res.Should().Be("Hello!!");

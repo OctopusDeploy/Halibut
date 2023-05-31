@@ -105,11 +105,11 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
             
-            public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
+            public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
-                return octopus.CreateClient<TService, TClientService>(serviceEndpoint, cancellationToken);
+                return octopus.CreateClient<TService, TClientService>(serviceEndpoint);
             }
 
             public void Dispose()
