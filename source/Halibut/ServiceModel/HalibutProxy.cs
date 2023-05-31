@@ -39,11 +39,11 @@ namespace Halibut.ServiceModel
 
             try
             {
-                var bits = TrimOffHalibutProxyRequestOptions(methodCall.Args);
+                var trimmedArgsAndHalibutProxyRequestOptions = TrimOffHalibutProxyRequestOptions(methodCall.Args);
                 
-                var request = CreateRequest(methodCall, bits.args);
+                var request = CreateRequest(methodCall, trimmedArgsAndHalibutProxyRequestOptions.args);
 
-                var response = DispatchRequest(request, ConnectingCancellationToken(bits.halibutProxyRequestOptions));
+                var response = DispatchRequest(request, ConnectingCancellationToken(trimmedArgsAndHalibutProxyRequestOptions.halibutProxyRequestOptions));
 
                 EnsureNotError(response);
 
@@ -110,9 +110,9 @@ namespace Halibut.ServiceModel
             if (!configured)
                 throw new Exception("Proxy not configured");
 
-            var bits = TrimOffHalibutProxyRequestOptions(args);
-            args = bits.args;
-            var halibutProxyRequestOptions = bits.halibutProxyRequestOptions;
+            var trimmedArgsAndHalibutProxyRequestOptions = TrimOffHalibutProxyRequestOptions(args);
+            args = trimmedArgsAndHalibutProxyRequestOptions.args;
+            var halibutProxyRequestOptions = trimmedArgsAndHalibutProxyRequestOptions.halibutProxyRequestOptions;
 
             var request = CreateRequest(targetMethod, args);
 
