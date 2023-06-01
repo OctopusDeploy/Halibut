@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Reflection;
 
 using System.Threading;
@@ -16,17 +17,17 @@ namespace Halibut.ServiceModel
         readonly Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter;
         readonly Type contractType;
         readonly ServiceEndPoint endPoint;
-        readonly CancellationToken cancellationToken;
+        readonly CancellationToken globalCancellationToken;
         long callId;
         ILog logger;
         
-        public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint, ILog logger, CancellationToken cancellationToken)
-            : base(contractType)
+        public HalibutProxy(Func<RequestMessage, CancellationToken, ResponseMessage> messageRouter, Type contractType, Type proxyType, ServiceEndPoint endPoint, ILog logger, CancellationToken cancellationToken)
+            : base(proxyType)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
-            this.cancellationToken = cancellationToken;
+            this.globalCancellationToken = cancellationToken;
             this.logger = logger;
         }
 
@@ -38,9 +39,11 @@ namespace Halibut.ServiceModel
 
             try
             {
-                var request = CreateRequest(methodCall);
+                var trimmedArgsAndHalibutProxyRequestOptions = TrimOffHalibutProxyRequestOptions(methodCall.Args);
+                
+                var request = CreateRequest(methodCall, trimmedArgsAndHalibutProxyRequestOptions.args);
 
-                var response = DispatchRequest(request);
+                var response = DispatchRequest(request, ConnectingCancellationToken(trimmedArgsAndHalibutProxyRequestOptions.halibutProxyRequestOptions));
 
                 EnsureNotError(response);
 
@@ -60,7 +63,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        RequestMessage CreateRequest(IMethodMessage methodCall)
+        RequestMessage CreateRequest(IMethodMessage methodCall, object[] args)
         {
             var activityId = Guid.NewGuid();
 
@@ -72,14 +75,9 @@ namespace Halibut.ServiceModel
                 Destination = endPoint,
                 MethodName = method.Name,
                 ServiceName = contractType.Name,
-                Params = methodCall.Args
+                Params = args
             };
             return request;
-        }
-
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
-        {
-            return messageRouter(requestMessage, cancellationToken);
         }
 #else
     public class HalibutProxy : DispatchProxy
@@ -89,7 +87,7 @@ namespace Halibut.ServiceModel
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
-        CancellationToken cancellationToken;
+        CancellationToken globalCancellationToken;
         ILog logger;
 
         public void Configure(Func<RequestMessage, ResponseMessage> messageRouter, Type contractType, ServiceEndPoint endPoint,  ILog logger)
@@ -102,7 +100,7 @@ namespace Halibut.ServiceModel
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
-            this.cancellationToken = cancellationToken;
+            this.globalCancellationToken = cancellationToken;
             this.configured = true;
             this.logger = logger;
         }
@@ -112,9 +110,13 @@ namespace Halibut.ServiceModel
             if (!configured)
                 throw new Exception("Proxy not configured");
 
+            var trimmedArgsAndHalibutProxyRequestOptions = TrimOffHalibutProxyRequestOptions(args);
+            args = trimmedArgsAndHalibutProxyRequestOptions.args;
+            var halibutProxyRequestOptions = trimmedArgsAndHalibutProxyRequestOptions.halibutProxyRequestOptions;
+
             var request = CreateRequest(targetMethod, args);
 
-            var response = DispatchRequest(request);
+            var response = DispatchRequest(request, ConnectingCancellationToken(halibutProxyRequestOptions));
 
             EnsureNotError(response);
 
@@ -144,12 +146,22 @@ namespace Halibut.ServiceModel
             };
             return request;
         }
-
-        ResponseMessage DispatchRequest(RequestMessage requestMessage)
-        {
-            return messageRouter(requestMessage, cancellationToken);
-        }
+        
 #endif
+        ResponseMessage DispatchRequest(RequestMessage requestMessage, CancellationToken connectCancellationToken)
+        {
+            return messageRouter(requestMessage, connectCancellationToken);
+        }
+        CancellationToken ConnectingCancellationToken(HalibutProxyRequestOptions halibutProxyRequestOptions)
+        {
+            if (halibutProxyRequestOptions == null || halibutProxyRequestOptions.ConnectCancellationToken == null)
+            {
+                return globalCancellationToken;
+            }
+
+            return (CancellationToken) halibutProxyRequestOptions.ConnectCancellationToken;
+        }
+        
         void EnsureNotError(ResponseMessage responseMessage)
         {
             if (responseMessage == null)
@@ -208,6 +220,17 @@ namespace Halibut.ServiceModel
 
             throw new HalibutClientException(error.Message, realException);
             
+        }
+
+        internal static (object[] args, HalibutProxyRequestOptions halibutProxyRequestOptions) TrimOffHalibutProxyRequestOptions(object[] args)
+        {
+            if (args.Length == 0) return (args, null);
+            object last = args.Last();
+            if (last is not HalibutProxyRequestOptions) return (args, null);
+
+            args = args.Take(args.Length - 1).ToArray();
+
+            return (args, (HalibutProxyRequestOptions) last);
         }
     }
 }
