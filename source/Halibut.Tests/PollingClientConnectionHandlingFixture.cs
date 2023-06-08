@@ -128,7 +128,7 @@ namespace Halibut.Tests
         static PortForwarder SetupPortForwarder(IHalibutRuntime halibut)
         {
             var octopusPort = halibut.Listen();
-            var portForwarder = new PortForwarder(new Uri("https://localhost:" + (octopusPort)), TimeSpan.Zero);
+            var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(octopusPort).Build();
 
             return portForwarder;
         }

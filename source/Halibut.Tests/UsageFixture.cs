@@ -233,7 +233,7 @@ namespace Halibut.Tests
                 var octopusPort = octopus.Listen();
                 octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
 
-                using (var loadBalancer = new PortForwarder(new Uri("https://localhost:" + octopusPort), TimeSpan.FromMilliseconds(10)))
+                using (var loadBalancer = PortForwarderBuilder.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(10)).Build())
                 {
 
                     tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + loadBalancer.PublicEndpoint.Port), Certificates.OctopusPublicThumbprint));

@@ -1,36 +1,39 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Logging;
+using Halibut.Tests.Util.TcpUtils;
+using NUnit.Framework.Constraints;
 using Serilog;
 
 namespace Halibut.Tests.Util.TcpUtils
 {
-    public class PortForwarder : IDisposable, IPortForwarder
+    public class PortForwarder : IDisposable
     {
         readonly Uri originServer;
-        readonly Socket listeningSocket;
+        Socket? listeningSocket;
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        readonly List<TcpPump> pumps = new List<TcpPump>();
+        readonly List<TcpPump> pumps = new();
         readonly ILogger logger;
         readonly TimeSpan sendDelay;
-        
+        Func<BiDirectionalDataTransferObserver> factory;
+        bool active = false;
+
         public int ListeningPort { get; }
 
-        public PortForwarder(Uri originServer, TimeSpan sendDelay)
+        public PortForwarder(Uri originServer, TimeSpan sendDelay, Func<BiDirectionalDataTransferObserver> factory, int? listeningPort = null)
         {
             logger = new SerilogLoggerBuilder().Build().ForContext<PortForwarder>();
             this.originServer = originServer;
             this.sendDelay = sendDelay;
+            this.factory = factory;
             var scheme = originServer.Scheme;
 
-            listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            listeningSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
-            listeningSocket.Listen(0);
-            logger.Information("Listening on {LoadBalancerEndpoint}", listeningSocket.LocalEndPoint?.ToString());
+            Start();
 
             ListeningPort = ((IPEndPoint)listeningSocket.LocalEndPoint).Port;
             PublicEndpoint = new UriBuilder(scheme, "localhost", ListeningPort).Uri;
@@ -38,40 +41,128 @@ namespace Halibut.Tests.Util.TcpUtils
             Task.Factory.StartNew(() => WorkerTask(cancellationTokenSource.Token).ConfigureAwait(false), TaskCreationOptions.LongRunning);
         }
 
-        public Uri PublicEndpoint { get; }
+        private void Start()
+        {
+            if (active)
+            {
+                throw new InvalidOperationException("PortForwarder is already started");
+            }
+
+            listeningSocket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+            listeningSocket!.Bind(new IPEndPoint(IPAddress.Loopback, ListeningPort));
+
+            try
+            {
+                listeningSocket.Listen(int.MaxValue);
+            }
+            catch (SocketException)
+            {
+                Stop();
+                throw;
+            }
+            logger.Information("Listening on {LoadBalancerEndpoint}", listeningSocket.LocalEndPoint?.ToString());
+            active = true;
+        }
+
+        private void Stop()
+        {
+            active = false;
+            listeningSocket?.Dispose();
+            listeningSocket = null;
+            logger.Information("Stopped listening");
+            CloseExistingConnections();
+        }
+
+        public Uri PublicEndpoint { get; set; }
+
+        public bool KillNewConnectionsImmediatlyMode { get; set; }
+
+        public void EnterKillNewAndExistingConnectionsMode()
+        {
+            KillNewConnectionsImmediatlyMode = true;
+            this.CloseExistingConnections();
+        }
+        
+        public void ReturnToNormalMode()
+        {
+            KillNewConnectionsImmediatlyMode = false;
+        }
 
         async Task WorkerTask(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Yield();
-
-                try
+                if (active)
                 {
-                    var clientSocket = await listeningSocket.AcceptAsync();
-
-                    var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
-                    var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-
-                    var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, logger);
-                    pump.Stopped += OnPortForwarderStopped;
-                    lock (pumps)
+                    try
                     {
-                        pumps.Add(pump);
-                    }
+                        var clientSocket = await listeningSocket?.AcceptAsync();
 
-                    pump.Start();
+                        if (!active || KillNewConnectionsImmediatlyMode || cancellationToken.IsCancellationRequested)
+                        {
+
+                            CloseSocketIgnoringErrors(clientSocket);
+
+                            if(!active) throw new OperationCanceledException("Port forwarder is not active");
+                            continue;
+                        }
+
+                        var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
+                        var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
+                        var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, factory, logger);
+                        AddNewPump(pump, cancellationToken);
+                    }
+                    catch (SocketException ex)
+                    {
+                        // This will occur normally on teardown.
+                        logger.Verbose(ex, "Socket Error accepting new connection {Message}", ex.Message);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, "Error accepting new connection {Message}", ex.Message);
+                    }
                 }
-                catch (SocketException ex)
+                else
                 {
-                    // This will occur normally on teardown.
-                    logger.Verbose(ex, "Socket Error accepting new connection {Message}", ex.Message);
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex, "Error accepting new connection {Message}", ex.Message);
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
                 }
             }
+        }
+
+        private static void CloseSocketIgnoringErrors(Socket clientSocket)
+        {
+            DoIgnoringException(() => clientSocket.Shutdown(SocketShutdown.Both));
+            DoIgnoringException(() => clientSocket.Close(0));
+            DoIgnoringException(() => clientSocket.Dispose());
+        }
+
+        private void AddNewPump(TcpPump pump, CancellationToken cancellationToken)
+        {
+            
+            lock (pumps)
+            {
+                if (cancellationToken.IsCancellationRequested || !active || KillNewConnectionsImmediatlyMode)
+                {
+                    try
+                    {
+                        pump.Dispose();
+                    }
+                    catch (Exception)
+                    {
+                        
+                    }
+                }
+                else
+                {
+                    pump.Stopped += OnPortForwarderStopped;
+                    pumps.Add(pump);
+                }
+            }
+
+            pump.Start();
         }
 
         void OnPortForwarderStopped(object sender, EventArgs e)
@@ -88,6 +179,17 @@ namespace Halibut.Tests.Util.TcpUtils
             }
         }
 
+        public void UnPauseExistingConnections()
+        {
+            lock (pumps)
+            {
+                foreach (var pump in pumps)
+                {
+                    pump.UnPause();
+                }
+            }
+        }
+
         public void PauseExistingConnections()
         {
             lock (pumps)
@@ -101,11 +203,13 @@ namespace Halibut.Tests.Util.TcpUtils
 
         public void CloseExistingConnections()
         {
+            logger.Information("Closing existing connections");
             DisposePumps();
         }
 
         List<Exception> DisposePumps()
         {
+            logger.Information("Start Dispose Pumps");
             var exceptions = new List<Exception>();
 
             lock (pumps)
@@ -125,19 +229,38 @@ namespace Halibut.Tests.Util.TcpUtils
                 }
             }
 
+            logger.Information("Fisinshed Dispose Pumps");
+
             return exceptions;
         }
 
         public void Dispose()
         {
             if(!cancellationTokenSource.IsCancellationRequested) cancellationTokenSource.Cancel();
-            listeningSocket.Close();
 
             var exceptions = DisposePumps();
 
             try
             {
-                listeningSocket.Dispose();
+                listeningSocket?.Shutdown(SocketShutdown.Both);
+            }
+            catch (Exception e)
+            {
+                exceptions.Add(e);
+            }
+
+            try
+            {
+                listeningSocket?.Close(0);
+            }
+            catch (Exception e)
+            {
+                exceptions.Add(e);
+            }
+
+            try
+            {
+                listeningSocket?.Dispose();
             }
             catch (Exception e)
             {
@@ -153,9 +276,21 @@ namespace Halibut.Tests.Util.TcpUtils
                 exceptions.Add(e);
             }
 
-            if (exceptions.Count > 0)
+            if (exceptions.Count(x => x is not ObjectDisposedException &&
+                    !(x is SocketException && x.Message.Contains("A request to send or receive data was disallowed because the socket is not connected"))) > 0)
             {
-                throw new AggregateException(exceptions);
+                logger.Warning(new AggregateException(exceptions), "Exceptions where thrown when Disposing of the PortForwarder");
+            }
+        }
+
+        private static void DoIgnoringException(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception)
+            {
             }
         }
     }
