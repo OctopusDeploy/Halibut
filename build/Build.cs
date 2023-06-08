@@ -137,8 +137,8 @@ class Build : NukeBuild
 
     Target Default => _ => _
         .DependsOn(Pack)
-        .DependsOn(PackTestPortForwarder)
-        .DependsOn(CopyToLocalPackages);
+        .DependsOn(CopyToLocalPackages)
+        .DependsOn(PackTestPortForwarder);
 
     public static int Main () => Execute<Build>(x => x.Default);
 }
