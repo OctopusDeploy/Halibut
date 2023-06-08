@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <LangVersion>9.0</LangVersion>
+        <RootNamespace>Octopus.TestPortForwarder</RootNamespace>
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">

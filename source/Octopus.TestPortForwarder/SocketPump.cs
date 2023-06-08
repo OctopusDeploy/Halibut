@@ -4,9 +4,8 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.TestUtils.PortForwarder.TcpUtils;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Octopus.TestPortForwarder
 {
 
     public class SocketPump

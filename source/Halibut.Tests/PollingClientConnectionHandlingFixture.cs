@@ -6,9 +6,8 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
-using Halibut.Tests.Util.TcpUtils;
-using Halibut.TestUtils.PortForwarder.TcpUtils;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {

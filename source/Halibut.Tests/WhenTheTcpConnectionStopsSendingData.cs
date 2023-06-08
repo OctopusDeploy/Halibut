@@ -5,9 +5,8 @@ using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
-using Halibut.Tests.Util.TcpUtils;
-using Halibut.TestUtils.PortForwarder.TcpUtils;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -18,7 +17,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder.Listening()
                        .WithService<IEchoService>(new EchoService())
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
+                       .WithPortForwarding()
                        .Build())
             {
                 var data = new byte[1024];
@@ -28,7 +27,7 @@ namespace Halibut.Tests
 
                 echo.SayHello("Bob");
 
-                (clientAndService.portForwarder as PortForwarder).PauseExistingConnections();
+                clientAndService.portForwarder.PauseExistingConnections();
 
                 var sayHelloTask = Task.Run(() => echo.SayHello("Bob"));
 

@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Halibut.TestUtils.PortForwarder.TcpUtils;
 using Serilog;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     public class PortForwarderBuilder
     {
@@ -43,9 +42,9 @@ namespace Halibut.Tests.Util.TcpUtils
             return this;
         }
 
-        public PortForwarder Build()
+        public Octopus.TestPortForwarder.PortForwarder Build()
         {
-            return new PortForwarder(originServer, sendDelay, () =>
+            return new Octopus.TestPortForwarder.PortForwarder(originServer, sendDelay, () =>
                 {
                     var results = observerFactory.Select(factory => factory()).ToArray();
                     return BiDirectionalDataTransferObserver.Combiner(results);

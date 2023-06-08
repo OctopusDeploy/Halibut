@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Halibut.Tests.Util.TcpUtils;
 
-namespace Halibut.TestUtils.PortForwarder.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     public class DataTransferObserverBuilder
     {

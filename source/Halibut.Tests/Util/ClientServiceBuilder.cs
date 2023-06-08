@@ -1,8 +1,7 @@
 using System;
 using System.Threading;
 using Halibut.ServiceModel;
-using Halibut.Tests.Util.TcpUtils;
-using Halibut.TestUtils.PortForwarder.TcpUtils;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Util
 {

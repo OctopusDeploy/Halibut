@@ -42,7 +42,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.TestUtils.CompatBin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.TestUtils.CompatBinary.Base", "Halibut.TestUtils.CompatBinary.Base\Halibut.TestUtils.CompatBinary.Base.csproj", "{BBC31D50-5170-49D9-A42D-625768705B7B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Halibut.TestUtils.PortForwarder", "Halibut.TestUtils.PortForwarder\Halibut.TestUtils.PortForwarder.csproj", "{ACF73278-BC28-4C60-ACF9-CAC3C5ACA45C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Octopus.TestPortForwarder", "Octopus.TestPortForwarder\Octopus.TestPortForwarder.csproj", "{ACF73278-BC28-4C60-ACF9-CAC3C5ACA45C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

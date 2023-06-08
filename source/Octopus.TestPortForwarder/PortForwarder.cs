@@ -5,10 +5,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Tests.Util.TcpUtils;
 using Serilog;
 
-namespace Halibut.TestUtils.PortForwarder.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     public class PortForwarder : IDisposable
     {
