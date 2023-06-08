@@ -13,7 +13,7 @@ namespace Halibut.Tests.Util
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         bool HasService = true;
 
-        Func<int, IPortForwarder> portForwarderFactory = port => new NullPortForwarder(port);
+        Func<int, PortForwarder>? portForwarderFactory;
 
         public ClientServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -66,9 +66,9 @@ namespace Halibut.Tests.Util
 
         public ClientServiceBuilder WithPortForwarding()
         {
-            return WithPortForwarding(port => new PortForwarder(new Uri("https://localhost:" + port), TimeSpan.Zero));
+            return WithPortForwarding(port => PortForwarderBuilder.ForwardingToLocalPort(port).Build());
         }
-        public ClientServiceBuilder WithPortForwarding(Func<int, IPortForwarder> portForwarderFactory)
+        public ClientServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
             this.portForwarderFactory = portForwarderFactory;
             return this;
@@ -85,15 +85,19 @@ namespace Halibut.Tests.Util
 
             var disposableCollection = new DisposableCollection();
 
-            IPortForwarder portForwarder;
+            PortForwarder? portForwarder = null;
             Uri serviceUri;
             CertAndThumbprint certForClientCreation;
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
                 var listenPort = octopus.Listen();
-                portForwarder = portForwarderFactory(listenPort);
+                portForwarder = portForwarderFactory != null ? portForwarderFactory(listenPort) : null;
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
-                if (tentacle != null) tentacle.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + portForwarder.ListeningPort), clientCertAndThumbprint.Thumbprint));
+                if (tentacle != null)
+                {
+                    if (portForwarder != null) listenPort = portForwarder.ListeningPort;
+                    tentacle.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint));
+                }
             }
             else
             {
@@ -110,8 +114,9 @@ namespace Halibut.Tests.Util
                     listenPort = dummyTentacle.Port;
                 }
 
-                portForwarder = portForwarderFactory(listenPort);
-                serviceUri = new Uri("https://localhost:" + portForwarder.ListeningPort);
+                portForwarder = portForwarderFactory != null ? portForwarderFactory(listenPort) : null;
+                if (portForwarder != null) listenPort = portForwarder.ListeningPort;
+                serviceUri = new Uri("https://localhost:" + listenPort);
             }
 
             return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection);
@@ -121,7 +126,7 @@ namespace Halibut.Tests.Util
         {
             readonly HalibutRuntime octopus;
             readonly HalibutRuntime? tentacle;
-            public readonly IPortForwarder portForwarder;
+            public readonly PortForwarder? portForwarder;
             readonly Uri serviceUri;
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly DisposableCollection disposableCollection;
@@ -130,7 +135,7 @@ namespace Halibut.Tests.Util
                 HalibutRuntime tentacle,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
-                IPortForwarder portForwarder, DisposableCollection disposableCollection)
+                PortForwarder? portForwarder, DisposableCollection disposableCollection)
             {
                 this.octopus = octopus;
                 this.tentacle = tentacle;
@@ -168,7 +173,7 @@ namespace Halibut.Tests.Util
             {
                 octopus.Dispose();
                 tentacle?.Dispose();
-                portForwarder.Dispose();
+                portForwarder?.Dispose();
                 disposableCollection.Dispose();
             }
         }

@@ -17,7 +17,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder.Listening()
                        .WithService<IEchoService>(new EchoService())
-                       .WithPortForwarding(port => new PortForwarder(new Uri("https://localhost:" + port), TimeSpan.Zero))
+                       .WithPortForwarding(port => PortForwarderBuilder.ForwardingToLocalPort(port).Build())
                        .Build())
             {
                 var data = new byte[1024];
