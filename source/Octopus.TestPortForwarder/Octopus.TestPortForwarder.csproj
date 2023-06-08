@@ -15,5 +15,9 @@
     <ItemGroup>
         <PackageReference Include="Serilog" Version="2.12.0" />
     </ItemGroup>
+
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
+        <DefineConstants>$(DefineConstants);DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
+    </PropertyGroup>
     
 </Project>
