@@ -122,9 +122,22 @@ class Build : NukeBuild
             ArtifactsDirectory.GlobFiles("*.nupkg")
                 .ForEach(package => CopyFileToDirectory(package, LocalPackagesDirectory, FileExistsPolicy.Overwrite));
         });
+    
+    [PublicAPI]
+    Target PackTestPortForwarder => _ => _
+        .Executes(() =>
+        {
+            DotNetPack(_ => _
+                .SetProject(Solution.Octopus_TestPortForwarder)
+                .SetVersion(OctoVersionInfo.FullSemVer)
+                .SetConfiguration(Configuration)
+                .SetOutputDirectory(ArtifactsDirectory)
+                .SetVerbosity(DotNetVerbosity.Normal));
+        });
 
     Target Default => _ => _
         .DependsOn(Pack)
+        .DependsOn(PackTestPortForwarder)
         .DependsOn(CopyToLocalPackages);
 
     public static int Main () => Execute<Build>(x => x.Default);
