@@ -16,7 +16,7 @@ namespace Halibut.Tests
         PerformanceCounter GetCounterForCurrentProcess(string categoryName, string counterName)
         {
             var pid = Process.GetCurrentProcess().Id;
-            
+
             var instanceName = new PerformanceCounterCategory("Process")
                 .GetInstanceNames()
                 .FirstOrDefault(instance =>
@@ -31,10 +31,10 @@ namespace Halibut.Tests
             {
                 throw new Exception("Could not find instance name for process.");
             }
-            
+
             return new PerformanceCounter(categoryName, counterName, instanceName, true);
         }
-        
+
         [Test]
         [WindowsTest]
         public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows()
@@ -44,12 +44,12 @@ namespace Halibut.Tests
             using (var opsPerSec = GetCounterForCurrentProcess("Process", "IO Other Operations/sec"))
             {
                 var client = new SecureListener(
-                    new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1093), 
+                    new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 0),
                     Certificates.TentacleListening,
                     null,
                     null,
                     thumbprint => true,
-                    new LogFactory(), 
+                    new LogFactory(),
                     () => ""
                 );
 
@@ -58,18 +58,18 @@ namespace Halibut.Tests
                     .Average();
 
                 float listeningAverage;
-            
+
                 using (client)
                 {
                     client.Start();
-                
+
                     listeningAverage = CollectCounterValues(opsPerSec)
                         .Take(secondsToSample)
                         .Average();
                 }
 
                 var idleAverageWithErrorMargin = idleAverage * 250f;
-            
+
                 TestContext.Out.WriteLine($"idle average:      {idleAverage} ops/second");
                 TestContext.Out.WriteLine($"listening average: {listeningAverage} ops/second");
                 TestContext.Out.WriteLine($"expectation:     < {idleAverageWithErrorMargin} ops/second");
@@ -77,11 +77,11 @@ namespace Halibut.Tests
                 listeningAverage.Should().BeLessThan(idleAverageWithErrorMargin);
             }
         }
-        
+
         IEnumerable<float> CollectCounterValues(PerformanceCounter counter)
         {
             var sleepTime = TimeSpan.FromSeconds(1);
-            
+
             while (true)
             {
                 Thread.Sleep(sleepTime);

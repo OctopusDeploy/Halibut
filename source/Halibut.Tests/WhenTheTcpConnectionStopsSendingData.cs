@@ -27,7 +27,7 @@ namespace Halibut.Tests
 
                 echo.SayHello("Bob");
 
-                (clientAndService.portForwarder as PortForwarder).PauseExistingConnections();
+                (clientAndService.PortForwarder as PortForwarder)!.PauseExistingConnections();
 
                 var sayHelloTask = Task.Run(() => echo.SayHello("Bob"));
 

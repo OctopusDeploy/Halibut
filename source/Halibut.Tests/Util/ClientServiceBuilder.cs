@@ -1,5 +1,8 @@
+#nullable enable
 using System;
+using System.CodeDom;
 using System.Threading;
+using FluentAssertions.Primitives;
 using Halibut.ServiceModel;
 using Halibut.Tests.Util.TcpUtils;
 
@@ -11,9 +14,11 @@ namespace Halibut.Tests.Util
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        bool HasService = true;
+        bool hasService = true;
 
         Func<int, PortForwarder>? portForwarderFactory;
+        HalibutRuntime? existingOctopus;
+        int? existingPort;
 
         public ClientServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -23,13 +28,17 @@ namespace Halibut.Tests.Util
 
         public static ClientServiceBuilder Polling()
         {
-            new ClientServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
             return new ClientServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
         public static ClientServiceBuilder Listening()
         {
             return new ClientServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+        }
+
+        public static ClientServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
+        {
+            return new ClientServiceBuilder(serviceConnectionType, CertAndThumbprint.TentacleListening);
         }
 
         /// <summary>
@@ -40,7 +49,7 @@ namespace Halibut.Tests.Util
         /// <returns></returns>
         public ClientServiceBuilder NoService()
         {
-            HasService = false;
+            hasService = false;
             return this;
         }
 
@@ -74,23 +83,44 @@ namespace Halibut.Tests.Util
             return this;
         }
 
-        public ClientAndService Build()
+        public ClientServiceBuilder WithExistingOctopus(HalibutRuntime octopus, int? port)
         {
-            serviceFactory = serviceFactory ?? new DelegateServiceFactory();
-            var octopus = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
-            octopus.Trust(serviceCertAndThumbprint.Thumbprint);
+            this.existingOctopus = octopus;
+            this.existingPort = port;
+            return this;
+        }
+
+        public IClientAndService Build()
+        {
+            serviceFactory ??= new DelegateServiceFactory();
+
+            var useExistingOctopus = this.existingOctopus != null;
+
+            if (useExistingOctopus && portForwarderFactory != null)
+            {
+                throw new NotSupportedException("An existing HalibutRuntime and PortForwarding cannot be used together");
+            }
+
+            var octopus = this.existingOctopus ?? new HalibutRuntime(clientCertAndThumbprint.Certificate2);
+
+            if (!useExistingOctopus)
+            {
+                octopus.Trust(serviceCertAndThumbprint.Thumbprint);
+            }
 
             HalibutRuntime? tentacle = null;
-            if (HasService) tentacle = new HalibutRuntime(serviceFactory, serviceCertAndThumbprint.Certificate2);
+            if (hasService)
+            {
+                tentacle = new HalibutRuntime(serviceFactory, serviceCertAndThumbprint.Certificate2);
+            }
 
             var disposableCollection = new DisposableCollection();
 
             PortForwarder? portForwarder = null;
             Uri serviceUri;
-            CertAndThumbprint certForClientCreation;
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
-                var listenPort = octopus.Listen();
+                var listenPort = useExistingOctopus ? this.existingPort!.Value : octopus.Listen();
                 portForwarder = portForwarderFactory != null ? portForwarderFactory(listenPort) : null;
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
                 if (tentacle != null)
@@ -122,11 +152,11 @@ namespace Halibut.Tests.Util
             return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection);
         }
 
-        public class ClientAndService : IDisposable
+        public class ClientAndService : IClientAndService
         {
             readonly HalibutRuntime octopus;
             readonly HalibutRuntime? tentacle;
-            public readonly PortForwarder? portForwarder;
+            readonly PortForwarder? portForwarder;
             readonly Uri serviceUri;
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly DisposableCollection disposableCollection;
@@ -135,7 +165,8 @@ namespace Halibut.Tests.Util
                 HalibutRuntime tentacle,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
-                PortForwarder? portForwarder, DisposableCollection disposableCollection)
+                PortForwarder? portForwarder,
+                DisposableCollection disposableCollection)
             {
                 this.octopus = octopus;
                 this.tentacle = tentacle;
@@ -144,6 +175,9 @@ namespace Halibut.Tests.Util
                 this.portForwarder = portForwarder;
                 this.disposableCollection = disposableCollection;
             }
+
+            public IHalibutRuntime Octopus => octopus;
+            public PortForwarder PortForwarder => portForwarder;
 
             public TService CreateClient<TService>()
             {
@@ -161,7 +195,12 @@ namespace Halibut.Tests.Util
                 modifyServiceEndpoint(serviceEndpoint);
                 return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
-            
+
+            public TClientService CreateClient<TService, TClientService>()
+            {
+                return CreateClient<TService, TClientService>(_ => { });
+            }
+
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);

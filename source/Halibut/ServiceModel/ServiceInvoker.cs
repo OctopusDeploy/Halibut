@@ -13,10 +13,12 @@ namespace Halibut.ServiceModel
     public class ServiceInvoker : IServiceInvoker
     {
         readonly IServiceFactory factory;
+        readonly Guid halibutRuntimeProcessIdentifier;
 
-        public ServiceInvoker(IServiceFactory factory)
+        public ServiceInvoker(IServiceFactory factory, Guid halibutRuntimeProcessIdentifier)
         {
             this.factory = factory;
+            this.halibutRuntimeProcessIdentifier = halibutRuntimeProcessIdentifier;
         }
 
         public ResponseMessage Invoke(RequestMessage requestMessage)
@@ -32,7 +34,8 @@ namespace Halibut.ServiceModel
                 var method = SelectMethod(methods, requestMessage);
                 var args = GetArguments(requestMessage, method);
                 var result = method.Invoke(lease.Service, args);
-                return ResponseMessage.FromResult(requestMessage, result);
+
+                return ResponseMessage.FromResult(requestMessage, result, halibutRuntimeProcessIdentifier);
             }
         }
 
@@ -103,7 +106,7 @@ namespace Halibut.ServiceModel
             throw new AmbiguousMethodMatchHalibutClientException(message.ToString(), new AmbiguousMatchException(message.ToString()));
         }
 
-        static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)
+        public static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)
         {
             var methodParams = methodInfo.GetParameters();
             var args = new object[methodParams.Length];

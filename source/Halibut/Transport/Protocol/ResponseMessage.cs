@@ -15,29 +15,61 @@ namespace Halibut.Transport.Protocol
         [JsonProperty("result")]
         public object Result { get; set; }
 
-        public static ResponseMessage FromResult(RequestMessage request, object result)
+        [JsonProperty("halibutRuntimeProcessIdentifier")]
+        public Guid? HalibutRuntimeProcessIdentifier { get; set; }
+
+        public static ResponseMessage FromResult(RequestMessage request, object result, Guid halibutRuntimeProcessIdentifier)
         {
-            return new ResponseMessage { Id = request.Id, Result = result };
+            return new ResponseMessage
+            {
+                Id = request.Id,
+                Result = result,
+                HalibutRuntimeProcessIdentifier = halibutRuntimeProcessIdentifier
+            };
         }
 
-        public static ResponseMessage FromError(RequestMessage request, string message)
+        public static ResponseMessage FromError(RequestMessage request, string message, Guid halibutRuntimeProcessIdentifier)
         {
-            return new ResponseMessage { Id = request.Id, Error = new ServerError { Message = message } };
+            return new ResponseMessage
+            {
+                Id = request.Id,
+                Error = new ServerError
+                {
+                    Message = message
+                },
+                HalibutRuntimeProcessIdentifier = halibutRuntimeProcessIdentifier
+            };
         }
 
         public static ResponseMessage FromException(RequestMessage request, Exception ex)
         {
-            return new ResponseMessage {Id = request.Id, Error = ServerErrorFromException(ex)};
+            return FromException(request, ex, null);
+        }
+
+        public static ResponseMessage FromException(RequestMessage request, Exception ex, Guid? halibutRuntimeProcessIdentifier)
+        {
+            return new ResponseMessage
+            {
+                Id = request.Id,
+                Error = ServerErrorFromException(ex),
+                HalibutRuntimeProcessIdentifier = halibutRuntimeProcessIdentifier
+            };
         }
 
         internal static ServerError ServerErrorFromException(Exception ex)
         {
-            string ErrorType = null;
+            string errorType = null;
             if (ex is HalibutClientException)
             {
-                ErrorType = ex.GetType().FullName;
+                errorType = ex.GetType().FullName;
             }
-            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), HalibutErrorType = ErrorType };
+
+            return new ServerError
+            {
+                Message = ex.UnpackFromContainers().Message,
+                Details = ex.ToString(),
+                HalibutErrorType = errorType
+            };
         }
     }
 }

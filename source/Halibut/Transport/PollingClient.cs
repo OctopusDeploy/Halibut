@@ -9,7 +9,8 @@ namespace Halibut.Transport
 {
     public class PollingClient : IPollingClient
     {
-        readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
+        readonly IncomingRequestProcessorAction handleIncomingRequest;
+        readonly ExceptionHandlingAction exceptionHander;
         readonly ILog log;
         readonly ISecureClient secureClient;
         readonly Uri subscription;
@@ -18,21 +19,22 @@ namespace Halibut.Transport
         bool working;
 
         [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
-            : this(subscription, secureClient, handleIncomingRequest, null)
+        public PollingClient(Uri subscription, ISecureClient secureClient, IncomingRequestProcessorAction handleIncomingRequest, ExceptionHandlingAction exceptionHander)
+            : this(subscription, secureClient, handleIncomingRequest, exceptionHander, null)
         {
         }
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
-            : this(subscription, secureClient, handleIncomingRequest, log, CancellationToken.None)
+        public PollingClient(Uri subscription, ISecureClient secureClient, IncomingRequestProcessorAction handleIncomingRequest, ExceptionHandlingAction exceptionHander, ILog log)
+            : this(subscription, secureClient, handleIncomingRequest, exceptionHander, log, CancellationToken.None)
         {
         }
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken)
+        public PollingClient(Uri subscription, ISecureClient secureClient, IncomingRequestProcessorAction handleIncomingRequest, ExceptionHandlingAction exceptionHander, ILog log, CancellationToken cancellationToken)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;
             this.handleIncomingRequest = handleIncomingRequest;
+            this.exceptionHander = exceptionHander;
             this.log = log;
             this.cancellationToken = cancellationToken;
             thread = new Thread(ExecutePollingLoop);
@@ -68,7 +70,7 @@ namespace Halibut.Transport
                             // Subsequent connection issues will try and reconnect quickly and then back-off
                             retry.Success();
 
-                            protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
+                            protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest, exceptionHander);
                         }, cancellationToken);
                         retry.Success();
                     }
