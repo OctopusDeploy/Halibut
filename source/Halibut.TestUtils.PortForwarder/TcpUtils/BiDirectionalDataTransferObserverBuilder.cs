@@ -1,6 +1,7 @@
 using System;
+using Halibut.Tests.Util.TcpUtils;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Halibut.TestUtils.PortForwarder.TcpUtils
 {
     public class BiDirectionalDataTransferObserverBuilder
     {

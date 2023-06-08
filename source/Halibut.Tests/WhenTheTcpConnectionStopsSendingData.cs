@@ -6,6 +6,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using Halibut.Tests.Util.TcpUtils;
+using Halibut.TestUtils.PortForwarder.TcpUtils;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -17,7 +18,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder.Listening()
                        .WithService<IEchoService>(new EchoService())
-                       .WithPortForwarding(port => PortForwarderBuilder.ForwardingToLocalPort(port).Build())
+                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
                        .Build())
             {
                 var data = new byte[1024];

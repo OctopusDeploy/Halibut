@@ -52,7 +52,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var octopus = new HalibutRuntime(Certificates.Octopus))
                 {
                     var octopusPort = octopus.Listen();
-                    using (var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(octopusPort).Build())
+                    using (var portForwarder = PortForwarderUtil.ForwardingToLocalPort(octopusPort).Build())
                     using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
                     {
                         octopus.Trust(Certificates.TentaclePollingPublicThumbprint);

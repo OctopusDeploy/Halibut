@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Halibut.Tests.Util.TcpUtils;
+using Halibut.TestUtils.PortForwarder.TcpUtils;
+using Serilog;
 
 namespace Halibut.Tests.Util.TcpUtils
 {
@@ -9,17 +10,19 @@ namespace Halibut.Tests.Util.TcpUtils
     {
         readonly Uri originServer;
         TimeSpan sendDelay = TimeSpan.Zero;
-        private List<Func<BiDirectionalDataTransferObserver>> observerFactory = new();
+        private readonly List<Func<BiDirectionalDataTransferObserver>> observerFactory = new();
         private int? listeningPort;
+        readonly ILogger logger;
 
-        public PortForwarderBuilder(Uri originServer)
+        public PortForwarderBuilder(Uri originServer, ILogger logger)
         {
             this.originServer = originServer;
+            this.logger = logger;
         }
 
-        public static PortForwarderBuilder ForwardingToLocalPort(int localPort)
+        public static PortForwarderBuilder ForwardingToLocalPort(int localPort, ILogger logger)
         {
-            return new PortForwarderBuilder(new Uri("https://localhost:" + localPort));
+            return new PortForwarderBuilder(new Uri("https://localhost:" + localPort), logger);
         }
 
         public PortForwarderBuilder WithSendDelay(TimeSpan sendDelay)
@@ -43,10 +46,12 @@ namespace Halibut.Tests.Util.TcpUtils
         public PortForwarder Build()
         {
             return new PortForwarder(originServer, sendDelay, () =>
-            {
-                var results = observerFactory.Select(factory => factory()).ToArray();
-                return BiDirectionalDataTransferObserver.Combiner(results);
-            }, listeningPort);
+                {
+                    var results = observerFactory.Select(factory => factory()).ToArray();
+                    return BiDirectionalDataTransferObserver.Combiner(results);
+                },
+                logger,
+                listeningPort);
         }
     }
 }

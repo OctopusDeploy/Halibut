@@ -1,6 +1,8 @@
+using System;
 using System.IO;
+using Halibut.Tests.Util.TcpUtils;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Halibut.TestUtils.PortForwarder.TcpUtils
 {
     public interface IDataTransferObserver
     {

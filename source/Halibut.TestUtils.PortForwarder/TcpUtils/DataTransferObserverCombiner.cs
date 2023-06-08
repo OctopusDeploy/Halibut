@@ -1,4 +1,7 @@
-﻿namespace Halibut.Tests.Util.TcpUtils
+﻿using System;
+using Halibut.Tests.Util.TcpUtils;
+
+namespace Halibut.TestUtils.PortForwarder.TcpUtils
 {
     public class DataTransferObserverCombiner
     {

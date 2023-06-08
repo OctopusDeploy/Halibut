@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.TestUtils.PortForwarder.TcpUtils;
 using Serilog;
 
 namespace Halibut.Tests.Util.TcpUtils
