@@ -9,8 +9,8 @@ namespace Octopus.TestPortForwarder
     {
         readonly Uri originServer;
         TimeSpan sendDelay = TimeSpan.Zero;
-        private readonly List<Func<BiDirectionalDataTransferObserver>> observerFactory = new();
-        private int? listeningPort;
+        readonly List<Func<BiDirectionalDataTransferObserver>> observerFactory = new();
+        int? listeningPort;
         readonly ILogger logger;
 
         public PortForwarderBuilder(Uri originServer, ILogger logger)
