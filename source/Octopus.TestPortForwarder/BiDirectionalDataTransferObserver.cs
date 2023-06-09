@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     public class BiDirectionalDataTransferObserver
     {

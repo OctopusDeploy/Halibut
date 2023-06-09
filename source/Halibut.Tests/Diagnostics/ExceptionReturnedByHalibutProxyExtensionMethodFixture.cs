@@ -7,9 +7,9 @@ using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
-using Halibut.Tests.Util.TcpUtils;
 using Halibut.Transport.Proxy;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Diagnostics
 {
@@ -52,7 +52,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var octopus = new HalibutRuntime(Certificates.Octopus))
                 {
                     var octopusPort = octopus.Listen();
-                    using (var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(octopusPort).Build())
+                    using (var portForwarder = PortForwarderUtil.ForwardingToLocalPort(octopusPort).Build())
                     using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
                     {
                         octopus.Trust(Certificates.TentaclePollingPublicThumbprint);

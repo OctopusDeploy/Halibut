@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     internal static class CancellationTokenExtensionMethods
     {

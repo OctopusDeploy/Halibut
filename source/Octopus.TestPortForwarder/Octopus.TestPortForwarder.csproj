@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <LangVersion>9.0</LangVersion>
+        <RootNamespace>Octopus.TestPortForwarder</RootNamespace>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
+        <TargetFrameworks>net48;net6.0</TargetFrameworks>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
+        <TargetFramework>net6.0</TargetFramework>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Serilog" Version="2.12.0" />
+    </ItemGroup>
+
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
+        <DefineConstants>$(DefineConstants);DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
+    </PropertyGroup>
+    
+</Project>

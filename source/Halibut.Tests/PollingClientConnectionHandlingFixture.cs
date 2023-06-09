@@ -6,8 +6,8 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
-using Halibut.Tests.Util.TcpUtils;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -128,7 +128,7 @@ namespace Halibut.Tests
         static PortForwarder SetupPortForwarder(IHalibutRuntime halibut)
         {
             var octopusPort = halibut.Listen();
-            var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(octopusPort).Build();
+            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(octopusPort).Build();
 
             return portForwarder;
         }

@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     public class TcpPump : IDisposable
     {

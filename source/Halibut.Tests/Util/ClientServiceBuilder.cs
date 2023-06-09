@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using Halibut.ServiceModel;
-using Halibut.Tests.Util.TcpUtils;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Util
 {
@@ -66,7 +66,7 @@ namespace Halibut.Tests.Util
 
         public ClientServiceBuilder WithPortForwarding()
         {
-            return WithPortForwarding(port => PortForwarderBuilder.ForwardingToLocalPort(port).Build());
+            return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
         }
         public ClientServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {

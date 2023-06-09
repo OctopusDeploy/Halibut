@@ -5,7 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     
     /// <summary>
@@ -16,7 +16,7 @@ namespace Halibut.Tests.Util.TcpUtils
     {
         readonly Socket listeningSocket;
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-        readonly ILogger logger = Log.ForContext<PortForwarder>();
+        readonly ILogger logger = Log.ForContext<Octopus.TestPortForwarder.PortForwarder>();
         
         public int Port { get; private set; }
         

@@ -5,12 +5,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Logging;
-using Halibut.Tests.Util.TcpUtils;
-using NUnit.Framework.Constraints;
 using Serilog;
 
-namespace Halibut.Tests.Util.TcpUtils
+namespace Octopus.TestPortForwarder
 {
     public class PortForwarder : IDisposable
     {
@@ -25,12 +22,17 @@ namespace Halibut.Tests.Util.TcpUtils
 
         public int ListeningPort { get; }
 
-        public PortForwarder(Uri originServer, TimeSpan sendDelay, Func<BiDirectionalDataTransferObserver> factory, int? listeningPort = null)
+        public PortForwarder(Uri originServer,
+            TimeSpan sendDelay,
+            Func<BiDirectionalDataTransferObserver> factory,
+            ILogger logger,
+            int? listeningPort = null)
         {
-            logger = new SerilogLoggerBuilder().Build().ForContext<PortForwarder>();
+            logger = logger.ForContext<PortForwarder>();
             this.originServer = originServer;
             this.sendDelay = sendDelay;
             this.factory = factory;
+            this.logger = logger;
             var scheme = originServer.Scheme;
 
             Start();
