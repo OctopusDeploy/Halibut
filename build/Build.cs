@@ -125,6 +125,7 @@ class Build : NukeBuild
     
     [PublicAPI]
     Target PackTestPortForwarder => _ => _
+        .DependsOn(Clean)
         .Executes(() =>
         {
             DotNetPack(_ => _
