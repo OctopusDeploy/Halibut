@@ -17,15 +17,20 @@ namespace Halibut.Transport.Caching
 
     internal class ResponseCache
     {
-        readonly MemoryCache responseMessageCache = new("ResponseMessageCache");
+        readonly TypedMemoryCache<ServiceEndPoint, TypedMemoryCache<string, CacheItemWrapper>> responseMessageCache = new("ResponseMessageCache", point => point.BaseUri.AbsoluteUri + " " + point.RemoteThumbprint);
 
+        TypedMemoryCache<string, CacheItemWrapper> CacheForEndpoint(ServiceEndPoint endPoint)
+        {
+            return responseMessageCache.GetOrAddNotAtomic(endPoint, new TypedMemoryCache<string, CacheItemWrapper>("ResponseMessageCache", s => s), new CacheItemPolicy() { });
+        }
         public ResponseMessage GetCachedResponse(ServiceEndPoint endPoint, RequestMessage request, MethodInfo methodInfo)
         {
             var responseCanBeCached = CanBeCached(methodInfo);
             if (!responseCanBeCached) return null;
 
             var cacheKey = GetCacheKey(endPoint, methodInfo, request);
-            var wrapper = responseMessageCache.GetCacheItem(cacheKey)?.Value as CacheItemWrapper;
+            var cacheForService = CacheForEndpoint(endPoint);
+            var wrapper = cacheForService.GetCacheItem(cacheKey);
 
             return wrapper?.ResponseMessage;
 
@@ -47,24 +52,15 @@ namespace Halibut.Transport.Caching
                 ResponseMessage = response,
                 EndPoint = endPoint
             };
-            responseMessageCache.Add(cacheKey, wrapper, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(cacheDuration) });
+            CacheForEndpoint(endPoint).Add(cacheKey, wrapper, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(cacheDuration) });
         }
 
         public void InvalidateStaleCachedResponses(ServiceEndPoint endPoint, ResponseMessage response)
         {
             FixMissingHalibutRuntimeProcessIdentifier(response);
 
-            var cacheItems = responseMessageCache.ToList();
-
-            foreach (var item in cacheItems)
-            {
-                var wrapper = item.Value as CacheItemWrapper;
-
-                if (wrapper.EndPoint == endPoint && wrapper.HalibutRuntimeUniqueIdentifier != response.HalibutRuntimeProcessIdentifier)
-                {
-                    responseMessageCache.Remove(item.Key);
-                }
-            }
+            CacheForEndpoint(endPoint)
+                .RemoveMatching((wrapper) => wrapper.EndPoint == endPoint && wrapper.HalibutRuntimeUniqueIdentifier != response.HalibutRuntimeProcessIdentifier);
         }
 
         bool CanBeCached(MethodInfo methodInfo)
