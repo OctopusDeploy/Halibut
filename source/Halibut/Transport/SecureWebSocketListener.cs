@@ -199,7 +199,7 @@ namespace Halibut.Transport
                 return false;
             }
 
-            var thumbprint = new X509Certificate2(certificate.Export(X509ContentType.Cert)).Thumbprint;
+            var thumbprint = new X509Certificate2(certificate.Export(X509ContentType.Cert), (string)null!).Thumbprint;
             var isAuthorized = verifyClientThumbprint(thumbprint);
 
             if (!isAuthorized)

@@ -328,7 +328,7 @@ namespace Halibut.Transport
                 return null;
             }
 
-            var thumbprint = new X509Certificate2(stream.RemoteCertificate.Export(X509ContentType.Cert)).Thumbprint;
+            var thumbprint = new X509Certificate2(stream.RemoteCertificate.Export(X509ContentType.Cert), (string)null!).Thumbprint;
             return thumbprint;
         }
 
