@@ -37,7 +37,7 @@ namespace Halibut.Transport
                                 throw new Exception("The server did not provide an SSL certificate");
 
 #pragma warning disable PC001 // API not supported on all platforms - X509Certificate2 not supported on macOS
-                            return new ServiceEndPoint(serviceEndpoint.BaseUri, new X509Certificate2(ssl.RemoteCertificate.Export(X509ContentType.Cert)).Thumbprint);
+                            return new ServiceEndPoint(serviceEndpoint.BaseUri, new X509Certificate2(ssl.RemoteCertificate.Export(X509ContentType.Cert), (string)null!).Thumbprint);
 #pragma warning restore PC001 // API not supported on all platforms - X509Certificate2 not supported on macOS
                         }
                     }

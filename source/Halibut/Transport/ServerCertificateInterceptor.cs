@@ -38,7 +38,7 @@ namespace Halibut.Transport
                     {
                         if (certificates.ContainsKey(clientId))
                         {
-                            var providedCert = new X509Certificate2(certificate.Export(X509ContentType.Cert)); // Copy the cert so that we can reference it later
+                            var providedCert = new X509Certificate2(certificate.Export(X509ContentType.Cert), (string)null!); // Copy the cert so that we can reference it later
                             certificates[clientId] = providedCert;
                             return true;
                         }
