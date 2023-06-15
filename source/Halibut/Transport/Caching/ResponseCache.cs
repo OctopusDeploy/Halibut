@@ -17,21 +17,34 @@ namespace Halibut.Transport.Caching
 
     internal class ResponseCache
     {
-        readonly TypedMemoryCache<ServiceEndPoint, TypedMemoryCache<string, CacheItemWrapper>> responseMessageCache = new("ResponseMessageCache", point => point.BaseUri.AbsoluteUri + " " + point.RemoteThumbprint);
+        readonly TypedMemoryCache<string, CacheItemWrapper> responseMessageCache = new("ResponseMessageCache", k => k);
+        readonly TypedMemoryCache<ServiceEndPoint, Guid> serviceToGuid = new("ResponseMessageCache", point => point.BaseUri.AbsoluteUri + " " + point.RemoteThumbprint); // Do we really need thumbprint as well?
 
-        TypedMemoryCache<string, CacheItemWrapper> CacheForEndpoint(ServiceEndPoint endPoint)
-        {
-            return responseMessageCache.GetOrAddNotAtomic(endPoint, new TypedMemoryCache<string, CacheItemWrapper>("ResponseMessageCache", s => s), new CacheItemPolicy() { });
-        }
+        
         public ResponseMessage GetCachedResponse(ServiceEndPoint endPoint, RequestMessage request, MethodInfo methodInfo)
         {
             var responseCanBeCached = CanBeCached(methodInfo);
             if (!responseCanBeCached) return null;
 
             var cacheKey = GetCacheKey(endPoint, methodInfo, request);
-            var cacheForService = CacheForEndpoint(endPoint);
-            var wrapper = cacheForService.GetCacheItem(cacheKey);
+            if (!responseMessageCache.TryGetCacheItem(cacheKey, out var wrapper))
+            {
+                // Its not in the cache
+                return null;
+            }
+            
+            // But is it valid?
+            if (!serviceToGuid.TryGetCacheItem(endPoint, out var guid))
+            {
+                // The guid was dropped so we don't know if the value in the cache is valid.
+                return null;
+            }
 
+            if (!wrapper!.HalibutRuntimeUniqueIdentifier.Equals(guid))
+            {
+                // What we have in cache was from a different instance of the service, so it may be out of date.
+                return null;
+            }
             return wrapper?.ResponseMessage;
 
         }
@@ -52,15 +65,16 @@ namespace Halibut.Transport.Caching
                 ResponseMessage = response,
                 EndPoint = endPoint
             };
-            CacheForEndpoint(endPoint).Add(cacheKey, wrapper, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(cacheDuration) });
+            
+            responseMessageCache.Add(cacheKey, wrapper, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(cacheDuration) });
+            serviceToGuid.Add(endPoint, wrapper.HalibutRuntimeUniqueIdentifier, new CacheItemPolicy());
         }
 
         public void InvalidateStaleCachedResponses(ServiceEndPoint endPoint, ResponseMessage response)
         {
             FixMissingHalibutRuntimeProcessIdentifier(response);
-
-            CacheForEndpoint(endPoint)
-                .RemoveMatching((wrapper) => wrapper.EndPoint == endPoint && wrapper.HalibutRuntimeUniqueIdentifier != response.HalibutRuntimeProcessIdentifier);
+            // Could this be faster?
+            serviceToGuid.Add(endPoint, response.HalibutRuntimeProcessIdentifier!.Value, new CacheItemPolicy());
         }
 
         bool CanBeCached(MethodInfo methodInfo)
