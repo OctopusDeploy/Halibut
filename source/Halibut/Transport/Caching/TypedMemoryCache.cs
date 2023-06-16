@@ -26,12 +26,12 @@ namespace Halibut.Transport.Caching
             }
 
             value = (V) cacheItem.Value;
-            return false;
+            return true;
         }
 
         internal void Add(K cacheKey, V wrapper, CacheItemPolicy cacheItemPolicy)
         {
-            memoryCache.Add(toKeyFunction(cacheKey), wrapper, cacheItemPolicy);
+            memoryCache.Set(toKeyFunction(cacheKey), wrapper, cacheItemPolicy);
         }
 
         internal V GetOrAddNotAtomic(K cacheKey, V valueIfOneDoesNotAlreadyExist, CacheItemPolicy policy)
