@@ -50,11 +50,6 @@ namespace Halibut.Tests.Util
             return this;
         }
 
-        public ClientServiceBuilder WithService<TContract>(TContract implementation)
-        {
-            return WithService(() => implementation);
-        }
-
         public ClientServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
             if (serviceFactory == null) serviceFactory = new DelegateServiceFactory();
@@ -124,10 +119,10 @@ namespace Halibut.Tests.Util
 
         public class ClientAndService : IDisposable
         {
-            readonly HalibutRuntime octopus;
-            readonly HalibutRuntime? tentacle;
+            public HalibutRuntime Octopus { get; }
+            public HalibutRuntime? Tentacle { get; }
             public readonly PortForwarder? portForwarder;
-            readonly Uri serviceUri;
+            public Uri ServiceUri { get; }
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly DisposableCollection disposableCollection;
 
@@ -137,9 +132,9 @@ namespace Halibut.Tests.Util
                 CertAndThumbprint serviceCertAndThumbprint,
                 PortForwarder? portForwarder, DisposableCollection disposableCollection)
             {
-                this.octopus = octopus;
-                this.tentacle = tentacle;
-                this.serviceUri = serviceUri;
+                this.Octopus = octopus;
+                this.Tentacle = tentacle;
+                this.ServiceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
                 this.portForwarder = portForwarder;
                 this.disposableCollection = disposableCollection;
@@ -157,22 +152,22 @@ namespace Halibut.Tests.Util
 
             public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                var serviceEndpoint = new ServiceEndPoint(ServiceUri, serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
-                return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
+                return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
             
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                var serviceEndpoint = new ServiceEndPoint(ServiceUri, serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
-                return octopus.CreateClient<TService, TClientService>(serviceEndpoint);
+                return Octopus.CreateClient<TService, TClientService>(serviceEndpoint);
             }
 
             public void Dispose()
             {
-                octopus.Dispose();
-                tentacle?.Dispose();
+                Octopus.Dispose();
+                Tentacle?.Dispose();
                 portForwarder?.Dispose();
                 disposableCollection.Dispose();
             }

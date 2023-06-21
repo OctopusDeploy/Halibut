@@ -15,7 +15,7 @@ namespace Halibut.Tests
         {
             DoSomeActionService doSomeActionService = new DoSomeActionService();
             using (var clientAndService = ClientServiceBuilder.Polling()
-                       .WithService<IDoSomeActionService>(doSomeActionService)
+                       .WithService<IDoSomeActionService>(() => doSomeActionService)
                        .WithPortForwarding()
                        .Build())
             {

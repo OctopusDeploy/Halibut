@@ -18,7 +18,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder.Listening()
                        .NoService()
-                       .WithService(new EchoService())
+                       .WithService<IEchoService>(() => new EchoService())
                        .Build())
             {
                 var data = new byte[1024 * 1024 + 15];
@@ -43,7 +43,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder.Listening()
                        .NoService()
-                       .WithService(new AmNotAllowed())
+                       .WithService<IAmNotAllowed>(() => new AmNotAllowed())
                        .Build())
             {
                 Assert.Throws<TypeNotAllowedException>(() => clientAndService.CreateClient<IAmNotAllowed>());
