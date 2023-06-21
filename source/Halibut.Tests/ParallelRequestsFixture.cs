@@ -5,6 +5,7 @@ using System.Threading;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.Util;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
@@ -18,13 +19,9 @@ namespace Halibut.Tests
             var services = new DelegateServiceFactory();
             services.Register<IReadDataSteamService>(() => new ReadDataStreamService());
             
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
             {
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                var readDataSteamService = octopus.CreateClient<IReadDataSteamService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                var readDataSteamService = clientAndService.CreateClient<IReadDataSteamService>();
 
                 var dataStreams = CreateDataStreams();
 

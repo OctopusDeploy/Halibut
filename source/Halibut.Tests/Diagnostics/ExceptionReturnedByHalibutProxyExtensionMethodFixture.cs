@@ -49,26 +49,19 @@ namespace Halibut.Tests.Diagnostics
                 var services = new DelegateServiceFactory();
                 DoSomeActionService doSomeActionService = new DoSomeActionService();
                 services.Register<IDoSomeActionService>(() => doSomeActionService);
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                
+                using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).WithPortForwarding().Build())
                 {
-                    var octopusPort = octopus.Listen();
-                    using (var portForwarder = PortForwarderUtil.ForwardingToLocalPort(octopusPort).Build())
-                    using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
-                    {
-                        octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+                    var svc = clientAndService.CreateClient<IDoSomeActionService>();
 
-                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + portForwarder.PublicEndpoint.Port), Certificates.OctopusPublicThumbprint));
+                    doSomeActionService.ActionDelegate = () => clientAndService.portForwarder.Dispose();
 
-                        var svc = octopus.CreateClient<IDoSomeActionService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
-                        doSomeActionService.ActionDelegate = () => portForwarder.Dispose();
-
-                        // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
-                        Assert.Throws<HalibutClientException>(() => svc.Action())
-                            .IsNetworkError()
-                            .Should()
-                            .Be(HalibutNetworkExceptionType.UnknownError, "Since currently we get a message envelope is null message");
-                    }
+                    // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
+                    var exception = Assert.Throws<HalibutClientException>(() => svc.Action());
+                    new SerilogLoggerBuilder().Build().Information(exception, "Got an exception, we were expecting one");
+                    exception.IsNetworkError()
+                        .Should()
+                        .Be(HalibutNetworkExceptionType.UnknownError, "Since currently we get a message envelope is null message");
                 }
             }
 

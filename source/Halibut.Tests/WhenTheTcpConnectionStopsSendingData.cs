@@ -16,7 +16,7 @@ namespace Halibut.Tests
         public async Task HalibutCanRecoverFromIdleTcpDisconnect2()
         {
             using (var clientAndService = ClientServiceBuilder.Listening()
-                       .WithService<IEchoService>(new EchoService())
+                       .WithService<IEchoService>(() => new EchoService())
                        .WithPortForwarding()
                        .Build())
             {
