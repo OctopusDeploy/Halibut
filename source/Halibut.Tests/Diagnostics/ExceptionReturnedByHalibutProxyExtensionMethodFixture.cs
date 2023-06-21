@@ -50,7 +50,7 @@ namespace Halibut.Tests.Diagnostics
                 DoSomeActionService doSomeActionService = new DoSomeActionService();
                 services.Register<IDoSomeActionService>(() => doSomeActionService);
                 
-                using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).WithPortForwarding().Build())
+                using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).WithPortForwarding().Build())
                 {
                     var svc = clientAndService.CreateClient<IDoSomeActionService>();
 
