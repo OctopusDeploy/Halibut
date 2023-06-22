@@ -155,4 +155,14 @@ namespace Octopus.TestPortForwarder
             SOCKET_OPEN
         }
     }
+
+#if NET48
+    public static class ArraySegmentExtensionMethods
+    {
+        public static ArraySegment<T> Slice<T>(this ArraySegment<T> arraySegment, int index, int count)
+        {
+            return new ArraySegment<T>(arraySegment.Array!, arraySegment.Offset + index, count);
+        }
+    }
+#endif
 }
