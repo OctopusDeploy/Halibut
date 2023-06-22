@@ -223,6 +223,17 @@ namespace Halibut.Tests
                 }
             }
         }
+
+        [Test]
+        public void FooBarWriteLine()
+        {
+            TestContext.WriteLine("Hello");
+        }
+        [Test]
+        public void FooBarProgress()
+        {
+            TestContext.Progress.WriteLine("Hello");
+        }
         
         [Test]
         [TestCase(ServiceConnectionType.Polling, 1)]
