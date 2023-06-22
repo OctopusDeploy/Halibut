@@ -11,8 +11,6 @@ namespace Halibut.Tests.Util
 {
     public class SerilogLoggerBuilder
     {
-        const string OutputTemplate = "{Timestamp:HH:mm:ss.fff zzz} {Message}{NewLine}{Exception}";
-        
         public ILogger Build()
         {
             // In teamcity we need to know what test the log is for, since we can find hung builds and only have a single file containing all log messages.
@@ -22,8 +20,8 @@ namespace Halibut.Tests.Util
                 testName = "[{TestName}] ";
             }
             
-            var outputTemplate = 
-                testName
+            var outputTemplate = "{Timestamp:HH:mm:ss.fff zzz} "
+                + testName
                 + "{Message}{NewLine}{Exception}";
             
             return new LoggerConfiguration()
