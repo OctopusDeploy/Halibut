@@ -11,7 +11,7 @@ namespace Octopus.TestPortForwarder
         TimeSpan sendDelay = TimeSpan.Zero;
         readonly List<Func<BiDirectionalDataTransferObserver>> observerFactory = new();
         int? listeningPort;
-        int delaySendingLastNBytes = 0;
+        int numberOfBytesToDelaySending = 0;
         readonly ILogger logger;
 
         public PortForwarderBuilder(Uri originServer, ILogger logger)
@@ -50,7 +50,7 @@ namespace Octopus.TestPortForwarder
 
         public PortForwarderBuilder WithDelaySendingLastNBytes(int numberOfBytesToDelaySending)
         {
-            this.delaySendingLastNBytes = numberOfBytesToDelaySending;
+            this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             return this;
         }
 
@@ -61,7 +61,7 @@ namespace Octopus.TestPortForwarder
                     var results = observerFactory.Select(factory => factory()).ToArray();
                     return BiDirectionalDataTransferObserver.Combiner(results);
                 },
-                delaySendingLastNBytes,
+                numberOfBytesToDelaySending,
                 logger,
                 listeningPort);
         }

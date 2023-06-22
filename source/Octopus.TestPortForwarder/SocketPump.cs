@@ -15,21 +15,39 @@ namespace Octopus.TestPortForwarder
 
         Stopwatch stopwatch = Stopwatch.StartNew();
         MemoryStream buffer = new MemoryStream();
-        private readonly TcpPump tcpPump;
+        readonly TcpPump tcpPump;
         IsPumpPaused isPumpPaused;
+        
+        /// <summary>
+        /// The pump will wait this long for new data to arrive before sending data.
+        /// This means we will bundle up data and send it all in one request. The aim is
+        /// to be able to find bugs where clients are reading more from the network than they
+        /// should be.
+        /// </summary>
         readonly TimeSpan sendDelay;
+        
+        /// <summary>
+        /// The pumps will send all data read immediately, except for the last n bytes read.
+        /// The last n bytes will be send a little later.
+        /// This means if the pump reads "Hello" and this is set to one, then "hell" will be sent
+        /// and ~10ms later "o" will be sent.
+        ///
+        /// This works with sendDelay, where sendDelay will "buffer" up more reads before sending and this will
+        /// send all but the last N bytes of everything buffered and then ~10ms later send the last n bytes. Before
+        /// returning to buffering up more reads.
+        /// </summary>
+        readonly int numberOfBytesToDelaySending;
 
-        IDataTransferObserver dataTransferObserver;
-        readonly int delaySendingLastNBytes;
+        readonly IDataTransferObserver dataTransferObserver;
         readonly ILogger logger;
 
-        public SocketPump(TcpPump tcpPump, IsPumpPaused isPumpPaused, TimeSpan sendDelay, IDataTransferObserver dataTransferObserver, int delaySendingLastNBytes, ILogger logger)
+        public SocketPump(TcpPump tcpPump, IsPumpPaused isPumpPaused, TimeSpan sendDelay, IDataTransferObserver dataTransferObserver, int numberOfBytesToDelaySending, ILogger logger)
         {
             this.tcpPump = tcpPump;
             this.isPumpPaused = isPumpPaused;
             this.sendDelay = sendDelay;
             this.dataTransferObserver = dataTransferObserver;
-            this.delaySendingLastNBytes = delaySendingLastNBytes;
+            this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             this.logger = logger;
         }
 
@@ -53,7 +71,7 @@ namespace Octopus.TestPortForwarder
                 dataTransferObserver.WritingData(tcpPump, buffer);
 
                 await PausePump(cancellationToken);
-                await WriteToSocketDelayingSendingTheLastNBytes(writeTo, buffer.GetBuffer(), (int)buffer.Length, delaySendingLastNBytes, cancellationToken);
+                await WriteToSocketDelayingSendingTheLastNBytes(writeTo, buffer.GetBuffer(), (int)buffer.Length, numberOfBytesToDelaySending, cancellationToken);
                 buffer.SetLength(0);
             }
             else

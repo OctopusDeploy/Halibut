@@ -17,7 +17,7 @@ namespace Octopus.TestPortForwarder
         readonly List<TcpPump> pumps = new();
         readonly ILogger logger;
         readonly TimeSpan sendDelay;
-        readonly int delaySendingLastNBytes;
+        readonly int numberOfBytesToDelaySending;
         Func<BiDirectionalDataTransferObserver> factory;
         bool active = false;
 
@@ -26,7 +26,7 @@ namespace Octopus.TestPortForwarder
         public PortForwarder(Uri originServer,
             TimeSpan sendDelay,
             Func<BiDirectionalDataTransferObserver> factory,
-            int delaySendingLastNBytes,
+            int numberOfBytesToDelaySending,
             ILogger logger,
             int? listeningPort = null)
         {
@@ -35,7 +35,7 @@ namespace Octopus.TestPortForwarder
             this.sendDelay = sendDelay;
             this.factory = factory;
             this.logger = logger;
-            this.delaySendingLastNBytes = delaySendingLastNBytes;
+            this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             var scheme = originServer.Scheme;
 
             Start();
@@ -117,7 +117,7 @@ namespace Octopus.TestPortForwarder
                         var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                         var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
-                        var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, factory, delaySendingLastNBytes, logger);
+                        var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, factory, numberOfBytesToDelaySending, logger);
                         AddNewPump(pump, cancellationToken);
                     }
                     catch (SocketException ex)
