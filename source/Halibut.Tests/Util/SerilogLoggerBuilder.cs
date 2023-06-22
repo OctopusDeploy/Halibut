@@ -42,7 +42,7 @@ namespace Halibut.Tests.Util
                     throw new ArgumentNullException(nameof(logEvent));
                 if (TestContext.Out == null)
                     return;
-                StringWriter output = new StringWriter();
+                var output = new StringWriter();
                 if (logEvent.Properties.TryGetValue("SourceContext", out var sourceContext))
                 {
                     output.Write("[" + sourceContext.ToString().Substring(sourceContext.ToString().LastIndexOf('.') + 1).Replace("\"", "") + "] ");
