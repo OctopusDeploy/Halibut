@@ -95,7 +95,7 @@ class Build : NukeBuild
             DotNetTest(_ => _
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
-                .Verbosity(DotNetVerbosity.Detailed)
+                .SetVerbosity(DotNetVerbosity.Detailed)
                 .EnableNoBuild()
                 .EnableNoRestore());
         });
