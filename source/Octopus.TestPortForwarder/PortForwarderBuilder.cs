@@ -48,7 +48,7 @@ namespace Octopus.TestPortForwarder
             return this;
         }
 
-        public PortForwarderBuilder WithDelaySendingLastNBytes(int numberOfBytesToDelaySending)
+        public PortForwarderBuilder WithNumberOfBytesToDelaySending(int numberOfBytesToDelaySending)
         {
             this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             return this;

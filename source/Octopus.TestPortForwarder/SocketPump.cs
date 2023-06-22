@@ -92,15 +92,14 @@ namespace Octopus.TestPortForwarder
             }
         }
         
-        async Task WriteToSocketDelayingSendingTheLastNBytes(Socket writeTo, byte[] buffer, int bufferLength, int delaySendingLastNBytes, CancellationToken cancellationToken)
+        static async Task WriteToSocketDelayingSendingTheLastNBytes(Socket writeTo, byte[] buffer, int bufferLength, int delaySendingLastNBytes, CancellationToken cancellationToken)
         {
-            int howMuchToSend = bufferLength - delaySendingLastNBytes;
+            var howMuchToSend = bufferLength - delaySendingLastNBytes;
             if(howMuchToSend < 0) howMuchToSend = bufferLength;
-            int sent = await WriteToSocket(writeTo, buffer, 0, howMuchToSend, cancellationToken);
+            var sent = await WriteToSocket(writeTo, buffer, 0, howMuchToSend, cancellationToken);
             if (howMuchToSend < bufferLength)
             {
                 await Task.Delay(10);
-                int restToSend = bufferLength - howMuchToSend;
                 sent += await WriteToSocket(writeTo, buffer, howMuchToSend, bufferLength - howMuchToSend, cancellationToken);
             }
             if (sent != bufferLength)
@@ -111,14 +110,14 @@ namespace Octopus.TestPortForwarder
         
         static async Task<int> WriteToSocket(Socket writeTo, byte[] buffer, int initialOffset, int totalBytesToSend, CancellationToken cancellationToken)
         {
-            ArraySegment<byte> toSend = new ArraySegment<byte>(buffer, initialOffset, totalBytesToSend);
+            var toSend = new ArraySegment<byte>(buffer, initialOffset, totalBytesToSend);
 
-            int offset = 0;
+            var offset = 0;
             while (totalBytesToSend - offset > 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                ArraySegment<byte> outputBuffer = toSend.Slice(offset, totalBytesToSend - offset);
+                var outputBuffer = toSend.Slice(offset, totalBytesToSend - offset);
 
 #if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
                 var sendAsyncCancellationTokenSource = new CancellationTokenSource();

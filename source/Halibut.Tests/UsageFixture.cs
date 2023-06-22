@@ -236,7 +236,7 @@ namespace Halibut.Tests
                        .WithServiceFactory(GetDelegateServiceFactory())
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort)
                            .WithSendDelay(TimeSpan.FromMilliseconds(20))
-                           .WithDelaySendingLastNBytes(numberOfBytesToDelaySending)
+                           .WithNumberOfBytesToDelaySending(numberOfBytesToDelaySending)
                            .Build())
                        .Build())
             {
