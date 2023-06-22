@@ -5,12 +5,15 @@ namespace Halibut.Tests.Util
     public class TeamCityDetection
     {
         public static bool IsRunningInTeamCity() 
-        { 
-            string environmentVariableValue = Environment.GetEnvironmentVariable("TEAMCITY_VERSION"); 
-            if (!string.IsNullOrEmpty(environmentVariableValue)) 
-            { 
-                return true; 
-            } 
+        {
+            foreach (var tcEnvVar in new string[]{"TEAMCITY_VERSION", "TEAMCITY_BUILD_ID"})
+            {
+                string environmentVariableValue = Environment.GetEnvironmentVariable(tcEnvVar); 
+                if (!string.IsNullOrEmpty(environmentVariableValue)) 
+                { 
+                    return true; 
+                } 
+            }
             return false; 
         } 
     }
