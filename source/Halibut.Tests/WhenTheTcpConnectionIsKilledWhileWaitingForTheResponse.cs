@@ -31,5 +31,14 @@ namespace Halibut.Tests
                 killPortForwarderTask.Status.Should().Be(TaskStatus.Faulted, "We should immediately get an error response.");
             }
         }
+
+        [Test]
+        public void EnvVars()
+        {
+            foreach (var key in Environment.GetEnvironmentVariables().Keys)
+            {
+                TestContext.WriteLine("Env vars: " + key);
+            }
+        }
     }
 }
