@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace Octopus.TestPortForwarder
 {
@@ -19,13 +20,17 @@ namespace Octopus.TestPortForwarder
         readonly TimeSpan sendDelay;
 
         IDataTransferObserver dataTransferObserver;
+        readonly int delaySendingLastNBytes;
+        readonly ILogger logger;
 
-        public SocketPump(TcpPump tcpPump, IsPumpPaused isPumpPaused, TimeSpan sendDelay, IDataTransferObserver dataTransferObserver)
+        public SocketPump(TcpPump tcpPump, IsPumpPaused isPumpPaused, TimeSpan sendDelay, IDataTransferObserver dataTransferObserver, int delaySendingLastNBytes, ILogger logger)
         {
             this.tcpPump = tcpPump;
             this.isPumpPaused = isPumpPaused;
             this.sendDelay = sendDelay;
             this.dataTransferObserver = dataTransferObserver;
+            this.delaySendingLastNBytes = delaySendingLastNBytes;
+            this.logger = logger;
         }
 
         public async Task<SocketStatus> PumpBytes(Socket readFrom, Socket writeTo, CancellationToken cancellationToken)
@@ -48,8 +53,7 @@ namespace Octopus.TestPortForwarder
                 dataTransferObserver.WritingData(tcpPump, buffer);
 
                 await PausePump(cancellationToken);
-
-                await WriteToSocket(writeTo, buffer.GetBuffer(), (int)buffer.Length, cancellationToken);
+                await WriteToSocketDelayingSendingTheLastNBytes(writeTo, buffer.GetBuffer(), (int)buffer.Length, delaySendingLastNBytes, cancellationToken);
                 buffer.SetLength(0);
             }
             else
@@ -69,15 +73,34 @@ namespace Octopus.TestPortForwarder
                 cancellationToken.ThrowIfCancellationRequested();
             }
         }
-
-        static async Task WriteToSocket(Socket writeTo, byte[] inputBuffer, int totalBytesToSend, CancellationToken cancellationToken)
+        
+        async Task WriteToSocketDelayingSendingTheLastNBytes(Socket writeTo, byte[] buffer, int bufferLength, int delaySendingLastNBytes, CancellationToken cancellationToken)
         {
-            var offset = 0;
+            int howMuchToSend = bufferLength - delaySendingLastNBytes;
+            if(howMuchToSend < 0) howMuchToSend = bufferLength;
+            int sent = await WriteToSocket(writeTo, buffer, 0, howMuchToSend, cancellationToken);
+            if (howMuchToSend < bufferLength)
+            {
+                await Task.Delay(10);
+                int restToSend = bufferLength - howMuchToSend;
+                sent += await WriteToSocket(writeTo, buffer, howMuchToSend, bufferLength - howMuchToSend, cancellationToken);
+            }
+            if (sent != bufferLength)
+            {
+                throw new Exception($"Was supported to send {bufferLength} but sent {sent}");
+            }
+        }
+        
+        static async Task<int> WriteToSocket(Socket writeTo, byte[] buffer, int initialOffset, int totalBytesToSend, CancellationToken cancellationToken)
+        {
+            ArraySegment<byte> toSend = new ArraySegment<byte>(buffer, initialOffset, totalBytesToSend);
+
+            int offset = 0;
             while (totalBytesToSend - offset > 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                ArraySegment<byte> outputBuffer = new ArraySegment<byte>(inputBuffer, offset, totalBytesToSend - offset);
+                ArraySegment<byte> outputBuffer = toSend.Slice(offset, totalBytesToSend - offset);
 
 #if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
                 var sendAsyncCancellationTokenSource = new CancellationTokenSource();
@@ -94,6 +117,8 @@ namespace Octopus.TestPortForwarder
 
                 cancellationToken.ThrowIfCancellationRequested();
             }
+
+            return offset;
         }
 
         static async Task<int> ReadFromSocket(Socket readFrom, MemoryStream memoryStream, CancellationToken cancellationToken)

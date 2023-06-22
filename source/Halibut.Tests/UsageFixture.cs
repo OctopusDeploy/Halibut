@@ -201,13 +201,43 @@ namespace Halibut.Tests
             }
         }
         
+        [Test]
+        [TestCase(ServiceConnectionType.Listening)]
+        [TestCase(ServiceConnectionType.Polling)]
+        public void StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
+        {
+            using (var clientAndService = ClientServiceBuilder.ForMode(serviceConnectionType)
+                       .WithServiceFactory(GetDelegateServiceFactory())
+                       .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
+                       .Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+
+                var data = new byte[1024 * 1024 + 15];
+                new Random().NextBytes(data);
+
+                for (var i = 0; i < 100; i++)
+                {
+                    var count = echo.CountBytes(DataStream.FromBytes(data));
+                    count.Should().Be(1024 * 1024 + 15);
+                }
+            }
+        }
         
         [Test]
-        public void StreamsCanBeSentToPollingWithLatency()
+        [TestCase(ServiceConnectionType.Polling, 1)]
+        [TestCase(ServiceConnectionType.Listening, 2)]
+        [TestCase(ServiceConnectionType.Polling, 2)]
+        [TestCase(ServiceConnectionType.Listening, 3)]
+        [TestCase(ServiceConnectionType.Polling, 3)]
+        public void StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
         {
-            using (var clientAndService = ClientServiceBuilder.Polling()
+            using (var clientAndService = ClientServiceBuilder.ForMode(serviceConnectionType)
                        .WithServiceFactory(GetDelegateServiceFactory())
-                       .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(10)).Build())
+                       .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort)
+                           .WithSendDelay(TimeSpan.FromMilliseconds(20))
+                           .WithDelaySendingLastNBytes(numberOfBytesToDelaySending)
+                           .Build())
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();

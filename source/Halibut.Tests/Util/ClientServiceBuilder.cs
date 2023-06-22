@@ -32,6 +32,19 @@ namespace Halibut.Tests.Util
             return new ClientServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
+        public static ClientServiceBuilder ForMode(ServiceConnectionType serviceConnectionType)
+        {
+            switch (serviceConnectionType)
+            {
+                case ServiceConnectionType.Polling:
+                    return ClientServiceBuilder.Polling();
+                case ServiceConnectionType.Listening:
+                    return ClientServiceBuilder.Listening();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
+            }
+        }
+
         /// <summary>
         ///     Ie no tentacle.
         ///     In the case of listening, a TCPListenerWhichKillsNewConnections will be created. This will cause connections to
@@ -72,11 +85,20 @@ namespace Halibut.Tests.Util
         public ClientAndService Build()
         {
             serviceFactory = serviceFactory ?? new DelegateServiceFactory();
-            var octopus = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
+            var octopus = new HalibutRuntimeBuilder().WithServerCertificate(clientCertAndThumbprint.Certificate2)
+                .WithLogFactory(new TestContextLogFactory("Tentacle"))
+                .Build();
             octopus.Trust(serviceCertAndThumbprint.Thumbprint);
 
             HalibutRuntime? tentacle = null;
-            if (HasService) tentacle = new HalibutRuntime(serviceFactory, serviceCertAndThumbprint.Certificate2);
+            if (HasService)
+            {
+                tentacle = new HalibutRuntimeBuilder()
+                    .WithServiceFactory(serviceFactory)
+                    .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
+                    .WithLogFactory(new TestContextLogFactory("Tentacle"))
+                    .Build();
+            }
 
             var disposableCollection = new DisposableCollection();
 
