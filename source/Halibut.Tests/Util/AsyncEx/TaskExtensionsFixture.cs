@@ -8,6 +8,7 @@ using NUnit.Framework;
 namespace Halibut.Tests.Util.AsyncEx
 {
     [TestFixture]
+    [NonParallelizable]
     public class TaskExtensionsFixture
     {
         [Test]

@@ -26,6 +26,7 @@ namespace Halibut.Tests
         }
     }
 
+    [NonParallelizable]
     [TestFixture]
     public class MemoryFixture
     {
