@@ -11,6 +11,7 @@ using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
+    [NonParallelizable]
     public class PollingClientConnectionHandlingFixture
     {
         [Test]
