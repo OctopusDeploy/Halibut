@@ -103,7 +103,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotNetTest(_ => _
-                .SetProjectFile(Solution)
+                .SetProjectFile(Solution.Halibut_Tests)
                 .SetConfiguration(Configuration)
                 .EnableNoBuild()
                 .EnableNoRestore());
