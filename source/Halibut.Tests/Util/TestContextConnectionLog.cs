@@ -37,8 +37,10 @@ namespace Halibut.Tests.Util
         void WriteInternal(LogEvent logEvent)
         {
             var logLevel = GetLogLevel(logEvent);
-
-            TestContext.WriteLine(string.Format("{6} {5, 16}: {0}:{1} {2}  {3} {4}", logLevel, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name, DateTime.UtcNow.ToString("o")));
+            
+            new SerilogLoggerBuilder().Build()
+                .ForContext<TestContextConnectionLog>()
+                .Information(string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logLevel, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name));
         }
 
         static LogLevel GetLogLevel(LogEvent logEvent)

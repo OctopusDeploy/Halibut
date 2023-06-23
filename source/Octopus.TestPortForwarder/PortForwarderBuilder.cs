@@ -11,6 +11,7 @@ namespace Octopus.TestPortForwarder
         TimeSpan sendDelay = TimeSpan.Zero;
         readonly List<Func<BiDirectionalDataTransferObserver>> observerFactory = new();
         int? listeningPort;
+        int numberOfBytesToDelaySending = 0;
         readonly ILogger logger;
 
         public PortForwarderBuilder(Uri originServer, ILogger logger)
@@ -36,9 +37,20 @@ namespace Octopus.TestPortForwarder
             return this;
         }
 
+        /// <summary>
+        /// If possible avoid using this as it may not be possible to bind to the given port.
+        /// </summary>
+        /// <param name="listeningPort"></param>
+        /// <returns></returns>
         public PortForwarderBuilder ListenOnPort(int? listeningPort)
         {
             this.listeningPort = listeningPort;
+            return this;
+        }
+
+        public PortForwarderBuilder WithNumberOfBytesToDelaySending(int numberOfBytesToDelaySending)
+        {
+            this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             return this;
         }
 
@@ -49,6 +61,7 @@ namespace Octopus.TestPortForwarder
                     var results = observerFactory.Select(factory => factory()).ToArray();
                     return BiDirectionalDataTransferObserver.Combiner(results);
                 },
+                numberOfBytesToDelaySending,
                 logger,
                 listeningPort);
         }
