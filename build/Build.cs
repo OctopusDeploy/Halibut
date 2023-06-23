@@ -60,7 +60,9 @@ class Build : NukeBuild
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut))
                 .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut_Tests)));
+                    .SetProjectFile(Solution.Halibut_Tests))
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut_Tests_DotMemory)));
         });
 
     Target Compile => _ => _
