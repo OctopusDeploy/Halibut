@@ -75,7 +75,9 @@ class Build : NukeBuild
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut))
                 .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut_Tests)));
+                    .SetProjectFile(Solution.Halibut_Tests))
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut_Tests_DotMemory)));
         });
 
     [PublicAPI]
@@ -83,8 +85,14 @@ class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
+            DotNetTest(_ => _
+                .SetProjectFile(Solution.Halibut_Tests)
+                .SetConfiguration(Configuration)
+                .EnableNoBuild()
+                .EnableNoRestore());
+            
             DotMemoryUnit(
-                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests.Path} --configuration={Configuration} --no-build");
+                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --no-build");
         });
 
     [PublicAPI]
