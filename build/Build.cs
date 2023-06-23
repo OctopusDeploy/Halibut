@@ -87,14 +87,15 @@ class Build : NukeBuild
         .DependsOn(Compile)
         .Executes(() =>
         {
+            DotMemoryUnit(
+                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --no-build");
+            
             DotNetTest(_ => _
                 .SetProjectFile(Solution.Halibut_Tests)
                 .SetConfiguration(Configuration)
                 .EnableNoBuild()
                 .EnableNoRestore());
             
-            DotMemoryUnit(
-                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --no-build");
         });
 
     [PublicAPI]
