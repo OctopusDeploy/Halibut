@@ -27,6 +27,7 @@ namespace Halibut.Tests.Util
             return new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(outputTemplate)))
+                .Enrich.WithProperty("TestName", TestContext.CurrentContext.Test.Name)
                 .CreateLogger();
         }
         
