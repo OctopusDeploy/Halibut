@@ -11,6 +11,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    [NonParallelizable]
     public class SecureListenerFixture
     {
         PerformanceCounter GetCounterForCurrentProcess(string categoryName, string counterName)

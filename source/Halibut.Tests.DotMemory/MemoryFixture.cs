@@ -11,7 +11,7 @@ using JetBrains.dotMemoryUnit.Kernel;
 using NUnit.Framework;
 using Serilog;
 
-namespace Halibut.Tests
+namespace Halibut.Tests.DotMemory
 {
     public interface ICalculatorService
     {
@@ -26,6 +26,7 @@ namespace Halibut.Tests
         }
     }
 
+    [NonParallelizable]
     [TestFixture]
     public class MemoryFixture
     {

@@ -58,9 +58,16 @@ class Build : NukeBuild
         {
             DotNetRestore(s => s
                 .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut))
+                    .SetProjectFile(Solution.Halibut)));
+            
+            DotNetRestore(s => s
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut_Tests_DotMemory)));
+            
+            DotNetRestore(s => s
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut_Tests)));
+            
         });
 
     Target Compile => _ => _
@@ -73,9 +80,24 @@ class Build : NukeBuild
                 .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
                 .EnableNoRestore()
                 .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut))
+                    .SetProjectFile(Solution.Halibut)));
+            
+            
+            DotNetBuild(s => s
+                .SetConfiguration(Configuration)
+                .SetVersion(OctoVersionInfo.FullSemVer)
+                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
+                .EnableNoRestore()
                 .CombineWith(ss => ss
                     .SetProjectFile(Solution.Halibut_Tests)));
+            
+            DotNetBuild(s => s
+                .SetConfiguration(Configuration)
+                .SetVersion(OctoVersionInfo.FullSemVer)
+                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
+                .EnableNoRestore()
+                .CombineWith(ss => ss
+                    .SetProjectFile(Solution.Halibut_Tests_DotMemory)));
         });
 
     [PublicAPI]
@@ -84,7 +106,14 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotMemoryUnit(
-                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests.Path} --configuration={Configuration} --no-build");
+                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --no-build");
+            
+            DotNetTest(_ => _
+                .SetProjectFile(Solution.Halibut_Tests)
+                .SetConfiguration(Configuration)
+                .EnableNoBuild()
+                .EnableNoRestore());
+            
         });
 
     [PublicAPI]
@@ -93,7 +122,7 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotNetTest(_ => _
-                .SetProjectFile(Solution)
+                .SetProjectFile(Solution.Halibut_Tests)
                 .SetConfiguration(Configuration)
                 .EnableNoBuild()
                 .EnableNoRestore());
