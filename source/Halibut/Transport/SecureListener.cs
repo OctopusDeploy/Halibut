@@ -44,18 +44,44 @@ namespace Halibut.Transport
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
+        HalibutTimeouts halibutTimeouts;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+        public SecureListener(IPEndPoint endPoint,
+                                X509Certificate2 serverCertificate,
+                                ExchangeProtocolBuilder exchangeProtocolBuilder,
+                                ExchangeActionAsync exchangeAction,
+                                Predicate<string> verifyClientThumbprint,
+                                ILogFactory logFactory,
+                                Func<string> getFriendlyHtmlPageContent,
+                                HalibutTimeouts halibutTimeouts)
+            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>(), halibutTimeouts)
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) :
-            this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, HalibutTimeouts halibutTimeouts) :
+            this(endPoint,
+                serverCertificate,
+                exchangeProtocolBuilder,
+                exchangeAction,
+                verifyClientThumbprint,
+                logFactory,
+                getFriendlyHtmlPageContent,
+                getFriendlyHtmlPageHeaders,
+                (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection,
+                halibutTimeouts)
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        public SecureListener(IPEndPoint endPoint, 
+                                X509Certificate2 serverCertificate,
+                                ExchangeProtocolBuilder exchangeProtocolBuilder,
+                                ExchangeActionAsync exchangeAction,
+                                Predicate<string> verifyClientThumbprint,
+                                ILogFactory logFactory,
+                                Func<string> getFriendlyHtmlPageContent,
+                                Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
+                                Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
+                                HalibutTimeouts halibutTimeouts)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -63,6 +89,7 @@ namespace Halibut.Transport
             this.exchangeAction = exchangeAction;
             this.verifyClientThumbprint = verifyClientThumbprint;
             this.unauthorizedClientConnect = unauthorizedClientConnect;
+            this.halibutTimeouts = halibutTimeouts;
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
@@ -170,8 +197,8 @@ namespace Halibut.Transport
         {
             try
             {
-                client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                client.SendTimeout = (int)halibutTimeouts.TcpClientSendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int)halibutTimeouts.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
                 await ExecuteRequest(client).ConfigureAwait(false);

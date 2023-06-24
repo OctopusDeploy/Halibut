@@ -12,6 +12,12 @@ namespace Halibut.Transport
     {
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
         readonly LogFactory logs = new LogFactory();
+        readonly HalibutTimeouts halibutTimeouts;
+
+        public DiscoveryClient(HalibutTimeouts halibutTimeouts)
+        {
+            this.halibutTimeouts = halibutTimeouts;
+        }
 
         public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint)
         {
@@ -23,7 +29,7 @@ namespace Halibut.Transport
             try
             {
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
-                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken))
+                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, new HalibutTimeouts(), log, cancellationToken))
                 {
                     using (var stream = client.GetStream())
                     {

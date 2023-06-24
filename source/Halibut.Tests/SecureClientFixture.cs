@@ -40,7 +40,7 @@ namespace Halibut.Tests
         [Test]
         public void SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
-            var connectionManager = new ConnectionManager();
+            var connectionManager = new ConnectionManager(new HalibutTimeouts());
             var stream = Substitute.For<IMessageExchangeStream>();
             stream.When(x => x.IdentifyAsClient()).Do(x => throw new ConnectionInitializationFailedException(""));
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
@@ -70,7 +70,7 @@ namespace Halibut.Tests
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), logger), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), new HalibutTimeouts(), logger), logger);
         }
     }
 }

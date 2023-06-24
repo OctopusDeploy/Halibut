@@ -12,11 +12,13 @@ namespace Halibut.Transport
         readonly Stream stream;
         readonly MessageExchangeProtocol protocol;
         DateTimeOffset lastUsed;
+        readonly HalibutTimeouts halibutTimeouts;
 
-        public SecureConnection(IDisposable client, Stream stream, ExchangeProtocolBuilder exchangeProtocolBuilder, ILog log)
+        public SecureConnection(IDisposable client, Stream stream, ExchangeProtocolBuilder exchangeProtocolBuilder, HalibutTimeouts halibutTimeouts, ILog log)
         {
             this.client = client;
             this.stream = stream;
+            this.halibutTimeouts = halibutTimeouts;
             protocol = exchangeProtocolBuilder(stream, log);
             lastUsed = DateTimeOffset.UtcNow;
         }
@@ -30,7 +32,7 @@ namespace Halibut.Transport
 
         public bool HasExpired()
         {
-            return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.SafeTcpClientPooledConnectionTimeout);
+            return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.SafeTcpClientPooledConnectionTimeout(halibutTimeouts));
         }
 
         public void Dispose()
