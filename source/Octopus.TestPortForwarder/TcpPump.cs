@@ -11,6 +11,12 @@ namespace Octopus.TestPortForwarder
 {
     public class TcpPump : IDisposable
     {
+        static long tcpPumpNumner = 0;
+
+        static long NextTcpPumpNumber()
+        {
+            return Interlocked.Increment(ref tcpPumpNumner);
+        }
         readonly Socket clientSocket;
         readonly EndPoint clientEndPoint;
         readonly Socket originSocket;
@@ -23,6 +29,7 @@ namespace Octopus.TestPortForwarder
         bool isDisposed;
         public bool IsPaused { get; set; }
         private Func<BiDirectionalDataTransferObserver> factory;
+        readonly long pumpNumber = NextTcpPumpNumber();
 
         public TcpPump(Socket clientSocket, Socket originSocket, EndPoint originEndPoint, TimeSpan sendDelay, Func<BiDirectionalDataTransferObserver> factory, int numberOfBytesToDelaySending, ILogger logger)
         {
@@ -36,6 +43,10 @@ namespace Octopus.TestPortForwarder
             clientEndPoint = clientSocket.RemoteEndPoint ?? throw new ArgumentException("Remote endpoint is null", nameof(clientSocket));
         }
 
+        public string DescribePump()
+        {
+            return $"Forwarding connection from {clientEndPoint.ToString()} to {originEndPoint.ToString()} [{pumpNumber}]";
+        }
         public event EventHandler<EventArgs> Stopped;
 
         public void Start()
