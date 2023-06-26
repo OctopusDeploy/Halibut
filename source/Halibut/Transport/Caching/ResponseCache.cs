@@ -14,7 +14,7 @@ namespace Halibut.Transport.Caching
     /// <returns>True to allow the error response message to be cached, otherwise false.</returns>
     public delegate bool OverrideErrorResponseMessageCachingAction(ResponseMessage responseMessage);
 
-    internal class ResponseCache
+    class ResponseCache
     {
         readonly MemoryCache responseMessageCache = new("ResponseMessageCache");
 

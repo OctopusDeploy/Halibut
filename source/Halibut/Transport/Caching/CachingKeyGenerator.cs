@@ -6,11 +6,11 @@ using System.Text;
 
 namespace Halibut.Transport.Caching
 {
-    internal class CachingKeyGenerator
+    class CachingKeyGenerator
     {
         const char LinkChar = ':';
 
-        public string GetCacheKey(MethodInfo methodInfo, object[] args, string prefix)
+        internal string GetCacheKey(MethodInfo methodInfo, object[] args, string prefix)
         {
             var methodArguments = args?.Any() == true
                 ? args.Select(ParameterCacheKeys.GenerateCacheKey)
@@ -18,7 +18,7 @@ namespace Halibut.Transport.Caching
             return GenerateCacheKey(methodInfo, prefix, methodArguments);
         }
 
-        public string GetCacheKeyPrefix(MethodInfo methodInfo, string prefix)
+        string GetCacheKeyPrefix(MethodInfo methodInfo, string prefix)
         {
             if (!string.IsNullOrWhiteSpace(prefix)) return $"{prefix}{LinkChar}";
 

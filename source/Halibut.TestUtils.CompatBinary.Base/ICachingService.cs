@@ -20,7 +20,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         // The CacheResponse Attribute cannot be applied / isn't need for the Service interface
         // It is applied on the client interface in the Halibut.Tests project
-        Guid CachableCallThatThrowsAnException(string exceptionMessage);
+        Guid CachableCallThatThrowsAnExceptionWithARandomExceptionMessage(string exceptionMessagePrefix);
 
         // The CacheResponse Attribute cannot be applied / isn't need for the Service interface
         // It is applied on the client interface in the Halibut.Tests project

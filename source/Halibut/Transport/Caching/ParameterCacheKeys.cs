@@ -7,7 +7,7 @@ namespace Halibut.Transport.Caching
 {
     static class ParameterCacheKeys
     {
-        public static string GenerateCacheKey(object parameter)
+        internal static string GenerateCacheKey(object parameter)
         {
             if (parameter == null) return string.Empty;
             if (parameter is string key) return key;

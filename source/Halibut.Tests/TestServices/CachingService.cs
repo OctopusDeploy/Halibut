@@ -24,9 +24,9 @@ namespace Halibut.Tests.TestServices
             return Guid.NewGuid();
         }
 
-        public Guid CachableCallThatThrowsAnException(string exceptionMessage)
+        public Guid CachableCallThatThrowsAnExceptionWithARandomExceptionMessage(string exceptionMessagePrefix)
         {
-            throw new Exception(exceptionMessage + " " + Guid.NewGuid());
+            throw new Exception(exceptionMessagePrefix + " " + Guid.NewGuid());
         }
 
         public Guid TwoSecondCachableCall()

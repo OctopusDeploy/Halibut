@@ -17,7 +17,7 @@ namespace Halibut.Tests.TestServices
         Guid CachableCall(Guid input);
 
         [CacheResponse(600)]
-        Guid CachableCallThatThrowsAnException(string exceptionMessage);
+        Guid CachableCallThatThrowsAnExceptionWithARandomExceptionMessage(string exceptionMessagePrefix);
 
         [CacheResponse(2)]
         Guid TwoSecondCachableCall();

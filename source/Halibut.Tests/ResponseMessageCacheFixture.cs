@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.BackwardsCompatibility.Util;
 using Halibut.Tests.TestServices;
@@ -172,57 +173,33 @@ namespace Halibut.Tests
         {
             using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
             {
-                clientAndService.Octopus.OverrideErrorResponseMessageCaching = (response) =>
-                {
-                    if (response.Error.Message.Contains("CACHE ME"))
-                    {
-                        return true;
-                    }
-
-                    return false;
-                };
+                clientAndService.Octopus.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
 
                 var client = clientAndService.CreateClient<ICachingService>();
 
-                Exception exception1 = null;
-                Exception exception2 = null;
-
-                TryCatch(() => client.CachableCallThatThrowsAnException($"UNCACHED"), e => exception1 = e);
-                TryCatch(() => client.CachableCallThatThrowsAnException($"UNCACHED"), e => exception2 = e);
-
-                exception1.Should().NotBeNull();
-                exception2.Should().NotBeNull();
+                var exception1 = Assert.Throws<ServiceInvocationHalibutClientException>(() => client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessage($"UNCACHED"));
+                var exception2 = Assert.Throws<ServiceInvocationHalibutClientException>(() => client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessage($"UNCACHED"));
                 exception1!.Message.Should().NotBe(exception2!.Message);
 
 
-                Exception exception3 = null;
-                Exception exception4 = null;
-
-                TryCatch(() => client.CachableCallThatThrowsAnException($"CACHE ME"), e => exception3 = e);
-                TryCatch(() => client.CachableCallThatThrowsAnException($"CACHE ME"), e => exception4 = e);
-
-                exception3.Should().NotBeNull();
-                exception4.Should().NotBeNull();
+                var exception3 = Assert.Throws<ServiceInvocationHalibutClientException>(() => client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessage($"CACHE ME"));
+                var exception4 = Assert.Throws<ServiceInvocationHalibutClientException>(() => client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessage($"CACHE ME"));
                 exception3!.Message.Should().Be(exception4!.Message);
             }
         }
 
         [Test]
         [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ErrorResponsesShouldNotBeCached(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        public async Task ForAServiceThatSupportsCaching_ErrorResponsesShouldNotBeCachedByDefault(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
         {
             using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
             {
                 var client = clientAndService.CreateClient<ICachingService>();
-                Exception exception1 = null;
-                Exception exception2 = null;
 
-                TryCatch(() => client.CachableCallThatThrowsAnException($"Exception"), e => exception1 = e);
-                TryCatch(() => client.CachableCallThatThrowsAnException($"Exception"), e => exception2 = e);
+                var exception1 = Assert.Throws<ServiceInvocationHalibutClientException>(() => client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessage($"Exception"));
+                var exception2 = Assert.Throws<ServiceInvocationHalibutClientException>(() => client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessage($"Exception"));
 
-                exception1.Should().NotBeNull();
                 exception1!.Message.Should().StartWith("Exception");
-                exception2.Should().NotBeNull();
                 exception2!.Message.Should().StartWith("Exception");
                 exception1!.Message.Should().NotBe(exception2.Message);
             }
@@ -239,18 +216,6 @@ namespace Halibut.Tests
                     .ForServiceConnectionType(serviceConnectionType)
                     .WithServiceVersion(halibutServiceVersion)
                     .Build();
-        }
-
-        void TryCatch(Action action, Action<Exception> handleException)
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception e)
-            {
-                handleException(e);
-            }
         }
 
         public interface IClientCachingService
