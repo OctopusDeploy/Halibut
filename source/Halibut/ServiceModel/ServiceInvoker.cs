@@ -103,7 +103,7 @@ namespace Halibut.ServiceModel
             throw new AmbiguousMethodMatchHalibutClientException(message.ToString(), new AmbiguousMatchException(message.ToString()));
         }
 
-        static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)
+        public static object[] GetArguments(RequestMessage requestMessage, MethodInfo methodInfo)
         {
             var methodParams = methodInfo.GetParameters();
             var args = new object[methodParams.Length];

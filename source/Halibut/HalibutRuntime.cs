@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-// ReSharper disable once RedundantUsingDirective : Used in .CORE
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -12,6 +11,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport;
+using Halibut.Transport.Caching;
 using Halibut.Transport.Protocol;
 
 namespace Halibut
@@ -33,6 +33,7 @@ namespace Halibut
         Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
         readonly IMessageSerializer messageSerializer;
         readonly ITypeRegistry typeRegistry;
+        readonly ResponseCache responseCache = new();
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -55,7 +56,7 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            
+
             // these two are the reason we can't just call our internal ctor.
             logs = new LogFactory();
             queueFactory = new DefaultPendingRequestQueueFactory(logs);
@@ -66,7 +67,7 @@ namespace Halibut
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
         }
-        
+
         internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer)
         {
             this.serverCertificate = serverCertificate;
@@ -81,7 +82,8 @@ namespace Halibut
         public ILogFactory Logs => logs;
 
         public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-        
+        public OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }
+
         IPendingRequestQueue GetQueue(Uri target)
         {
             return queues.GetOrAdd(target, u => queueFactory.CreateQueue(target));
@@ -100,7 +102,7 @@ namespace Halibut
 
             return Listen(new IPEndPoint(ipAddress, port));
         }
-        
+
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
             return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log), log);
@@ -163,7 +165,7 @@ namespace Halibut
         {
             return Discover(uri, CancellationToken.None);
         }
-        
+
         public ServiceEndPoint Discover(Uri uri, CancellationToken cancellationToken)
         {
             return Discover(new ServiceEndPoint(uri, null), cancellationToken);
@@ -173,7 +175,7 @@ namespace Halibut
         {
             return Discover(endpoint, CancellationToken.None);
         }
-        
+
         public ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             var client = new DiscoveryClient();
@@ -221,26 +223,41 @@ namespace Halibut
             return proxy;
 #endif
         }
-        
+
         // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
         [Obsolete("Consider implementing an async HalibutProxy instead")]
-        ResponseMessage SendOutgoingRequest(RequestMessage request, CancellationToken cancellationToken)
+        ResponseMessage SendOutgoingRequest(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
-            return SendOutgoingRequestAsync(request, cancellationToken).GetAwaiter().GetResult();
+            return SendOutgoingRequestAsync(request, methodInfo, cancellationToken).GetAwaiter().GetResult();
         }
 
-        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
+
+            var cachedResponse = responseCache.GetCachedResponse(endPoint, request, methodInfo);
+
+            if (cachedResponse != null)
+            {
+                return cachedResponse;
+            }
+
+            ResponseMessage response;
 
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    return SendOutgoingHttpsRequest(request, cancellationToken);
+                    response = SendOutgoingHttpsRequest(request, cancellationToken);
+                    break;
                 case "poll":
-                    return await SendOutgoingPollingRequest(request, cancellationToken);
+                    response = await SendOutgoingPollingRequest(request, cancellationToken);
+                    break;
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
+
+            responseCache.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
+
+            return response;
         }
 
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
@@ -359,6 +376,6 @@ namespace Halibut
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                                    Environment.OSVersion.Version >= new Version(6, 2);
 #pragma warning restore DE0009 // API is deprecated
-        
+
     }
 }

@@ -26,6 +26,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
+            services.Register<ICachingService>(() => new CachingService());
             using (var tentaclePolling = new HalibutRuntime(services, TentacleCert))
             {
                 switch (serviceConnectionType)

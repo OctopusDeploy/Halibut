@@ -2,33 +2,39 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Tests.Util;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.BackwardsCompatibility.Util
 {
-    public class ClientAndPreviousVersionServiceBuilder
+    public class ClientAndPreviousServiceVersionBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        string version = "5.0.429";
+        string version = null;
 
-        ClientAndPreviousVersionServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        ClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
         }
 
-        public static ClientAndPreviousVersionServiceBuilder WithPollingService()
+        public static ClientAndPreviousServiceVersionBuilder WithPollingService()
         {
-            return new ClientAndPreviousVersionServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
-        public static ClientAndPreviousVersionServiceBuilder WithListeningService()
+        public static ClientAndPreviousServiceVersionBuilder WithListeningService()
         {
-            return new ClientAndPreviousVersionServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
-        public static ClientAndPreviousVersionServiceBuilder WithService(ServiceConnectionType connectionType)
+        public static ClientAndPreviousServiceVersionBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
+        {
+            return new ClientAndPreviousServiceVersionBuilder(serviceConnectionType, CertAndThumbprint.TentacleListening);
+        }
+
+        public static ClientAndPreviousServiceVersionBuilder WithService(ServiceConnectionType connectionType)
         {
             switch (connectionType)
             {
@@ -41,15 +47,19 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             }
         }
 
-        public ClientAndPreviousVersionServiceBuilder WithServiceVersion(string version)
+        public ClientAndPreviousServiceVersionBuilder WithServiceVersion(string version)
         {
             this.version = version;
             return this;
         }
 
-        public async Task<ClientAndService> Build()
+        public async Task<IClientAndService> Build()
         {
-            if (version == null) throw new Exception("The version of the service must be set.");
+            if (version == null)
+            {
+                throw new Exception("The version of the service must be set.");
+            }
+
             var octopus = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
             octopus.Trust(serviceCertAndThumbprint.Thumbprint);
 
@@ -70,9 +80,8 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             return new ClientAndService(octopus, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint);
         }
 
-        public class ClientAndService : IDisposable
+        public class ClientAndService : IClientAndService
         {
-            readonly HalibutRuntime octopus;
             readonly HalibutTestBinaryRunner.RunningOldHalibutBinary runningOldHalibutBinary;
             readonly Uri serviceUri;
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
@@ -82,11 +91,15 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint)
             {
-                this.octopus = octopus;
+                this.Octopus = octopus;
                 this.runningOldHalibutBinary = runningOldHalibutBinary;
                 this.serviceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             }
+
+            public HalibutRuntime Octopus { get; }
+
+            public PortForwarder PortForwarder => throw new NotSupportedException();
 
             public TService CreateClient<TService>()
             {
@@ -102,19 +115,24 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
-                return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
+                return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
-            
+
+            public TClientService CreateClient<TService, TClientService>()
+            {
+                return CreateClient<TService, TClientService>(_ => { });
+            }
+
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
-                return octopus.CreateClient<TService, TClientService>(serviceEndpoint);
+                return Octopus.CreateClient<TService, TClientService>(serviceEndpoint);
             }
 
             public void Dispose()
             {
-                octopus.Dispose();
+                Octopus.Dispose();
                 runningOldHalibutBinary.Dispose();
             }
         }

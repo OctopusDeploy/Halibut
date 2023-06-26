@@ -21,13 +21,13 @@ namespace Halibut.Tests
             {
                 var svc = clientAndService.CreateClient<IDoSomeActionService>();
 
-                doSomeActionService.ActionDelegate = () => clientAndService.portForwarder.Dispose();
+                doSomeActionService.ActionDelegate = () => clientAndService.PortForwarder.Dispose();
 
                 // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
                 var killPortForwarderTask = Task.Run(() => svc.Action());
-                
+
                 await Task.WhenAny(killPortForwarderTask, Task.Delay(TimeSpan.FromSeconds(10)));
-                
+
                 killPortForwarderTask.Status.Should().Be(TaskStatus.Faulted, "We should immediately get an error response.");
             }
         }
