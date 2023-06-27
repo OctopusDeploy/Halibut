@@ -10,7 +10,7 @@ namespace Halibut.ServiceModel
         readonly Dictionary<string, Func<object>> services = new Dictionary<string, Func<object>>(StringComparer.OrdinalIgnoreCase);
         readonly HashSet<Type> serviceTypes = new HashSet<Type>();
 
-        public void Register<TContract>(Func<TContract> implementation)
+        public DelegateServiceFactory Register<TContract>(Func<TContract> implementation)
         {
             var serviceType = typeof(TContract);
             services.Add(serviceType.Name, () => implementation());
@@ -18,6 +18,8 @@ namespace Halibut.ServiceModel
             {
                 serviceTypes.Add(serviceType);    
             }
+
+            return this;
         }
 
         public IServiceLease CreateService(string serviceName)
