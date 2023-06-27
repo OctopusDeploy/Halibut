@@ -12,7 +12,10 @@ namespace Halibut.Tests.BackwardsCompatibility
         [Test]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException_Polling()
         {
-            using (var clientAndService = await ClientAndPreviousVersionServiceBuilder.WithPollingService().WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
+                       .WithPollingService()
+                       .WithServiceVersion(PreviousServiceVersions.v5_0_429)
+                       .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>(se =>
                 {
@@ -27,7 +30,10 @@ namespace Halibut.Tests.BackwardsCompatibility
         [Test]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException_Listening()
         {
-            using (var clientAndService = await ClientAndPreviousVersionServiceBuilder.WithListeningService().WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
+                       .WithListeningService()
+                       .WithServiceVersion(PreviousServiceVersions.v5_0_429)
+                       .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>(se =>
                 {

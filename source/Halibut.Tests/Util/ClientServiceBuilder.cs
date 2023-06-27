@@ -1,5 +1,8 @@
+#nullable enable
 using System;
+using System.CodeDom;
 using System.Threading;
+using FluentAssertions.Primitives;
 using Halibut.ServiceModel;
 using Octopus.TestPortForwarder;
 
@@ -11,7 +14,7 @@ namespace Halibut.Tests.Util
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        bool HasService = true;
+        bool hasService = true;
 
         Func<int, PortForwarder>? portForwarderFactory;
 
@@ -23,7 +26,6 @@ namespace Halibut.Tests.Util
 
         public static ClientServiceBuilder Polling()
         {
-            new ClientServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
             return new ClientServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
@@ -53,7 +55,7 @@ namespace Halibut.Tests.Util
         /// <returns></returns>
         public ClientServiceBuilder NoService()
         {
-            HasService = false;
+            hasService = false;
             return this;
         }
 
@@ -85,13 +87,14 @@ namespace Halibut.Tests.Util
         public ClientAndService Build()
         {
             serviceFactory = serviceFactory ?? new DelegateServiceFactory();
+
             var octopus = new HalibutRuntimeBuilder().WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogFactory("Tentacle"))
                 .Build();
             octopus.Trust(serviceCertAndThumbprint.Thumbprint);
 
             HalibutRuntime? tentacle = null;
-            if (HasService)
+            if (hasService)
             {
                 tentacle = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
@@ -104,7 +107,6 @@ namespace Halibut.Tests.Util
 
             PortForwarder? portForwarder = null;
             Uri serviceUri;
-            CertAndThumbprint certForClientCreation;
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
                 var listenPort = octopus.Listen();
@@ -139,7 +141,7 @@ namespace Halibut.Tests.Util
             return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection);
         }
 
-        public class ClientAndService : IDisposable
+        public class ClientAndService : IClientAndService
         {
             public HalibutRuntime Octopus { get; }
             public HalibutRuntime? Tentacle { get; }
@@ -152,7 +154,8 @@ namespace Halibut.Tests.Util
                 HalibutRuntime tentacle,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
-                PortForwarder? portForwarder, DisposableCollection disposableCollection)
+                PortForwarder? portForwarder,
+                DisposableCollection disposableCollection)
             {
                 this.Octopus = octopus;
                 this.Tentacle = tentacle;
@@ -161,6 +164,8 @@ namespace Halibut.Tests.Util
                 this.portForwarder = portForwarder;
                 this.disposableCollection = disposableCollection;
             }
+
+            public PortForwarder PortForwarder => portForwarder;
 
             public TService CreateClient<TService>()
             {
@@ -178,7 +183,12 @@ namespace Halibut.Tests.Util
                 modifyServiceEndpoint(serviceEndpoint);
                 return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
-            
+
+            public TClientService CreateClient<TService, TClientService>()
+            {
+                return CreateClient<TService, TClientService>(_ => { });
+            }
+
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = new ServiceEndPoint(ServiceUri, serviceCertAndThumbprint.Thumbprint);

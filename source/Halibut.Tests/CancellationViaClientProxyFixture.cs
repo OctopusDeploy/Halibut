@@ -55,17 +55,28 @@ namespace Halibut.Tests
         [TestCase(ServiceConnectionType.Polling)]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientAndPreviousVersionServiceBuilder.WithService(serviceConnectionType).WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.WithService(serviceConnectionType).WithServiceVersion("5.0.429").Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
                     {
                         se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
                         se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
                     });
-                
+
                 var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
                 res.Should().Be("Hello!!");
             }
+        }
+
+        public interface IClientEchoService
+        {
+            int LongRunningOperation(HalibutProxyRequestOptions halibutProxyRequestOptions);
+
+            string SayHello(string name, HalibutProxyRequestOptions halibutProxyRequestOptions);
+
+            bool Crash(HalibutProxyRequestOptions halibutProxyRequestOptions);
+
+            int CountBytes(DataStream stream, HalibutProxyRequestOptions halibutProxyRequestOptions);
         }
     }
 
@@ -80,16 +91,5 @@ namespace Halibut.Tests
         {
             throw new NotImplementedException();
         }
-    }
-
-    public interface IClientEchoService
-    {
-        int LongRunningOperation(HalibutProxyRequestOptions halibutProxyRequestOptions);
-
-        string SayHello(string name, HalibutProxyRequestOptions halibutProxyRequestOptions);
-
-        bool Crash(HalibutProxyRequestOptions halibutProxyRequestOptions);
-
-        int CountBytes(DataStream stream, HalibutProxyRequestOptions halibutProxyRequestOptions);
     }
 }
