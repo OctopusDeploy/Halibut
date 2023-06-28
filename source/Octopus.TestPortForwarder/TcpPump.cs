@@ -11,11 +11,11 @@ namespace Octopus.TestPortForwarder
 {
     public class TcpPump : IDisposable
     {
-        static long tcpPumpNumner = 0;
+        static long numberOfTcpPumpsCreated = 0;
 
         static long NextTcpPumpNumber()
         {
-            return Interlocked.Increment(ref tcpPumpNumner);
+            return Interlocked.Increment(ref numberOfTcpPumpsCreated);
         }
         readonly Socket clientSocket;
         readonly EndPoint clientEndPoint;
