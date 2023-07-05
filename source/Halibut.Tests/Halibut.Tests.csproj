@@ -23,12 +23,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="App.config" />
-    <None Include="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NET6.0.approved.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="PublicSurfaceAreaFixture.ThePublicSurfaceAreaShouldNotRegress.NETFramework.approved.cs">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
   <ItemGroup>
