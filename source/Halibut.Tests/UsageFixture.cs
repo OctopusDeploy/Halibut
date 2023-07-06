@@ -18,17 +18,13 @@ namespace Halibut.Tests
 {
     public class UsageFixture
     {
-        static DelegateServiceFactory GetDelegateServiceFactory()
-        {
-            var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
-            return services;
-        }
-
         [Test]
         public void OctopusCanDiscoverTentacle()
         {
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = ClientServiceBuilder
+                       .Listening()
+                       .WithEchoService()
+                       .Build())
             {
                 var info = clientAndService.Octopus.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
@@ -42,7 +38,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithServiceFactory(GetDelegateServiceFactory())
+                       .WithEchoService()
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -59,12 +55,10 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public void OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
         {
-            var services = GetDelegateServiceFactory();
-            services.Register<ISupportedServices>(() => new SupportedServices());
-
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithServiceFactory(services)
+                       .WithEchoService()
+                       .WithSupportedServices()
                        .Build())
             {
                 var svc = clientAndService.CreateClient<ISupportedServices>();
@@ -81,9 +75,11 @@ namespace Halibut.Tests
         [Test]
         public void HalibutSerializerIsKeptUpToDateWithPollingTentacle()
         {
-            var services = GetDelegateServiceFactory();
-            services.Register<ISupportedServices>(() => new SupportedServices());
-            using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).Build()){
+            using (var clientAndService = ClientServiceBuilder
+                       .Polling()
+                       .WithEchoService()
+                       .WithSupportedServices()
+                       .Build()){
 
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -102,7 +98,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithServiceFactory(GetDelegateServiceFactory())
+                       .WithEchoService()
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -122,8 +118,9 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public void StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder.ForMode(serviceConnectionType)
-                       .WithServiceFactory(GetDelegateServiceFactory())
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
                        .Build())
             {
@@ -148,8 +145,9 @@ namespace Halibut.Tests
         [TestCase(ServiceConnectionType.Polling, 3)]
         public void StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
         {
-            using (var clientAndService = ClientServiceBuilder.ForMode(serviceConnectionType)
-                       .WithServiceFactory(GetDelegateServiceFactory())
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort)
                            .WithSendDelay(TimeSpan.FromMilliseconds(20))
                            .WithNumberOfBytesToDelaySending(numberOfBytesToDelaySending)
@@ -170,12 +168,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void SupportsDifferentServiceContractMethods()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public void SupportsDifferentServiceContractMethods(ServiceConnectionType serviceConnectionType)
         {
-            var services = GetDelegateServiceFactory();
-            services.Register<ISupportedServices>(() => new SupportedServices());
-
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
+            using (var clientAndService = ClientServiceBuilder
+                     .ForMode(serviceConnectionType)
+                     .WithEchoService()
+                     .WithSupportedServices()
+                     .Build())
             {
                 var echo = clientAndService.CreateClient<ISupportedServices>();
                 echo.MethodReturningVoid(12, 14);
@@ -213,7 +213,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithServiceFactory(GetDelegateServiceFactory())
+                       .WithEchoService()
                        .Build())
             {
                 var progressReported = new List<int>();
@@ -315,6 +315,13 @@ namespace Halibut.Tests
 
                 sw.Elapsed.Should().BeLessOrEqualTo(TimeSpan.FromSeconds(5));
             }
+        }
+
+        static DelegateServiceFactory GetDelegateServiceFactory()
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<IEchoService>(() => new EchoService());
+            return services;
         }
 
         static async Task<string> DownloadStringIgnoringCertificateValidation(string uri)

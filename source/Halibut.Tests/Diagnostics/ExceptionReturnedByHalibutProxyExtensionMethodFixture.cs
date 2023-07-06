@@ -51,7 +51,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var clientAndService = ClientServiceBuilder
                            .Polling()
                            .WithPortForwarding(out var portForwarder)
-                           .WithService<IDoSomeActionService>(() => new DoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode()))
+                           .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
                            .Build())
                 {
                     var svc = clientAndService.CreateClient<IDoSomeActionService>();
@@ -129,7 +129,7 @@ namespace Halibut.Tests.Diagnostics
             {
                 using (var clientAndService = ClientServiceBuilder
                            .Listening()
-                           .WithService<IEchoService>(() => new EchoService())
+                           .WithEchoService()
                            .Build())
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(remoteThumbprint: "Wrong Thumbrprint");
@@ -147,7 +147,7 @@ namespace Halibut.Tests.Diagnostics
             {
                 using (var clientAndService = ClientServiceBuilder
                            .ForMode(serviceConnectionType)
-                           .WithService<IEchoService>(() => new EchoService())
+                           .WithEchoService()
                            .Build())
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
@@ -167,7 +167,7 @@ namespace Halibut.Tests.Diagnostics
             {
                 using (var clientAndService = ClientServiceBuilder
                            .ForMode(serviceConnectionType)
-                           .WithService<IEchoService>(() => new EchoService())
+                           .WithEchoService()
                            .Build())
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
@@ -187,7 +187,7 @@ namespace Halibut.Tests.Diagnostics
             {
                 using (var clientAndService = ClientServiceBuilder
                            .ForMode(serviceConnectionType)
-                           .WithService<IEchoService>(() => new EchoService())
+                           .WithEchoService()
                            .Build())
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();

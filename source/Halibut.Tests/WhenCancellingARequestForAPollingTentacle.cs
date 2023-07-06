@@ -58,7 +58,7 @@ namespace Halibut.Tests
 
                 using (var clientAndService = ClientServiceBuilder
                            .Polling()
-                           .WithService<IDoSomeActionService>(() => new DoSomeActionService(() =>
+                           .WithDoSomeActionService(() =>
                            {
                                calls.Add(DateTime.UtcNow);
 
@@ -68,7 +68,7 @@ namespace Halibut.Tests
                                }
 
                                Thread.Sleep(TimeSpan.FromSeconds(1));
-                           }))
+                           })
                            // CancelWhenRequestDequeuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
                            .WithPendingRequestQueueFactory(logFactory => new CancelWhenRequestDequeuedPendingRequestQueueFactory(logFactory, cancellationTokenSource))
                            .Build())

@@ -45,7 +45,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithService<IEchoService>(() => new EchoService())
+                       .WithEchoService()
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -133,8 +133,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithPortForwarding(out var portForwarder)
-                       .WithService<IReadDataStreamService>(() => new ReadDataStreamService())
+                       .WithReadDataStreamService()
                        .Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
