@@ -46,13 +46,12 @@ namespace Halibut.Tests.Diagnostics
         public class WhenTheHalibutProxyThrowsAnException
         {
             [Test]
-            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-            public async Task WhenTheConnectionTerminatesWaitingForAResponseFromATentacle(ServiceConnectionType serviceConnectionType)
+            public async Task WhenTheConnectionTerminatesWaitingForAResponseFromAPollingTentacle()
             {
                 using (var clientAndService = ClientServiceBuilder
-                           .ForMode(serviceConnectionType)
+                           .Polling()
                            .WithPortForwarding(out var portForwarder)
-                           .WithService<IDoSomeActionService>(() => new DoSomeActionService(() => portForwarder.Value.Dispose()))
+                           .WithService<IDoSomeActionService>(() => new DoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode()))
                            .Build())
                 {
                     var svc = clientAndService.CreateClient<IDoSomeActionService>();
