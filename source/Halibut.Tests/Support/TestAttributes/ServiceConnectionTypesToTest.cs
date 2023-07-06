@@ -1,6 +1,5 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using Halibut.Tests.Support;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
