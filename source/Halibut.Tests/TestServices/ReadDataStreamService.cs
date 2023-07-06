@@ -2,7 +2,7 @@ using System.Xml.Schema;
 
 namespace Halibut.Tests.TestServices
 {
-    public class ReadDataStreamService : IReadDataSteamService
+    public class ReadDataStreamService : IReadDataStreamService
     {
         long SendData(DataStream dataStream)
         {
@@ -17,7 +17,7 @@ namespace Halibut.Tests.TestServices
                     total += read;
                 }
             });
-            
+
             return total;
         }
 

@@ -33,11 +33,11 @@ namespace Halibut.Tests
             }
             finally
             {
-               File.Delete(filePath); 
+               File.Delete(filePath);
             }
         }
 
-        private static string ReadStreamAsString(Stream stream)
+        static string ReadStreamAsString(Stream stream)
         {
             using (var reader = new StreamReader(stream))
             {
