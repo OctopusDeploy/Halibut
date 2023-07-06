@@ -2,11 +2,9 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
-using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -15,7 +13,8 @@ namespace Halibut.Tests
         [Test]
         public async Task HalibutCanRecoverFromIdleTcpDisconnect2()
         {
-            using (var clientAndService = ClientServiceBuilder.Listening()
+            using (var clientAndService = ClientServiceBuilder
+                       .Listening()
                        .WithService<IEchoService>(() => new EchoService())
                        .WithPortForwarding()
                        .Build())
@@ -27,7 +26,7 @@ namespace Halibut.Tests
 
                 echo.SayHello("Bob");
 
-                clientAndService.portForwarder.PauseExistingConnections();
+                clientAndService.PortForwarder!.PauseExistingConnections();
 
                 var sayHelloTask = Task.Run(() => echo.SayHello("Bob"));
 

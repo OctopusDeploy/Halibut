@@ -3,9 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
-using Halibut.Tests.BackwardsCompatibility.Util;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
@@ -51,8 +52,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCase(ServiceConnectionType.Listening)]
-        [TestCase(ServiceConnectionType.Polling)]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.WithService(serviceConnectionType).WithServiceVersion("5.0.429").Build())

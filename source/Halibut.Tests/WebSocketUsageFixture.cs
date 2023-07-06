@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using FluentAssertions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 

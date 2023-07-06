@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
-using Halibut.Tests.BackwardsCompatibility.Util;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.Transport.Caching;
 using NUnit.Framework;
 

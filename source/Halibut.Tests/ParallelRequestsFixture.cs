@@ -1,12 +1,9 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using FluentAssertions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
-using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -18,7 +15,7 @@ namespace Halibut.Tests
         {
             var services = new DelegateServiceFactory();
             services.Register<IReadDataSteamService>(() => new ReadDataStreamService());
-            
+
             using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataSteamService>();
@@ -58,7 +55,7 @@ namespace Halibut.Tests
 
             return dataStreams;
         }
-        
+
         static void WaitForAllThreads(List<Thread> threads)
         {
             foreach (var thread in threads)

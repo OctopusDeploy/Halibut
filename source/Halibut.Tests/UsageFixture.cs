@@ -5,13 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -35,37 +35,46 @@ namespace Halibut.Tests
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }
-       
+
 
         [Test]
-        public void OctopusCanSendMessagesToListeningTentacle()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public void OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndServer = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithServiceFactory(GetDelegateServiceFactory())
+                       .Build())
             {
-                var echo = clientAndServer.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
-                var watch = Stopwatch.StartNew();
+
                 for (var i = 0; i < 2000; i++)
                 {
-                    echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }
-
-                Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
             }
         }
 
         [Test]
-        public void OctopusCanSendMessagesToPollingTentacle()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public void OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
         {
             var services = GetDelegateServiceFactory();
             services.Register<ISupportedServices>(() => new SupportedServices());
-            using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).Build())
+
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithServiceFactory(services)
+                       .Build())
             {
                 var svc = clientAndService.CreateClient<ISupportedServices>();
                 for (var i = 1; i < 100; i++)
                 {
-                    var i1 = i;
-                    svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    {
+                        var i1 = i;
+                        svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    }
                 }
             }
         }
@@ -77,43 +86,26 @@ namespace Halibut.Tests
             services.Register<ISupportedServices>(() => new SupportedServices());
             using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).Build()){
 
-                // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered                     
+                // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
                 var echo = clientAndService.CreateClient<IEchoService>();
                 // This must come before CreateClient<ISupportedServices> for the situation to occur
-                echo.SayHello("Deploy package A").Should().Be("Deploy package A" + "..."); 
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A" + "...");
 
                 var svc = clientAndService.CreateClient<ISupportedServices>();
                 // This must happen before the message loop in MessageExchangeProtocol restarts (timeout, exception, or end) for the error to occur
                 svc.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
             }
         }
-        
-        
 
         [Test]
-        public void StreamsCanBeSentToListening()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public void StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithServiceFactory(GetDelegateServiceFactory())
+                       .Build())
             {
-                var data = new byte[1024 * 1024 + 15];
-                new Random().NextBytes(data);
-
-                var echo = clientAndService.CreateClient<IEchoService>();
-
-                for (var i = 0; i < 100; i++)
-                {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
-                    count.Should().Be(1024 * 1024 + 15);
-                }
-            }
-        }
-
-        [Test]
-        public void StreamsCanBeSentToPolling()
-        {
-            using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(GetDelegateServiceFactory()).Build())
-            {
-
                 var echo = clientAndService.CreateClient<IEchoService>();
 
                 var data = new byte[1024 * 1024 + 15];
@@ -126,10 +118,9 @@ namespace Halibut.Tests
                 }
             }
         }
-        
+
         [Test]
-        [TestCase(ServiceConnectionType.Listening)]
-        [TestCase(ServiceConnectionType.Polling)]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public void StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = ClientServiceBuilder.ForMode(serviceConnectionType)
@@ -149,7 +140,7 @@ namespace Halibut.Tests
                 }
             }
         }
-        
+
         [Test]
         [TestCase(ServiceConnectionType.Polling, 1)]
         [TestCase(ServiceConnectionType.Listening, 2)]
@@ -184,6 +175,7 @@ namespace Halibut.Tests
         {
             var services = GetDelegateServiceFactory();
             services.Register<ISupportedServices>(() => new SupportedServices());
+
             using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
             {
                 var echo = clientAndService.CreateClient<ISupportedServices>();
@@ -217,9 +209,13 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void StreamsCanBeSentToListeningWithProgressReporting()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public void StreamsCanBeSentWithProgressReporting(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithServiceFactory(GetDelegateServiceFactory())
+                       .Build())
             {
                 var progressReported = new List<int>();
 
@@ -316,7 +312,7 @@ namespace Halibut.Tests
                         sw.Stop();
                     }
                 });
-                
+
 
                 sw.Elapsed.Should().BeLessOrEqualTo(TimeSpan.FromSeconds(5));
             }
@@ -364,6 +360,6 @@ namespace Halibut.Tests
             }
         }
 
-        
+
     }
 }
