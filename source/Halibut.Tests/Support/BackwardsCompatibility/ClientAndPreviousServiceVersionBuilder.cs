@@ -101,9 +101,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public PortForwarder? PortForwarder => throw new NotSupportedException();
 
-            public TService CreateClient<TService>()
+            public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
             {
-                return CreateClient<TService>(s => { }, CancellationToken.None);
+                return CreateClient<TService>(s => { }, cancellationToken ?? CancellationToken.None, remoteThumbprint);
             }
 
             public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint)
@@ -111,9 +111,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 return CreateClient<TService>(modifyServiceEndpoint, CancellationToken.None);
             }
 
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
+            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken, string? remoteThumbprint = null)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                var serviceEndpoint = new ServiceEndPoint(serviceUri, remoteThumbprint ?? serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
                 return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }

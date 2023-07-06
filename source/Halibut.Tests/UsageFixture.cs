@@ -28,10 +28,9 @@ namespace Halibut.Tests
         [Test]
         public void OctopusCanDiscoverTentacle()
         {
-            using (var clientAndServer = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
             {
-
-                var info = clientAndServer.Octopus.Discover(clientAndServer.ServiceUri);
+                var info = clientAndService.Octopus.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }

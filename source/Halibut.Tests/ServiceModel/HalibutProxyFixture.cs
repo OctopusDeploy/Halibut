@@ -13,7 +13,7 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void ThrowsSpecificErrorWhenErrorTypeIsSet()
         {
-            ServerError serverError = ResponseMessage.ServerErrorFromException(new MethodNotFoundHalibutClientException("not found", "not even mum could find it"));
+            var serverError = ResponseMessage.ServerErrorFromException(new MethodNotFoundHalibutClientException("not found", "not even mum could find it"));
 
             Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
@@ -23,7 +23,7 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void ThrowsGenericErrorWhenErrorTypeIsUnknown()
         {
-            ServerError serverError = new ServerError { Message = "bob", Details = "details", HalibutErrorType = "Foo.BarException" };
+            var serverError = new ServerError { Message = "bob", Details = "details", HalibutErrorType = "Foo.BarException" };
 
             Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
@@ -33,7 +33,7 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void ThrowsGenericErrorWhenErrorTypeIsNull_ForExampleWhenTalkingToAnOlderHalibutVersion()
         {
-            ServerError serverError = new ServerError { Message = "bob", Details = "details", HalibutErrorType = null };
+            var serverError = new ServerError { Message = "bob", Details = "details", HalibutErrorType = null };
 
             Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
@@ -43,7 +43,7 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void BackwardCompatibility_ServiceNotFound_IsThrownAsA_ServiceNotFoundHalibutClientException()
         {
-            ServerError serverError = new ServerError
+            var serverError = new ServerError
             {
                 Message = "Service not found: IEchoService",
                 Details = @"System.Exception: Service not found: IEchoService
@@ -63,7 +63,7 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void BackwardsCompatibility_MethodNotFound_IsThrownAsA_MethodNotFoundHalibutClientException()
         {
-            ServerError serverError = new ServerError
+            var serverError = new ServerError
             {
                 Message = "Service System.Object::SayHello not found",
                 Details = null,
@@ -78,7 +78,7 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void BackwardCompatibility_AmbiguousMethodMatch_IsThrownAsA_NoMatchingServiceOrMethodHalibutClientException()
         {
-            ServerError serverError = new ServerError
+            var serverError = new ServerError
             {
                 Message = @"More than one possible match for the requested service method was found given the argument types. The matches were:
  - System.String Ambiguous(System.String, System.String)
@@ -104,11 +104,10 @@ String, <null>
             errorThrower.Should().Throw<AmbiguousMethodMatchHalibutClientException>();
         }
 
-
         [Test]
         public void BackwardsCompatibility_ServiceThrewAnException_IsThrownAsA_ServiceInvocationHalibutClientException()
         {
-            ServerError serverError = new ServerError
+            var serverError = new ServerError
             {
                 Message = "Attempted to divide by zero.",
                 Details = @"System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.
@@ -128,7 +127,5 @@ String, <null>
 
             errorThrower.Should().Throw<ServiceInvocationHalibutClientException>();
         }
-
-
     }
 }
