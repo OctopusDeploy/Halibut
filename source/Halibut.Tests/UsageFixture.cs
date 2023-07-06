@@ -39,19 +39,42 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void OctopusCanSendMessagesToTentacle(ServiceConnectionType serviceConnectionType)
+        public void OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndServer = ClientServiceBuilder
+            using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithServiceFactory(GetDelegateServiceFactory())
                        .Build())
             {
-                var echo = clientAndServer.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
                 for (var i = 0; i < 2000; i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public void OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
+        {
+            var services = GetDelegateServiceFactory();
+            services.Register<ISupportedServices>(() => new SupportedServices());
+
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithServiceFactory(services)
+                       .Build())
+            {
+                var svc = clientAndService.CreateClient<ISupportedServices>();
+                for (var i = 1; i < 100; i++)
+                {
+                    {
+                        var i1 = i;
+                        svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    }
                 }
             }
         }

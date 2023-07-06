@@ -95,7 +95,7 @@ namespace Halibut.Tests.Support
         {
             serviceFactory = serviceFactory ?? new DelegateServiceFactory();
 
-            var octopusLogFactory = new TestContextLogFactory("Server");
+            var octopusLogFactory = new TestContextLogFactory("Client");
             var octopusBuilder = new HalibutRuntimeBuilder().WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory);
 
