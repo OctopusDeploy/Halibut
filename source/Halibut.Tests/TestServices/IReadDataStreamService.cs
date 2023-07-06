@@ -1,6 +1,6 @@
 namespace Halibut.Tests.TestServices
 {
-    public interface IReadDataSteamService
+    public interface IReadDataStreamService
     {
         long SendData(params DataStream[] dataStreams);
     }

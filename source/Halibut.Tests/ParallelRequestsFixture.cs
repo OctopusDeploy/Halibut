@@ -14,18 +14,18 @@ namespace Halibut.Tests
         public void SendMessagesToAListeningTentacleInParallel()
         {
             var services = new DelegateServiceFactory();
-            services.Register<IReadDataSteamService>(() => new ReadDataStreamService());
+            services.Register<IReadDataStreamService>(() => new ReadDataStreamService());
 
             using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
             {
-                var readDataSteamService = clientAndService.CreateClient<IReadDataSteamService>();
+                var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 
                 var dataStreams = CreateDataStreams();
 
-                Semaphore messagesAreSentTheSameTimeSemaphore = new Semaphore(0, dataStreams.Length);
+                var messagesAreSentTheSameTimeSemaphore = new Semaphore(0, dataStreams.Length);
 
                 var threads = new List<Thread>();
-                for (int i = 0; i < 64; i++)
+                for (var i = 0; i < 64; i++)
                 {
                     var thread = new Thread(() =>
                     {
@@ -47,8 +47,8 @@ namespace Halibut.Tests
         {
             // Lots of DataStreams since they are handled in a special way, and we have had threading issues
             // with these previously.
-            DataStream[] dataStreams = new DataStream[128];
-            for (int i = 0; i < dataStreams.Length; i++)
+            var dataStreams = new DataStream[128];
+            for (var i = 0; i < dataStreams.Length; i++)
             {
                 dataStreams[i] = DataStream.FromString("Hello");
             }
