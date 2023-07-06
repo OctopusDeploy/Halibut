@@ -14,16 +14,13 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task AResponseShouldBeQuicklyReturned(ServiceConnectionType serviceConnectionType)
         {
-            var doSomeActionService = new DoSomeActionService();
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithService<IDoSomeActionService>(() => doSomeActionService)
-                       .WithPortForwarding()
+                       .WithPortForwarding(out var portForwarder)
+                       .WithService<IDoSomeActionService>(() => new DoSomeActionService(() => portForwarder.Value.Dispose()))
                        .Build())
             {
                 var svc = clientAndService.CreateClient<IDoSomeActionService>();
-
-                doSomeActionService.ActionDelegate = () => clientAndService.PortForwarder!.Dispose();
 
                 // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
                 var killPortForwarderTask = Task.Run(() => svc.Action());
