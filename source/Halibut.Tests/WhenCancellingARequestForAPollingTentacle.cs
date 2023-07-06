@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
@@ -21,15 +21,15 @@ namespace Halibut.Tests
             {
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                // No Tentacle
-                // CancelWhenRequestQueuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
-                using (var server = SetupServer(logFactory => new CancelWhenRequestQueuedPendingRequestQueueFactory(logFactory, cancellationTokenSource)))
+                using (var clientAndService = ClientServiceBuilder
+                           .Polling()
+                           // No Tentacle
+                           .NoService()
+                           // CancelWhenRequestQueuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
+                           .WithPendingRequestQueueFactory(logFactory => new CancelWhenRequestQueuedPendingRequestQueueFactory(logFactory, cancellationTokenSource))
+                           .Build())
                 {
-                    server.Listen();
-                    var doSomeActionService = server.CreateClient<IDoSomeActionService>(
-                        "poll://SQ-TENTAPOLL",
-                        Certificates.TentaclePollingPublicThumbprint,
-                        cancellationTokenSource.Token);
+                    var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>(cancellationTokenSource.Token);
 
                     Exception actualException = null;
 
@@ -56,86 +56,28 @@ namespace Halibut.Tests
                 var calls = new List<DateTime>();
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                // CancelWhenRequestDequeuedPendingRequestQueueFactory cancels the cancellation token source when a request is dequeued
-                var (server, tentacle, doSomeActionService) = SetupPollingServerAndTentacle(
-                    logFactory => new CancelWhenRequestDequeuedPendingRequestQueueFactory(logFactory, cancellationTokenSource),
-                    doSomeActionServiceAction: () =>
-                    {
-                        calls.Add(DateTime.UtcNow);
+                using (var clientAndService = ClientServiceBuilder
+                           .Polling()
+                           .WithService<IDoSomeActionService>(() => new DoSomeActionService(() =>
+                           {
+                               calls.Add(DateTime.UtcNow);
 
-                        while (!cancellationTokenSource.IsCancellationRequested)
-                        {
-                            Thread.Sleep(TimeSpan.FromMilliseconds(10));
-                        }
+                               while (!cancellationTokenSource.IsCancellationRequested)
+                               {
+                                   Thread.Sleep(TimeSpan.FromMilliseconds(10));
+                               }
 
-                        Thread.Sleep(TimeSpan.FromSeconds(1));
-                    },
-                    cancellationTokenSource.Token);
-
-                using (server)
-                using (tentacle)
+                               Thread.Sleep(TimeSpan.FromSeconds(1));
+                           }))
+                           // CancelWhenRequestDequeuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
+                           .WithPendingRequestQueueFactory(logFactory => new CancelWhenRequestDequeuedPendingRequestQueueFactory(logFactory, cancellationTokenSource))
+                           .Build())
                 {
-                    doSomeActionService.Action();
+                    clientAndService.CreateClient<IDoSomeActionService>(cancellationTokenSource.Token).Action();
                 }
 
                 calls.Should().HaveCount(1);
             }
-        }
-
-        static (HalibutRuntime server, IHalibutRuntime tentacle, IDoSomeActionService doSomeActionService) SetupPollingServerAndTentacle(
-                Func<ILogFactory, IPendingRequestQueueFactory> factory,
-                Action doSomeActionServiceAction,
-                CancellationToken cancellationToken)
-        {
-            var server = SetupServer(factory);
-
-            var serverPort = server.Listen();
-
-            var serverUri = new Uri("https://localhost:" + serverPort);
-            var tentacle = SetupPollingTentacle(serverUri, "poll://SQ-TENTAPOLL", doSomeActionServiceAction);
-
-            var doSomeActionService = server.CreateClient<IDoSomeActionService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint, cancellationToken);
-
-            return (server, tentacle, doSomeActionService);
-        }
-
-        static HalibutRuntime SetupPollingTentacle(Uri url, string pollingEndpoint, Action doSomeServiceAction)
-        {
-            var services = new DelegateServiceFactory();
-            var doSomeActionService = new DoSomeActionService(doSomeServiceAction);
-
-            services.Register<IDoSomeActionService>(() => doSomeActionService);
-            services.Register<IEchoService>(() => new EchoService());
-
-            var pollingTentacle = new HalibutRuntimeBuilder()
-                .WithServiceFactory(services)
-                .WithLogFactory(new TestContextLogFactory("Tentacle"))
-                .WithServerCertificate(Certificates.TentaclePolling)
-                .Build();
-
-            pollingTentacle.Poll(new Uri(pollingEndpoint), new ServiceEndPoint(url, Certificates.OctopusPublicThumbprint));
-
-            return pollingTentacle;
-        }
-
-        static HalibutRuntime SetupServer(Func<ILogFactory, IPendingRequestQueueFactory> factory = null)
-        {
-            var logFactory = new TestContextLogFactory("Server");
-
-            var builder = new HalibutRuntimeBuilder()
-                .WithLogFactory(logFactory)
-                .WithServerCertificate(Certificates.Octopus);
-
-            if (factory != null)
-            {
-                builder = builder.WithPendingRequestQueueFactory(factory(logFactory));
-            }
-
-            var server = builder.Build();
-
-            server.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-            return server;
         }
 
         internal class CancelWhenRequestQueuedPendingRequestQueueFactory : IPendingRequestQueueFactory

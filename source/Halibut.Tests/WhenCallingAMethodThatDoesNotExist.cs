@@ -4,56 +4,31 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public static class WhenCallingAMethodThatDoesNotExist
+    public class WhenCallingAMethodThatDoesNotExist
     {
-        public class OnAPollingService
+        [Test]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ServiceConnectionType serviceConnectionType)
         {
-            [Test]
-            public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient()
+            var services = new SingleServiceFactory(new object(), typeof(EchoService));
+
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithServiceFactory(services)
+                       .Build())
             {
-                var services = new SingleServiceFactory(new object(), typeof(EchoService));
-                
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
-                {
-                    var octopusPort = octopus.Listen();
-                    using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
-                    {
-                        octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+                var echo = clientAndService.CreateClient<IEchoService>();
 
-                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+                Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
 
-                        var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
-                        Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
-
-                        readAsyncCall.Should().Throw<MethodNotFoundHalibutClientException>();
-                    }
-                }
-            }
-        }
-
-        public class OnAListeningTentacle
-        {
-            [Test]
-            public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient()
-            {
-                var services = new SingleServiceFactory(new object(), typeof(EchoService));
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
-                using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-                {
-                    var tentaclePort = tentacleListening.Listen();
-                    tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                    var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-                    Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
-
-                    readAsyncCall.Should().Throw<MethodNotFoundHalibutClientException>();
-                }
+                readAsyncCall.Should().Throw<MethodNotFoundHalibutClientException>();
             }
         }
 

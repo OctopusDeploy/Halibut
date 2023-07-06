@@ -5,6 +5,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using Halibut.Transport.Proxy;
@@ -24,7 +25,7 @@ namespace Halibut.Tests.Diagnostics
                     .Should()
                     .Be(HalibutNetworkExceptionType.NotANetworkError);
             }
-            
+
             [Test]
             public void ServiceNotFoundHalibutClientException_ItIsNotANetworkError()
             {
@@ -32,7 +33,7 @@ namespace Halibut.Tests.Diagnostics
                     .Should()
                     .Be(HalibutNetworkExceptionType.NotANetworkError);
             }
-            
+
             [Test]
             public void AmbiguousMethodMatchHalibutClientException_ItIsNotANetworkError()
             {
@@ -49,12 +50,12 @@ namespace Halibut.Tests.Diagnostics
                 var services = new DelegateServiceFactory();
                 DoSomeActionService doSomeActionService = new DoSomeActionService();
                 services.Register<IDoSomeActionService>(() => doSomeActionService);
-                
+
                 using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).WithPortForwarding().Build())
                 {
                     var svc = clientAndService.CreateClient<IDoSomeActionService>();
 
-                    doSomeActionService.ActionDelegate = () => clientAndService.portForwarder.Dispose();
+                    doSomeActionService.ActionDelegate = () => clientAndService.PortForwarder?.Dispose();
 
                     // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
                     var exception = Assert.Throws<HalibutClientException>(() => svc.Action());
@@ -126,7 +127,7 @@ namespace Halibut.Tests.Diagnostics
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
                 }
             }
-            
+
             [Test]
             public void BecauseOfAInvalidCertificateException_ItIsNotANetworkError()
             {
@@ -146,7 +147,7 @@ namespace Halibut.Tests.Diagnostics
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
-            
+
             [Test]
             public void BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSendingToListening_ItIsNotANetworkError()
             {
@@ -170,7 +171,7 @@ namespace Halibut.Tests.Diagnostics
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
-            
+
             [Test]
             public void BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSendingToPolling_ItIsNotANetworkError()
             {
@@ -196,7 +197,7 @@ namespace Halibut.Tests.Diagnostics
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
-            
+
             [Test]
             public void BecauseTheDataStreamThrowAFileNotFoundException_WhenSendingToPolling_ItIsNotANetworkError()
             {
@@ -222,7 +223,7 @@ namespace Halibut.Tests.Diagnostics
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
-            
+
             [Test]
             public void BecauseTheServiceThrowAnException_ItIsNotANetworkError()
             {
@@ -238,7 +239,7 @@ namespace Halibut.Tests.Diagnostics
 
                     var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
 
-                    
+
                     var exception = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
                     exception.IsNetworkError().Should().Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
