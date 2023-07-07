@@ -129,7 +129,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]  
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public void FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = ClientServiceBuilder
