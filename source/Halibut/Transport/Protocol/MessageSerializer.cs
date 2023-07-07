@@ -249,51 +249,7 @@ namespace Halibut.Transport.Protocol
                 throw;
             }
         }
-
-        //async Task<T> ReadCompressedMessageRewindableAsyncLukesExample<T>(Stream stream, IRewindableBuffer rewindable)
-        //{
-        //    await Task.CompletedTask;
-
-        //    rewindable.StartBuffer();
-        //    try
-        //    {
-        //        var ourCopyOfTheCompressedBytes = new RewindableBufferStream(stream, 10000000); // TODO make this better
-        //        ourCopyOfTheCompressedBytes.StartBuffer();
-        //        using (var zip = new DeflateStream(ourCopyOfTheCompressedBytes, CompressionMode.Decompress, true))
-        //        {
-        //            var b = new byte[1024 * 4];
-        //            while (await zip.ReadAsync(b, 0, b.Length) != 0)
-        //            {
-
-        //            }
-        //        }
-
-        //        ourCopyOfTheCompressedBytes.FinishAndRewind(ourCopyOfTheCompressedBytes.rewindBufferCount);
-        //        using (var zip = new DeflateStream(ourCopyOfTheCompressedBytes, CompressionMode.Decompress, true))
-        //        using (var bson = new BsonDataReader(zip) { CloseInput = false })
-        //        {
-        //            var messageEnvelope = DeserializeMessage<T>(bson);
-
-        //            // Find the unused bytes in the DeflateStream input buffer
-        //            if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
-        //            {
-        //                rewindable.FinishAndRewind(unusedBytesCount);
-        //            }
-        //            else
-        //            {
-        //                rewindable.CancelBuffer();
-        //            }
-
-        //            return messageEnvelope.Message;
-        //        }
-        //    }
-        //    catch
-        //    {
-        //        rewindable.CancelBuffer();
-        //        throw;
-        //    }
-        //}
-
+        
         MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
         {
             var result = createSerializer().Deserialize<MessageEnvelope<T>>(reader);
