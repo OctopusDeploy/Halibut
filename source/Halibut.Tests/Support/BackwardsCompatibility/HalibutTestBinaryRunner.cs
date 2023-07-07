@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Octopus.Shellfish;
+using Serilog;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -18,6 +19,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly string version;
+        ILogger logger = new SerilogLoggerBuilder().Build().ForContext<HalibutRuntimeBuilder>();
 
         public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version)
         {
@@ -94,7 +96,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 {
                     Action<string> processLogs = s =>
                     {
-                        TestContext.WriteLine(s);
+                        logger.Information(s);
                         if (s.StartsWith("Listening on port: "))
                         {
                             serviceListenPort = int.Parse(Regex.Match(s, @"\d+").Value);
@@ -115,7 +117,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 }
                 catch (Exception e)
                 {
-                    TestContext.WriteLine(e);
+                    logger.Information(e, "Error running Halibut Test Binary");
                     throw;
                 }
             }, cancellationToken);
