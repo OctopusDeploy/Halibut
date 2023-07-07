@@ -15,7 +15,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .Listening()
-                       .WithService<IEchoService>(() => new EchoService())
+                       .WithEchoService()
                        .WithPortForwarding()
                        .Build())
             {

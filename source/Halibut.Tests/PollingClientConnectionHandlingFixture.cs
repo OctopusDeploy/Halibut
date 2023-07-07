@@ -93,8 +93,8 @@ namespace Halibut.Tests
             var clientAndService = ClientServiceBuilder
                 .Polling()
                 .WithPortForwarding()
-                .WithService<IDoSomeActionService>(() => new DoSomeActionService(doSomeActionServiceAction))
-                .WithService<IEchoService>(() => new EchoService())
+                .WithDoSomeActionService(doSomeActionServiceAction)
+                .WithEchoService()
                 .Build();
 
 
