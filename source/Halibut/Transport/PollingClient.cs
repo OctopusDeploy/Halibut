@@ -16,25 +16,27 @@ namespace Halibut.Transport
         readonly Thread thread;
         readonly CancellationToken cancellationToken;
         bool working;
+        Func<RetryPolicy> CreateRetryPolicy;
 
         [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest)
-            : this(subscription, secureClient, handleIncomingRequest, null)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, Func<RetryPolicy> createRetryPolicy)
+            : this(subscription, secureClient, handleIncomingRequest, null, createRetryPolicy)
         {
         }
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log)
-            : this(subscription, secureClient, handleIncomingRequest, log, CancellationToken.None)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, Func<RetryPolicy> createRetryPolicy)
+            : this(subscription, secureClient, handleIncomingRequest, log, CancellationToken.None, createRetryPolicy)
         {
         }
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;
             this.handleIncomingRequest = handleIncomingRequest;
             this.log = log;
             this.cancellationToken = cancellationToken;
+            CreateRetryPolicy = createRetryPolicy;
             thread = new Thread(ExecutePollingLoop);
             thread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
             thread.IsBackground = true;
@@ -53,7 +55,7 @@ namespace Halibut.Transport
 
         void ExecutePollingLoop(object ignored)
         {
-            var retry = RetryPolicy.Create();
+            var retry = CreateRetryPolicy();
             var sleepFor = TimeSpan.Zero;
             while (working)
             {
