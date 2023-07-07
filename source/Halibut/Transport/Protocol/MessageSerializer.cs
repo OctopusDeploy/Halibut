@@ -9,7 +9,7 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
-        const long MemoryOverflowLimitBytes = 10;
+        const long MemoryOverflowLimitBytes = 1024L * 1600L * 1000L;
         readonly ITypeRegistry typeRegistry;
         readonly Func<JsonSerializer> createSerializer;
         readonly DeflateStreamInputBufferReflector deflateReflector;
@@ -81,8 +81,8 @@ namespace Halibut.Transport.Protocol
         {
             if (stream is IRewindableBuffer rewindable)
             {
-                return await ReadCompressedMessageRewindableAsyncVanilla<T>(stream, rewindable);
-                //return await ReadCompressedMessageRewindableAsyncCpuOptimized<T>(stream, rewindable);
+                //return await ReadCompressedMessageRewindableAsyncVanilla<T>(stream, rewindable);
+                return await ReadCompressedMessageRewindableAsyncCpuOptimized<T>(stream, rewindable);
                 //return await ReadCompressedMessageRewindableAsyncMemoryOptimized<T>(stream, rewindable);
             }
 

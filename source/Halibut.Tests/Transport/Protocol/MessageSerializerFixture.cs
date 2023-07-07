@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -78,17 +79,35 @@ namespace Halibut.Tests.Transport.Protocol
         [Test]
         public async Task SendReceiveMessageAsyncRewindableShouldRoundTrip()
         {
+            TimeSpan time;
             using (var stream = new MemoryStream())
-            using (var rewindableStream = new RewindableBufferStream(stream))
+            using (var rewindableStream = new RewindableBufferStream(stream, 1024 * 200))
             {
+                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
+                //for (int i = 0; i < 10; i++)
+                //{
+                //    File.AppendAllText(@"C:\Users\Stephen Burman\Downloads\inflated-file.json", m);
+                //    }
+
+                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
+                var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\inflated-file.json");
+                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\small-file.json");
+
+                await Task.Delay(5000);
+
+                var stopwatch = Stopwatch.StartNew();
+
                 var sut = MessageSerializerBuilder.Build();
-                await sut.WriteMessageAsync(stream, "Test");
+                
+                await sut.WriteMessageAsync(stream, m);
                 stream.Position = 0;
                 var result = await sut.ReadMessageAsync<string>(rewindableStream);
-                Assert.AreEqual("Test", result);
-            }
+                Assert.AreEqual(m, result);
 
-            await Task.Delay(5000);
+                
+                time = stopwatch.Elapsed;
+                await Task.Delay(5000);
+            }
         }
 
         [Test]
