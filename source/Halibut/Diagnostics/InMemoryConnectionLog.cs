@@ -46,12 +46,15 @@ namespace Halibut.Diagnostics
             switch (logEvent.Type)
             {
                 case EventType.Error:
+                    return LogLevel.Error;
                 case EventType.Diagnostic:
                 case EventType.SecurityNegotiation:
+                case EventType.MessageExchange:
+                    return LogLevel.Trace;
                 case EventType.OpeningNewConnection:
                     return LogLevel.Debug;
                 default:
-                    return LogLevel.Trace;
+                    return LogLevel.Info;
             }
         }
 
