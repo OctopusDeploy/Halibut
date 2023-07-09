@@ -5,6 +5,8 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Util;
 using NUnit.Framework;
 using Octopus.Shellfish;
