@@ -7,6 +7,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -134,6 +135,7 @@ namespace Halibut.Tests
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithReadDataStreamService()
+                       .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();

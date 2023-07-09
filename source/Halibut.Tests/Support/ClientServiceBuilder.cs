@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Util;
 using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
@@ -19,6 +20,7 @@ namespace Halibut.Tests.Support
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
         Reference<PortForwarder>? portForwarderReference;
+        Func<RetryPolicy>? pollingReconnectRetryPolicy;
 
         public ClientServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -128,11 +130,13 @@ namespace Halibut.Tests.Support
             HalibutRuntime? tentacle = null;
             if (hasService)
             {
-                tentacle = new HalibutRuntimeBuilder()
+                var tentacleBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                    .WithLogFactory(new TestContextLogFactory("Service"))
-                    .Build();
+                    .WithLogFactory(new TestContextLogFactory("Service"));
+
+                if(pollingReconnectRetryPolicy != null) tentacleBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
+                tentacle = tentacleBuilder.Build();
             }
 
             var disposableCollection = new DisposableCollection();
@@ -310,6 +314,12 @@ namespace Halibut.Tests.Support
             {
                 WebSocketSslCertificateHelper.RemoveSslCertBindingFor(bindingAddress);
             }
+        }
+
+        public ClientServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
+        {
+            this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
+            return this;
         }
     }
 }
