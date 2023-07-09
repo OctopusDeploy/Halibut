@@ -124,28 +124,31 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 this.tentacle = tentacle;
             }
 
-            public TService CreateClient<TService>()
+            /// <summary>
+            /// Creates a client, which forwards RPC calls on to a proxy in a external process which will make those calls back
+            /// to service in the this process.
+            /// </summary>
+            /// <typeparam name="TService"></typeparam>
+            /// <returns></returns>
+            public TService CreateClientToTheProxy<TService>()
             {
-                return CreateClient<TService>(s => { }, CancellationToken.None);
+                return CreateClientToTheProxy<TService>(s => { }, CancellationToken.None);
             }
 
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                return CreateClient<TService>(modifyServiceEndpoint, CancellationToken.None);
-            }
 
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
+            /// <summary>
+            /// This probably never makes sense to be called, since this modifies the client to the proxy client. If a test
+            /// wanted to set these it is probably setting them on the wrong client
+            /// </summary>
+            /// <param name="modifyServiceEndpoint"></param>
+            /// <param name="cancellationToken"></param>
+            /// <typeparam name="TService"></typeparam>
+            /// <returns></returns>
+            private TService CreateClientToTheProxy<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
                 modifyServiceEndpoint(serviceEndpoint);
                 return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
-            }
-            
-            public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
-                modifyServiceEndpoint(serviceEndpoint);
-                return octopus.CreateClient<TService, TClientService>(serviceEndpoint);
             }
 
             public void Dispose()
