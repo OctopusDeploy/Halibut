@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 

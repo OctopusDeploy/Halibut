@@ -31,7 +31,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             Console.WriteLine("Octopus/Client cert details " + clientCert);
             
 
-            ServiceConnectionType serviceConnectionType = ServiceConnectionTypeFromString(Environment.GetEnvironmentVariable("ServiceConnectionType"));
+            ServiceConnectionType serviceConnectionType = BackwardsCompatProgramBase.ServiceConnectionTypeFromString(Environment.GetEnvironmentVariable("ServiceConnectionType"));
             string addressToPoll = null;
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
@@ -119,17 +119,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
             }
 
             return 1;
-        }
-        
-
-        public static ServiceConnectionType ServiceConnectionTypeFromString(string s)
-        {
-            if (Enum.TryParse(s, out ServiceConnectionType serviceConnectionType))
-            {
-                return serviceConnectionType;
-            }
-
-            throw new Exception($"Unknown service type '{s}'");
         }
     }
 }

@@ -5,17 +5,12 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Tests.Support;
-using Halibut.Tests.Support.BackwardsCompatibility;
-using Halibut.Tests.Util;
-using NUnit.Framework;
 using Octopus.Shellfish;
 
-namespace Halibut.Tests.BackwardsCompatibility.Util
+namespace Halibut.Tests.Support.BackwardsCompatibility
 {
     public class ProxyHalibutTestBinaryRunner
     {
-        // The port the binary should poll.
         readonly ServiceConnectionType serviceConnectionType;
         readonly int? clientServicePort;
         readonly CertAndThumbprint clientCertAndThumbprint;
@@ -33,30 +28,6 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             this.realServiceListenAddress = realServiceListenAddress;
         }
 
-        string BinaryDir(string version)
-        {
-            var onDiskVersion = version.Replace(".", "_");
-            var assemblyDir = new DirectoryInfo(Path.GetDirectoryName(typeof(HalibutTestBinaryRunner).Assembly.Location)!);
-            var upAt = assemblyDir.Parent.Parent.Parent.Parent;
-            var projectName = $"Halibut.TestUtils.CompatBinary.v{onDiskVersion}";
-            var executable = Path.Combine(upAt.FullName, projectName, assemblyDir.Parent.Parent.Name, assemblyDir.Parent.Name, assemblyDir.Name, projectName);
-            executable = AddExeForWindows(executable);
-            if (!File.Exists(executable))
-            {
-                throw new Exception("Could not executable at path:\n" +
-                                    executable + "\n" +
-                                    $"Did you forget to update the csproj to depend on {projectName}\n" +
-                                    "If testing a previously untested version of Halibut a new project may be required.");
-            }
-
-            return executable;
-        }
-
-        string AddExeForWindows(string path)
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return path + ".exe";
-            return path;
-        }
 
         public async Task<RoundTripRunningOldHalibutBinary> Run()
         {
@@ -122,7 +93,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                     };
 
-                    ShellExecutor.ExecuteCommand(BinaryDir(version),
+                    ShellExecutor.ExecuteCommand(new HalibutTestBinaryPath().BinPath(version),
                         "",
                         tmp.FullPath,
                         processLogs,
