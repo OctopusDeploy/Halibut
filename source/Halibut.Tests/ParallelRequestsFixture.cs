@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
@@ -13,12 +14,12 @@ namespace Halibut.Tests
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void SendMessagesToTentacleInParallel(ServiceConnectionType serviceConnectionType)
+        public async Task SendMessagesToTentacleInParallel(ServiceConnectionType serviceConnectionType)
         {
             var services = new DelegateServiceFactory();
             services.Register<IReadDataStreamService>(() => new ReadDataStreamService());
 
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithServiceFactory(services).Build())
             {

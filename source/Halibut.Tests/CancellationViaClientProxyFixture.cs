@@ -15,9 +15,9 @@ namespace Halibut.Tests
     public class CancellationViaClientProxyFixture
     {
         [Test]
-        public void CancellationCanBeDoneViaClientProxy()
+        public async Task CancellationCanBeDoneViaClientProxy()
         {
-            using (var clientAndService = ClientServiceBuilder.Listening()
+            using (var clientAndService = await ClientServiceBuilder.Listening()
                        .NoService()
                        .WithEchoService()
                        .Build())
@@ -40,9 +40,9 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void CannotHaveServiceWithHalibutProxyRequestOptions()
+        public async Task CannotHaveServiceWithHalibutProxyRequestOptions()
         {
-            using (var clientAndService = ClientServiceBuilder.Listening()
+            using (var clientAndService = await ClientServiceBuilder.Listening()
                        .NoService()
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
                        .Build())

@@ -3,6 +3,7 @@ using System;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Util;
@@ -110,8 +111,9 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public ClientAndService Build()
+        public async Task<ClientAndService> Build()
         {
+            await Task.CompletedTask;
             serviceFactory ??= new DelegateServiceFactory();
 
             var octopusLogFactory = new TestContextLogFactory("Client");

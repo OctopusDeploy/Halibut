@@ -19,7 +19,7 @@ namespace Halibut.Tests
         {
             var services = new SingleServiceFactory(new object(), typeof(EchoService));
 
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithServiceFactory(services)
                        .Build())
