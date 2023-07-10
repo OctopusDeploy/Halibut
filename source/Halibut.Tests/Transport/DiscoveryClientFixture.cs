@@ -51,5 +51,18 @@ namespace Halibut.Tests.Transport
 
             Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint), "No such host is known");
         }
+        
+        [Test]
+        public void OctopusCanDiscoverTentacle()
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<IEchoService>(() => new EchoService());
+            
+            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
+            {
+                var info = clientAndService.Octopus.Discover(clientAndService.ServiceUri);
+                info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
+            }
+        }
     }
 }

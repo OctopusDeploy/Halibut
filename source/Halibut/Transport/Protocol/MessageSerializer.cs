@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
-using System.Threading.Tasks;
+using Halibut.Transport.Observability;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -12,6 +12,7 @@ namespace Halibut.Transport.Protocol
         const long MemoryOverflowLimitBytes = 1024L * 1600L * 1000L;
         readonly ITypeRegistry typeRegistry;
         readonly Func<JsonSerializer> createSerializer;
+        readonly IMessageSerializerObserver observer;
         readonly DeflateStreamInputBufferReflector deflateReflector;
 
         public MessageSerializer() // kept for backwards compatibility.
@@ -25,12 +26,17 @@ namespace Halibut.Transport.Protocol
                 return JsonSerializer.Create(settings);
             };
             deflateReflector = new DeflateStreamInputBufferReflector();
+            observer = new NoMessageSerializerObserver();
         }
 
-        internal MessageSerializer(ITypeRegistry typeRegistry, Func<JsonSerializer> createSerializer)
+        internal MessageSerializer(
+            ITypeRegistry typeRegistry, 
+            Func<JsonSerializer> createSerializer,
+            IMessageSerializerObserver observer)
         {
             this.typeRegistry = typeRegistry;
             this.createSerializer = createSerializer;
+            this.observer = observer;
             deflateReflector = new DeflateStreamInputBufferReflector();
         }
 
@@ -41,7 +47,9 @@ namespace Halibut.Transport.Protocol
         
         public void WriteMessage<T>(Stream stream, T message)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+            using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+
+            using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 // for the moment this MUST be object so that the $type property is included
@@ -49,6 +57,8 @@ namespace Halibut.Transport.Protocol
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
                 createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
+
+            observer.MessageWritten(compressedByteCountingStream.BytesWritten);
         }
 
         public async Task WriteMessageAsync<T>(Stream stream, T message)
@@ -91,10 +101,15 @@ namespace Halibut.Transport.Protocol
 
         T ReadCompressedMessage<T>(Stream stream)
         {
-            using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-            using (var bson = new BsonDataReader(zip) { CloseInput = false })
+            using (var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen))
+            using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true))
+            using (var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen))
+            using (var bson = new BsonDataReader(decompressedByteCountingStream) { CloseInput = false })
             {
                 var messageEnvelope = DeserializeMessage<T>(bson);
+
+                observer.MessageRead(compressedByteCountingStream.BytesRead, decompressedByteCountingStream.BytesRead);
+
                 return messageEnvelope.Message;
             }
         }
@@ -119,11 +134,13 @@ namespace Halibut.Transport.Protocol
             rewindable.StartBuffer();
             try
             {
-                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-                using (var bson = new BsonDataReader(zip) { CloseInput = false })
+                using (var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen))
+                using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true))
+                using (var decompressedObservableStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen))
+                using (var bson = new BsonDataReader(decompressedObservableStream) { CloseInput = false })
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);
-
+                    
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
@@ -133,6 +150,9 @@ namespace Halibut.Transport.Protocol
                     {
                         rewindable.CancelBuffer();
                     }
+
+                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead);
+
                     return messageEnvelope.Message;
                 }
             }

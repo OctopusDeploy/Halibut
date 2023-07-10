@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Halibut.Util
 {
-    class RetryPolicy
+    public class RetryPolicy
     {
         readonly Stopwatch stopwatch = new Stopwatch();
 

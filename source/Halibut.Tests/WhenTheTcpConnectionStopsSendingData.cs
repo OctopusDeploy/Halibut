@@ -15,7 +15,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .Listening()
-                       .WithService<IEchoService>(() => new EchoService())
+                       .WithEchoService()
                        .WithPortForwarding()
                        .Build())
             {
@@ -35,6 +35,9 @@ namespace Halibut.Tests
                 await Task.WhenAny(sayHelloTask, Task.Delay(HalibutLimits.TcpClientHeartbeatReceiveTimeout + HalibutLimits.TcpClientHeartbeatReceiveTimeout));
 
                 sayHelloTask.IsCompleted.Should().BeTrue("We should be able to detect dead TCP connections and retry requests with a new TCP connection.");
+
+                (HalibutLimits.TcpClientHeartbeatReceiveTimeout + TimeSpan.FromSeconds(10)).Should().BeLessThan(HalibutLimits.TcpClientReceiveTimeout, 
+                    "This depend on the heart beat timeouts being less than the regular TCP timeouts, if that is not true this test isn't testing the correct timeout.");
             }
         }
     }

@@ -71,10 +71,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 runningOldHalibutBinary = await new HalibutTestBinaryRunner(serviceConnectionType, listenPort, clientCertAndThumbprint, serviceCertAndThumbprint, version).Run();
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
             }
-            else
+            else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 runningOldHalibutBinary = await new HalibutTestBinaryRunner(serviceConnectionType, null, clientCertAndThumbprint, serviceCertAndThumbprint, version).Run();
                 serviceUri = new Uri("https://localhost:" + runningOldHalibutBinary.serviceListenPort);
+            }
+            else
+            {
+                throw new NotSupportedException();
             }
 
             return new ClientAndService(octopus, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint);

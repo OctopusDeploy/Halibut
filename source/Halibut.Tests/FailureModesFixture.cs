@@ -7,6 +7,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -45,7 +46,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithService<IEchoService>(() => new EchoService())
+                       .WithEchoService()
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -133,8 +134,8 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
-                       .WithPortForwarding(out var portForwarder)
-                       .WithService<IReadDataStreamService>(() => new ReadDataStreamService())
+                       .WithReadDataStreamService()
+                       .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();

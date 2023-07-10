@@ -13,6 +13,7 @@ using Halibut.ServiceModel;
 using Halibut.Transport;
 using Halibut.Transport.Caching;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut
 {
@@ -34,6 +35,7 @@ namespace Halibut
         readonly IMessageSerializer messageSerializer;
         readonly ITypeRegistry typeRegistry;
         readonly ResponseCache responseCache = new();
+        Func<RetryPolicy> PollingReconnectRetryPolicy;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -56,6 +58,7 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
+            PollingReconnectRetryPolicy = RetryPolicy.Create;
 
             // these two are the reason we can't just call our internal ctor.
             logs = new LogFactory();
@@ -68,7 +71,7 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
         }
 
-        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer)
+        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer, Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -76,6 +79,7 @@ namespace Halibut
             this.queueFactory = queueFactory;
             this.typeRegistry = typeRegistry;
             this.messageSerializer = messageSerializer;
+            PollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             invoker = new ServiceInvoker(serviceFactory);
         }
 
@@ -158,7 +162,7 @@ namespace Halibut
             {
                 client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
             }
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken));
+            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, PollingReconnectRetryPolicy));
         }
 
         public ServiceEndPoint Discover(Uri uri)

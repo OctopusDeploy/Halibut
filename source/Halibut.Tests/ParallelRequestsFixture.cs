@@ -3,6 +3,7 @@ using System.Threading;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 
@@ -11,12 +12,15 @@ namespace Halibut.Tests
     public class ParallelRequestsFixture
     {
         [Test]
-        public void SendMessagesToAListeningTentacleInParallel()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public void SendMessagesToTentacleInParallel(ServiceConnectionType serviceConnectionType)
         {
             var services = new DelegateServiceFactory();
             services.Register<IReadDataStreamService>(() => new ReadDataStreamService());
 
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
+            using (var clientAndService = ClientServiceBuilder
+                       .ForMode(serviceConnectionType)
+                       .WithServiceFactory(services).Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 

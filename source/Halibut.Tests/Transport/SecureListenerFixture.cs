@@ -41,6 +41,7 @@ namespace Halibut.Tests.Transport
         [WindowsTest]
         public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows()
         {
+            var logger = new SerilogLoggerBuilder().Build();
             const int secondsToSample = 5;
 
             using (var opsPerSec = GetCounterForCurrentProcess("Process", "IO Other Operations/sec"))
@@ -72,9 +73,9 @@ namespace Halibut.Tests.Transport
 
                 var idleAverageWithErrorMargin = idleAverage * 250f;
 
-                TestContext.Out.WriteLine($"idle average:      {idleAverage} ops/second");
-                TestContext.Out.WriteLine($"listening average: {listeningAverage} ops/second");
-                TestContext.Out.WriteLine($"expectation:     < {idleAverageWithErrorMargin} ops/second");
+                logger.Information($"idle average:      {idleAverage} ops/second");
+                logger.Information($"listening average: {listeningAverage} ops/second");
+                logger.Information($"expectation:     < {idleAverageWithErrorMargin} ops/second");
 
                 listeningAverage.Should().BeLessThan(idleAverageWithErrorMargin);
             }

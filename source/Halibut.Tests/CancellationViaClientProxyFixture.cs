@@ -19,7 +19,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = ClientServiceBuilder.Listening()
                        .NoService()
-                       .WithService<IEchoService>(() => new EchoService())
+                       .WithEchoService()
                        .Build())
             {
                 var data = new byte[1024 * 1024 + 15];

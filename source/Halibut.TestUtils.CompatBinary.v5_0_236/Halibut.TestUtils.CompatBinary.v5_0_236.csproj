@@ -14,11 +14,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Halibut" Version="5.0.237" />
+      <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.Base\Halibut.TestUtils.CompatBinary.Base.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.Base\Halibut.TestUtils.CompatBinary.Base.csproj" />
+      <PackageReference Include="Halibut" Version="5.0.236" />
     </ItemGroup>
 
 </Project>

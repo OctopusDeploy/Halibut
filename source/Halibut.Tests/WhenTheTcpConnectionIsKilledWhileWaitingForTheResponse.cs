@@ -17,7 +17,7 @@ namespace Halibut.Tests
             using (var clientAndService = ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithPortForwarding(out var portForwarder)
-                       .WithService<IDoSomeActionService>(() => new DoSomeActionService(() => portForwarder.Value.Dispose()))
+                       .WithDoSomeActionService(() => portForwarder.Value.Dispose())
                        .Build())
             {
                 var svc = clientAndService.CreateClient<IDoSomeActionService>();
