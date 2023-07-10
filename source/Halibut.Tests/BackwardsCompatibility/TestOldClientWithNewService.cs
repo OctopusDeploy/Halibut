@@ -23,7 +23,7 @@ namespace Halibut.Tests.BackwardsCompatibility
                        .Build())
             {
                 
-                var echo = clientAndService.CreateClientToTheProxy<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("hello");
             }
 
@@ -40,7 +40,7 @@ namespace Halibut.Tests.BackwardsCompatibility
                        .Build())
             {
                 
-                var echo = clientAndService.CreateClientToTheProxy<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("hello");
             }
 

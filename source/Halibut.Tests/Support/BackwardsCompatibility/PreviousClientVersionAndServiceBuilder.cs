@@ -6,6 +6,8 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
+using IoC;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.BackwardsCompatibility.Util
 {
@@ -19,7 +21,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        string version = "5.0.429";
+        string? version = null;
 
         IEchoService echoService = new EchoService();
 
@@ -89,8 +91,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 var clientListenPort = client.Listen();
                 runningOldHalibutBinary = await new ProxyHalibutTestBinaryRunner(serviceConnectionType, clientListenPort, clientCertAndThumbprint, serviceCertAndThumbprint, new Uri("poll://SQ-TENTAPOLL"), version).Run();
                 proxyServiceUri = new Uri("poll://SQ-TENTAPOLL");
-                // TODO support this.
-                
+
                 tentacle.Poll(proxyServiceUri, new ServiceEndPoint(new Uri("https://localhost:" + runningOldHalibutBinary.proxyClientListenPort), clientCertAndThumbprint.Thumbprint));
             }
             else
@@ -104,13 +105,15 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             return new ClientAndService(client, runningOldHalibutBinary, proxyServiceUri, serviceCertAndThumbprint, tentacle);
         }
 
-        public class ClientAndService : IDisposable
+        public class ClientAndService : IClientAndService
         {
-            readonly HalibutRuntime octopus;
+            public HalibutRuntime Octopus { get; }
             readonly ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary;
             readonly Uri serviceUri;
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly HalibutRuntime tentacle;
+            
+            public PortForwarder? PortForwarder { get; }
 
             public ClientAndService(HalibutRuntime octopus,
                 ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary,
@@ -118,7 +121,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 CertAndThumbprint serviceCertAndThumbprint,
                 HalibutRuntime tentacle)
             {
-                this.octopus = octopus;
+                this.Octopus = octopus;
                 this.runningOldHalibutBinary = runningOldHalibutBinary;
                 this.serviceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
@@ -131,11 +134,22 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             /// </summary>
             /// <typeparam name="TService"></typeparam>
             /// <returns></returns>
-            public TService CreateClientToTheProxy<TService>()
+            public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
             {
-                return CreateClientToTheProxy<TService>(s => { }, CancellationToken.None);
-            }
+                if (remoteThumbprint == null) remoteThumbprint = serviceCertAndThumbprint.Thumbprint;
+                if (remoteThumbprint != serviceCertAndThumbprint.Thumbprint)
+                {
+                    throw new Exception("Setting the remote thumbprint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
+                }
 
+                if (cancellationToken != null && cancellationToken != CancellationToken.None)
+                {
+                    throw new Exception("Setting the connect cancellation token to anything other than none is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
+                }
+                
+                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken??CancellationToken.None);
+            }
 
             /// <summary>
             /// This probably never makes sense to be called, since this modifies the client to the proxy client. If a test
@@ -143,18 +157,32 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             /// </summary>
             /// <param name="modifyServiceEndpoint"></param>
             /// <param name="cancellationToken"></param>
+            /// <param name="remoteThumbprint"></param>
             /// <typeparam name="TService"></typeparam>
             /// <returns></returns>
-            private TService CreateClientToTheProxy<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
+            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken, string? remoteThumbprint = null)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
-                modifyServiceEndpoint(serviceEndpoint);
-                return octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
+                throw new Exception("Modifying the service endpoint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
+            }
+
+            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint)
+            {
+                return CreateClient<TService>(s => { }, CancellationToken.None);
+            }
+
+            public TClientService CreateClient<TService, TClientService>()
+            {
+                return CreateClient<TService, TClientService>(s => { });
+            }
+
+            public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
+            {
+                throw new Exception("Unsupported, since the " + typeof(TClientService) + " would not actually be passed on to the remote process which holds the actual client under test.");
             }
 
             public void Dispose()
             {
-                octopus.Dispose();
+                Octopus.Dispose();
                 runningOldHalibutBinary.Dispose();
                 tentacle.Dispose();
             }
