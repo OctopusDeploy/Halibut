@@ -20,14 +20,26 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly string version;
         ILogger logger = new SerilogLoggerBuilder().Build().ForContext<HalibutRuntimeBuilder>();
+        readonly Uri webSocketServiceEndpointUri;
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version)
         {
             this.serviceConnectionType = serviceConnectionType;
-            this.clientServicePort = clientServicePort;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.version = version;
+        }
+
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version)
+        {
+            this.clientServicePort = clientServicePort;
+        }
+
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version)
+        {
+            this.webSocketServiceEndpointUri = webSocketServiceEndpointUri;
         }
 
         string BinaryDir(string version)
@@ -63,6 +75,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             if (clientServicePort != null)
             {
                 envs.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
+            }
+            else if (webSocketServiceEndpointUri != null)
+            {
+                envs.Add("sslthubprint", Certificates.SslThumbprint);
+                envs.Add("octopusservercommsport", webSocketServiceEndpointUri.ToString());
             }
 
             envs.Add("ServiceConnectionType", serviceConnectionType.ToString());

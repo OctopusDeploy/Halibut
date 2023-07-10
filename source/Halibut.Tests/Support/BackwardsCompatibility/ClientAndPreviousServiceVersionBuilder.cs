@@ -24,6 +24,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
+        public static ClientAndPreviousServiceVersionBuilder WithPollingOverWebSocketService()
+        {
+            return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
+        }
+
         public static ClientAndPreviousServiceVersionBuilder WithListeningService()
         {
             return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
@@ -40,6 +45,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 case ServiceConnectionType.Polling:
                     return WithPollingService();
+                case ServiceConnectionType.PollingOverWebSocket:
+                    return WithPollingOverWebSocketService();
                 case ServiceConnectionType.Listening:
                     return WithListeningService();
                 default:
@@ -65,15 +72,33 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             Uri serviceUri;
             HalibutTestBinaryRunner.RunningOldHalibutBinary runningOldHalibutBinary;
+            var disposableCollection = new DisposableCollection();
+
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
                 var listenPort = octopus.Listen();
                 runningOldHalibutBinary = await new HalibutTestBinaryRunner(serviceConnectionType, listenPort, clientCertAndThumbprint, serviceCertAndThumbprint, version).Run();
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
             }
+            else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
+            {
+                var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
+                var webSocketPath = Guid.NewGuid().ToString();
+                var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
+                var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
+
+                octopus.ListenWebSocket(webSocketListeningUrl);
+
+                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
+                disposableCollection.Add(webSocketSslCertificate);
+
+                var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
+                runningOldHalibutBinary = await new HalibutTestBinaryRunner(serviceConnectionType, webSocketServiceEndpointUri, clientCertAndThumbprint, serviceCertAndThumbprint, version).Run();
+                serviceUri = new Uri("poll://SQ-TENTAPOLL");
+            }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
-                runningOldHalibutBinary = await new HalibutTestBinaryRunner(serviceConnectionType, null, clientCertAndThumbprint, serviceCertAndThumbprint, version).Run();
+                runningOldHalibutBinary = await new HalibutTestBinaryRunner(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version).Run();
                 serviceUri = new Uri("https://localhost:" + runningOldHalibutBinary.serviceListenPort);
             }
             else
@@ -81,7 +106,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 throw new NotSupportedException();
             }
 
-            return new ClientAndService(octopus, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint);
+            return new ClientAndService(octopus, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, disposableCollection);
         }
 
         public class ClientAndService : IClientAndService
@@ -89,16 +114,19 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly HalibutTestBinaryRunner.RunningOldHalibutBinary runningOldHalibutBinary;
             readonly Uri serviceUri;
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
+            readonly DisposableCollection disposableCollection;
 
             public ClientAndService(HalibutRuntime octopus,
                 HalibutTestBinaryRunner.RunningOldHalibutBinary runningOldHalibutBinary,
                 Uri serviceUri,
-                CertAndThumbprint serviceCertAndThumbprint)
+                CertAndThumbprint serviceCertAndThumbprint,
+                DisposableCollection disposableCollection)
             {
                 Octopus = octopus;
                 this.runningOldHalibutBinary = runningOldHalibutBinary;
                 this.serviceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+                this.disposableCollection = disposableCollection;
             }
 
             public HalibutRuntime Octopus { get; }
