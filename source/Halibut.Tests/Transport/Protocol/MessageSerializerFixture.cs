@@ -44,7 +44,7 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ReadMessage_ObservesThatMessageIsWritten()
+        public void ReadMessage_ObservesThatMessageIsRead()
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
             var sut = new MessageSerializerBuilder()
@@ -97,7 +97,7 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ReadMessage_Rewindable_ObservesThatMessageIsWritten()
+        public void ReadMessage_Rewindable_ObservesThatMessageIsRead()
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
             var sut = new MessageSerializerBuilder()
@@ -143,7 +143,7 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ReadMessage_Rewindable_ShouldNotObserveTrailingData()
+        public void ReadMessage_Rewindable_ShouldNotObserveTrailingDataWhenReading()
         {
             const string trailingData = "SomeOtherData";
 
