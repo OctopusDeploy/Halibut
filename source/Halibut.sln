@@ -42,7 +42,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.TestUtils.CompatBin
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.TestUtils.CompatBinary.Base", "Halibut.TestUtils.CompatBinary.Base\Halibut.TestUtils.CompatBinary.Base.csproj", "{BBC31D50-5170-49D9-A42D-625768705B7B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.TestUtils.CompatBinary.v5_0_237", "Halibut.TestUtils.CompatBinary.v5_0_237\Halibut.TestUtils.CompatBinary.v5_0_237.csproj", "{1718896B-5089-462C-AD60-E189A86A12F9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.TestUtils.CompatBinary.v5_0_236", "Halibut.TestUtils.CompatBinary.v5_0_236\Halibut.TestUtils.CompatBinary.v5_0_236.csproj", "{1718896B-5089-462C-AD60-E189A86A12F9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Octopus.TestPortForwarder", "Octopus.TestPortForwarder\Octopus.TestPortForwarder.csproj", "{ACF73278-BC28-4C60-ACF9-CAC3C5ACA45C}"
 EndProject
