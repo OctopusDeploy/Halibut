@@ -18,8 +18,8 @@ namespace Halibut.Tests
         {
             new object[] { ServiceConnectionType.Polling, null },
             new object[] { ServiceConnectionType.Listening, null },
-            new object[] { ServiceConnectionType.Polling, PreviousServiceVersions.v5_0_237_Used_In_Tentacle_6_3_417 },
-            new object[] { ServiceConnectionType.Listening, PreviousServiceVersions.v5_0_237_Used_In_Tentacle_6_3_417 }
+            new object[] { ServiceConnectionType.Polling, PreviousServiceVersions.v5_0_236_Used_In_Tentacle_6_3_417 },
+            new object[] { ServiceConnectionType.Listening, PreviousServiceVersions.v5_0_236_Used_In_Tentacle_6_3_417 }
         };
 
         [Test]
