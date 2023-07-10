@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -31,7 +32,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             var stopwatch = Stopwatch.StartNew();
 
-            var sut = MessageSerializerBuilder.Build();
+            var sut = new MessageSerializerBuilder().Build();
             using (var stream = new MemoryStream())
             {
                 var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
@@ -139,7 +140,7 @@ namespace Halibut.Tests.Transport.Protocol
 
                 var stopwatch = Stopwatch.StartNew();
 
-                var sut = MessageSerializerBuilder.Build();
+                var sut = new MessageSerializerBuilder().Build();
                 
                 await sut.WriteMessageAsync(stream, m);
                 stream.Position = 0;
@@ -203,7 +204,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             const string trailingData = "SomeOtherData";
 
-            var sut = MessageSerializerBuilder.Build();
+            var sut = new MessageSerializerBuilder().Build();
             using (var ms = new MemoryStream())
             using (var stream = new RewindableBufferStream(ms))
             {
@@ -220,7 +221,6 @@ namespace Halibut.Tests.Transport.Protocol
                 }
             }
         }
-#endif
 
         [Test]
         public void ReadMessage_Rewindable_ShouldNotObserveTrailingDataWhenReading()
