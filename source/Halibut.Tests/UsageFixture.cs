@@ -10,6 +10,7 @@ using Halibut.Logging;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using NUnit.Framework;
@@ -40,11 +41,10 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
+        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
-            using (var clientAndService = await ClientServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
@@ -52,7 +52,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
+                for (var i = 0; i < StandardIterationCount.ForServiceType(latestClientAndServiceTestCase.ServiceConnectionType); i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }
@@ -137,12 +137,11 @@ namespace Halibut.Tests
             }
         }
 
-        [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
+        
+        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
+        public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
-            using (var clientAndService = await ClientServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
@@ -178,11 +177,10 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public async Task StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
+        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
+        public async Task StreamsCanBeSentWithLatency(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
-            using (var clientAndService = await ClientServiceBuilder
-                      .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
                       .WithStandardServices()
                       .WithHalibutLoggingLevel(LogLevel.Info)
                       .Build())
@@ -201,68 +199,12 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public async Task StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
+        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
+        public async Task SupportsDifferentServiceContractMethods(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
-            using (var clientAndService = await ClientServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithEchoService()
-                       .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
-                       .WithHalibutLoggingLevel(LogLevel.Info)
+            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
+                       .WithStandardServices()
                        .Build())
-            {
-                var echo = clientAndService.CreateClient<IEchoService>();
-
-                var data = new byte[1024 * 1024 + 15];
-                new Random().NextBytes(data);
-
-                for (var i = 0; i < 100; i++)
-                {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
-                    count.Should().Be(1024 * 1024 + 15);
-                }
-            }
-        }
-
-        [Test]
-        [TestCase(ServiceConnectionType.Polling, 1)]
-        [TestCase(ServiceConnectionType.Listening, 2)]
-        [TestCase(ServiceConnectionType.Polling, 2)]
-        [TestCase(ServiceConnectionType.Listening, 3)]
-        [TestCase(ServiceConnectionType.Polling, 3)]
-        public async Task StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
-        {
-            using (var clientAndService = await ClientServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithEchoService()
-                       .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort)
-                           .WithSendDelay(TimeSpan.FromMilliseconds(20))
-                           .WithNumberOfBytesToDelaySending(numberOfBytesToDelaySending)
-                           .Build())
-                       .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
-            {
-                var echo = clientAndService.CreateClient<IEchoService>();
-
-                var data = new byte[1024 * 1024 + 15];
-                new Random().NextBytes(data);
-
-                for (var i = 0; i < 100; i++)
-                {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
-                    count.Should().Be(1024 * 1024 + 15);
-                }
-            }
-        }
-
-        [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public async Task SupportsDifferentServiceContractMethods(ServiceConnectionType serviceConnectionType)
-        {
-            using (var clientAndService = await ClientServiceBuilder
-                     .ForServiceConnectionType(serviceConnectionType)
-                     .WithStandardServices()
-                     .Build())
             {
                 var echo = clientAndService.CreateClient<IMultipleParametersTestService>();
                 echo.MethodReturningVoid(12, 14);
@@ -295,11 +237,10 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public async Task StreamsCanBeSentWithProgressReporting(ServiceConnectionType serviceConnectionType)
+        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
+        public async Task StreamsCanBeSentWithProgressReporting(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
-            using (var clientAndService = await ClientServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
                        .WithStandardServices()
                        .Build())
             {
