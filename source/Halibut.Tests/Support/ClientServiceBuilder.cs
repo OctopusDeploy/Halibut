@@ -9,7 +9,7 @@ using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
 {
-    public class ClientServiceBuilder
+    public class ClientServiceBuilder : IClientAndServiceBuilder
     {
         IServiceFactory? serviceFactory;
         readonly ServiceConnectionType serviceConnectionType;
@@ -75,6 +75,11 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithService<TContract>(Func<TContract> implementation)
+        {
+            return WithService<TContract>(implementation);
+        }
+        
         public ClientServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
             if (serviceFactory == null) serviceFactory = new DelegateServiceFactory();
@@ -87,6 +92,16 @@ namespace Halibut.Tests.Support
         public ClientServiceBuilder WithPortForwarding()
         {
             return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
+        }
+
+        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        {
+            return await Build();
+        }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        {
+            return WithPortForwarding(func);
         }
 
         public ClientServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
