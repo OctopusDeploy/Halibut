@@ -54,7 +54,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
                        .WithLogFactory(new TestContextLogFactory("ProxyClient"))
                        .Build())
             {
-                // 
                 Console.WriteLine("Next line should be: 36F35047CE8B000CF4C671819A2DD1AFCDE3403D");
                 Console.WriteLine("Client will trust: " + serviceCert.Thumbprint);
                 client.Trust(serviceCert.Thumbprint);
@@ -114,6 +113,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     Console.WriteLine("RunningAndReady");
                     Console.WriteLine("Will Now sleep");
                     Console.Out.Flush();
+                    // Now sleep until the processes is killed externally.
                     Thread.Sleep(1000000);
                 }
             }
