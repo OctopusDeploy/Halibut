@@ -13,7 +13,5 @@ namespace Halibut.Tests.Util
             if (field is null) throw new InvalidOperationException($"Failed to find field {fieldName} on type {type.FullName}");
             field.SetValue(null, value);
         }
-        
-        
     }
 }
