@@ -8,7 +8,7 @@ namespace Halibut.Transport.Observability
         {
         }
 
-        public void MessageRead(long decompressedBytesRead)
+        public void MessageRead(long compressedBytesRead, long decompressedBytesRead)
         {
         }
     }

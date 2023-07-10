@@ -3,6 +3,6 @@
     public interface IMessageSerializerObserver
     {
         void MessageWritten(long compressedBytesWritten);
-        void MessageRead(long decompressedBytesRead);
+        void MessageRead(long compressedBytesRead, long decompressedBytesRead);
     }
 }

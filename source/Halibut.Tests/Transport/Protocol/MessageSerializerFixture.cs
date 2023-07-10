@@ -60,8 +60,9 @@ namespace Halibut.Tests.Transport.Protocol
                 sut.ReadMessage<string>(stream);
             }
 
-            var decompressedBytesRead = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
-            decompressedBytesRead.Should().Be(120);
+            var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
+            readMessage.CompressedBytesRead.Should().Be(55);
+            readMessage.DecompressedBytesRead.Should().Be(120);
             messageSerializerObserver.MessagesWritten.Should().BeEmpty();
         }
 
@@ -114,8 +115,9 @@ namespace Halibut.Tests.Transport.Protocol
                 sut.ReadMessage<string>(rewindableStream);
             }
 
-            var decompressedBytesRead = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
-            decompressedBytesRead.Should().Be(120);
+            var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
+            readMessage.CompressedBytesRead.Should().Be(55);
+            readMessage.DecompressedBytesRead.Should().Be(120);
             messageSerializerObserver.MessagesWritten.Should().BeEmpty();
         }
 
@@ -165,8 +167,9 @@ namespace Halibut.Tests.Transport.Protocol
                 sut.ReadMessage<string>(rewindableStream);
             }
 
-            var decompressedBytesRead = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
-            decompressedBytesRead.Should().Be(120);
+            var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
+            readMessage.CompressedBytesRead.Should().Be(55);
+            readMessage.DecompressedBytesRead.Should().Be(120);
         }
 #endif
     }
