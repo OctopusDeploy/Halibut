@@ -1,11 +1,11 @@
 ﻿namespace Halibut.Tests.Support
 {
-    public class ReadMessage
+    public class ReceivedMessageState
     {
         public long CompressedBytesRead { get; }
         public long DecompressedBytesRead { get; }
 
-        public ReadMessage(long compressedBytesRead, long decompressedBytesRead)
+        public ReceivedMessageState(long compressedBytesRead, long decompressedBytesRead)
         {
             CompressedBytesRead = compressedBytesRead;
             DecompressedBytesRead = decompressedBytesRead;

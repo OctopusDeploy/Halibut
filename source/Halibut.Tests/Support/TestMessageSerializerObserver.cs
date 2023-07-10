@@ -6,10 +6,10 @@ namespace Halibut.Tests.Support
     public class TestMessageSerializerObserver : IMessageSerializerObserver
     {
         readonly List<long> messagesWritten = new();
-        readonly List<ReadMessage> messagesRead = new();
+        readonly List<ReceivedMessageState> messagesRead = new();
 
         public IReadOnlyList<long> MessagesWritten => messagesWritten;
-        public IReadOnlyList<ReadMessage> MessagesRead => messagesRead;
+        public IReadOnlyList<ReceivedMessageState> MessagesRead => messagesRead;
 
         public void MessageWritten(long compressedBytesWritten)
         {
@@ -18,7 +18,7 @@ namespace Halibut.Tests.Support
 
         public void MessageRead(long compressedBytesRead, long decompressedBytesRead)
         {
-            var readMessage = new ReadMessage(compressedBytesRead, decompressedBytesRead);
+            var readMessage = new ReceivedMessageState(compressedBytesRead, decompressedBytesRead);
             messagesRead.Add(readMessage);
         }
     }
