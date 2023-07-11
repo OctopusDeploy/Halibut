@@ -9,6 +9,7 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.Util;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
 
@@ -29,7 +30,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-                for (var i = 0; i < 2000; i++)
+                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }
@@ -48,7 +49,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-                for (var i = 0; i < 2000; i++)
+                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }
