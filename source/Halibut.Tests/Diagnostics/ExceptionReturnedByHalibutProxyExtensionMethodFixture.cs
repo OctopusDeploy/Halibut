@@ -146,7 +146,7 @@ namespace Halibut.Tests.Diagnostics
             public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
                 using (var clientAndService = await ClientServiceBuilder
-                           .ForMode(serviceConnectionType)
+                           .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .Build())
                 {
@@ -166,7 +166,7 @@ namespace Halibut.Tests.Diagnostics
             public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
                 using (var clientAndService = await ClientServiceBuilder
-                           .ForMode(serviceConnectionType)
+                           .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .Build())
                 {
@@ -186,7 +186,7 @@ namespace Halibut.Tests.Diagnostics
             public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
                 using (var clientAndService = await ClientServiceBuilder
-                           .ForMode(serviceConnectionType)
+                           .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .Build())
                 {

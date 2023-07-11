@@ -20,7 +20,7 @@ namespace Halibut.Tests
             services.Register<IReadDataStreamService>(() => new ReadDataStreamService());
 
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceFactory(services).Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();

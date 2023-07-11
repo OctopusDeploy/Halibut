@@ -35,12 +35,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
-        public static ClientAndPreviousServiceVersionBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
-        {
-            return new ClientAndPreviousServiceVersionBuilder(serviceConnectionType, CertAndThumbprint.TentacleListening);
-        }
-
-        public static ClientAndPreviousServiceVersionBuilder WithService(ServiceConnectionType connectionType)
+        public static ClientAndPreviousServiceVersionBuilder ForServiceConnectionType(ServiceConnectionType connectionType)
         {
             switch (connectionType)
             {

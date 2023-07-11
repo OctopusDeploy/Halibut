@@ -16,7 +16,7 @@ namespace Halibut.Tests
         public async Task AServiceNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
