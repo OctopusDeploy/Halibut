@@ -208,7 +208,7 @@ namespace Halibut.Tests
         static async Task<IClientAndService> CreateClientAndService(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
         {
             return halibutServiceVersion == null ?
-                ClientServiceBuilder
+                await ClientServiceBuilder
                     .ForMode(serviceConnectionType)
                     .WithCachingService()
                     .Build() :

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
@@ -13,12 +14,12 @@ namespace Halibut.Tests
     public class PollingClientConnectionHandlingFixture
     {
         [Test]
-        public void PollingClientShouldConnectQuickly()
+        public async Task PollingClientShouldConnectQuickly()
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = SetupPollingServerAndTentacle(() =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(() =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -33,12 +34,12 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void PollingClientShouldReConnectQuickly()
+        public async Task PollingClientShouldReConnectQuickly()
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = SetupPollingServerAndTentacle(() =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(() =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -85,12 +86,12 @@ namespace Halibut.Tests
             secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(8));
         }
 
-        (ClientServiceBuilder.ClientAndService,
-            IEchoService echoService,
-            IDoSomeActionService doSomeActionService)
+        async Task<(ClientServiceBuilder.ClientAndService,
+                IEchoService echoService,
+                IDoSomeActionService doSomeActionService)>
             SetupPollingServerAndTentacle(Action doSomeActionServiceAction)
         {
-            var clientAndService = ClientServiceBuilder
+            var clientAndService = await ClientServiceBuilder
                 .Polling()
                 .WithPortForwarding()
                 .WithDoSomeActionService(doSomeActionServiceAction)

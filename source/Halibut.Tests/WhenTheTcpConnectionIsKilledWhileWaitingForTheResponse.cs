@@ -14,7 +14,7 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task AResponseShouldBeQuicklyReturned(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithPortForwarding(out var portForwarder)
                        .WithDoSomeActionService(() => portForwarder.Value.Dispose())

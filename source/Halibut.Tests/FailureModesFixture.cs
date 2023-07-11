@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
@@ -22,9 +23,9 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void FailsWhenSendingToPollingMachineButNothingPicksItUp()
+        public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp()
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .Polling()
                        .NoService()
                        .Build())
@@ -42,9 +43,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void FailWhenServerThrowsAnException(ServiceConnectionType serviceConnectionType)
+        public async Task FailWhenServerThrowsAnException(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithEchoService()
                        .Build())
@@ -130,9 +131,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
+        public async Task FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithReadDataStreamService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
@@ -53,12 +54,12 @@ namespace Halibut.Tests.Transport
         }
         
         [Test]
-        public void OctopusCanDiscoverTentacle()
+        public async Task OctopusCanDiscoverTentacle()
         {
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
+            using (var clientAndService = await ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
             {
                 var info = clientAndService.Octopus.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);

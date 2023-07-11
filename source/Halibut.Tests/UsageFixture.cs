@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.Tests.Support;
@@ -15,9 +16,9 @@ namespace Halibut.Tests
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithEchoService()
                        .Build())
@@ -34,9 +35,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
+        public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithEchoService()
                        .WithSupportedServices()
@@ -54,9 +55,9 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void HalibutSerializerIsKeptUpToDateWithPollingTentacle()
+        public async Task HalibutSerializerIsKeptUpToDateWithPollingTentacle()
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .Polling()
                        .WithEchoService()
                        .WithSupportedServices()
@@ -75,9 +76,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
+        public async Task StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithEchoService()
                        .Build())
@@ -97,9 +98,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
+        public async Task StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
@@ -124,9 +125,9 @@ namespace Halibut.Tests
         [TestCase(ServiceConnectionType.Polling, 2)]
         [TestCase(ServiceConnectionType.Listening, 3)]
         [TestCase(ServiceConnectionType.Polling, 3)]
-        public void StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
+        public async Task StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort)
@@ -150,9 +151,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void SupportsDifferentServiceContractMethods(ServiceConnectionType serviceConnectionType)
+        public async Task SupportsDifferentServiceContractMethods(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                      .ForMode(serviceConnectionType)
                      .WithEchoService()
                      .WithSupportedServices()
@@ -190,9 +191,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public void StreamsCanBeSentWithProgressReporting(ServiceConnectionType serviceConnectionType)
+        public async Task StreamsCanBeSentWithProgressReporting(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .WithEchoService()
                        .Build())

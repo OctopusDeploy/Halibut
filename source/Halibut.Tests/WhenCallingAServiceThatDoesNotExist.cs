@@ -15,7 +15,7 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task AServiceNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .ForMode(serviceConnectionType)
                        .Build())
             {

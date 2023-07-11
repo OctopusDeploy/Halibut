@@ -1,5 +1,6 @@
 #if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
@@ -12,9 +13,9 @@ namespace Halibut.Tests
     public class WebSocketUsageFixture
     {
         [Test]
-        public void HalibutSerializerIsKeptUpToDateWithWebSocketPollingTentacle()
+        public async Task HalibutSerializerIsKeptUpToDateWithWebSocketPollingTentacle()
         {
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .PollingOverWebSocket()
                        .WithService<IEchoService>(() => new EchoService())
                        .WithService<ISupportedServices>(() => new SupportedServices())
@@ -31,10 +32,10 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void OctopusCanSendMessagesToWebSocketPollingTentacle()
+        public async Task OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
 
-            using (var clientAndService = ClientServiceBuilder
+            using (var clientAndService = await ClientServiceBuilder
                        .PollingOverWebSocket()
                        .WithService<ISupportedServices>(() => new SupportedServices())
                        .Build())

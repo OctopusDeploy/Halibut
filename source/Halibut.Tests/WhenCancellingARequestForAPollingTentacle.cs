@@ -17,11 +17,11 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued
         {
             [Test]
-            public void TheRequestShouldBeCancelled()
+            public async Task TheRequestShouldBeCancelled()
             {
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = ClientServiceBuilder
+                using (var clientAndService = await ClientServiceBuilder
                            .Polling()
                            // No Tentacle
                            .NoService()
@@ -51,12 +51,12 @@ namespace Halibut.Tests
         public class AndTheRequestHasBeenDequeuedButNoResponseReceived
         {
             [Test]
-            public void TheRequestShouldNotBeCancelled()
+            public async Task TheRequestShouldNotBeCancelled()
             {
                 var calls = new List<DateTime>();
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = ClientServiceBuilder
+                using (var clientAndService = await ClientServiceBuilder
                            .Polling()
                            .WithDoSomeActionService(() =>
                            {
