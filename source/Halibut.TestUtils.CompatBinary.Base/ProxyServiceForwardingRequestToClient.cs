@@ -65,9 +65,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     case ServiceConnectionType.Polling:
                         var clientPollingListeningPort = client.Listen();
                         Console.WriteLine("Polling listener is listening on port: " + clientPollingListeningPort);
-                        
-                        // This needs to be done within the CLR.
-                        //tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), octopusThumbprint));
                         realServiceUri = new Uri("poll://SQ-TENTAPOLL");
                         break;
                     case ServiceConnectionType.Listening:
@@ -80,12 +77,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 var realServiceEndpoint = new ServiceEndPoint(realServiceUri, serviceCert.Thumbprint);
 
                 var forwardingEchoService = client.CreateClient<IEchoService>(realServiceEndpoint);
-                
-                // We can only test in listening mode since in polling not everything is setup yet.
-                // Console.WriteLine("Testing can communicate with service from external proxy client");
-                // forwardingEchoService.SayHello("Hello");
-                // Console.WriteLine("Testing passed, we can talk from the external binary back to the service");
-
 
                 // Connects as service to the client.
                 var services = new DelegateServiceFactory();
