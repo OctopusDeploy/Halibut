@@ -12,11 +12,13 @@ namespace Halibut.Tests.BackwardsCompatibility
     public class TestOldClientWithNewService
     {
         [Test]
+        [TestCaseSource()]
         public async Task Listening()
         {
-            new SerilogLoggerBuilder().Build().Information("Hello");
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndServiceBuilder.WithListeningService().WithClientVersion(PreviousServiceVersions.v5_0_429)
+            using (var clientAndService = await PreviousClientVersionAndServiceBuilder
+                       .WithListeningService()
+                       .WithClientVersion(PreviousVersions.v5_0_429)
                        .WithEchoServiceService(echoService)
                        .Build())
             {
@@ -31,9 +33,8 @@ namespace Halibut.Tests.BackwardsCompatibility
         [Test]
         public async Task Polling()
         {
-            new SerilogLoggerBuilder().Build().Information("Hello");
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndServiceBuilder.WithPollingService().WithClientVersion(PreviousServiceVersions.v5_0_429)
+            using (var clientAndService = await PreviousClientVersionAndServiceBuilder.WithPollingService().WithClientVersion(PreviousVersions.v5_0_429)
                        .WithEchoServiceService(echoService)
                        .Build())
             {

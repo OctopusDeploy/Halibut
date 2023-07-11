@@ -17,7 +17,7 @@ namespace Halibut.Tests.BackwardsCompatibility
         {
             using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
                        .ForServiceConnectionType(serviceConnectionType)
-                       .WithServiceVersion(PreviousServiceVersions.v5_0_429)
+                       .WithServiceVersion(PreviousVersions.v5_0_429)
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>(se =>
