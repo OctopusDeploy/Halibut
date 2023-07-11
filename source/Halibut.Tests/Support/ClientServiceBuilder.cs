@@ -89,6 +89,10 @@ namespace Halibut.Tests.Support
             return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
         }
 
+        public ClientServiceBuilder WithStandardServices()
+        {
+            return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
+        }
         public ClientServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
         {
             this.WithPortForwarding();

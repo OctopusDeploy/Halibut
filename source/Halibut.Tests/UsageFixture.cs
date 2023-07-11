@@ -42,7 +42,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await ClientServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
-                       .WithEchoService()
+                       .WithStandardServices()
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -61,8 +61,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await ClientServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
-                       .WithEchoService()
-                       .WithMultipleParametersTestService()
+                       .WithStandardServices()
                        .Build())
             {
                 var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
@@ -81,8 +80,8 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await ClientServiceBuilder
                        .Polling()
-                       .WithEchoService()
-                       .WithMultipleParametersTestService()
+                       .WithStandardServices()
+                       //WithSupportedServices()
                        .Build()){
 
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
@@ -101,9 +100,9 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithEchoService()
-                       .Build())
+                                              .ForServiceConnectionType(serviceConnectionType)
+                                              .WithStandardServices()
+                                              .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
 
@@ -177,8 +176,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await ClientServiceBuilder
                      .ForServiceConnectionType(serviceConnectionType)
-                     .WithEchoService()
-                     .WithMultipleParametersTestService()
+                     .WithStandardServices()
                      .Build())
             {
                 var echo = clientAndService.CreateClient<IMultipleParametersTestService>();
@@ -217,7 +215,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await ClientServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
-                       .WithEchoService()
+                       .WithStandardServices()
                        .Build())
             {
                 var progressReported = new List<int>();
