@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -61,7 +60,7 @@ namespace Halibut
             this.typeRegistry = typeRegistry;
             return this;
         }
-        
+
         internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
