@@ -1,7 +1,5 @@
 #nullable enable
 using System;
-using System.Net.Sockets;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
@@ -52,6 +50,8 @@ namespace Halibut.Tests.Support
                     return Polling();
                 case ServiceConnectionType.Listening:
                     return Listening();
+                case ServiceConnectionType.PollingOverWebSocket:
+                    return PollingOverWebSocket();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
@@ -158,19 +158,9 @@ namespace Halibut.Tests.Support
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
-                static int FindFreeTcpPort()
-                {
-                    var listener = new TcpListener(IPAddress.Loopback, 0);
-                    listener.Start();
-                    var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                    listener.Stop();
-                    return port;
-                }
-
-                var webSocketListeningPort = FindFreeTcpPort();
+                var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
                 var webSocketPath = Guid.NewGuid().ToString();
                 var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
-                var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
                 var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
 
                 octopus.ListenWebSocket(webSocketListeningUrl);
@@ -178,14 +168,15 @@ namespace Halibut.Tests.Support
                 var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
                 disposableCollection.Add(webSocketSslCertificate);
 
-                if (portForwarderFactory != null)
-                {
-                    throw new NotSupportedException("The PortForwarder is not currently supported with WebSockets");
-                }
-
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
                 if (tentacle != null)
                 {
+                    if (portForwarder != null)
+                    {
+                        webSocketListeningPort = portForwarder.ListeningPort;
+                    }
+
+                    var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
                     tentacle.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint));
                 }
             }
@@ -281,40 +272,6 @@ namespace Halibut.Tests.Support
                 Tentacle?.Dispose();
                 PortForwarder?.Dispose();
                 disposableCollection.Dispose();
-            }
-        }
-
-        class WebSocketSslCertificateBuilder
-        {
-            readonly string bindingAddress;
-
-            public WebSocketSslCertificateBuilder(string bindingAddress)
-            {
-                this.bindingAddress = bindingAddress;
-            }
-
-            public WebSocketSslCertificate Build()
-            {
-                WebSocketSslCertificateHelper.AddSslCertToLocalStoreAndRegisterFor(bindingAddress);
-
-                var webSocketSslCertificate = new WebSocketSslCertificate(bindingAddress);
-
-                return webSocketSslCertificate;
-            }
-        }
-
-        class WebSocketSslCertificate : IDisposable
-        {
-            readonly string bindingAddress;
-
-            internal WebSocketSslCertificate(string bindingAddress)
-            {
-                this.bindingAddress = bindingAddress;
-            }
-
-            public void Dispose()
-            {
-                WebSocketSslCertificateHelper.RemoveSslCertBindingFor(bindingAddress);
             }
         }
 

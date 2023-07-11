@@ -130,7 +130,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
+        // TODO - This runs for 30+ mins with WebSockets
         public async Task FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder

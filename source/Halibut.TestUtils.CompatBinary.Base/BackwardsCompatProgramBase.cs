@@ -18,7 +18,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
             ServiceConnectionType serviceConnectionType = ServiceConnectionTypeFromString(Environment.GetEnvironmentVariable("ServiceConnectionType"));
             string addressToPoll = null;
-            if (serviceConnectionType == ServiceConnectionType.Polling)
+            if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
                 addressToPoll = Environment.GetEnvironmentVariable("octopusservercommsport");
                 Console.WriteLine($"Will poll: {addressToPoll}");
@@ -33,6 +33,12 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 {
                     case ServiceConnectionType.Polling:
                         tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), octopusThumbprint));
+                        break;
+                    case ServiceConnectionType.PollingOverWebSocket:
+                        var sslThubprint = Environment.GetEnvironmentVariable("sslthubprint");
+                        Console.WriteLine($"Using SSL thumbprint: {sslThubprint}");
+
+                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), sslThubprint));
                         break;
                     case ServiceConnectionType.Listening:
                         var port = tentaclePolling.Listen();
@@ -66,6 +72,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
     public enum ServiceConnectionType
     {
         Polling,
+        PollingOverWebSocket,
         Listening
     }
 }
