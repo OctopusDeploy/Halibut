@@ -1,6 +1,6 @@
 ﻿namespace Halibut.Tests.Support.BackwardsCompatibility
 {
-    public static class PreviousServiceVersions
+    public static class PreviousVersions
     {
         // Version prior to new exception types being added to Halibut. All exceptions are HalibutClientException
         public const string v5_0_429 = "5.0.429";

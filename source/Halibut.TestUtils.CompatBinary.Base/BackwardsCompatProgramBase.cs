@@ -2,12 +2,34 @@ using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Halibut.ServiceModel;
+using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 
 namespace Halibut.TestUtils.SampleProgram.Base
 {
     public class BackwardsCompatProgramBase
     {
         public static int Main(string[] args)
+        {
+            var mode = Environment.GetEnvironmentVariable("mode")??"";
+            Console.WriteLine("Mode is: " + mode);
+            if (mode.Equals("serviceonly"))
+            {
+                RunExternalService();
+            }
+            else if(mode.Equals("proxy"))
+            {
+                ProxyServiceForwardingRequestToClient.Run(args);
+            }
+            else
+            {
+                Console.WriteLine("Unknown mode: " + mode);
+                throw new Exception("Unknown mode: " + mode);
+            }
+            
+            return 1;
+        }
+
+        static void RunExternalService()
         {
             var tentacleCertPath = Environment.GetEnvironmentVariable("tentaclecertpath");
             Console.WriteLine($"Using tentacle cert path: {tentacleCertPath}");
@@ -27,7 +49,12 @@ namespace Halibut.TestUtils.SampleProgram.Base
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             services.Register<ICachingService>(() => new CachingService());
-            using (var tentaclePolling = new HalibutRuntime(services, TentacleCert))
+
+            using (var tentaclePolling = new HalibutRuntimeBuilder()
+                       .WithServiceFactory(services)
+                       .WithServerCertificate(TentacleCert)
+                       .WithLogFactory(new TestContextLogFactory("ExternalService"))
+                       .Build())
             {
                 switch (serviceConnectionType)
                 {
@@ -54,8 +81,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 Console.Out.Flush();
                 Thread.Sleep(1000000);
             }
-
-            return 1;
         }
 
         public static ServiceConnectionType ServiceConnectionTypeFromString(string s)
