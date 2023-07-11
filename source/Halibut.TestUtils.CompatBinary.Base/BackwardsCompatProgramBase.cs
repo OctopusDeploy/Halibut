@@ -1,6 +1,5 @@
 using System;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading;
+using System.Threading.Tasks;
 using Halibut.ServiceModel;
 using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 
@@ -8,62 +7,61 @@ namespace Halibut.TestUtils.SampleProgram.Base
 {
     public class BackwardsCompatProgramBase
     {
-        public static int Main(string[] args)
+        public static async Task<int> Main()
         {
-            var mode = Environment.GetEnvironmentVariable("mode")??"";
-            Console.WriteLine("Mode is: " + mode);
+            var mode = SettingsHelper.GetSetting("mode") ?? string.Empty;
+            Console.WriteLine($"Mode is: {mode}");
+
             if (mode.Equals("serviceonly"))
             {
-                RunExternalService();
+                await RunExternalService();
             }
             else if(mode.Equals("proxy"))
             {
-                ProxyServiceForwardingRequestToClient.Run(args);
+                await ProxyServiceForwardingRequestToClient.Run();
             }
             else
             {
-                Console.WriteLine("Unknown mode: " + mode);
-                throw new Exception("Unknown mode: " + mode);
+                Console.WriteLine($"Unknown mode: {mode}");
+                throw new Exception($"Unknown mode: {mode}");
             }
-            
+
             return 1;
         }
 
-        static void RunExternalService()
+        static async Task RunExternalService()
         {
-            var tentacleCertPath = Environment.GetEnvironmentVariable("tentaclecertpath");
-            Console.WriteLine($"Using tentacle cert path: {tentacleCertPath}");
-            var TentacleCert = new X509Certificate2(tentacleCertPath);
+            var serviceCert = SettingsHelper.GetServiceCertificate();
+            var serviceConnectionType = SettingsHelper.GetServiceConnectionType();
+            var octopusThumbprint = SettingsHelper.GetClientThumbprint();
 
-            var octopusThumbprint = Environment.GetEnvironmentVariable("octopusthumbprint");
-            Console.WriteLine($"Using octopus thumbprint: {octopusThumbprint}");
-
-            ServiceConnectionType serviceConnectionType = ServiceConnectionTypeFromString(Environment.GetEnvironmentVariable("ServiceConnectionType"));
             string addressToPoll = null;
+
             if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
-                addressToPoll = Environment.GetEnvironmentVariable("octopusservercommsport");
+                addressToPoll = SettingsHelper.GetSetting("octopusservercommsport");
                 Console.WriteLine($"Will poll: {addressToPoll}");
             }
 
+            var proxyDetails = SettingsHelper.GetProxyDetails();
             var services = ServiceFactoryFactory.CreateServiceFactory();
 
             using (var tentaclePolling = new HalibutRuntimeBuilder()
                        .WithServiceFactory(services)
-                       .WithServerCertificate(TentacleCert)
+                       .WithServerCertificate(serviceCert)
                        .WithLogFactory(new TestContextLogFactory("ExternalService"))
                        .Build())
             {
                 switch (serviceConnectionType)
                 {
                     case ServiceConnectionType.Polling:
-                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), octopusThumbprint));
+                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll!), octopusThumbprint, proxyDetails));
                         break;
                     case ServiceConnectionType.PollingOverWebSocket:
-                        var sslThubprint = Environment.GetEnvironmentVariable("sslthubprint");
+                        var sslThubprint = SettingsHelper.GetSetting("sslthubprint");
                         Console.WriteLine($"Using SSL thumbprint: {sslThubprint}");
 
-                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), sslThubprint));
+                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll!), sslThubprint, proxyDetails));
                         break;
                     case ServiceConnectionType.Listening:
                         var port = tentaclePolling.Listen();
@@ -76,26 +74,11 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
                 Console.WriteLine("RunningAndReady");
                 Console.WriteLine("Will Now sleep");
-                Console.Out.Flush();
-                Thread.Sleep(1000000);
+                await Console.Out.FlushAsync();
+
+                // Run until the Program is terminated
+                await Task.Delay(-1);
             }
         }
-
-        public static ServiceConnectionType ServiceConnectionTypeFromString(string s)
-        {
-            if (Enum.TryParse(s, out ServiceConnectionType serviceConnectionType))
-            {
-                return serviceConnectionType;
-            }
-
-            throw new Exception($"Unknown service type '{s}'");
-        }
-    }
-
-    public enum ServiceConnectionType
-    {
-        Polling,
-        PollingOverWebSocket,
-        Listening
     }
 }

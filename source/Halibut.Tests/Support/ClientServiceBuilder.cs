@@ -173,11 +173,11 @@ namespace Halibut.Tests.Support
             PortForwarder? portForwarder = null;
             var proxy = proxyFactory?.Invoke();
             ProxyDetails? proxyDetails = null;
+
             if (proxy != null)
             {
                 await proxy.StartAsync(cancellationTokenSource.Token);
                 proxyDetails = new ProxyDetails("localhost", proxy.Endpoint.Port, ProxyType.HTTP);
-                disposableCollection.Add(proxy);
             }
 
             Uri serviceUri;
@@ -251,14 +251,11 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxyDetails, cancellationTokenSource);
+            return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxy, proxyDetails, cancellationTokenSource);
         }
 
         public class ClientAndService : IClientAndService
         {
-            public HalibutRuntime Octopus { get; }
-            public HalibutRuntime? Tentacle { get; }
-            public PortForwarder? PortForwarder { get; }
             public Uri ServiceUri { get; }
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly DisposableCollection disposableCollection;
@@ -271,6 +268,7 @@ namespace Halibut.Tests.Support
                 CertAndThumbprint serviceCertAndThumbprint,
                 PortForwarder? portForwarder,
                 DisposableCollection disposableCollection,
+                HttpProxyService? proxy,
                 ProxyDetails? proxyDetails,
                 CancellationTokenSource cancellationTokenSource)
             {
@@ -279,10 +277,16 @@ namespace Halibut.Tests.Support
                 ServiceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
                 PortForwarder = portForwarder;
+                Proxy = proxy;
                 this.disposableCollection = disposableCollection;
                 this.proxyDetails = proxyDetails;
                 this.cancellationTokenSource = cancellationTokenSource;
             }
+
+            public HalibutRuntime Octopus { get; }
+            public HalibutRuntime? Tentacle { get; }
+            public PortForwarder? PortForwarder { get; }
+            public HttpProxyService? Proxy { get; }
 
             public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
             {
@@ -317,9 +321,9 @@ namespace Halibut.Tests.Support
             {
                 cancellationTokenSource?.Cancel();
                 cancellationTokenSource?.Dispose();
-
                 Octopus.Dispose();
                 Tentacle?.Dispose();
+                Proxy?.Dispose();
                 PortForwarder?.Dispose();
                 disposableCollection.Dispose();
             }

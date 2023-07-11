@@ -14,44 +14,65 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly string version;
+        readonly ProxyDetails proxyDetails;
         readonly Uri realServiceListenAddress;
 
-        public ProxyHalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, Uri realServiceListenAddress, string version)
+        public ProxyHalibutTestBinaryRunner(
+            ServiceConnectionType serviceConnectionType,
+            int? clientServicePort,
+            CertAndThumbprint clientCertAndThumbprint,
+            CertAndThumbprint serviceCertAndThumbprint,
+            Uri realServiceListenAddress,
+            string version,
+            ProxyDetails proxyDetails)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientServicePort = clientServicePort;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.version = version;
+            this.proxyDetails = proxyDetails;
             this.realServiceListenAddress = realServiceListenAddress;
         }
 
 
         public async Task<RoundTripRunningOldHalibutBinary> Run()
         {
-            var envs = new Dictionary<string, string>();
-            envs.Add("mode", "proxy");
-            envs.Add("tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath);
-            envs.Add("octopuscertpath", clientCertAndThumbprint.CertificatePfxPath);
+            var settings = new Dictionary<string, string>
+            {
+                { "mode", "proxy" },
+                { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
+                { "octopuscertpath", clientCertAndThumbprint.CertificatePfxPath }
+            };
+
+            if (proxyDetails != null)
+            {
+                settings.Add("proxydetails_host", proxyDetails.Host);
+                settings.Add("proxydetails_password", proxyDetails.Password);
+                settings.Add("proxydetails_username", proxyDetails.UserName);
+                settings.Add("proxydetails_port", proxyDetails.Port.ToString());
+                settings.Add("proxydetails_type", proxyDetails.Type.ToString());
+            }
+
             if (clientServicePort != null)
             {
-                envs.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
+                settings.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
             }
 
             if (realServiceListenAddress != null)
             {
-                envs.Add("realServiceListenAddress", realServiceListenAddress.ToString());
+                settings.Add("realServiceListenAddress", realServiceListenAddress.ToString());
             }
 
-            envs.Add("ServiceConnectionType", serviceConnectionType.ToString());
+            settings.Add("ServiceConnectionType", serviceConnectionType.ToString());
 
-            CancellationTokenSource cts = new CancellationTokenSource();
+            var cts = new CancellationTokenSource();
 
             try
             {
                 var tmp = new TmpDirectory();
 
-                var (task, serviceListenPort, proxyClientListenPort) = await StartHalibutTestBinary(version, envs, tmp, cts.Token);
+                var (task, serviceListenPort, proxyClientListenPort) = await StartHalibutTestBinary(version, settings, tmp, cts.Token);
 
                 return new RoundTripRunningOldHalibutBinary(cts, task, tmp, serviceListenPort, proxyClientListenPort);
             }
@@ -74,29 +95,29 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 try
                 {
-                    Action<string> processLogs = s =>
+                    void ProcessLogs(string s)
                     {
                         logger.Information(s);
                         if (s.StartsWith("Listening on port: "))
                         {
-                            serviceListenPort = Int32.Parse(Regex.Match(s, @"\d+").Value);
+                            serviceListenPort = int.Parse(Regex.Match(s, @"\d+").Value);
                             logger.Information("External halibut binary listening port is: " + serviceListenPort);
                         }
 
                         if (s.StartsWith("Polling listener is listening on port: "))
                         {
-                            proxyClientListenPort = Int32.Parse(Regex.Match(s, @"\d+").Value);
+                            proxyClientListenPort = int.Parse(Regex.Match(s, @"\d+").Value);
                         }
 
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
-                    };
+                    }
 
                     ShellExecutor.ExecuteCommand(new HalibutTestBinaryPath().BinPath(version),
                         "",
                         tmp.FullPath,
-                        processLogs,
-                        processLogs,
-                        processLogs,
+                        ProcessLogs,
+                        ProcessLogs,
+                        ProcessLogs,
                         customEnvironmentVariables: envs,
                         cancel: cancellationToken
                     );
@@ -127,17 +148,22 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly CancellationTokenSource cts;
             readonly Task runningOldHalibutTask;
             readonly TmpDirectory tmpDirectory;
-            public readonly int? serviceListenPort;
-            public readonly int? proxyClientListenPort;
 
-            public RoundTripRunningOldHalibutBinary(CancellationTokenSource cts, Task runningOldHalibutTask, TmpDirectory tmpDirectory, int? serviceListenPort, int? proxyClientListenPort)
+            public RoundTripRunningOldHalibutBinary(
+                CancellationTokenSource cts,
+                Task runningOldHalibutTask,
+                TmpDirectory tmpDirectory,
+                int? serviceListenPort,
+                int? proxyClientListenPort)
             {
                 this.cts = cts;
                 this.runningOldHalibutTask = runningOldHalibutTask;
                 this.tmpDirectory = tmpDirectory;
-                this.serviceListenPort = serviceListenPort;
-                this.proxyClientListenPort = proxyClientListenPort;
+                this.ServiceListenPort = serviceListenPort;
+                this.ProxyClientListenPort = proxyClientListenPort;
             }
+            public int? ServiceListenPort { get; }
+            public int? ProxyClientListenPort { get; }
 
             public void Dispose()
             {

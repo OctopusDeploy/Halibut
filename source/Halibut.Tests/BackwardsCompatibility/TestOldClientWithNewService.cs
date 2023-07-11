@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Tests.BackwardsCompatibility.Util;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
@@ -22,7 +21,7 @@ namespace Halibut.Tests.BackwardsCompatibility
                        .WithEchoServiceService(echoService)
                        .Build())
             {
-                
+
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("hello");
             }
