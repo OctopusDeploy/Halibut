@@ -8,9 +8,7 @@ namespace Halibut.TestUtils.SampleProgram.v5_0_429
     {
         public static int Main(string[] args)
         {
-            var s = HalibutLimits.PollingRequestQueueTimeout;
-            Console.WriteLine(s);
-           return BackwardsCompatProgramBase.Main(args);
+            return BackwardsCompatProgramBase.Main(args);
         }
     }
 }
