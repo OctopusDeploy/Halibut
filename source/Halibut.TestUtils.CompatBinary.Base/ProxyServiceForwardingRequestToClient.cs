@@ -107,7 +107,5 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
             return 1;
         }
-
-        
     }
 }
