@@ -15,7 +15,8 @@ namespace Halibut.Tests.Support.TestAttributes
         static readonly ServiceConnectionType[] serviceConnectionTypesToTest =
         {
             ServiceConnectionType.Polling, 
-            ServiceConnectionType.Listening
+            ServiceConnectionType.Listening,
+            ServiceConnectionType.PollingOverWebSocket
         };
 
         static readonly NetworkConditionTestCase[] networkConditionTestCases =

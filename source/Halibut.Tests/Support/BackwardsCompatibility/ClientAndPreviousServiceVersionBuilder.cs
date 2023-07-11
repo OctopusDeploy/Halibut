@@ -6,7 +6,7 @@ using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
-    public class ClientAndPreviousServiceVersionBuilder
+    public class ClientAndPreviousServiceVersionBuilder : IClientAndServiceBaseBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
@@ -56,9 +56,27 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        {
+            return WithPortForwarding(func);
+        }
+
         public ClientAndPreviousServiceVersionBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
             this.portForwarderFactory = portForwarderFactory;
+            return this;
+        }
+
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
+        {
+            return WithStandardServices();
+        }
+
+        public IClientAndServiceBaseBuilder WithStandardServices()
+        {
+            // TODO: EchoService is registered by default, so we don't need to do anything else here.
+            // It would be better to be able to configure the Tentacle binary to register/not register
+            // specific services, but we'll do that later.
             return this;
         }
 

@@ -94,14 +94,24 @@ namespace Halibut.Tests.Support
             return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
         }
 
-        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        async Task<IClientAndService> IClientAndServiceBaseBuilder.Build()
         {
             return await Build();
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
         {
             return WithPortForwarding(func);
+        }
+
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
+        {
+            return WithStandardServices();
+        }
+
+        public ClientServiceBuilder WithStandardServices()
+        {
+            return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
         }
 
         public ClientServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)

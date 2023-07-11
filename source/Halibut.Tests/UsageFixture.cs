@@ -42,7 +42,7 @@ namespace Halibut.Tests
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
             using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
-                       .WithEchoService()
+                       .WithStandardServices()
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -60,8 +60,9 @@ namespace Halibut.Tests
         public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
             using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
-                       .WithEchoService()
-                       .WithMultipleParametersTestService()
+                       .WithStandardServices()
+                       // We'll be back
+                       //.WithSupportedServices()
                        .Build())
             {
                 var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
@@ -80,8 +81,8 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await ClientServiceBuilder
                        .Polling()
-                       .WithEchoService()
-                       .WithMultipleParametersTestService()
+                       .WithStandardServices()
+                       //WithSupportedServices()
                        .Build()){
 
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
@@ -100,7 +101,7 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSentWithLatency(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
             using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
-                       .WithEchoService()
+                       .WithStandardServices()
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -121,8 +122,8 @@ namespace Halibut.Tests
         public async Task SupportsDifferentServiceContractMethods(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
             using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
-                    .WithEchoService()
-                    .WithSupportedServices()
+                    .WithStandardServices()
+                    //.WithSupportedServices()
                     .Build())
             {
                 var echo = clientAndService.CreateClient<IMultipleParametersTestService>();
@@ -160,7 +161,8 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSentWithProgressReporting(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
         {
             using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
-                       .WithEchoService()
+                       .WithStandardServices()
+                       //.WithEchoService()
                        .Build())
             {
                 var progressReported = new List<int>();

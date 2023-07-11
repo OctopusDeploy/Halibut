@@ -24,6 +24,8 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
         string? version = null;
 
         IEchoService echoService = new EchoService();
+        ICachingService cachingService = new CachingService();
+        IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
 
         PreviousClientVersionAndServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -66,6 +68,18 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             return this;
         }
 
+        public PreviousClientVersionAndServiceBuilder WithCachingService(ICachingService cachingService)
+        {
+            this.cachingService = cachingService;
+            return this;
+        }
+
+        public PreviousClientVersionAndServiceBuilder WithMultipleParametersTestService(IMultipleParametersTestService multipleParametersTestService)
+        {
+            this.multipleParametersTestService = multipleParametersTestService;
+            return this;
+        }
+
         public async Task<ClientAndService> Build()
         {
             
@@ -76,7 +90,10 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
 
             var tentacle = new HalibutRuntimeBuilder()
                 // TODO register the other
-                .WithServiceFactory(new DelegateServiceFactory().Register<IEchoService>(() => echoService))
+                .WithServiceFactory(new DelegateServiceFactory()
+                    .Register(() => echoService)
+                    .Register(() => cachingService)
+                    .Register(() => multipleParametersTestService))
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogFactory("Tentacle"))
                 .Build();

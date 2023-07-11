@@ -10,11 +10,6 @@ namespace Halibut.Tests.Support
             return builder.WithService<IEchoService>(() => new EchoService());
         }
 
-        public static IClientAndServiceBuilder WithSupportedServices(this IClientAndServiceBuilder builder)
-        {
-            return builder.WithService<ISupportedServices>(() => new SupportedServices());
-        }
-
         public static IClientAndServiceBuilder WithDoSomeActionService(this IClientAndServiceBuilder builder, Action action)
         {
             return builder.WithService<IDoSomeActionService>(() => new DoSomeActionService(action));

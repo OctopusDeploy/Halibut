@@ -21,7 +21,7 @@ namespace Halibut.Tests.Support.TestCases
             RecommendedIterations = recommendedIterations;
         }
 
-        public IClientAndServiceBuilder CreateBaseTestCaseBuilder()
+        public IClientAndServiceBaseBuilder CreateBaseTestCaseBuilder()
         {
             var logger = new SerilogLoggerBuilder().Build();
             IClientAndServiceBuilder builder = ClientServiceBuilder.ForServiceConnectionType(ServiceConnectionType);

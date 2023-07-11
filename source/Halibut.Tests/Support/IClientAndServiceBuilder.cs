@@ -4,10 +4,16 @@ using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
 {
-    public interface IClientAndServiceBuilder
+    // Latest to latest
+    public interface IClientAndServiceBuilder : IClientAndServiceBaseBuilder
+    {
+        IClientAndServiceBuilder WithService<T>(Func<T> func);
+    }
+
+    public interface IClientAndServiceBaseBuilder
     {
         Task<IClientAndService> Build();
-        IClientAndServiceBuilder WithService<T>(Func<T> func);
-        IClientAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> func);
+        IClientAndServiceBaseBuilder WithPortForwarding(Func<int, PortForwarder> func);
+        IClientAndServiceBaseBuilder WithStandardServices();
     }
 }
