@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.BackwardsCompatibility.Util;
-using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
@@ -12,7 +11,6 @@ namespace Halibut.Tests.BackwardsCompatibility
     public class TestOldClientWithNewService
     {
         [Test]
-        [TestCaseSource()]
         public async Task Listening()
         {
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());

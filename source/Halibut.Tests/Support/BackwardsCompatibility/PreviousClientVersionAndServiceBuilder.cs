@@ -74,10 +74,6 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             var client = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
             client.Trust(serviceCertAndThumbprint.Thumbprint);
 
-            var realService2 = ClientServiceBuilder.ForMode(serviceConnectionType)
-                .WithService<IEchoService>(() => echoService)
-                .Build();
-            
             var tentacle = new HalibutRuntimeBuilder()
                 .WithServiceFactory(new DelegateServiceFactory().Register<IEchoService>(() => echoService))
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
