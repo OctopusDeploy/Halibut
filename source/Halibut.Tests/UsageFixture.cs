@@ -101,7 +101,6 @@ namespace Halibut.Tests
             using (var clientAndService = await ClientServiceBuilder
                        .Polling()
                        .WithStandardServices()
-                       //WithSupportedServices()
                        .Build()){
 
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
@@ -120,9 +119,9 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                                              .ForServiceConnectionType(serviceConnectionType)
-                                              .WithStandardServices()
-                                              .Build())
+                      .ForServiceConnectionType(serviceConnectionType)
+                      .WithStandardServices()
+                      .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
 

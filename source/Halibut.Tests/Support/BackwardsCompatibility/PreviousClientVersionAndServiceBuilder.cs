@@ -94,7 +94,6 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             client.Trust(serviceCertAndThumbprint.Thumbprint);
 
             var tentacle = new HalibutRuntimeBuilder()
-                // TODO register the other
                 .WithServiceFactory(new DelegateServiceFactory()
                     .Register(() => echoService)
                     .Register(() => cachingService)
