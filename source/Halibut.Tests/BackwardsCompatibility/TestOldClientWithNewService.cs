@@ -2,7 +2,9 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.BackwardsCompatibility.Util;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 
@@ -11,28 +13,12 @@ namespace Halibut.Tests.BackwardsCompatibility
     public class TestOldClientWithNewService
     {
         [Test]
-        public async Task Listening()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
+        public async Task SimplePreviousClientTest(ServiceConnectionType serviceConnectionType)
         {
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndServiceBuilder
-                       .WithListeningService()
+            using (var clientAndService = await PreviousClientVersionAndServiceBuilder.ForServiceConnectionType(serviceConnectionType)
                        .WithClientVersion(PreviousVersions.v5_0_429)
-                       .WithEchoServiceService(echoService)
-                       .Build())
-            {
-                
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("hello");
-            }
-
-            echoService.SayHelloCallCount.Should().Be(1);
-        }
-        
-        [Test]
-        public async Task Polling()
-        {
-            var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndServiceBuilder.WithPollingService().WithClientVersion(PreviousVersions.v5_0_429)
                        .WithEchoServiceService(echoService)
                        .Build())
             {
