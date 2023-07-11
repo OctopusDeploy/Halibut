@@ -62,6 +62,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        public ClientAndPreviousServiceVersionBuilder WithStandardServices()
+        {
+            // TODO: EchoService is registered by default, so we don't need to do anything else here.
+            // It would be better to be able to configure the Tentacle binary to register/not register
+            // specific services, but we'll do that later.
+            return this;
+        }
+
         public async Task<IClientAndService> Build()
         {
             if (version == null)
