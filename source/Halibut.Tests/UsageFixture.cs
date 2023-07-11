@@ -10,7 +10,6 @@ using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -21,7 +20,7 @@ namespace Halibut.Tests
         public async Task ClientCanSendMessagesToOldTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
-                       .WithService(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceVersion(PreviousVersions.v5_0_429)
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .Build())
