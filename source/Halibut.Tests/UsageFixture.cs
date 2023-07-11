@@ -48,7 +48,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-                for (var i = 0; i < StandardIterationCount.ForServiceType(latestClientAndServiceTestCase.ServiceConnectionType); i++)
+                for (var i = 0; i < latestClientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }

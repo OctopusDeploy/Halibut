@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.Util;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
@@ -32,7 +33,11 @@ namespace Halibut.Tests.Support.TestAttributes
             {
                 foreach (var networkConditionTestCase in networkConditionTestCases)
                 {
-                    yield return new LatestClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase);
+                    // Slightly bad network conditions e.g. a delay of 20ms can blow out test times especially when running for 2000 iterations.
+                    // 50 seems ok, resulting in 15s tests.
+                    int recommendedIterations = 50;
+                    if (networkConditionTestCase == NetworkConditionTestCase.NetworkConditionPerfect) recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType);
+                    yield return new LatestClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations);
                 }
             }
         }
