@@ -64,7 +64,7 @@ namespace Halibut.Tests
                     });
 
                 var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
-                res.Should().Be("Hello!!");
+                res.Should().Be("Hello!!...");
             }
         }
 
