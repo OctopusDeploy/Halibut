@@ -29,8 +29,12 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public static DelegateServiceFactory CreateProxyingServicesServiceFactory(HalibutRuntime clientWhichTalksToLatestHalibut, ServiceEndPoint realServiceEndpoint)
         {
             var forwardingEchoService = clientWhichTalksToLatestHalibut.CreateClient<IEchoService>(realServiceEndpoint);
+            var forwardingCachingService = clientWhichTalksToLatestHalibut.CreateClient<ICachingService>(realServiceEndpoint);
+            var forwardingMultipleParametersTestService = clientWhichTalksToLatestHalibut.CreateClient<IMultipleParametersTestService>(realServiceEndpoint);
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new DelegateEchoService(forwardingEchoService));
+            services.Register<ICachingService>(() => new DelegateCachingService(forwardingCachingService));
+            services.Register<IMultipleParametersTestService>(() => new DelegateMultipleParametersTestService(forwardingMultipleParametersTestService));
             return services;
         }
     }
