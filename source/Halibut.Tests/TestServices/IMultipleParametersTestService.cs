@@ -10,7 +10,7 @@ namespace Halibut.Tests.TestServices
         public int Longitude { get; set; }
     }
     
-    public interface ISupportedServices
+    public interface IMultipleParametersTestService
     {
         void MethodReturningVoid(long a, long b);
 

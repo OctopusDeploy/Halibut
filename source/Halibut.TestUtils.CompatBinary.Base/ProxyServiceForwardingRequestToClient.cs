@@ -76,11 +76,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
                 var realServiceEndpoint = new ServiceEndPoint(realServiceUri, serviceCert.Thumbprint);
 
-                var forwardingEchoService = client.CreateClient<IEchoService>(realServiceEndpoint);
-
-                // Connects as service to the client.
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new DelegateEchoService(forwardingEchoService));
+                var services = ServiceFactoryFactory.CreateProxyingServicesServiceFactory(client, realServiceEndpoint);
                 using (var proxyService = new HalibutRuntimeBuilder()
                            .WithServiceFactory(services)
                            .WithServerCertificate(serviceCert)
@@ -111,5 +107,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
             return 1;
         }
+
+        
     }
 }
