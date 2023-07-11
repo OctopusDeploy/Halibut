@@ -46,9 +46,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 Console.WriteLine($"Will poll: {addressToPoll}");
             }
 
-            var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
-            services.Register<ICachingService>(() => new CachingService());
+            var services = ServiceFactoryFactory.CreateServiceFactory();
 
             using (var tentaclePolling = new HalibutRuntimeBuilder()
                        .WithServiceFactory(services)

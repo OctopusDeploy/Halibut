@@ -2,7 +2,7 @@
 
 namespace Halibut.Tests.TestServices
 {
-    public class SupportedServices : ISupportedServices
+    public class MultipleParametersTestService : IMultipleParametersTestService
     {
         public void MethodReturningVoid(long a, long b)
         {
