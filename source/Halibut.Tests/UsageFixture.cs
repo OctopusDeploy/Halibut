@@ -6,14 +6,36 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
     public class UsageFixture
     {
+        [Test]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task ClientCanSendMessagesToOldTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
+        {
+            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
+                       .WithService(serviceConnectionType)
+                       .WithServiceVersion(PreviousVersions.v5_0_429)
+                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
+                       .Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+
+                for (var i = 0; i < 2000; i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+        
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
