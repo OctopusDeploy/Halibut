@@ -55,7 +55,7 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.WithService(serviceConnectionType).WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
                     {

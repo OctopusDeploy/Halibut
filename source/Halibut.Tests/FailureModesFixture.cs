@@ -46,7 +46,7 @@ namespace Halibut.Tests
         public async Task FailWhenServerThrowsAnException(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .Build())
             {
@@ -135,7 +135,7 @@ namespace Halibut.Tests
         public async Task FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithReadDataStreamService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build())

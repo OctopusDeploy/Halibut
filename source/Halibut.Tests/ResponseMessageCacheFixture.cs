@@ -209,7 +209,7 @@ namespace Halibut.Tests
         {
             return halibutServiceVersion == null ?
                 await ClientServiceBuilder
-                    .ForMode(serviceConnectionType)
+                    .ForServiceConnectionType(serviceConnectionType)
                     .WithCachingService()
                     .Build() :
                 await ClientAndPreviousServiceVersionBuilder

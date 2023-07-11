@@ -42,7 +42,7 @@ namespace Halibut.Tests.Support
             return new ClientServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
-        public static ClientServiceBuilder ForMode(ServiceConnectionType serviceConnectionType)
+        public static ClientServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
         {
             switch (serviceConnectionType)
             {

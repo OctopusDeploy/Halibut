@@ -11,7 +11,6 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -22,7 +21,7 @@ namespace Halibut.Tests
         public async Task ClientCanSendMessagesToOldTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
-                       .WithService(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceVersion(PreviousVersions.v5_0_429)
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .Build())
@@ -42,7 +41,7 @@ namespace Halibut.Tests
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .Build())
             {
@@ -61,7 +60,7 @@ namespace Halibut.Tests
         public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .WithSupportedServices()
                        .Build())
@@ -102,7 +101,7 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .Build())
             {
@@ -124,7 +123,7 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
                        .Build())
@@ -151,7 +150,7 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort)
                            .WithSendDelay(TimeSpan.FromMilliseconds(20))
@@ -177,7 +176,7 @@ namespace Halibut.Tests
         public async Task SupportsDifferentServiceContractMethods(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                     .ForMode(serviceConnectionType)
+                     .ForServiceConnectionType(serviceConnectionType)
                      .WithEchoService()
                      .WithSupportedServices()
                      .Build())
@@ -217,7 +216,7 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSentWithProgressReporting(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .Build())
             {
