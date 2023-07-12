@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
-using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
@@ -139,8 +138,6 @@ namespace Halibut.Tests
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithReadDataStreamService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
-                       // This test is very noisy for the test logs
-                       .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();

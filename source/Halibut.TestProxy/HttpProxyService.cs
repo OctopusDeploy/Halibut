@@ -47,114 +47,95 @@ namespace Halibut.TestProxy
 
             logger.LogInformation("Listening for HTTP proxy requests on {Listen}", listener.Server.LocalEndPoint);
 
-            try
+            while (!stoppingToken.IsCancellationRequested)
             {
-                while (!stoppingToken.IsCancellationRequested)
+                try
                 {
-                    try
-                    {
-                        TcpClient? client;
+                    TcpClient? client;
 
 #if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
-                        using var socketCancellationTokenSource = new CancellationTokenSource();
-                        using (stoppingToken.Register(() =>
-                               {
-                                   try
-                                   {
-                                       socketCancellationTokenSource.Cancel();
-                                   }
-                                   catch
-                                   {
-                                   }
+                    var socketCancellationTokenSource = new CancellationTokenSource();
+                    using (stoppingToken.Register(() => socketCancellationTokenSource.Cancel()))
+                    {
+                        var cancelTask = socketCancellationTokenSource.Token.AsTask<TcpClient?>();
+                        var actionTask = listener.AcceptTcpClientAsync();
 
-                               }))
-                        {
-                            var cancelTask = socketCancellationTokenSource.Token.AsTask<TcpClient?>();
-                            var actionTask = Task.Run(() => listener.AcceptTcpClientAsync(), stoppingToken);
-
-                            client = await (await Task.WhenAny(actionTask, cancelTask).ConfigureAwait(false)).ConfigureAwait(false);
-                        }
+                        client = await (await Task.WhenAny(actionTask, cancelTask).ConfigureAwait(false)).ConfigureAwait(false);
+                    }
 #else
                     client = await listener.AcceptTcpClientAsync(stoppingToken);
 #endif
-                        _ = Task.Run(async () => await HandleProxyRequest(client!, stoppingToken), stoppingToken);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Ignore, we are being shutdown
-                    }
+
+                    _ = Task.Run(async () => await HandleProxyRequest(client, stoppingToken), stoppingToken);
                 }
-            }
-            finally
-            {
-                listener.Stop();
+                catch (OperationCanceledException)
+                {
+                    // Ignore, we are being shutdown
+                }
             }
         }
 
-        public IPEndPoint? Endpoint { get; set; }
+        public IPEndPoint Endpoint { get; set; }
 
         async Task HandleProxyRequest(TcpClient client, CancellationToken cancellationToken)
         {
-        if (cancellationToken.IsCancellationRequested) return;
+            if (cancellationToken.IsCancellationRequested) return;
 
-        var stream = client.GetStream();
-        if (client.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)
-        {
-            throw new InvalidOperationException($"{client.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
-        }
+            var stream = client.GetStream();
+            if (client.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint) throw new InvalidOperationException($"{client.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
 
-        var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
+            var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
 
-        // Set up some pipes to handle reading and replying to the connect request
-        var reader = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
-        var writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
+            // Set up some pipes to handle reading and replying to the connect request
+            var reader = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
+            var writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
-        try
-        {
             HttpProxyConnectionRequest? connectionRequest = null;
-            try
-            {
-                connectionRequest = await ParseConnectionRequest(sourceEndpoint, reader, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "An error has occurred parsing CONNECT request from {SourceEndpoint}", sourceEndpoint);
-                await SendConnectResponse(sourceEndpoint, "1.0", 400, "Bad request", writer, cancellationToken);
-                return;
-            }
 
             try
             {
-                await CreateProxyConnectionAndForward(client, connectionRequest, cancellationToken);
+                try
+                {
+                    connectionRequest = await ParseConnectionRequest(sourceEndpoint, reader, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error has occurred parsing CONNECT request from {SourceEndpoint}", sourceEndpoint);
+                    await SendConnectResponse(sourceEndpoint, "1.0", 400, "Bad request", writer, cancellationToken);
+                    return;
+                }
+
+                try
+                {
+                    await CreateProxyConnectionAndForward(client, connectionRequest, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("An error has occurred establishing proxy connection: {SourceEndpoint} <-> {DestinationEndpoint}. Error: {ErrorMessage}", sourceEndpoint, connectionRequest!.Endpoint, ex.Message);
+                    await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 502, "Bad gateway", writer, cancellationToken);
+                    return;
+                }
+
+                try
+                {
+                    await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 200, "Connection established", writer, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error has occurred responding to CONNECT request: {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, connectionRequest!.Endpoint);
+                    return;
+                }
+
+                logger.LogInformation("CONNECT request successful: {SourceEndpoint} -> {DestinationEndpoint}", sourceEndpoint, connectionRequest.Endpoint);
             }
-            catch (Exception ex)
+            finally
             {
-                logger.LogError("An error has occurred establishing proxy connection: {SourceEndpoint} <-> {DestinationEndpoint}. Error: {ErrorMessage}", sourceEndpoint, connectionRequest!.Endpoint, ex.Message);
-                await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 502, "Bad gateway", writer, cancellationToken);
-                return;
+                await reader.CompleteAsync();
+                await writer.CompleteAsync();
             }
-
-            try
-            {
-                await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 200, "Connection established", writer, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "An error has occurred responding to CONNECT request: {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, connectionRequest!.Endpoint);
-                return;
-            }
-
-            logger.LogInformation("CONNECT request successful: {SourceEndpoint} -> {DestinationEndpoint}", sourceEndpoint, connectionRequest.Endpoint);
-        }
-        finally
-        {
-            await reader.CompleteAsync();
-            await writer.CompleteAsync();
         }
 
-        }
-
-        async Task CreateProxyConnectionAndForward(TcpClient client, HttpProxyConnectionRequest connectionRequest, CancellationToken cancellationToken)
+        private async Task CreateProxyConnectionAndForward(TcpClient client, HttpProxyConnectionRequest connectionRequest, CancellationToken cancellationToken)
         {
             var proxyConnection = proxyConnectionService.GetProxyConnection(connectionRequest.Endpoint);
             await proxyConnection.Connect(client, cancellationToken);
@@ -176,10 +157,10 @@ namespace Halibut.TestProxy
 
             var connectRequestRegex = new Regex("CONNECT (?<hostname>[\\S]+):(?<port>\\d+) HTTP/(?<version>\\d{1}\\.{1}\\d{1})", RegexOptions.Compiled);
 
-            while (!connectionRequestReceived && !cancellationToken.IsCancellationRequested)
+            while (!connectionRequestReceived)
             {
-                var readResult = await reader.ReadAsync(cancellationToken);
-                var buffer = readResult.Buffer;
+                ReadResult readResult = await reader.ReadAsync(cancellationToken);
+                ReadOnlySequence<byte> buffer = readResult.Buffer;
 
                 try
                 {
@@ -235,13 +216,6 @@ namespace Halibut.TestProxy
 
             message = outputMessage.ToString();
             return message.Length != 0;
-        }
-
-        public override void Dispose()
-        {
-            proxyConnectionService.Dispose();
-
-            base.Dispose();
         }
     }
 }

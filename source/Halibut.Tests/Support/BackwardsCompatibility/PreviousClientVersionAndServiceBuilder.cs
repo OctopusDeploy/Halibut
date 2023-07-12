@@ -2,7 +2,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.TestServices;
@@ -29,7 +28,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         Func<int, PortForwarder>? portForwarderFactory;
-        LogLevel halibutLogLevel;
 
         PreviousClientVersionAndServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -90,25 +88,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndServiceBuilder WithProxy()
-        {
-            this.proxyFactory = () =>
-            {
-                var options = new HttpProxyOptions();
-                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
+        //public PreviousClientVersionAndServiceBuilder WithProxy()
+        //{
+        //    this.proxyFactory = () =>
+        //    {
+        //        var options = new HttpProxyOptions();
+        //        var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
 
-                return new HttpProxyService(options, loggerFactory);
-            };
+        //        return new HttpProxyService(options, loggerFactory);
+        //    };
 
-            return this;
-        }
-
-        public PreviousClientVersionAndServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
-        {
-            this.halibutLogLevel = halibutLogLevel;
-
-            return this;
-        }
+        //    return this;
+        //}
 
         public async Task<ClientAndService> Build()
         {
@@ -129,7 +120,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     .Register(() => cachingService)
                     .Register(() => multipleParametersTestService))
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                .WithLogFactory(new TestContextLogFactory("Tentacle", halibutLogLevel))
+                .WithLogFactory(new TestContextLogFactory("Tentacle"))
                 .Build();
 
             PortForwarder? portForwarder = null;
@@ -157,8 +148,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     serviceCertAndThumbprint,
                     new Uri("poll://SQ-TENTAPOLL"),
                     version,
-                    proxyDetails,
-                    halibutLogLevel).Run();
+                    proxyDetails).Run();
 
                 proxyServiceUri = new Uri("poll://SQ-TENTAPOLL");
 
@@ -180,8 +170,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     serviceCertAndThumbprint,
                     new Uri("https://localhost:" + listenPort),
                     version,
-                    proxyDetails,
-                    halibutLogLevel).Run();
+                    proxyDetails).Run();
 
                 proxyServiceUri = new Uri("https://localhost:" + runningOldHalibutBinary.ServiceListenPort);
             }
@@ -278,13 +267,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public void Dispose()
             {
                 cancellationTokenSource?.Cancel();
+                cancellationTokenSource?.Dispose();
                 Octopus.Dispose();
                 runningOldHalibutBinary.Dispose();
                 tentacle.Dispose();
                 disposableCollection.Dispose();
                 Proxy?.Dispose();
                 PortForwarder?.Dispose();
-                cancellationTokenSource?.Dispose();
             }
         }
     }

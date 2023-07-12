@@ -33,7 +33,6 @@
             "AppVeyor",
             "AzurePipelines",
             "Bamboo",
-            "Bitbucket",
             "Bitrise",
             "GitHubActions",
             "GitLab",
@@ -85,7 +84,6 @@
               "CopyToLocalPackages",
               "Default",
               "Pack",
-              "PackTestPortForwarder",
               "Restore",
               "TestLinux",
               "TestWindows"
@@ -107,7 +105,6 @@
               "CopyToLocalPackages",
               "Default",
               "Pack",
-              "PackTestPortForwarder",
               "Restore",
               "TestLinux",
               "TestWindows"

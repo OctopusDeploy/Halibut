@@ -3,22 +3,20 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Diagnostics;
-using Halibut.Logging;
+
 
 namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
 {
     public class TestContextLogFactory : ILogFactory
     {
         readonly string name;
-        readonly LogLevel logLevel;
-        readonly ConcurrentDictionary<string, TestContextConnectionLog> events = new();
-        readonly HashSet<Uri> endpoints = new();
-        readonly HashSet<string> prefixes = new();
+        readonly ConcurrentDictionary<string, TestContextConnectionLog> events = new ConcurrentDictionary<string, TestContextConnectionLog>();
+        readonly HashSet<Uri> endpoints = new HashSet<Uri>();
+        readonly HashSet<string> prefixes = new HashSet<string>();
 
-        public TestContextLogFactory(string name, LogLevel logLevel)
+        public TestContextLogFactory(string name)
         {
             this.name = name;
-            this.logLevel = logLevel;
         }
 
         public Uri[] GetEndpoints()
@@ -38,14 +36,14 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
             endpoint = NormalizeEndpoint(endpoint);
             lock (endpoints)
                 endpoints.Add(endpoint);
-            return events.GetOrAdd(endpoint.ToString(), e => new TestContextConnectionLog(endpoint.ToString(), name, logLevel));
+            return events.GetOrAdd(endpoint.ToString(), e => new TestContextConnectionLog(endpoint.ToString(), name));
         }
 
         public ILog ForPrefix(string prefix)
         {
             lock (prefixes)
                 prefixes.Add(prefix);
-            return events.GetOrAdd(prefix, e => new TestContextConnectionLog(prefix, name, logLevel));
+            return events.GetOrAdd(prefix, e => new TestContextConnectionLog(prefix, name));
         }
 
         static Uri NormalizeEndpoint(Uri endpoint)
