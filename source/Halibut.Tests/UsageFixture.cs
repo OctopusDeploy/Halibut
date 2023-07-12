@@ -11,8 +11,8 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
-using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
