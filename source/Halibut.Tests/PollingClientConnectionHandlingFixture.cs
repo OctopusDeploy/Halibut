@@ -98,7 +98,6 @@ namespace Halibut.Tests
                 .WithEchoService()
                 .Build();
 
-
             var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>();
             var echoService = clientAndService.CreateClient<IEchoService>();
 

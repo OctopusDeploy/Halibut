@@ -20,31 +20,10 @@ namespace Halibut.Tests
     public class UsageFixture
     {
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        public async Task ClientCanSendMessagesToOldTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
+        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithServiceVersion(PreviousVersions.v5_0_429)
-                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
-                       .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
-            {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
-
-                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
-                {
-                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
-                }
-            }
-        }
-
-        [Test]
-        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
-        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
-        {
-            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
+            using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
@@ -52,7 +31,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-                for (var i = 0; i < StandardIterationCount.ForServiceType(latestClientAndServiceTestCase.ServiceConnectionType); i++)
+                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }
@@ -138,10 +117,10 @@ namespace Halibut.Tests
         }
 
         
-        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
-        public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
+        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
+            using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
@@ -177,10 +156,10 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
-        public async Task StreamsCanBeSentWithLatency(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
+        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
+            using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
                       .WithStandardServices()
                       .WithHalibutLoggingLevel(LogLevel.Info)
                       .Build())
@@ -199,10 +178,10 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
-        public async Task SupportsDifferentServiceContractMethods(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
+        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
+            using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
                        .WithStandardServices()
                        .Build())
             {
@@ -238,9 +217,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
-        public async Task StreamsCanBeSentWithProgressReporting(LatestClientAndServiceTestCase latestClientAndServiceTestCase)
+        public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await latestClientAndServiceTestCase.CreateBaseTestCaseBuilder()
+            using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
                        .WithStandardServices()
                        .Build())
             {

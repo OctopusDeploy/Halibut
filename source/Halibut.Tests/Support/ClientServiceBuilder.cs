@@ -13,7 +13,7 @@ using Serilog.Extensions.Logging;
 
 namespace Halibut.Tests.Support
 {
-    public class ClientServiceBuilder : IClientAndServiceBuilder
+    public class ClientServiceBuilder : IClientAndServiceBaseBuilder
     {
         IServiceFactory? serviceFactory;
         readonly ServiceConnectionType serviceConnectionType;
@@ -81,11 +81,6 @@ namespace Halibut.Tests.Support
             this.serviceFactory = serviceFactory;
             return this;
         }
-
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithService<TContract>(Func<TContract> implementation)
-        {
-            return WithService<TContract>(implementation);
-        }
         
         public ClientServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
@@ -101,20 +96,17 @@ namespace Halibut.Tests.Support
             return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
         }
 
-        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
         {
-            return await Build();
+            return this.WithPortForwarding(func);
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        public ClientServiceBuilder WithPortForwarding(Func<int, PortForwarder> func)
         {
-            return WithPortForwarding(func);
+            this.portForwarderFactory = func;
+            return this;
         }
 
-        public ClientServiceBuilder WithStandardServices()
-        {
-            return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
-        }
         public ClientServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
         {
             this.WithPortForwarding();
@@ -125,10 +117,14 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public ClientServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
         {
-            this.portForwarderFactory = portForwarderFactory;
-            return this;
+            return WithStandardServices();
+        }
+        
+        public ClientServiceBuilder WithStandardServices()
+        {
+            return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
         }
 
         public ClientServiceBuilder WithProxy()
@@ -161,6 +157,11 @@ namespace Halibut.Tests.Support
             this.halibutLogLevel = halibutLogLevel;
 
             return this;
+        }
+
+        async Task<IClientAndService> IClientAndServiceBaseBuilder.Build()
+        {
+            return await Build();
         }
 
         public async Task<ClientAndService> Build()
