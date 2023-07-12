@@ -21,7 +21,7 @@ namespace Halibut.Tests
             {
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Polling()
                            // No Tentacle
                            .NoService()
@@ -56,7 +56,7 @@ namespace Halibut.Tests
                 var calls = new List<DateTime>();
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Polling()
                            .WithDoSomeActionService(() =>
                            {

@@ -17,7 +17,7 @@ namespace Halibut.Tests
         [Test]
         public async Task CancellationCanBeDoneViaClientProxy()
         {
-            using (var clientAndService = await ClientServiceBuilder.Listening()
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
                        .NoService()
                        .WithEchoService()
                        .Build())
@@ -42,7 +42,7 @@ namespace Halibut.Tests
         [Test]
         public async Task CannotHaveServiceWithHalibutProxyRequestOptions()
         {
-            using (var clientAndService = await ClientServiceBuilder.Listening()
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
                        .NoService()
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
                        .Build())
@@ -55,7 +55,7 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
                     {

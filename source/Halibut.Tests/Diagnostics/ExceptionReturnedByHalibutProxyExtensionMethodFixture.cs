@@ -49,7 +49,7 @@ namespace Halibut.Tests.Diagnostics
             [Test]
             public async Task WhenTheConnectionTerminatesWaitingForAResponseFromAPollingTentacle()
             {
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Polling()
                            .WithPortForwarding(out var portForwarder)
                            .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
@@ -72,7 +72,7 @@ namespace Halibut.Tests.Diagnostics
                 var services = new DelegateServiceFactory();
                 services.Register<IEchoService>(() => new EchoService());
 
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Polling()
                            .NoService()
                            .Build())
@@ -89,7 +89,7 @@ namespace Halibut.Tests.Diagnostics
             [Test]
             public async Task BecauseTheListeningTentacleIsNotResponding()
             {
-                using (var clientAndService = await ClientServiceBuilder.Listening().NoService().Build())
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().NoService().Build())
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
 
@@ -128,7 +128,7 @@ namespace Halibut.Tests.Diagnostics
             [Test]
             public async Task BecauseOfAInvalidCertificateException_WhenConnectingToListening_ItIsNotANetworkError()
             {
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Listening()
                            .WithEchoService()
                            .Build())
@@ -146,7 +146,7 @@ namespace Halibut.Tests.Diagnostics
             [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
             public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .Build())
@@ -166,7 +166,7 @@ namespace Halibut.Tests.Diagnostics
             [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
             public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .Build())
@@ -186,7 +186,7 @@ namespace Halibut.Tests.Diagnostics
             [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
             public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .Build())

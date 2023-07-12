@@ -10,7 +10,7 @@ using Serilog.Extensions.Logging;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
-    public class ClientAndPreviousServiceVersionBuilder : IClientAndServiceBaseBuilder
+    public class LatestClientAndPreviousServiceVersionBuilder : IClientAndServiceBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
@@ -21,28 +21,28 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         CancellationTokenSource cancellationTokenSource = new();
         LogLevel halibutLogLevel;
 
-        ClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
         }
 
-        public static ClientAndPreviousServiceVersionBuilder WithPollingService()
+        public static LatestClientAndPreviousServiceVersionBuilder WithPollingService()
         {
-            return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
-        public static ClientAndPreviousServiceVersionBuilder WithPollingOverWebSocketService()
+        public static LatestClientAndPreviousServiceVersionBuilder WithPollingOverWebSocketService()
         {
-            return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
         }
 
-        public static ClientAndPreviousServiceVersionBuilder WithListeningService()
+        public static LatestClientAndPreviousServiceVersionBuilder WithListeningService()
         {
-            return new ClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
-        public static ClientAndPreviousServiceVersionBuilder ForServiceConnectionType(ServiceConnectionType connectionType)
+        public static LatestClientAndPreviousServiceVersionBuilder ForServiceConnectionType(ServiceConnectionType connectionType)
         {
             switch (connectionType)
             {
@@ -57,29 +57,29 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        public ClientAndPreviousServiceVersionBuilder WithServiceVersion(string? version)
+        public LatestClientAndPreviousServiceVersionBuilder WithServiceVersion(string? version)
         {
             this.version = version;
             return this;
         }
 
-        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
         {
             return WithPortForwarding(func);
         }
 
-        public ClientAndPreviousServiceVersionBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
+        public LatestClientAndPreviousServiceVersionBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
             this.portForwarderFactory = portForwarderFactory;
             return this;
         }
 
-        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
             return WithStandardServices();
         }
 
-        public ClientAndPreviousServiceVersionBuilder WithStandardServices()
+        public LatestClientAndPreviousServiceVersionBuilder WithStandardServices()
         {
             // TODO: EchoService is registered by default, so we don't need to do anything else here.
             // It would be better to be able to configure the Tentacle binary to register/not register
@@ -87,7 +87,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public ClientAndPreviousServiceVersionBuilder WithProxy()
+        public LatestClientAndPreviousServiceVersionBuilder WithProxy()
         {
             this.proxyFactory = () =>
             {
@@ -100,7 +100,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public ClientAndPreviousServiceVersionBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        public LatestClientAndPreviousServiceVersionBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
 
