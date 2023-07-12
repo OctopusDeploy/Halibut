@@ -5,10 +5,12 @@ using System.Threading.Tasks;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
+using ICachingService = Halibut.Tests.TestServices.ICachingService;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -26,7 +28,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Func<HttpProxyService>? proxyFactory;
         CancellationTokenSource cancellationTokenSource = new();
         IEchoService echoService = new EchoService();
-        ICachingService cachingService = new CachingService();
+        Halibut.TestUtils.Contracts.ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
@@ -83,7 +85,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithCachingService(ICachingService cachingService)
+        public PreviousClientVersionAndLatestServiceBuilder WithCachingService(Halibut.TestUtils.Contracts.ICachingService cachingService)
         {
             this.cachingService = cachingService;
             return this;
@@ -116,6 +118,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             };
 
             return this;
+        }
+        
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        {
+            return WithHalibutLoggingLevel(halibutLogLevel);
         }
         
         public PreviousClientVersionAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)

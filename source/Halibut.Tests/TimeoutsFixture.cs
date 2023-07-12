@@ -6,6 +6,7 @@ using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -16,7 +17,7 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task ReadingARequestMessage(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()

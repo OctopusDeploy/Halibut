@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Halibut.Logging;
 using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
@@ -9,5 +10,6 @@ namespace Halibut.Tests.Support
         Task<IClientAndService> Build();
         IClientAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> func);
         IClientAndServiceBuilder WithStandardServices();
+        IClientAndServiceBuilder WithHalibutLoggingLevel(LogLevel info);
     }
 }

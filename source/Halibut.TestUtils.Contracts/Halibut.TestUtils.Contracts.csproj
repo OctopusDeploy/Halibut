@@ -13,7 +13,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Halibut\Halibut.csproj" />
+        <PackageReference Include="Halibut" Version="5.0.205">
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
     </ItemGroup>
 
 </Project>

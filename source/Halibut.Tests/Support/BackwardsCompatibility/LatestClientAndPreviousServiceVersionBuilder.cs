@@ -100,6 +100,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        {
+            return WithHalibutLoggingLevel(halibutLogLevel);
+        }
+        
         public LatestClientAndPreviousServiceVersionBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
@@ -107,7 +112,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public async Task<IClientAndService> Build()
+        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        {
+            return await Build();
+        }
+        
+        public async Task<ClientAndService> Build()
         {
             if (version == null)
             {

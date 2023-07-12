@@ -1,6 +1,7 @@
 ﻿using System;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
+using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
 namespace Halibut.Tests.Support
 {
