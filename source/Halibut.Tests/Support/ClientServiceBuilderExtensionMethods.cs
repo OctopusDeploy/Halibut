@@ -1,5 +1,6 @@
 ﻿using System;
 using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 
 namespace Halibut.Tests.Support
 {

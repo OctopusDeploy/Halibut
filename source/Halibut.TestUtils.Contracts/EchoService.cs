@@ -2,7 +2,7 @@
 using System.IO;
 using System.Threading;
 
-namespace Halibut.Tests.TestServices
+namespace Halibut.TestUtils.Contracts
 {
     public class EchoService : IEchoService
     {

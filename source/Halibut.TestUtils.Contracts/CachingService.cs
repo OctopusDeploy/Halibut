@@ -1,6 +1,6 @@
-using System;
+﻿using System;
 
-namespace Halibut.TestUtils.SampleProgram.Base
+namespace Halibut.TestUtils.Contracts
 {
     public class CachingService : ICachingService
     {
@@ -14,12 +14,12 @@ namespace Halibut.TestUtils.SampleProgram.Base
             return Guid.NewGuid();
         }
 
-        public Guid CachableCall(Guid input)
+        public Guid AnotherCachableCall()
         {
             return Guid.NewGuid();
         }
 
-        public Guid AnotherCachableCall()
+        public Guid CachableCall(Guid input)
         {
             return Guid.NewGuid();
         }

@@ -20,4 +20,8 @@
         <PackageReference Include="Halibut" Version="5.0.205" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Halibut.TestUtils.Contracts\Halibut.TestUtils.Contracts.csproj" />
+    </ItemGroup>
+
 </Project>

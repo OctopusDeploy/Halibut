@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;

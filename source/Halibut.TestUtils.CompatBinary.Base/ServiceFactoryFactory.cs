@@ -1,5 +1,5 @@
 using Halibut.ServiceModel;
-using Halibut.TestUtils.SampleProgram.Base.Services;
+using Halibut.TestUtils.Contracts;
 
 namespace Halibut.TestUtils.SampleProgram.Base
 {

@@ -1,3 +1,5 @@
+using Halibut.TestUtils.Contracts;
+
 namespace Halibut.Tests.TestServices
 {
     public class CallRecordingEchoServiceDecorator : IEchoService
