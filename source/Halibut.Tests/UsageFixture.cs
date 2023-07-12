@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -23,6 +24,13 @@ namespace Halibut.Tests
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             return services;
+        }
+        
+        [Test]
+        public void WhatVersionAreYou()
+        {
+            TestContext.WriteLine(RuntimeInformation.FrameworkDescription);
+            RuntimeInformation.FrameworkDescription.Should().Be("");
         }
 
         [Test]
