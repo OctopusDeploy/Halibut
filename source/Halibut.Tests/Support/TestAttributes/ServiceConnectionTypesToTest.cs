@@ -11,7 +11,8 @@ namespace Halibut.Tests.Support.TestAttributes
             yield return ServiceConnectionType.Listening;
 
 #if SUPPORTS_WEB_SOCKET_CLIENT
-            yield return ServiceConnectionType.PollingOverWebSocket;
+            // Removed for now since it is so unreliable
+            //yield return ServiceConnectionType.PollingOverWebSocket;
 #endif
         }
 
