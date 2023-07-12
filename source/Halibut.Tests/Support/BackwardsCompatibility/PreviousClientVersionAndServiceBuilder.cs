@@ -16,7 +16,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     /// In this case the client is run out of process, and talks to a service running
     /// in this process.
     /// </summary>
-    public class PreviousClientVersionAndServiceBuilder
+    public class PreviousClientVersionAndServiceBuilder: IClientAndServiceBaseBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
@@ -58,6 +58,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        {
+            return WithPortForwarding(func);
+        }
+
         public PreviousClientVersionAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
             this.portForwarderFactory = portForwarderFactory;
@@ -88,6 +93,16 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
+        {
+            return WithStandardServices();
+        }
+
+        public PreviousClientVersionAndServiceBuilder WithStandardServices()
+        {
+            return WithEchoServiceService(new EchoService()).WithCachingService(new CachingService()).WithMultipleParametersTestService(new MultipleParametersTestService());
+        }
+
         public PreviousClientVersionAndServiceBuilder WithProxy()
         {
             this.proxyFactory = () =>
@@ -99,6 +114,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             };
 
             return this;
+        }
+
+        async Task<IClientAndService> IClientAndServiceBaseBuilder.Build()
+        {
+            return await Build();
         }
 
         public async Task<ClientAndService> Build()
