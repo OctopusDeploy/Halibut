@@ -151,6 +151,11 @@ namespace Halibut.Tests.Support
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             return this;
         }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        {
+            return WithHalibutLoggingLevel(halibutLogLevel);
+        }
         
         public LatestClientAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {

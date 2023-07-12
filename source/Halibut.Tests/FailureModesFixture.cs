@@ -54,7 +54,7 @@ namespace Halibut.Tests
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
-                ex.Message.Should().Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contain("divide by zero");
+                ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
             }
         }
 

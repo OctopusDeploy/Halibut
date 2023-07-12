@@ -3,9 +3,15 @@ using Halibut.Tests.Support.BackwardsCompatibility;
 
 namespace Halibut.Tests.Support.TestCases
 {
+    /// <summary>
+    /// Defines what version of the Client and the Service that will be used in a test.
+    /// </summary>
     public class ClientAndServiceTestVersion
     {
+        
+        // null means latest.
         public string? ClientVersion;
+        // null means latest.
         public string? ServiceVersion;
 
         ClientAndServiceTestVersion(string? clientVersion, string? serviceVersion)
@@ -61,7 +67,7 @@ namespace Halibut.Tests.Support.TestCases
                 return $"vService:{ServiceVersion}";
             }
 
-            return "shrug";
+            throw new Exception("Invalid client and service version.");
         }
     }
 

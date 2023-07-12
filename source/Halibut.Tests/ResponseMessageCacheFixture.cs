@@ -6,9 +6,9 @@ using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
-using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Caching;
 using NUnit.Framework;
+using ICachingService = Halibut.Tests.TestServices.ICachingService;
 
 namespace Halibut.Tests
 {

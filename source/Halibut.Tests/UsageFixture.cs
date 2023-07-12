@@ -48,7 +48,7 @@ namespace Halibut.Tests
         // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
         {
-            using (var clientAndService = clientVersion != null ?
+            using (IClientAndService clientAndService = clientVersion != null ?
                        await PreviousClientVersionAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithClientVersion(clientVersion)
@@ -88,7 +88,7 @@ namespace Halibut.Tests
         // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
         public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
         {
-            using (var clientAndService = clientVersion != null ?
+            using (IClientAndService clientAndService = clientVersion != null ?
                        await PreviousClientVersionAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithClientVersion(clientVersion)
