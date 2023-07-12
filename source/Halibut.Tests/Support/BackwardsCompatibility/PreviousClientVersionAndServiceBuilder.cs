@@ -28,7 +28,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         Func<int, PortForwarder>? portForwarderFactory;
-        
+
         PreviousClientVersionAndServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
@@ -88,18 +88,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndServiceBuilder WithProxy()
-        {
-            this.proxyFactory = () =>
-            {
-                var options = new HttpProxyOptions();
-                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
+        //public PreviousClientVersionAndServiceBuilder WithProxy()
+        //{
+        //    this.proxyFactory = () =>
+        //    {
+        //        var options = new HttpProxyOptions();
+        //        var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
 
-                return new HttpProxyService(options, loggerFactory);
-            };
+        //        return new HttpProxyService(options, loggerFactory);
+        //    };
 
-            return this;
-        }
+        //    return this;
+        //}
 
         public async Task<ClientAndService> Build()
         {
