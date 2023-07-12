@@ -60,9 +60,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public static X509Certificate2 GetClientCertificate()
         {
             var octopusCertPath = GetSetting("octopuscertpath");
-            Console.WriteLine($"Using octopus cert path: {octopusCertPath}");
+            //Console.WriteLine($"Using octopus cert path: {octopusCertPath}");
             var clientCert = new X509Certificate2(octopusCertPath);
-            Console.WriteLine("Octopus/Client cert details " + clientCert);
+            //Console.WriteLine("Octopus/Client cert details " + clientCert);
 
             return clientCert;
         }
@@ -70,7 +70,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public static string GetClientThumbprint()
         {
             var thumbprint = GetSetting("octopusthumbprint");
-            Console.WriteLine($"Using octopus thumbprint: {thumbprint}");
+            //Console.WriteLine($"Using octopus thumbprint: {thumbprint}");
 
             return thumbprint;
         }
@@ -78,9 +78,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public static X509Certificate2 GetServiceCertificate()
         {
             var tentacleCertPath = GetSetting("tentaclecertpath");
-            Console.WriteLine($"Using tentacle cert path: {tentacleCertPath}");
+            //Console.WriteLine($"Using tentacle cert path: {tentacleCertPath}");
             var serviceCert = new X509Certificate2(tentacleCertPath);
-            Console.WriteLine("Tentacle/service cert details " + serviceCert);
+            //Console.WriteLine("Tentacle/service cert details " + serviceCert);
 
             return serviceCert;
         }
