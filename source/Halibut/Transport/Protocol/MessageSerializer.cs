@@ -2,6 +2,8 @@
 using System.IO;
 using System.IO.Compression;
 using Halibut.Transport.Observability;
+using System.Linq;
+using Halibut.Diagnostics;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -62,12 +64,55 @@ namespace Halibut.Transport.Protocol
 
         public T ReadMessage<T>(Stream stream)
         {
-            if (stream is IRewindableBuffer rewindable)
+            var messageReader = MessageReaderStrategyFromStream<T>(stream);
+            using (var errorRecorder = new ErrorRecordingStream.ErrorRecordingStream(stream))
             {
-                return ReadCompressedMessageRewindable<T>(stream, rewindable);
+                Exception exceptionFromDeserialisation = null;
+                try
+                {
+                    return messageReader(errorRecorder);
+                }
+                catch (Exception e)
+                {
+                    exceptionFromDeserialisation = e;
+                }
+                finally
+                {
+                    if (errorRecorder.ReadExceptions.Count == 1)
+                    {
+                        throw errorRecorder.ReadExceptions[0];
+                    }
+
+                    if (errorRecorder.WasTheEndOfStreamEncountered)
+                    {
+                        throw new EndOfStreamException();
+                    }
+
+                    if (errorRecorder.ReadExceptions.Count == 0 && exceptionFromDeserialisation != null)
+                    {
+                        throw exceptionFromDeserialisation;
+                    }
+
+                    if (errorRecorder.ReadExceptions.Count > 0)
+                    {
+                        throw new IOException("Error Reading from stream", new AggregateException(errorRecorder.ReadExceptions));
+                    }
+                }
+
+                // Can never be reached
+                throw exceptionFromDeserialisation;
             }
 
-            return ReadCompressedMessage<T>(stream);
+        }
+
+        Func<Stream, T> MessageReaderStrategyFromStream<T>(Stream stream)
+        {
+            if (stream is IRewindableBuffer rewindable)
+            {
+                return (s) => ReadCompressedMessageRewindable<T>(s, rewindable);
+            }
+
+            return (s) => ReadCompressedMessage<T>(s);
         }
 
         T ReadCompressedMessage<T>(Stream stream)
@@ -131,7 +176,7 @@ namespace Halibut.Transport.Protocol
         
         // By making this a generic type, each message specifies the exact type it sends/expects
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
-        class MessageEnvelope<T>
+        public class MessageEnvelope<T>
         {
             public T Message { get; set; }
         }

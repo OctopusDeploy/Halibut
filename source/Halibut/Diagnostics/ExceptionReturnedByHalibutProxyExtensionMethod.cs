@@ -58,6 +58,11 @@ namespace Halibut.Diagnostics
                 return IsNetworkError(exception.InnerException);
             }
 
+            if (exception is HalibutClientException)
+            {
+                if (exception.Message.Contains("System.IO.EndOfStreamException")) return HalibutNetworkExceptionType.IsNetworkError;
+            }
+
             return HalibutNetworkExceptionType.UnknownError;
         }
     }

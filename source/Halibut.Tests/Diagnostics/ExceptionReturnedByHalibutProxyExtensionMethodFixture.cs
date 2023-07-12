@@ -48,11 +48,10 @@ namespace Halibut.Tests.Diagnostics
 
         public class WhenTheHalibutProxyThrowsAnException : BaseTest
         {
-            [Test]
-            public async Task WhenTheConnectionTerminatesWaitingForAResponseFromAPollingTentacle()
+            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            public async Task WhenTheConnectionTerminatesWaitingForAResponse(ServiceConnectionType serviceConnectionType)
             {
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .Polling()
+                using (var clientAndService = await ClientServiceBuilder.ForServiceConnectionType(serviceConnectionType)
                            .WithPortForwarding(out var portForwarder)
                            .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
                            .Build(CancellationToken))
@@ -64,7 +63,26 @@ namespace Halibut.Tests.Diagnostics
                     new SerilogLoggerBuilder().Build().Information(exception, "Got an exception, we were expecting one");
                     exception.IsNetworkError()
                         .Should()
-                        .Be(HalibutNetworkExceptionType.UnknownError, "Since currently we get a message envelope is null message");
+                        .Be(HalibutNetworkExceptionType.IsNetworkError);
+                }
+            }
+            
+            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            public async Task WhenTheConnectionPausesWaitingForAResponse(ServiceConnectionType serviceConnectionType)
+            {
+                using (var clientAndService = await ClientServiceBuilder.ForServiceConnectionType(serviceConnectionType)
+                           .WithPortForwarding(out var portForwarder)
+                           .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
+                           .Build())
+                {
+                    var svc = clientAndService.CreateClient<IDoSomeActionService>();
+
+                    // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
+                    var exception = Assert.Throws<HalibutClientException>(() => svc.Action());
+                    new SerilogLoggerBuilder().Build().Information(exception, "Got an exception, we were expecting one");
+                    exception.IsNetworkError()
+                        .Should()
+                        .Be(HalibutNetworkExceptionType.IsNetworkError);
                 }
             }
 
