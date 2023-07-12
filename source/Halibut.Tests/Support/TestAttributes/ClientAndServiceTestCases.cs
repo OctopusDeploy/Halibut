@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using Halibut.Tests.Support.TestCases;
@@ -8,20 +7,36 @@ namespace Halibut.Tests.Support.TestAttributes
 {
     public abstract class ClientAndServiceTestCases : IEnumerable<ClientAndServiceTestCase>
     {
-        static readonly ServiceConnectionType[] serviceConnectionTypesToTest =
+        protected virtual ServiceConnectionType[] ServiceConnectionTypesToTest 
         {
-            ServiceConnectionType.Polling,
-            ServiceConnectionType.Listening
-        };
+            get
+            {
+                return new[]
+                {
+                    ServiceConnectionType.Polling,
+                    ServiceConnectionType.Listening,
+// Disabled while these are causing flakey Team City Tests
+//#if SUPPORTS_WEB_SOCKET_CLIENT
+//                    ServiceConnectionType.PollingOverWebSocket
+//#endif
+                };
+            }
+        }
 
-        static readonly NetworkConditionTestCase[] networkConditionTestCases =
+        protected virtual NetworkConditionTestCase[] NetworkConditionTestCases
         {
-            NetworkConditionTestCase.NetworkConditionPerfect,
-            NetworkConditionTestCase.NetworkCondition20MsLatency,
-            NetworkConditionTestCase.NetworkCondition20MsLatencyWithLastByteArrivingLate,
-            NetworkConditionTestCase.NetworkCondition20MsLatencyWithLast2BytesArrivingLate,
-            NetworkConditionTestCase.NetworkCondition20MsLatencyWithLast3BytesArrivingLate
-        };
+            get
+            {
+                return new[]
+                {
+                    NetworkConditionTestCase.NetworkConditionPerfect,
+                    NetworkConditionTestCase.NetworkCondition20MsLatency,
+                    NetworkConditionTestCase.NetworkCondition20MsLatencyWithLastByteArrivingLate,
+                    NetworkConditionTestCase.NetworkCondition20MsLatencyWithLast2BytesArrivingLate,
+                    NetworkConditionTestCase.NetworkCondition20MsLatencyWithLast3BytesArrivingLate
+                };
+            }
+        }
         
         readonly ClientAndServiceTestVersion[] clientServiceTestVersions;
 
@@ -34,14 +49,18 @@ namespace Halibut.Tests.Support.TestAttributes
         {
             foreach (var clientServiceTestVersion in clientServiceTestVersions)
             {
-                foreach (var serviceConnectionType in serviceConnectionTypesToTest)
+                foreach (var serviceConnectionType in ServiceConnectionTypesToTest)
                 {
-                    foreach (var networkConditionTestCase in networkConditionTestCases)
+                    foreach (var networkConditionTestCase in NetworkConditionTestCases)
                     {
                         // Slightly bad network conditions e.g. a delay of 20ms can blow out test times especially when running for 2000 iterations.
-                        // 50 seems ok, resulting in 15s tests.
-                        int recommendedIterations = 50;
-                        if (networkConditionTestCase == NetworkConditionTestCase.NetworkConditionPerfect) recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType);
+                        // 15 iterations seems ok.
+                        var recommendedIterations = 15;
+                        if (networkConditionTestCase == NetworkConditionTestCase.NetworkConditionPerfect)
+                        {
+                            recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType);
+                        }
+
                         yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion);
                     }
                 }

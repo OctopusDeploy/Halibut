@@ -18,7 +18,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             services.Register<IMultipleParametersTestService>(() => new MultipleParametersTestService());
             return services;
         }
-        
+
         /// <summary>
         /// Used when the test CLR has the services
         /// ie Old/Previous Client calling latest services.

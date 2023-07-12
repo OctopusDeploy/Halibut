@@ -189,47 +189,47 @@ namespace Halibut.Tests.Support
                 octopusBuilder = octopusBuilder.WithPendingRequestQueueFactory(pendingRequestQueueFactory(octopusLogFactory));
             }
 
-            var octopus = octopusBuilder.Build();
-            octopus.Trust(serviceCertAndThumbprint.Thumbprint);
+            var client = octopusBuilder.Build();
+            client.Trust(serviceCertAndThumbprint.Thumbprint);
 
-            HalibutRuntime? tentacle = null;
+            HalibutRuntime? service = null;
             if (hasService)
             {
-                var tentacleBuilder = new HalibutRuntimeBuilder()
+                var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                     .WithLogFactory(new TestContextLogFactory("Service", halibutLogLevel));
 
-                if(pollingReconnectRetryPolicy != null) tentacleBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
-                tentacle = tentacleBuilder.Build();
+                if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
+                service = serviceBuilder.Build();
             }
 
             var disposableCollection = new DisposableCollection();
             PortForwarder? portForwarder = null;
-            var proxy = proxyFactory?.Invoke();
-            ProxyDetails? proxyDetails = null;
+            var httpProxy = proxyFactory?.Invoke();
+            ProxyDetails? httpProxyDetails = null;
 
-            if (proxy != null)
+            if (httpProxy != null)
             {
-                await proxy.StartAsync(cancellationTokenSource.Token);
-                proxyDetails = new ProxyDetails("localhost", proxy.Endpoint.Port, ProxyType.HTTP);
+                await httpProxy.StartAsync(cancellationTokenSource.Token);
+                httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint.Port, ProxyType.HTTP);
             }
 
             Uri serviceUri;
 
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
-                var listenPort = octopus.Listen();
-                portForwarder = portForwarderFactory?.Invoke(listenPort);
+                var clientListenPort = client.Listen();
+                portForwarder = portForwarderFactory?.Invoke(clientListenPort);
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
-                if (tentacle != null)
+                if (service != null)
                 {
                     if (portForwarder != null)
                     {
-                        listenPort = portForwarder.ListeningPort;
+                        clientListenPort = portForwarder.ListeningPort;
                     }
 
-                    tentacle.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint, proxyDetails));
+                    service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + clientListenPort), clientCertAndThumbprint.Thumbprint, httpProxyDetails));
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
@@ -239,30 +239,32 @@ namespace Halibut.Tests.Support
                 var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
                 var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
 
-                octopus.ListenWebSocket(webSocketListeningUrl);
+                client.ListenWebSocket(webSocketListeningUrl);
 
                 var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
                 disposableCollection.Add(webSocketSslCertificate);
 
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
-                if (tentacle != null)
+                if (service != null)
                 {
+                    portForwarder = portForwarderFactory?.Invoke(webSocketListeningPort);
+
                     if (portForwarder != null)
                     {
                         webSocketListeningPort = portForwarder.ListeningPort;
                     }
 
                     var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
-                    tentacle.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, proxyDetails));
+                    service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, httpProxyDetails));
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 int listenPort;
-                if (tentacle != null)
+                if (service != null)
                 {
-                    tentacle.Trust(clientCertAndThumbprint.Thumbprint);
-                    listenPort = tentacle.Listen();
+                    service.Trust(clientCertAndThumbprint.Thumbprint);
+                    listenPort = service.Listen();
                 }
                 else
                 {
@@ -271,9 +273,12 @@ namespace Halibut.Tests.Support
                     listenPort = dummyTentacle.Port;
                 }
 
-                portForwarder = portForwarderFactory != null ? portForwarderFactory(listenPort) : null;
+                portForwarder = portForwarderFactory?.Invoke(listenPort);
+                if (portForwarder != null)
+                {
+                    listenPort = portForwarder.ListeningPort;
+                }
 
-                if (portForwarder != null) listenPort = portForwarder.ListeningPort;
                 serviceUri = new Uri("https://localhost:" + listenPort);
             }
             else
@@ -286,7 +291,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxy, proxyDetails, cancellationTokenSource);
+            return new ClientAndService(client, service, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, cancellationTokenSource);
         }
 
         public class ClientAndService : IClientAndService
@@ -297,8 +302,8 @@ namespace Halibut.Tests.Support
             readonly ProxyDetails? proxyDetails;
             readonly CancellationTokenSource cancellationTokenSource;
 
-            public ClientAndService(HalibutRuntime octopus,
-                HalibutRuntime tentacle,
+            public ClientAndService(HalibutRuntime client,
+                HalibutRuntime service,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
                 PortForwarder? portForwarder,
@@ -307,21 +312,21 @@ namespace Halibut.Tests.Support
                 ProxyDetails? proxyDetails,
                 CancellationTokenSource cancellationTokenSource)
             {
-                Octopus = octopus;
-                Tentacle = tentacle;
+                Client = client;
+                Service = service;
                 ServiceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
                 PortForwarder = portForwarder;
-                Proxy = proxy;
+                HttpProxy = proxy;
                 this.disposableCollection = disposableCollection;
                 this.proxyDetails = proxyDetails;
                 this.cancellationTokenSource = cancellationTokenSource;
             }
 
-            public HalibutRuntime Octopus { get; }
-            public HalibutRuntime? Tentacle { get; }
+            public HalibutRuntime Client { get; }
+            public HalibutRuntime? Service { get; }
             public PortForwarder? PortForwarder { get; }
-            public HttpProxyService? Proxy { get; }
+            public HttpProxyService? HttpProxy { get; }
 
             public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
             {
@@ -337,7 +342,7 @@ namespace Halibut.Tests.Support
             {
                 var serviceEndpoint = new ServiceEndPoint(ServiceUri, remoteThumbprint ?? serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
-                return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
+                return Client.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
 
             public TClientService CreateClient<TService, TClientService>()
@@ -349,15 +354,15 @@ namespace Halibut.Tests.Support
             {
                 var serviceEndpoint = new ServiceEndPoint(ServiceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
-                return Octopus.CreateClient<TService, TClientService>(serviceEndpoint);
+                return Client.CreateClient<TService, TClientService>(serviceEndpoint);
             }
 
             public void Dispose()
             {
                 cancellationTokenSource?.Cancel();
-                Octopus.Dispose();
-                Tentacle?.Dispose();
-                Proxy?.Dispose();
+                Client.Dispose();
+                Service?.Dispose();
+                HttpProxy?.Dispose();
                 PortForwarder?.Dispose();
                 disposableCollection.Dispose();
                 cancellationTokenSource?.Dispose();

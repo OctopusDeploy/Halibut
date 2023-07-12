@@ -33,7 +33,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 }
             }
 
-            Console.WriteLine("Not using a Proxy");
+            Console.WriteLine("Not using an Http Proxy");
             return null;
         }
 
