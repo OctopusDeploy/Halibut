@@ -35,7 +35,7 @@ namespace Halibut.Tests
                 }
             }
         }
-        
+
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
@@ -60,7 +60,7 @@ namespace Halibut.Tests
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
-                       .ForMode(serviceConnectionType)
+                       .ForServiceConnectionType(serviceConnectionType)
                        .WithProxy()
                        .WithEchoService()
                        .Build())
@@ -68,7 +68,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-                for (var i = 0; i < 2000; i++)
+                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }

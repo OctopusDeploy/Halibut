@@ -24,6 +24,7 @@ namespace Halibut.Tests.Support
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
         Func<HttpProxyService>? proxyFactory;
+        readonly CancellationTokenSource cancellationTokenSource = new();
 
         public ClientServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -128,6 +129,12 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public ClientServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
+        {
+            this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
+            return this;
+        }
+
         public async Task<ClientAndService> Build()
         {
             await Task.CompletedTask;
@@ -164,7 +171,7 @@ namespace Halibut.Tests.Support
             ProxyDetails? proxyDetails = null;
             if (proxy != null)
             {
-                await proxy.StartAsync(CancellationToken.None);
+                await proxy.StartAsync(cancellationTokenSource.Token);
                 proxyDetails = new ProxyDetails("localhost", proxy.Endpoint.Port, ProxyType.HTTP);
                 disposableCollection.Add(proxy);
             }
@@ -240,7 +247,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxyDetails);
+            return new ClientAndService(octopus, tentacle, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxyDetails, cancellationTokenSource);
         }
 
         public class ClientAndService : IClientAndService
@@ -252,6 +259,7 @@ namespace Halibut.Tests.Support
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly DisposableCollection disposableCollection;
             readonly ProxyDetails? proxyDetails;
+            readonly CancellationTokenSource cancellationTokenSource;
 
             public ClientAndService(HalibutRuntime octopus,
                 HalibutRuntime tentacle,
@@ -259,7 +267,8 @@ namespace Halibut.Tests.Support
                 CertAndThumbprint serviceCertAndThumbprint,
                 PortForwarder? portForwarder,
                 DisposableCollection disposableCollection,
-                ProxyDetails? proxyDetails)
+                ProxyDetails? proxyDetails,
+                CancellationTokenSource cancellationTokenSource)
             {
                 Octopus = octopus;
                 Tentacle = tentacle;
@@ -268,6 +277,7 @@ namespace Halibut.Tests.Support
                 PortForwarder = portForwarder;
                 this.disposableCollection = disposableCollection;
                 this.proxyDetails = proxyDetails;
+                this.cancellationTokenSource = cancellationTokenSource;
             }
 
             public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
@@ -301,17 +311,14 @@ namespace Halibut.Tests.Support
 
             public void Dispose()
             {
+                cancellationTokenSource?.Cancel();
+                cancellationTokenSource?.Dispose();
+
                 Octopus.Dispose();
                 Tentacle?.Dispose();
                 PortForwarder?.Dispose();
                 disposableCollection.Dispose();
             }
-        }
-
-        public ClientServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
-        {
-            this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
-            return this;
         }
     }
 }

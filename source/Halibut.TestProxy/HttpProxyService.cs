@@ -51,7 +51,21 @@ namespace Halibut.TestProxy
             {
                 try
                 {
-                    var client = await listener.AcceptTcpClientAsync(); // TODO Cancellation - stoppingToken
+                    TcpClient? client;
+
+#if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
+                    var socketCancellationTokenSource = new CancellationTokenSource();
+                    using (stoppingToken.Register(() => socketCancellationTokenSource.Cancel()))
+                    {
+                        var cancelTask = socketCancellationTokenSource.Token.AsTask<TcpClient?>();
+                        var actionTask = listener.AcceptTcpClientAsync();
+
+                        client = await (await Task.WhenAny(actionTask, cancelTask).ConfigureAwait(false)).ConfigureAwait(false);
+                    }
+#else
+                    client = await listener.AcceptTcpClientAsync(stoppingToken);
+#endif
+
                     _ = Task.Run(async () => await HandleProxyRequest(client, stoppingToken), stoppingToken);
                 }
                 catch (OperationCanceledException)
