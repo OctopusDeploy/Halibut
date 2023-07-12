@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
@@ -21,6 +22,7 @@ namespace Halibut.Tests
 
             using (var clientAndService = await ClientServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .WithServiceFactory(services).Build())
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Logging;
 using Octopus.Shellfish;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
@@ -15,16 +16,17 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly string version;
         readonly ProxyDetails proxyDetails;
+        readonly LogLevel halibutLogLevel;
         readonly Uri realServiceListenAddress;
 
-        public ProxyHalibutTestBinaryRunner(
-            ServiceConnectionType serviceConnectionType,
+        public ProxyHalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType,
             int? clientServicePort,
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint,
             Uri realServiceListenAddress,
             string version,
-            ProxyDetails proxyDetails)
+            ProxyDetails proxyDetails,
+            LogLevel halibutLogLevel)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientServicePort = clientServicePort;
@@ -32,9 +34,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.version = version;
             this.proxyDetails = proxyDetails;
+            this.halibutLogLevel = halibutLogLevel;
             this.realServiceListenAddress = realServiceListenAddress;
         }
-
 
         public async Task<RoundTripRunningOldHalibutBinary> Run()
         {
@@ -44,7 +46,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "mode", "proxy" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
                 { "octopuscertpath", clientCertAndThumbprint.CertificatePfxPath },
-                {CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile}
+                { "halibutloglevel", halibutLogLevel.ToString() },
+                { CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile }
             };
 
             if (proxyDetails != null)

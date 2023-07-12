@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Transport.Proxy;
@@ -25,6 +26,7 @@ namespace Halibut.Tests.Support
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
         Func<HttpProxyService>? proxyFactory;
         readonly CancellationTokenSource cancellationTokenSource = new();
+        LogLevel halibutLogLevel = LogLevel.Trace;
 
         public ClientServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -139,12 +141,19 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public ClientServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        {
+            this.halibutLogLevel = halibutLogLevel;
+
+            return this;
+        }
+
         public async Task<ClientAndService> Build()
         {
             await Task.CompletedTask;
             serviceFactory ??= new DelegateServiceFactory();
 
-            var octopusLogFactory = new TestContextLogFactory("Client");
+            var octopusLogFactory = new TestContextLogFactory("Client", halibutLogLevel);
             var octopusBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory);
@@ -163,7 +172,7 @@ namespace Halibut.Tests.Support
                 var tentacleBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                    .WithLogFactory(new TestContextLogFactory("Service"));
+                    .WithLogFactory(new TestContextLogFactory("Service", halibutLogLevel));
 
                 if(pollingReconnectRetryPolicy != null) tentacleBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
                 tentacle = tentacleBuilder.Build();

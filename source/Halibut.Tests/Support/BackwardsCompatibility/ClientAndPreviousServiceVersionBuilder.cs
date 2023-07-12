@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
@@ -18,6 +19,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Func<int, PortForwarder> portForwarderFactory;
         Func<HttpProxyService>? proxyFactory;
         CancellationTokenSource cancellationTokenSource = new();
+        LogLevel halibutLogLevel;
 
         ClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -88,6 +90,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        public ClientAndPreviousServiceVersionBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        {
+            this.halibutLogLevel = halibutLogLevel;
+
+            return this;
+        }
+
         public async Task<IClientAndService> Build()
         {
             if (version == null)
@@ -130,7 +139,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     version,
-                    proxyDetails).Run();
+                    proxyDetails,
+                    halibutLogLevel).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
@@ -158,7 +168,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     version,
-                    proxyDetails).Run();
+                    proxyDetails,
+                    halibutLogLevel).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
@@ -167,7 +178,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     version,
-                    proxyDetails).Run();
+                    proxyDetails,
+                    halibutLogLevel).Run();
 
                 int listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
                 if (portForwarder != null) listenPort = portForwarder.ListeningPort;
