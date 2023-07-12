@@ -18,7 +18,7 @@ namespace Halibut.TestProxy
     {
         readonly ProxyEndpoint destinationEndpoint;
         readonly ILogger<ProxyConnection> logger;
-        List<TcpTunnel>? tunnels = new();
+        readonly List<TcpTunnel> tunnels = new();
         readonly SemaphoreSlim sync = new(1);
 
         public ProxyConnection(ProxyEndpoint destinationEndpoint, ILogger<ProxyConnection> logger)
@@ -33,16 +33,13 @@ namespace Halibut.TestProxy
 
             try
             {
-                if (source.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)
-                {
-                    throw new InvalidOperationException($"{source.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
-                }
+                if (source.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint) throw new InvalidOperationException($"{source.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
 
                 var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
                 var destination = new TcpClient(destinationEndpoint.Hostname, destinationEndpoint.Port);
                 var tunnel = new TcpTunnel(source, destination);
 
-                tunnels!.Add(tunnel);
+                tunnels.Add(tunnel);
 
                 // We kick the tunneling to a background task so that we can await for it close and cleanup
                 _ = Task.Run<Task>(async () =>
@@ -58,6 +55,9 @@ namespace Halibut.TestProxy
                     catch (Exception ex)
                     {
                         logger.LogWarning(ex, "An error has occurred in proxy connection - {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, destinationEndpoint);
+                    }
+                    finally
+                    {
                         tunnels.Remove(tunnel);
                         tunnel.Dispose();
                     }
@@ -71,13 +71,13 @@ namespace Halibut.TestProxy
 
         public void Dispose()
         {
-            foreach (var tunnel in tunnels!)
+            var allTunnels = tunnels.ToList();
+
+            foreach (var tunnel in allTunnels)
             {
                 tunnels.Remove(tunnel);
                 tunnel.Dispose();
             }
-
-            tunnels = null;
 
             sync.Dispose();
         }

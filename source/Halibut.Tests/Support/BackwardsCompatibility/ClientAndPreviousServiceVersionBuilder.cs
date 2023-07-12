@@ -2,7 +2,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
@@ -19,7 +18,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Func<int, PortForwarder> portForwarderFactory;
         Func<HttpProxyService>? proxyFactory;
         CancellationTokenSource cancellationTokenSource = new();
-        LogLevel halibutLogLevel;
 
         ClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -77,25 +75,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public ClientAndPreviousServiceVersionBuilder WithProxy()
-        {
-            this.proxyFactory = () =>
-            {
-                var options = new HttpProxyOptions();
-                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
+        //public ClientAndPreviousServiceVersionBuilder WithProxy()
+        //{
+        //    this.proxyFactory = () =>
+        //    {
+        //        var options = new HttpProxyOptions();
+        //        var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
 
-                return new HttpProxyService(options, loggerFactory);
-            };
+        //        return new HttpProxyService(options, loggerFactory);
+        //    };
 
-            return this;
-        }
-
-        public ClientAndPreviousServiceVersionBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
-        {
-            this.halibutLogLevel = halibutLogLevel;
-
-            return this;
-        }
+        //    return this;
+        //}
 
         public async Task<IClientAndService> Build()
         {
@@ -139,8 +130,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     version,
-                    proxyDetails,
-                    halibutLogLevel).Run();
+                    proxyDetails).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
@@ -168,8 +158,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     version,
-                    proxyDetails,
-                    halibutLogLevel).Run();
+                    proxyDetails).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
@@ -178,8 +167,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     version,
-                    proxyDetails,
-                    halibutLogLevel).Run();
+                    proxyDetails).Run();
 
                 int listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
                 if (portForwarder != null) listenPort = portForwarder.ListeningPort;
@@ -259,11 +247,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public void Dispose()
             {
                 cancellationTokenSource?.Cancel();
+                cancellationTokenSource?.Dispose();
                 Octopus.Dispose();
                 Proxy?.Dispose();
                 runningOldHalibutBinary.Dispose();
                 disposableCollection.Dispose();
-                cancellationTokenSource?.Dispose();
             }
         }
     }

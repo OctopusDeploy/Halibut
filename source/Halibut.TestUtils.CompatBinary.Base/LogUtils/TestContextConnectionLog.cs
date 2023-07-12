@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Halibut.Diagnostics;
-using Halibut.Logging;
+
 
 namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
 {
@@ -10,13 +10,11 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
     {
         readonly string endpoint;
         readonly string name;
-        readonly LogLevel logLevel;
 
-        public TestContextConnectionLog(string endpoint, string name, LogLevel logLevel)
+        public TestContextConnectionLog(string endpoint, string name)
         {
             this.endpoint = endpoint;
             this.name = name;
-            this.logLevel = logLevel;
         }
 
         public void Write(EventType type, string message, params object[] args)
@@ -36,30 +34,8 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
 
         void WriteInternal(LogEvent logEvent)
         {
-            var logEventLogLevel = GetLogLevel(logEvent);
-
-            if (logEventLogLevel >= logLevel)
-            {
-                var logMessage = string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logEvent.Type, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name);
-                Console.WriteLine(logMessage);
-            }
-        }
-
-        static LogLevel GetLogLevel(LogEvent logEvent)
-        {
-            switch (logEvent.Type)
-            {
-                case EventType.Error:
-                    return LogLevel.Error;
-                case EventType.Diagnostic:
-                case EventType.SecurityNegotiation:
-                case EventType.MessageExchange:
-                    return LogLevel.Trace;
-                case EventType.OpeningNewConnection:
-                    return LogLevel.Debug;
-                default:
-                    return LogLevel.Info;
-            }
+            var logMessage = string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logEvent.Type, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name);
+            Console.WriteLine(logMessage);
         }
     }
 }

@@ -49,7 +49,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             using (var tentaclePolling = new HalibutRuntimeBuilder()
                        .WithServiceFactory(services)
                        .WithServerCertificate(serviceCert)
-                       .WithLogFactory(new TestContextLogFactory("ExternalService", SettingsHelper.GetHalibutLogLevel()))
+                       .WithLogFactory(new TestContextLogFactory("ExternalService"))
                        .Build())
             {
                 switch (serviceConnectionType)
