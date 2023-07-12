@@ -67,8 +67,6 @@ namespace Halibut.Transport.Protocol
 
         public async Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
         {
-            //TODO: Because serialization fills the stream, we can't do anything until it finishes (and fills the memory stream).
-
             using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
             using var compressedInMemoryBuffer = new WriteAsyncIfPossibleStream(compressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
             using (var zip = new DeflateStream(compressedInMemoryBuffer, CompressionMode.Compress, true))
