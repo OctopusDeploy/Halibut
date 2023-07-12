@@ -56,77 +56,77 @@ namespace Halibut.Tests
             }
         }
 
-        //[Test]
-        //[TestCase(ServiceConnectionType.Polling, null, null)]
-        //[TestCase(ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
-        //[TestCase(ServiceConnectionType.Polling, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
-        //[TestCase(ServiceConnectionType.Listening, null, null)]
-        //[TestCase(ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
-        //[TestCase(ServiceConnectionType.Listening, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
-        //// PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
-        //public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
-        //{
-        //    using (var clientAndService = clientVersion != null ?
-        //               await PreviousClientVersionAndServiceBuilder
-        //                   .ForServiceConnectionType(serviceConnectionType)
-        //                   .WithClientVersion(clientVersion)
-        //                   .WithProxy()
-        //                   .Build() : serviceVersion != null ?
-        //               await ClientAndPreviousServiceVersionBuilder
-        //                   .ForServiceConnectionType(serviceConnectionType)
-        //                   .WithServiceVersion(serviceVersion)
-        //                   .WithProxy()
-        //                   .Build()
-        //               : await ClientServiceBuilder
-        //                   .ForServiceConnectionType(serviceConnectionType)
-        //                   .WithProxy()
-        //                   .WithEchoService()
-        //                   .Build())
-        //    {
-        //        var echo = clientAndService.CreateClient<IEchoService>();
-        //        echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+        [Test]
+        [TestCase(ServiceConnectionType.Polling, null, null)]
+        [TestCase(ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Polling, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        [TestCase(ServiceConnectionType.Listening, null, null)]
+        [TestCase(ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Listening, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
+        {
+            using (var clientAndService = clientVersion != null ?
+                       await PreviousClientVersionAndServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithClientVersion(clientVersion)
+                           .WithProxy()
+                           .Build() : serviceVersion != null ?
+                       await ClientAndPreviousServiceVersionBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithServiceVersion(serviceVersion)
+                           .WithProxy()
+                           .Build()
+                       : await ClientServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithProxy()
+                           .WithEchoService()
+                           .Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-        //        for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
-        //        {
-        //            echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
-        //        }
-        //    }
-        //}
+                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
 
-        //[Test]
-        //[TestCase(ServiceConnectionType.Polling, null, null)]
-        //[TestCase(ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
-        //[TestCase(ServiceConnectionType.Polling, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
-        //[TestCase(ServiceConnectionType.Listening, null, null)]
-        //[TestCase(ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
-        //[TestCase(ServiceConnectionType.Listening, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
-        //// PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
-        //public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
-        //{
-        //    using (var clientAndService = clientVersion != null ?
-        //               await PreviousClientVersionAndServiceBuilder
-        //                   .ForServiceConnectionType(serviceConnectionType)
-        //                   .WithClientVersion(clientVersion)
-        //                   .WithProxy()
-        //                   .Build() : serviceVersion != null ?
-        //               await ClientAndPreviousServiceVersionBuilder
-        //                   .ForServiceConnectionType(serviceConnectionType)
-        //                   .WithServiceVersion(serviceVersion)
-        //                   .WithProxy()
-        //                   .Build()
-        //               : await ClientServiceBuilder
-        //                   .ForServiceConnectionType(serviceConnectionType)
-        //                   .WithProxy()
-        //                   .WithEchoService()
-        //                   .Build())
-        //    {
-        //        await clientAndService.Proxy!.StopAsync(CancellationToken.None);
+        [Test]
+        [TestCase(ServiceConnectionType.Polling, null, null)]
+        [TestCase(ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Polling, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        [TestCase(ServiceConnectionType.Listening, null, null)]
+        [TestCase(ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Listening, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
+        public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
+        {
+            using (var clientAndService = clientVersion != null ?
+                       await PreviousClientVersionAndServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithClientVersion(clientVersion)
+                           .WithProxy()
+                           .Build() : serviceVersion != null ?
+                       await ClientAndPreviousServiceVersionBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithServiceVersion(serviceVersion)
+                           .WithProxy()
+                           .Build()
+                       : await ClientServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithProxy()
+                           .WithEchoService()
+                           .Build())
+            {
+                await clientAndService.Proxy!.StopAsync(CancellationToken.None);
 
-        //        var echo = clientAndService.CreateClient<IEchoService>();
-        //        Func<string> action = () => echo.SayHello("Deploy package A");
-        //        action.Should().Throw<HalibutClientException>();
-        //    }
-        //}
+                var echo = clientAndService.CreateClient<IEchoService>();
+                Func<string> action = () => echo.SayHello("Deploy package A");
+                action.Should().Throw<HalibutClientException>();
+            }
+        }
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
