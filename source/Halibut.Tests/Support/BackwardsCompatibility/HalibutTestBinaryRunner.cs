@@ -16,53 +16,67 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly string version;
-        ILogger logger = new SerilogLoggerBuilder().Build().ForContext<HalibutRuntimeBuilder>();
+        readonly ProxyDetails? proxyDetails;
+        readonly ILogger logger = new SerilogLoggerBuilder().Build().ForContext<HalibutRuntimeBuilder>();
         readonly Uri webSocketServiceEndpointUri;
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.version = version;
+            this.proxyDetails = proxyDetails;
         }
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version) :
-            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails)
         {
             this.clientServicePort = clientServicePort;
         }
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version) :
-            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails)
         {
             this.webSocketServiceEndpointUri = webSocketServiceEndpointUri;
         }
-        
+
         public async Task<RunningOldHalibutBinary> Run()
         {
-            var envs = new Dictionary<string, string>();
-            envs.Add("mode", "serviceonly");
-            envs.Add("tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath);
-            envs.Add("octopusthumbprint", clientCertAndThumbprint.Thumbprint);
+            var settings = new Dictionary<string, string>
+            {
+                { "mode", "serviceonly" },
+                { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
+                { "octopusthumbprint", clientCertAndThumbprint.Thumbprint }
+            };
+
+            if (proxyDetails != null)
+            {
+                settings.Add("proxydetails_host", proxyDetails.Host);
+                settings.Add("proxydetails_password", proxyDetails.Password);
+                settings.Add("proxydetails_username", proxyDetails.UserName);
+                settings.Add("proxydetails_port", proxyDetails.Port.ToString());
+                settings.Add("proxydetails_type", proxyDetails.Type.ToString());
+            }
+
             if (clientServicePort != null)
             {
-                envs.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
+                settings.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
             }
             else if (webSocketServiceEndpointUri != null)
             {
-                envs.Add("sslthubprint", Certificates.SslThumbprint);
-                envs.Add("octopusservercommsport", webSocketServiceEndpointUri.ToString());
+                settings.Add("sslthubprint", Certificates.SslThumbprint);
+                settings.Add("octopusservercommsport", webSocketServiceEndpointUri.ToString());
             }
 
-            envs.Add("ServiceConnectionType", serviceConnectionType.ToString());
+            settings.Add("ServiceConnectionType", serviceConnectionType.ToString());
 
-            CancellationTokenSource cts = new CancellationTokenSource();
+            var cts = new CancellationTokenSource();
 
             try
             {
                 var tmp = new TmpDirectory();
 
-                var (task, serviceListenPort) = await StartHalibutTestBinary(version, envs, tmp, cts.Token);
+                var (task, serviceListenPort) = await StartHalibutTestBinary(version, settings, tmp, cts.Token);
 
                 return new RunningOldHalibutBinary(cts, task, tmp, serviceListenPort);
             }
@@ -73,7 +87,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        async Task<(Task, int?)> StartHalibutTestBinary(string version, Dictionary<string, string> envs, TmpDirectory tmp, CancellationToken cancellationToken)
+        async Task<(Task, int?)> StartHalibutTestBinary(string version, Dictionary<string, string> settings, TmpDirectory tmp, CancellationToken cancellationToken)
         {
             var hasTentacleStarted = new ManualResetEventSlim();
             hasTentacleStarted.Reset();
@@ -83,7 +97,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 try
                 {
-                    Action<string> processLogs = s =>
+                    void ProcessLogs(string s)
                     {
                         logger.Information(s);
                         if (s.StartsWith("Listening on port: "))
@@ -92,15 +106,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         }
 
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
-                    };
+                    }
 
                     ShellExecutor.ExecuteCommand(new HalibutTestBinaryPath().BinPath(version),
                         "",
                         tmp.FullPath,
-                        processLogs,
-                        processLogs,
-                        processLogs,
-                        customEnvironmentVariables: envs,
+                        ProcessLogs,
+                        ProcessLogs,
+                        ProcessLogs,
+                        customEnvironmentVariables: settings,
                         cancel: cancellationToken
                     );
                 }
@@ -129,14 +143,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly CancellationTokenSource cts;
             readonly Task runningOldHalibutTask;
             readonly TmpDirectory tmpDirectory;
-            public readonly int? serviceListenPort;
+            public int? ServiceListenPort { get; }
 
             public RunningOldHalibutBinary(CancellationTokenSource cts, Task runningOldHalibutTask, TmpDirectory tmpDirectory, int? serviceListenPort)
             {
                 this.cts = cts;
                 this.runningOldHalibutTask = runningOldHalibutTask;
                 this.tmpDirectory = tmpDirectory;
-                this.serviceListenPort = serviceListenPort;
+                this.ServiceListenPort = serviceListenPort;
             }
 
             public void Dispose()

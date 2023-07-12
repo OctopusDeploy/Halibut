@@ -1,14 +1,13 @@
-﻿using System;
-using Halibut.Diagnostics;
+﻿using System.Threading.Tasks;
 using Halibut.TestUtils.SampleProgram.Base;
 
 namespace Halibut.TestUtils.SampleProgram.v5_0_429
 {
     public class Program
     {
-        public static int Main(string[] args)
+        public static async Task<int> Main()
         {
-            return BackwardsCompatProgramBase.Main(args);
+            return await BackwardsCompatProgramBase.Main();
         }
     }
 }
