@@ -20,7 +20,7 @@ namespace Halibut.Tests
             var services = new DelegateServiceFactory();
             services.Register<IReadDataStreamService>(() => new ReadDataStreamService());
 
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .WithServiceFactory(services).Build())

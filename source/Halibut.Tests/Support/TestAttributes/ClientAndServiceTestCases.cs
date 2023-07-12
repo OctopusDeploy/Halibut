@@ -23,9 +23,9 @@ namespace Halibut.Tests.Support.TestAttributes
             NetworkConditionTestCase.NetworkCondition20MsLatencyWithLast3BytesArrivingLate
         };
         
-        readonly ClientServiceTestVersion[] clientServiceTestVersions;
+        readonly ClientAndServiceTestVersion[] clientServiceTestVersions;
 
-        protected ClientAndServiceTestCases(params ClientServiceTestVersion[] clientServiceTestVersions)
+        protected ClientAndServiceTestCases(params ClientAndServiceTestVersion[] clientServiceTestVersions)
         {
             this.clientServiceTestVersions = clientServiceTestVersions;
         }

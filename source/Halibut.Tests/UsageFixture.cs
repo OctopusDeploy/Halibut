@@ -20,7 +20,7 @@ namespace Halibut.Tests
     public class UsageFixture
     {
         [Test]
-        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
@@ -38,7 +38,7 @@ namespace Halibut.Tests
             }
         }
 
-        [Test]
+[Test]
         [TestCase(ServiceConnectionType.Polling, null, null)]
         [TestCase(ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
         [TestCase(ServiceConnectionType.Polling, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
@@ -49,19 +49,19 @@ namespace Halibut.Tests
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
         {
             using (var clientAndService = clientVersion != null ?
-                       await PreviousClientVersionAndServiceBuilder
+                       await PreviousClientVersionAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithClientVersion(clientVersion)
                            .WithHalibutLoggingLevel(LogLevel.Info)
                            .WithProxy()
                            .Build() : serviceVersion != null ?
-                       await ClientAndPreviousServiceVersionBuilder
+                       await LatestClientAndPreviousServiceVersionBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithServiceVersion(serviceVersion)
                            .WithHalibutLoggingLevel(LogLevel.Info)
                            .WithProxy()
                            .Build()
-                       : await ClientServiceBuilder
+                       : await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .WithHalibutLoggingLevel(LogLevel.Info)
@@ -89,19 +89,19 @@ namespace Halibut.Tests
         public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
         {
             using (var clientAndService = clientVersion != null ?
-                       await PreviousClientVersionAndServiceBuilder
+                       await PreviousClientVersionAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithClientVersion(clientVersion)
                            .WithHalibutLoggingLevel(LogLevel.Info)
                            .WithProxy()
                            .Build() : serviceVersion != null ?
-                       await ClientAndPreviousServiceVersionBuilder
+                       await LatestClientAndPreviousServiceVersionBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithServiceVersion(serviceVersion)
                            .WithHalibutLoggingLevel(LogLevel.Info)
                            .WithProxy()
                            .Build()
-                       : await ClientServiceBuilder
+                       : await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
                            .WithHalibutLoggingLevel(LogLevel.Info)
@@ -117,7 +117,7 @@ namespace Halibut.Tests
         }
 
         
-        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
         public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
@@ -139,7 +139,7 @@ namespace Halibut.Tests
         [Test]
         public async Task HalibutSerializerIsKeptUpToDateWithPollingTentacle()
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .Polling()
                        .WithStandardServices()
                        .Build()){
@@ -156,7 +156,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
         public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
@@ -178,7 +178,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestAndAPreviousVersionClientAndServiceTestCases))]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()
@@ -216,7 +216,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestClientAndServiceTestCases))]
+        [TestCaseSource(typeof(LatestClientAndLatestServiceTestCases))]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateBaseTestCaseBuilder()

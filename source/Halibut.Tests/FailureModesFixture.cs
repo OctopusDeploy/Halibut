@@ -27,7 +27,7 @@ namespace Halibut.Tests
         [Test]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp()
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .Polling()
                        .NoService()
                        .Build())
@@ -47,7 +47,7 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task FailWhenServerThrowsAnException(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
                        .Build())
@@ -136,7 +136,7 @@ namespace Halibut.Tests
         // TODO - This runs for 30+ mins with WebSockets
         public async Task FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithReadDataStreamService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))

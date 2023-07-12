@@ -16,7 +16,7 @@ namespace Halibut.Tests.BackwardsCompatibility
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
+            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceVersion(PreviousVersions.v5_0_429)
                        .Build())

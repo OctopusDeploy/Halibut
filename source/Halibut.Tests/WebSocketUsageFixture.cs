@@ -14,7 +14,7 @@ namespace Halibut.Tests
         [Test]
         public async Task HalibutSerializerIsKeptUpToDateWithWebSocketPollingTentacle()
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .PollingOverWebSocket()
                        .WithStandardServices()
                        .Build())
@@ -33,7 +33,7 @@ namespace Halibut.Tests
         public async Task OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
 
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .PollingOverWebSocket()
                        .WithStandardServices()
                        .Build())

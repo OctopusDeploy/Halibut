@@ -4,7 +4,7 @@ namespace Halibut.Tests.Support.TestCases
 {
     public class ClientAndServiceTestCase
     {
-        ClientServiceTestVersion clientServiceTestVersion;
+        ClientAndServiceTestVersion _clientAndServiceTestVersion;
         
         readonly NetworkConditionTestCase networkConditionTestCase;
         public ServiceConnectionType ServiceConnectionType { get; }
@@ -17,18 +17,18 @@ namespace Halibut.Tests.Support.TestCases
         /// </summary>
         public readonly int RecommendedIterations;
 
-        public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType, NetworkConditionTestCase networkConditionTestCase, int recommendedIterations, ClientServiceTestVersion clientServiceTestVersion)
+        public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType, NetworkConditionTestCase networkConditionTestCase, int recommendedIterations, ClientAndServiceTestVersion clientAndServiceTestVersion)
         {
             ServiceConnectionType = serviceConnectionType;
             this.networkConditionTestCase = networkConditionTestCase;
             RecommendedIterations = recommendedIterations;
-            this.clientServiceTestVersion = clientServiceTestVersion;
+            this._clientAndServiceTestVersion = clientAndServiceTestVersion;
         }
 
-        public IClientAndServiceBaseBuilder CreateBaseTestCaseBuilder()
+        public IClientAndServiceBuilder CreateBaseTestCaseBuilder()
         {
             var logger = new SerilogLoggerBuilder().Build();
-            IClientAndServiceBaseBuilder builder = ClientServiceBuilderFactory.ForVersion(clientServiceTestVersion)(ServiceConnectionType);
+            IClientAndServiceBuilder builder = ClientAndServiceBuilderFactory.ForVersion(_clientAndServiceTestVersion)(ServiceConnectionType);
             if (networkConditionTestCase.PortForwarderFactory != null)
             {
                 builder.WithPortForwarding(i => networkConditionTestCase.PortForwarderFactory(i, logger));
@@ -39,7 +39,7 @@ namespace Halibut.Tests.Support.TestCases
 
         public override string ToString()
         {
-            return ServiceConnectionType + ", " + clientServiceTestVersion + ", " + networkConditionTestCase + ", Iters: " + RecommendedIterations;
+            return ServiceConnectionType + ", " + _clientAndServiceTestVersion + ", " + networkConditionTestCase + ", Iters: " + RecommendedIterations;
         }
     }
 }

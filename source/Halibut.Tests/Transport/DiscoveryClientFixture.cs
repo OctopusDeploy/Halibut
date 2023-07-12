@@ -59,7 +59,7 @@ namespace Halibut.Tests.Transport
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             
-            using (var clientAndService = await ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().WithServiceFactory(services).Build())
             {
                 var info = clientAndService.Octopus.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);

@@ -13,11 +13,11 @@ using Serilog.Extensions.Logging;
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
     /// <summary>
-    /// Used to test old versions of a client talking to a new version of service.
+    /// Used to test old versions of a client talking to the latest version of a service.
     /// In this case the client is run out of process, and talks to a service running
     /// in this process.
     /// </summary>
-    public class PreviousClientVersionAndServiceBuilder: IClientAndServiceBaseBuilder
+    public class PreviousClientVersionAndLatestServiceBuilder: IClientAndServiceBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
@@ -30,24 +30,24 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
-
-        PreviousClientVersionAndServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        
+        PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
         }
 
-        public static PreviousClientVersionAndServiceBuilder WithPollingService()
+        public static PreviousClientVersionAndLatestServiceBuilder WithPollingService()
         {
-            return new PreviousClientVersionAndServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
-        public static PreviousClientVersionAndServiceBuilder WithListeningService()
+        public static PreviousClientVersionAndLatestServiceBuilder WithListeningService()
         {
-            return new PreviousClientVersionAndServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
-        public static PreviousClientVersionAndServiceBuilder ForServiceConnectionType(ServiceConnectionType connectionType)
+        public static PreviousClientVersionAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType connectionType)
         {
             switch (connectionType)
             {
@@ -60,42 +60,52 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
         {
             return WithPortForwarding(func);
         }
 
-        public PreviousClientVersionAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
+        public PreviousClientVersionAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
             this.portForwarderFactory = portForwarderFactory;
             return this;
         }
 
-        public PreviousClientVersionAndServiceBuilder WithClientVersion(string version)
+        public PreviousClientVersionAndLatestServiceBuilder WithClientVersion(string version)
         {
             this.version = version;
             return this;
         }
 
-        public PreviousClientVersionAndServiceBuilder WithEchoServiceService(IEchoService echoService)
+        public PreviousClientVersionAndLatestServiceBuilder WithEchoServiceService(IEchoService echoService)
         {
             this.echoService = echoService;
             return this;
         }
 
-        public PreviousClientVersionAndServiceBuilder WithCachingService(ICachingService cachingService)
+        public PreviousClientVersionAndLatestServiceBuilder WithCachingService(ICachingService cachingService)
         {
             this.cachingService = cachingService;
             return this;
         }
 
-        public PreviousClientVersionAndServiceBuilder WithMultipleParametersTestService(IMultipleParametersTestService multipleParametersTestService)
+        public PreviousClientVersionAndLatestServiceBuilder WithMultipleParametersTestService(IMultipleParametersTestService multipleParametersTestService)
         {
             this.multipleParametersTestService = multipleParametersTestService;
             return this;
         }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
+        {
+            return WithStandardServices();
+        }
+
+        public PreviousClientVersionAndLatestServiceBuilder WithStandardServices()
+        {
+            return WithEchoServiceService(new EchoService()).WithCachingService(new CachingService()).WithMultipleParametersTestService(new MultipleParametersTestService());
+        }
         
-        public PreviousClientVersionAndServiceBuilder WithProxy()
+        public PreviousClientVersionAndLatestServiceBuilder WithProxy()
         {
             this.proxyFactory = () =>
             {
@@ -107,25 +117,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             return this;
         }
-                
-        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
-        {
-            return WithStandardServices();
-        }
-
-        public PreviousClientVersionAndServiceBuilder WithStandardServices()
-        {
-            return WithEchoServiceService(new EchoService()).WithCachingService(new CachingService()).WithMultipleParametersTestService(new MultipleParametersTestService());
-        }
-
-        public PreviousClientVersionAndServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        
+        public PreviousClientVersionAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
 
             return this;
         }
 
-        async Task<IClientAndService> IClientAndServiceBaseBuilder.Build()
+        async Task<IClientAndService> IClientAndServiceBuilder.Build()
         {
             return await Build();
         }

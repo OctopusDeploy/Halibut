@@ -87,12 +87,12 @@ namespace Halibut.Tests
             secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(8));
         }
 
-        async Task<(ClientServiceBuilder.ClientAndService,
+        async Task<(LatestClientAndLatestServiceBuilder.ClientAndService,
                 IEchoService echoService,
                 IDoSomeActionService doSomeActionService)>
             SetupPollingServerAndTentacle(Action doSomeActionServiceAction)
         {
-            var clientAndService = await ClientServiceBuilder
+            var clientAndService = await LatestClientAndLatestServiceBuilder
                 .Polling()
                 .WithPortForwarding()
                 .WithDoSomeActionService(doSomeActionServiceAction)

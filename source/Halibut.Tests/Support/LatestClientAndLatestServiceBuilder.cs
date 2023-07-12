@@ -13,7 +13,7 @@ using Serilog.Extensions.Logging;
 
 namespace Halibut.Tests.Support
 {
-    public class ClientServiceBuilder : IClientAndServiceBaseBuilder
+    public class LatestClientAndLatestServiceBuilder : IClientAndServiceBuilder
     {
         IServiceFactory? serviceFactory;
         readonly ServiceConnectionType serviceConnectionType;
@@ -28,28 +28,28 @@ namespace Halibut.Tests.Support
         readonly CancellationTokenSource cancellationTokenSource = new();
         LogLevel halibutLogLevel = LogLevel.Trace;
 
-        public ClientServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
         }
 
-        public static ClientServiceBuilder Polling()
+        public static LatestClientAndLatestServiceBuilder Polling()
         {
-            return new ClientServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
-        public static ClientServiceBuilder PollingOverWebSocket()
+        public static LatestClientAndLatestServiceBuilder PollingOverWebSocket()
         {
-            return new ClientServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
         }
 
-        public static ClientServiceBuilder Listening()
+        public static LatestClientAndLatestServiceBuilder Listening()
         {
-            return new ClientServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
         }
 
-        public static ClientServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
+        public static LatestClientAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
         {
             switch (serviceConnectionType)
             {
@@ -70,19 +70,19 @@ namespace Halibut.Tests.Support
         ///     that port to be killed immediately.
         /// </summary>
         /// <returns></returns>
-        public ClientServiceBuilder NoService()
+        public LatestClientAndLatestServiceBuilder NoService()
         {
             hasService = false;
             return this;
         }
 
-        public ClientServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
+        public LatestClientAndLatestServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
             this.serviceFactory = serviceFactory;
             return this;
         }
         
-        public ClientServiceBuilder WithService<TContract>(Func<TContract> implementation)
+        public LatestClientAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
             if (serviceFactory == null) serviceFactory = new DelegateServiceFactory();
             if (serviceFactory is not DelegateServiceFactory) throw new Exception("WithService can only be used with a delegate service factory");
@@ -91,23 +91,23 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public ClientServiceBuilder WithPortForwarding()
+        public LatestClientAndLatestServiceBuilder WithPortForwarding()
         {
             return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
         }
 
-        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
         {
             return this.WithPortForwarding(func);
         }
 
-        public ClientServiceBuilder WithPortForwarding(Func<int, PortForwarder> func)
+        public LatestClientAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> func)
         {
             this.portForwarderFactory = func;
             return this;
         }
 
-        public ClientServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
+        public LatestClientAndLatestServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
         {
             this.WithPortForwarding();
 
@@ -117,17 +117,17 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
             return WithStandardServices();
         }
         
-        public ClientServiceBuilder WithStandardServices()
+        public LatestClientAndLatestServiceBuilder WithStandardServices()
         {
             return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
         }
-
-        public ClientServiceBuilder WithProxy()
+        
+        public LatestClientAndLatestServiceBuilder WithProxy()
         {
             this.proxyFactory = () =>
             {
@@ -140,26 +140,26 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public ClientServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
+        public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
             this.pendingRequestQueueFactory = pendingRequestQueueFactory;
             return this;
         }
 
-        public ClientServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
+        public LatestClientAndLatestServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             return this;
         }
-
-        public ClientServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        
+        public LatestClientAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
 
             return this;
         }
-
-        async Task<IClientAndService> IClientAndServiceBaseBuilder.Build()
+        
+        async Task<IClientAndService> IClientAndServiceBuilder.Build()
         {
             return await Build();
         }

@@ -14,7 +14,7 @@ namespace Halibut.Tests.Support
         TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null);
         TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint);
         TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken, string? remoteThumbprint = null);
-        TClientService CreateClient<TService, TClientService>();
-        TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint);
+        TClientAndService CreateClient<TService, TClientAndService>();
+        TClientAndService CreateClient<TService, TClientAndService>(Action<ServiceEndPoint> modifyServiceEndpoint);
     }
 }
