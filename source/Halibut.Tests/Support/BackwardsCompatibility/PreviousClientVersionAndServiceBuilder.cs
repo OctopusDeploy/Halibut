@@ -24,6 +24,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
         string? version = null;
 
         IEchoService echoService = new EchoService();
+        Func<int, PortForwarder>? portForwarderFactory;
 
         PreviousClientVersionAndServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -53,6 +54,12 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                     throw new ArgumentOutOfRangeException(nameof(connectionType), connectionType, null);
             }
         }
+        
+        public PreviousClientVersionAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
+        {
+            this.portForwarderFactory = portForwarderFactory;
+            return this;
+        }
 
         public PreviousClientVersionAndServiceBuilder WithClientVersion(string version)
         {
@@ -80,6 +87,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 .WithLogFactory(new TestContextLogFactory("Tentacle"))
                 .Build();
 
+            PortForwarder? portForwarder = null;
             Uri proxyServiceUri;
             ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary;
             if (serviceConnectionType == ServiceConnectionType.Polling)
@@ -87,18 +95,23 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 var clientListenPort = client.Listen();
                 runningOldHalibutBinary = await new ProxyHalibutTestBinaryRunner(serviceConnectionType, clientListenPort, clientCertAndThumbprint, serviceCertAndThumbprint, new Uri("poll://SQ-TENTAPOLL"), version).Run();
                 proxyServiceUri = new Uri("poll://SQ-TENTAPOLL");
+                
+                portForwarder = portForwarderFactory?.Invoke((int) runningOldHalibutBinary.proxyClientListenPort!);
 
-                tentacle.Poll(proxyServiceUri, new ServiceEndPoint(new Uri("https://localhost:" + runningOldHalibutBinary.proxyClientListenPort), clientCertAndThumbprint.Thumbprint));
+                var listenPort = portForwarder?.ListeningPort ?? (int)runningOldHalibutBinary.proxyClientListenPort!;
+                tentacle.Poll(proxyServiceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint));
             }
             else
             {
-                var port = tentacle.Listen();
+                var listenPort = tentacle.Listen();
                 tentacle.Trust(clientCertAndThumbprint.Thumbprint);
-                runningOldHalibutBinary = await new ProxyHalibutTestBinaryRunner(serviceConnectionType, null, clientCertAndThumbprint, serviceCertAndThumbprint, new Uri("https://localhost:" + port), version).Run();
+                portForwarder = portForwarderFactory != null ? portForwarderFactory(listenPort) : null;
+                listenPort = portForwarder?.ListeningPort??listenPort;
+                runningOldHalibutBinary = await new ProxyHalibutTestBinaryRunner(serviceConnectionType, null, clientCertAndThumbprint, serviceCertAndThumbprint, new Uri("https://localhost:" + listenPort), version).Run();
                 proxyServiceUri = new Uri("https://localhost:" + runningOldHalibutBinary.serviceListenPort);
             }
 
-            return new ClientAndService(client, runningOldHalibutBinary, proxyServiceUri, serviceCertAndThumbprint, tentacle);
+            return new ClientAndService(client, runningOldHalibutBinary, proxyServiceUri, serviceCertAndThumbprint, portForwarder, tentacle);
         }
 
         public class ClientAndService : IClientAndService
@@ -107,6 +120,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
             readonly ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary;
             readonly Uri serviceUri;
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
+            readonly PortForwarder? portForwarder;
             readonly HalibutRuntime tentacle;
             
             public PortForwarder? PortForwarder { get; }
@@ -115,12 +129,14 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
+                PortForwarder? portForwarder,
                 HalibutRuntime tentacle)
             {
                 this.Octopus = octopus;
                 this.runningOldHalibutBinary = runningOldHalibutBinary;
                 this.serviceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+                this.portForwarder = portForwarder;
                 this.tentacle = tentacle;
             }
 
@@ -181,6 +197,7 @@ namespace Halibut.Tests.BackwardsCompatibility.Util
                 Octopus.Dispose();
                 runningOldHalibutBinary.Dispose();
                 tentacle.Dispose();
+                portForwarder?.Dispose();
             }
         }
     }
