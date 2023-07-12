@@ -37,11 +37,71 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
-        // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
-        public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ClientAndServiceTestCase testCase)
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsPerfectNetworkTestCases))]
+        public async Task ClientCanSendMessagesToTentacle_WithEchoService_AndPortForwrding(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (IClientAndService clientAndService = await testCase.CreateTestCaseBuilder()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+
+                for (var i = 0; i < 5; i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsPerfectNetworkTestCases))]
+        public async Task ClientCanNotSendMessagesToTentacle_WithEchoService_AndBrokenPortForwarding(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build())
+            {
+                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+
+                var echo = clientAndService.CreateClient<IEchoService>();
+                Func<string> action = () => echo.SayHello("Deploy package A");
+                action.Should().Throw<HalibutClientException>();
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsNoWebSocketPerfectNetworkTestCases))]
+        // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
+        public async Task ClientCanSendMessagesToTentacle_WithEchoService_AndPortForwarding_AndProxy(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
+                       .WithProxy()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+
+                for (var i = 0; i < 5; i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsNoWebSocketsTestCases))]
+        // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithProxy()
                        .WithHalibutLoggingLevel(LogLevel.Info)
@@ -50,7 +110,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
 
-                for (var i = 0; i < 10; i++)
+                for (var i = 0; i < 5; i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
                 }
@@ -58,17 +118,17 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
-        // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
-        public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ClientAndServiceTestCase testCase)
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsNoWebSocketPerfectNetworkTestCases))]
+        // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
+        public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (IClientAndService clientAndService = await testCase.CreateTestCaseBuilder()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithProxy()
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
             {
-                await clientAndService.Proxy!.StopAsync(CancellationToken.None);
+                await clientAndService.HttpProxy!.StopAsync(CancellationToken.None);
 
                 var echo = clientAndService.CreateClient<IEchoService>();
                 Func<string> action = () => echo.SayHello("Deploy package A");
@@ -87,7 +147,7 @@ namespace Halibut.Tests
                        .Build())
             {
                 var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
-                for (var i = 1; i < 100; i++)
+                for (var i = 1; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     {
                         var i1 = i;
@@ -103,6 +163,7 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .Polling()
                        .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build()){
 
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
@@ -130,7 +191,7 @@ namespace Halibut.Tests
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
-                for (var i = 0; i < 100; i++)
+                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     var count = echo.CountBytes(DataStream.FromBytes(data));
                     count.Should().Be(1024 * 1024 + 15);
@@ -139,11 +200,12 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
+        [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsPerfectNetworkTestCases))]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IMultipleParametersTestService>();
@@ -177,11 +239,12 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(LatestClientAndLatestServiceTestCases))]
+        [TestCaseSource(typeof(LatestClientAndLatestServicePerfectNetworkTestCases))]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
             {
                 var progressReported = new List<int>();

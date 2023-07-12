@@ -61,7 +61,7 @@ namespace Halibut.Tests.Transport
             
             using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().WithServiceFactory(services).Build())
             {
-                var info = clientAndService.Octopus.Discover(clientAndService.ServiceUri);
+                var info = clientAndService.Client.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }

@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Halibut.ServiceModel;
 using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 using Halibut.TestUtils.SampleProgram.Base.Services;
 

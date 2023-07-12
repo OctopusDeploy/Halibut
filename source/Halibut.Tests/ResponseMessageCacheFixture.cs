@@ -173,7 +173,7 @@ namespace Halibut.Tests
         {
             using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
             {
-                clientAndService.Octopus.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
+                clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
 
                 var client = clientAndService.CreateClient<ICachingService>();
 

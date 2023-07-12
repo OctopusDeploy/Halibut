@@ -6,11 +6,17 @@ namespace Halibut.Tests.Support.TestAttributes
     ///     Holds all the standard test cases for testing a latest client with a latest service.
     ///     In this case latest means the code as is, rather than some previously built version of halibut.
     /// </summary>
-    public class LatestClientAndLatestServiceTestCases : ClientAndServiceTestCases
+    public class LatestClientAndLatestServicePerfectNetworkTestCases : LatestClientAndLatestServiceTestCases
     {
-        public LatestClientAndLatestServiceTestCases()
-            : base(ClientAndServiceTestVersion.Latest())
+        protected override NetworkConditionTestCase[] NetworkConditionTestCases
         {
+            get
+            {
+                return new[]
+                {
+                    NetworkConditionTestCase.NetworkConditionPerfect
+                };
+            }
         }
     }
 }

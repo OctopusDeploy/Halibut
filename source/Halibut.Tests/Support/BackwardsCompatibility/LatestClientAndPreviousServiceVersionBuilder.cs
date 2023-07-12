@@ -175,6 +175,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
 
                 octopus.ListenWebSocket(webSocketListeningUrl);
+                portForwarder = portForwarderFactory?.Invoke(webSocketListeningPort);
 
                 var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
                 disposableCollection.Add(webSocketSslCertificate);
@@ -206,7 +207,10 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     proxyDetails,
                     halibutLogLevel).Run();
 
-                int listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
+                var listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
+
+                portForwarder = portForwarderFactory?.Invoke(listenPort);
+
                 if (portForwarder != null) listenPort = portForwarder.ListeningPort;
                 serviceUri = new Uri("https://localhost:" + listenPort);
             }
@@ -227,30 +231,30 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly ProxyDetails? proxyDetails;
             readonly CancellationTokenSource cancellationTokenSource;
 
-            public ClientAndService(HalibutRuntime octopus,
+            public ClientAndService(HalibutRuntime client,
                 HalibutTestBinaryRunner.RunningOldHalibutBinary runningOldHalibutBinary,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
                 PortForwarder? portForwarder,
                 DisposableCollection disposableCollection,
-                HttpProxyService? proxy,
+                HttpProxyService? httpProxy,
                 ProxyDetails? proxyDetails,
                 CancellationTokenSource cancellationTokenSource)
             {
-                Octopus = octopus;
+                Client = client;
                 this.runningOldHalibutBinary = runningOldHalibutBinary;
                 this.serviceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
                 PortForwarder = portForwarder;
-                Proxy = proxy;
+                HttpProxy = httpProxy;
                 this.disposableCollection = disposableCollection;
                 this.proxyDetails = proxyDetails;
                 this.cancellationTokenSource = cancellationTokenSource;
             }
 
-            public HalibutRuntime Octopus { get; }
+            public HalibutRuntime Client { get; }
             public PortForwarder? PortForwarder { get; }
-            public HttpProxyService? Proxy { get; }
+            public HttpProxyService? HttpProxy { get; }
 
             public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
             {
@@ -266,7 +270,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, remoteThumbprint ?? serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
-                return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken);
+                return Client.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
 
             public TClientService CreateClient<TService, TClientService>()
@@ -278,15 +282,16 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
-                return Octopus.CreateClient<TService, TClientService>(serviceEndpoint);
+                return Client.CreateClient<TService, TClientService>(serviceEndpoint);
             }
 
             public void Dispose()
             {
                 cancellationTokenSource?.Cancel();
-                Octopus.Dispose();
-                Proxy?.Dispose();
+                Client.Dispose();
                 runningOldHalibutBinary.Dispose();
+                HttpProxy?.Dispose();
+                PortForwarder?.Dispose();
                 disposableCollection.Dispose();
                 cancellationTokenSource?.Dispose();
             }

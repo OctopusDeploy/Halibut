@@ -8,9 +8,9 @@ namespace Halibut.Tests.Support
 {
     public interface IClientAndService : IDisposable
     {
-        HalibutRuntime Octopus { get; }
+        HalibutRuntime Client { get; }
         PortForwarder? PortForwarder { get; }
-        HttpProxyService? Proxy { get; }
+        HttpProxyService? HttpProxy { get; }
         TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null);
         TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint);
         TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken, string? remoteThumbprint = null);

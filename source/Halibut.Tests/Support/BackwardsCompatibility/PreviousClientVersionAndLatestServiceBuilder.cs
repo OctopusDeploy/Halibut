@@ -5,12 +5,10 @@ using System.Threading.Tasks;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
-using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
-using ICachingService = Halibut.Tests.TestServices.ICachingService;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -26,7 +24,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         string? version = null;
         Func<HttpProxyService>? proxyFactory;
-        CancellationTokenSource cancellationTokenSource = new();
+        readonly CancellationTokenSource cancellationTokenSource = new();
         IEchoService echoService = new EchoService();
         Halibut.TestUtils.Contracts.ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
@@ -44,6 +42,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
         }
 
+        public static PreviousClientVersionAndLatestServiceBuilder WithPollingOverWebSocketsService()
+        {
+            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
+        }
+
         public static PreviousClientVersionAndLatestServiceBuilder WithListeningService()
         {
             return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
@@ -55,6 +58,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 case ServiceConnectionType.Polling:
                     return WithPollingService();
+                case ServiceConnectionType.PollingOverWebSocket:
+                    return WithPollingOverWebSocketsService();
                 case ServiceConnectionType.Listening:
                     return WithListeningService();
                 default:
@@ -151,8 +156,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             // A Halibut Runtime that is used as a client to forward requests to the previous version
             // of Halibut Runtime that will actually talk to the Service (Tentacle) below
-            var client = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
-            client.Trust(serviceCertAndThumbprint.Thumbprint);
+            var proxyClient = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
+            proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
 
             // The Halibut Runtime that will be used as the Service (Tentacle)
             var service = new HalibutRuntimeBuilder()
@@ -167,58 +172,97 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             PortForwarder? portForwarder = null;
             var disposableCollection = new DisposableCollection();
             ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary;
-            Uri proxyServiceUri;
-            var proxy = proxyFactory?.Invoke();
-            ProxyDetails? proxyDetails = null;
+            Uri serviceUri;
+            var httpProxy = proxyFactory?.Invoke();
+            ProxyDetails? httpProxyDetails = null;
 
-            if (proxy != null)
+            if (httpProxy != null)
             {
-                await proxy.StartAsync(cancellationTokenSource.Token);
-                proxyDetails = new ProxyDetails("localhost", proxy.Endpoint.Port, ProxyType.HTTP);
-                disposableCollection.Add(proxy);
+                await httpProxy.StartAsync(cancellationTokenSource.Token);
+                httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint!.Port, ProxyType.HTTP);
             }
 
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
-                var clientListenPort = client.Listen();
+                var proxyClientListeningPort = proxyClient.Listen();
 
                 runningOldHalibutBinary = await new ProxyHalibutTestBinaryRunner(
                     serviceConnectionType,
-                    clientListenPort,
+                    proxyClientListeningPort,
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     new Uri("poll://SQ-TENTAPOLL"),
                     version,
-                    proxyDetails,
+                    httpProxyDetails,
+                    null,
                     halibutLogLevel).Run();
 
-                proxyServiceUri = new Uri("poll://SQ-TENTAPOLL");
+                serviceUri = new Uri("poll://SQ-TENTAPOLL");
 
                 portForwarder = portForwarderFactory?.Invoke((int) runningOldHalibutBinary.ProxyClientListenPort!);
 
                 var listenPort = portForwarder?.ListeningPort ?? (int)runningOldHalibutBinary.ProxyClientListenPort!;
-                service.Poll(proxyServiceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint, proxyDetails));
+                service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint, httpProxyDetails));
+            }
+            else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
+            {
+                // For simplicity the proxy client Listens rather than Listens over WebSockets
+                // The real client will Listen over WebSockets
+                var proxyClientListeningPort = proxyClient.Listen();
+                var webSocketPath = Guid.NewGuid().ToString();
+
+                runningOldHalibutBinary = await new ProxyHalibutTestBinaryRunner(
+                    serviceConnectionType,
+                    proxyClientListeningPort,
+                    clientCertAndThumbprint,
+                    serviceCertAndThumbprint,
+                    new Uri("poll://SQ-TENTAPOLL"),
+                    version,
+                    httpProxyDetails,
+                    webSocketPath,
+                    halibutLogLevel).Run();
+
+                serviceUri = new Uri("poll://SQ-TENTAPOLL");
+
+                var webSocketListeningPort = runningOldHalibutBinary.ProxyClientListenPort!.Value;
+                var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
+                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
+                disposableCollection.Add(webSocketSslCertificate);
+
+                portForwarder = portForwarderFactory?.Invoke((int)runningOldHalibutBinary.ProxyClientListenPort!);
+
+                if (portForwarder != null)
+                {
+                    webSocketListeningPort = (int)portForwarder?.ListeningPort!;
+                }
+
+                var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
+
+                service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, httpProxyDetails));
             }
             else
             {
-                var listenPort = service.Listen();
+                var serviceListeningPort = service.Listen();
                 service.Trust(clientCertAndThumbprint.Thumbprint);
-                portForwarder = portForwarderFactory != null ? portForwarderFactory(listenPort) : null;
-                listenPort = portForwarder?.ListeningPort??listenPort;
+
+                portForwarder = portForwarderFactory != null ? portForwarderFactory(serviceListeningPort) : null;
+                serviceListeningPort = portForwarder?.ListeningPort ?? serviceListeningPort;
+
                 runningOldHalibutBinary = await new ProxyHalibutTestBinaryRunner(
                     serviceConnectionType,
                     null,
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
-                    new Uri("https://localhost:" + listenPort),
+                    new Uri("https://localhost:" + serviceListeningPort),
                     version,
-                    proxyDetails,
+                    httpProxyDetails,
+                    null,
                     halibutLogLevel).Run();
 
-                proxyServiceUri = new Uri("https://localhost:" + runningOldHalibutBinary.ServiceListenPort);
+                serviceUri = new Uri("https://localhost:" + runningOldHalibutBinary.ServiceListenPort);
             }
 
-            return new ClientAndService(client, runningOldHalibutBinary, proxyServiceUri, serviceCertAndThumbprint, service, disposableCollection, cancellationTokenSource, portForwarder, proxy);
+            return new ClientAndService(proxyClient, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, service, disposableCollection, cancellationTokenSource, portForwarder, httpProxy);
         }
 
         public class ClientAndService : IClientAndService
@@ -226,34 +270,38 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary;
             readonly Uri serviceUri;
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
-            readonly HalibutRuntime tentacle;
+            readonly HalibutRuntime service;
             readonly DisposableCollection disposableCollection;
             readonly CancellationTokenSource cancellationTokenSource;
 
-            public ClientAndService(HalibutRuntime octopus,
+            public ClientAndService(HalibutRuntime proxyClient,
                 ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
-                HalibutRuntime tentacle,
+                HalibutRuntime service,
                 DisposableCollection disposableCollection,
                 CancellationTokenSource cancellationTokenSource,
                 PortForwarder? portForwarder,
-                HttpProxyService? proxy)
+                HttpProxyService? httpProxy)
             {
-                Octopus = octopus;
-                Proxy = proxy;
+                Client = proxyClient;
+                HttpProxy = httpProxy;
                 PortForwarder = portForwarder;
                 this.runningOldHalibutBinary = runningOldHalibutBinary;
                 this.serviceUri = serviceUri;
                 this.serviceCertAndThumbprint = serviceCertAndThumbprint;
-                this.tentacle = tentacle;
+                this.service = service;
                 this.disposableCollection = disposableCollection;
                 this.cancellationTokenSource = cancellationTokenSource;
             }
 
-            public HalibutRuntime Octopus { get; }
+            /// <summary>
+            /// This is the ProxyClient
+            /// </summary>
+            public HalibutRuntime Client { get; }
+            public HalibutRuntime ProxyClient => Client;
             public PortForwarder? PortForwarder { get; }
-            public HttpProxyService? Proxy { get; }
+            public HttpProxyService? HttpProxy { get; }
 
             /// <summary>
             /// Creates a client, which forwards RPC calls on to a proxy in a external process which will make those calls back
@@ -275,7 +323,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 }
 
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
-                return Octopus.CreateClient<TService>(serviceEndpoint, cancellationToken??CancellationToken.None);
+                return ProxyClient.CreateClient<TService>(serviceEndpoint, cancellationToken??CancellationToken.None);
             }
 
             /// <summary>
@@ -310,12 +358,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public void Dispose()
             {
                 cancellationTokenSource?.Cancel();
-                Octopus.Dispose();
+                Client.Dispose();
                 runningOldHalibutBinary.Dispose();
-                tentacle.Dispose();
-                disposableCollection.Dispose();
-                Proxy?.Dispose();
+                service.Dispose();
+                HttpProxy?.Dispose();
                 PortForwarder?.Dispose();
+                disposableCollection.Dispose();
                 cancellationTokenSource?.Dispose();
             }
         }

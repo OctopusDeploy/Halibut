@@ -11,6 +11,9 @@
     <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
         <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
+    <ItemGroup>
+      <Compile Include="..\Halibut.Tests\Support\TcpPortHelper.cs" Link="TcpPortHelper.cs" />
+    </ItemGroup>
 
     <ItemGroup>
         <!-- Earlier versions contain bugs that can cause Halibut to hang
