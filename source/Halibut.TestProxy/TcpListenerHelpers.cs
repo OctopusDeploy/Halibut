@@ -10,7 +10,7 @@ namespace Halibut.TestProxy
 {
     public static class TcpListenerHelpers
     {
-        static Regex ListenParseRegex = new Regex("(?<hostname>[\\S]+):(?<port>\\d+)", RegexOptions.Compiled);
+        static readonly Regex ListenParseRegex = new("(?<hostname>[\\S]+):(?<port>\\d+)", RegexOptions.Compiled);
 
         public static async Task<TcpListener> GetTcpListener(string listenEndpoint)
         {

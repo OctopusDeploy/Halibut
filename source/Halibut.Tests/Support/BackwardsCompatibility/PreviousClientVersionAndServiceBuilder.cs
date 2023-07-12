@@ -88,18 +88,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        //public PreviousClientVersionAndServiceBuilder WithProxy()
-        //{
-        //    this.proxyFactory = () =>
-        //    {
-        //        var options = new HttpProxyOptions();
-        //        var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
+        public PreviousClientVersionAndServiceBuilder WithProxy()
+        {
+            this.proxyFactory = () =>
+            {
+                var options = new HttpProxyOptions();
+                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
 
-        //        return new HttpProxyService(options, loggerFactory);
-        //    };
+                return new HttpProxyService(options, loggerFactory);
+            };
 
-        //    return this;
-        //}
+            return this;
+        }
 
         public async Task<ClientAndService> Build()
         {
@@ -267,13 +267,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public void Dispose()
             {
                 cancellationTokenSource?.Cancel();
-                cancellationTokenSource?.Dispose();
                 Octopus.Dispose();
                 runningOldHalibutBinary.Dispose();
                 tentacle.Dispose();
                 disposableCollection.Dispose();
                 Proxy?.Dispose();
                 PortForwarder?.Dispose();
+                cancellationTokenSource?.Dispose();
             }
         }
     }

@@ -114,18 +114,18 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        //public ClientServiceBuilder WithProxy()
-        //{
-        //    this.proxyFactory = () =>
-        //    {
-        //        var options = new HttpProxyOptions();
-        //        var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
+        public ClientServiceBuilder WithProxy()
+        {
+            this.proxyFactory = () =>
+            {
+                var options = new HttpProxyOptions();
+                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
 
-        //        return new HttpProxyService(options, loggerFactory);
-        //    };
+                return new HttpProxyService(options, loggerFactory);
+            };
 
-        //    return this;
-        //}
+            return this;
+        }
 
         public ClientServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
@@ -320,12 +320,12 @@ namespace Halibut.Tests.Support
             public void Dispose()
             {
                 cancellationTokenSource?.Cancel();
-                cancellationTokenSource?.Dispose();
                 Octopus.Dispose();
                 Tentacle?.Dispose();
                 Proxy?.Dispose();
                 PortForwarder?.Dispose();
                 disposableCollection.Dispose();
+                cancellationTokenSource?.Dispose();
             }
         }
     }
