@@ -1,4 +1,5 @@
 ﻿using System;
+using Halibut.TestUtils.Contracts;
 
 namespace Halibut.TestUtils.SampleProgram.Base
 {

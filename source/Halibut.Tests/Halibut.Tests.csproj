@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Halibut.TestProxy\Halibut.TestProxy.csproj" />
+    <ProjectReference Include="..\Halibut.TestUtils.Contracts\Halibut.TestUtils.Contracts.csproj" />
     <ProjectReference Include="..\Octopus.TestPortForwarder\Octopus.TestPortForwarder.csproj" />
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
     <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v5_0_429\Halibut.TestUtils.CompatBinary.v5_0_429.csproj" ReferenceOutputAssembly="false" />

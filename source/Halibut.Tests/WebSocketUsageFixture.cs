@@ -2,9 +2,8 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests

@@ -1,7 +1,7 @@
 ﻿using System;
 using Halibut.Transport.Caching;
 
-namespace Halibut.Tests.TestServices
+namespace Halibut.TestUtils.Contracts
 {
     public interface ICachingService
     {
