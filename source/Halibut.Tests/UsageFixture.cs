@@ -35,13 +35,33 @@ namespace Halibut.Tests
                 }
             }
         }
-        
+
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await ClientServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
+                       .WithEchoService()
+                       .Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+
+                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ServiceConnectionType serviceConnectionType)
+        {
+            using (var clientAndService = await ClientServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithProxy()
                        .WithEchoService()
                        .Build())
             {
