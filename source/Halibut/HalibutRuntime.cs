@@ -146,6 +146,12 @@ namespace Halibut
         {
             ISecureClient client;
             var log = logs.ForEndpoint(endPoint.BaseUri);
+            
+            log?.Write(EventType.Error, $"Halibut test error log. Thrown from: {GetType()}");
+            log?.Write(EventType.OpeningNewConnection, $"Halibut test debug log. Thrown from: {GetType()}");
+            log?.Write(EventType.Diagnostic, $"Halibut test trace log. Thrown from: {GetType()}");
+            log?.Write(EventType.FileTransfer, $"Halibut test information log. Thrown from: {GetType()}");
+            
             if (endPoint.IsWebSocketEndpoint)
             {
 #if SUPPORTS_WEB_SOCKET_CLIENT
