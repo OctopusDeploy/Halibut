@@ -10,7 +10,7 @@ using Serilog.Extensions.Logging;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
-    public class ClientAndPreviousServiceVersionBuilder
+    public class ClientAndPreviousServiceVersionBuilder : IClientAndServiceBaseBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
@@ -63,10 +63,20 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        {
+            return WithPortForwarding(func);
+        }
+
         public ClientAndPreviousServiceVersionBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
             this.portForwarderFactory = portForwarderFactory;
             return this;
+        }
+
+        IClientAndServiceBaseBuilder IClientAndServiceBaseBuilder.WithStandardServices()
+        {
+            return WithStandardServices();
         }
 
         public ClientAndPreviousServiceVersionBuilder WithStandardServices()
