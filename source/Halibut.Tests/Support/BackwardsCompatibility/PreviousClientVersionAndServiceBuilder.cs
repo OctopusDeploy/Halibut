@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.TestServices;
@@ -28,6 +29,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         Func<int, PortForwarder>? portForwarderFactory;
+        LogLevel halibutLogLevel;
 
         PreviousClientVersionAndServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -101,6 +103,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        public PreviousClientVersionAndServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        {
+            this.halibutLogLevel = halibutLogLevel;
+
+            return this;
+        }
+
         public async Task<ClientAndService> Build()
         {
             if (version == null)
@@ -120,7 +129,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     .Register(() => cachingService)
                     .Register(() => multipleParametersTestService))
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                .WithLogFactory(new TestContextLogFactory("Tentacle"))
+                .WithLogFactory(new TestContextLogFactory("Tentacle", halibutLogLevel))
                 .Build();
 
             PortForwarder? portForwarder = null;
@@ -148,7 +157,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     serviceCertAndThumbprint,
                     new Uri("poll://SQ-TENTAPOLL"),
                     version,
-                    proxyDetails).Run();
+                    proxyDetails,
+                    halibutLogLevel).Run();
 
                 proxyServiceUri = new Uri("poll://SQ-TENTAPOLL");
 
@@ -170,7 +180,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     serviceCertAndThumbprint,
                     new Uri("https://localhost:" + listenPort),
                     version,
-                    proxyDetails).Run();
+                    proxyDetails,
+                    halibutLogLevel).Run();
 
                 proxyServiceUri = new Uri("https://localhost:" + runningOldHalibutBinary.ServiceListenPort);
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
+using Halibut.Logging;
 using Halibut.Transport.Proxy;
 
 namespace Halibut.TestUtils.SampleProgram.Base
@@ -44,6 +45,16 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public static ServiceConnectionType GetServiceConnectionType()
         {
             return AsServiceConnectionType(GetSetting("ServiceConnectionType"));
+        }
+
+        public static LogLevel GetHalibutLogLevel()
+        {
+            return AsLogLevel(GetSetting("halibutloglevel"));
+
+            LogLevel AsLogLevel(string s)
+            {
+                return (LogLevel)Enum.Parse(typeof(LogLevel), s);
+            }
         }
 
         public static X509Certificate2 GetClientCertificate()
