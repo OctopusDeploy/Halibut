@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Transport.Observability;
 using Newtonsoft.Json;
@@ -10,11 +11,11 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
-        const long MemoryOverflowLimitBytes = 1024L * 1600L * 1000L;
         readonly ITypeRegistry typeRegistry;
         readonly Func<JsonSerializer> createSerializer;
         readonly IMessageSerializerObserver observer;
         readonly DeflateStreamInputBufferReflector deflateReflector;
+        readonly long readIntoMemoryLimitBytes;
 
         public MessageSerializer() // kept for backwards compatibility.
         {
@@ -33,11 +34,13 @@ namespace Halibut.Transport.Protocol
         internal MessageSerializer(
             ITypeRegistry typeRegistry, 
             Func<JsonSerializer> createSerializer,
-            IMessageSerializerObserver observer)
+            IMessageSerializerObserver observer,
+            long readIntoMemoryLimitBytes)
         {
             this.typeRegistry = typeRegistry;
             this.createSerializer = createSerializer;
             this.observer = observer;
+            this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             deflateReflector = new DeflateStreamInputBufferReflector();
         }
 
@@ -62,9 +65,12 @@ namespace Halibut.Transport.Protocol
             observer.MessageWritten(compressedByteCountingStream.BytesWritten);
         }
 
-        public async Task WriteMessageAsync<T>(Stream stream, T message)
+        public async Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
         {
-            using var compressedInMemoryBuffer = new FileOverflowMemoryStream(MemoryOverflowLimitBytes);
+            //TODO: Because serialization fills the stream, we can't do anything until it finishes (and fills the memory stream).
+
+            using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+            using var compressedInMemoryBuffer = new WriteAsyncIfPossibleStream(compressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
             using (var zip = new DeflateStream(compressedInMemoryBuffer, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
@@ -74,8 +80,9 @@ namespace Halibut.Transport.Protocol
                 createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
 
-            compressedInMemoryBuffer.Position = 0;
-            await compressedInMemoryBuffer.CopyToAsync(stream);
+            await compressedInMemoryBuffer.WriteAnyUnwrittenDataToWrappedStream(cancellationToken);
+            
+            observer.MessageWritten(compressedByteCountingStream.BytesWritten);
         }
 
         public T ReadMessage<T>(Stream stream)
@@ -88,16 +95,15 @@ namespace Halibut.Transport.Protocol
             return ReadCompressedMessage<T>(stream);
         }
 
-        public async Task<T> ReadMessageAsync<T>(Stream stream)
+        public async Task<T> ReadMessageAsync<T>(Stream stream, CancellationToken cancellationToken)
         {
             if (stream is IRewindableBuffer rewindable)
             {
-                //return await ReadCompressedMessageRewindableAsyncVanilla<T>(stream, rewindable);
-                return await ReadCompressedMessageRewindableAsyncCpuOptimized<T>(stream, rewindable);
+                return await ReadCompressedMessageRewindableAsyncCpuOptimized<T>(stream, rewindable, cancellationToken);
                 //return await ReadCompressedMessageRewindableAsyncMemoryOptimized<T>(stream, rewindable);
             }
 
-            return await ReadCompressedMessageAsync<T>(stream);
+            return await ReadCompressedMessageAsync<T>(stream, cancellationToken);
         }
 
         T ReadCompressedMessage<T>(Stream stream)
@@ -115,17 +121,21 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task<T> ReadCompressedMessageAsync<T>(Stream stream)
+        async Task<T> ReadCompressedMessageAsync<T>(Stream stream, CancellationToken cancellationToken)
         {
-            using var zip = new DeflateStream(stream, CompressionMode.Decompress, true);
+            using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+            using var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true);
+            using var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
 
-            using var deflatedInMemoryStream = new FileOverflowMemoryStream(MemoryOverflowLimitBytes);
-            await zip.CopyToAsync(deflatedInMemoryStream);
-
-            deflatedInMemoryStream.Position = 0;
+            using var deflatedInMemoryStream = new ReadAsyncIfPossibleStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+            await deflatedInMemoryStream.BufferFromSourceStreamUntilLimitReached(cancellationToken);
+            
             using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
             {
                 var messageEnvelope = DeserializeMessage<T>(bson);
+
+                observer.MessageRead(compressedByteCountingStream.BytesRead, decompressedByteCountingStream.BytesRead);
+
                 return messageEnvelope.Message;
             }
         }
@@ -163,88 +173,60 @@ namespace Halibut.Transport.Protocol
                 throw;
             }
         }
-
-        async Task<T> ReadCompressedMessageRewindableAsyncVanilla<T>(Stream stream, IRewindableBuffer rewindable)
+        
+        Task<T> ReadCompressedMessageRewindableAsyncMemoryOptimized<T>(Stream stream, IRewindableBuffer rewindable)
         {
-            await Task.CompletedTask;
+            //TODO: We would have to create another stream type to get this to work. But is it worth spiking now?
+            throw new NotImplementedException();
+            //rewindable.StartBuffer();
+            //try
+            //{
+            //    using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+            //    using var compressedInMemoryStream = new FileOverflowMemoryStream(readIntoMemoryLimitBytes);
+            //    using var testerBufferStream = new CopyBytesReadToDestinationStream(stream, compressedInMemoryStream);
+            //    using (var zip = new DeflateStream(testerBufferStream, CompressionMode.Decompress, true))
+            //    {
+            //        var unimportantBuffer = new byte[1024 * 4];
+            //        while (await zip.ReadAsync(unimportantBuffer, 0, unimportantBuffer.Length) != 0)
+            //        {
+            //        }
 
-            rewindable.StartBuffer();
-            try
-            {
-                using (var zip = new DeflateStream(stream, CompressionMode.Decompress, true))
-                using (var bson = new BsonDataReader(zip) { CloseInput = false })
-                {
-                    var messageEnvelope = DeserializeMessage<T>(bson);
+            //        // Find the unused bytes in the DeflateStream input buffer
+            //        if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
+            //        {
+            //            rewindable.FinishAndRewind(unusedBytesCount);
+            //        }
+            //        else
+            //        {
+            //            rewindable.CancelBuffer();
+            //        }
+            //    }
 
-                    // Find the unused bytes in the DeflateStream input buffer
-                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
-                    {
-                        rewindable.FinishAndRewind(unusedBytesCount);
-                    }
-                    else
-                    {
-                        rewindable.CancelBuffer();
-                    }
-                    return messageEnvelope.Message;
-                }
-            }
-            catch
-            {
-                rewindable.CancelBuffer();
-                throw;
-            }
-        }
-
-        async Task<T> ReadCompressedMessageRewindableAsyncMemoryOptimized<T>(Stream stream, IRewindableBuffer rewindable)
-        {
-            rewindable.StartBuffer();
-            try
-            {
-                using var compressedInMemoryStream = new FileOverflowMemoryStream(MemoryOverflowLimitBytes);
-                using var testerBufferStream = new CopyBytesReadToDestinationStream(stream, compressedInMemoryStream);
-                using (var zip = new DeflateStream(testerBufferStream, CompressionMode.Decompress, true))
-                {
-                    var unimportantBuffer = new byte[1024 * 4];
-                    while (await zip.ReadAsync(unimportantBuffer, 0, unimportantBuffer.Length) != 0)
-                    {
-                    }
-
-                    // Find the unused bytes in the DeflateStream input buffer
-                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
-                    {
-                        rewindable.FinishAndRewind(unusedBytesCount);
-                    }
-                    else
-                    {
-                        rewindable.CancelBuffer();
-                    }
-                }
-
-                compressedInMemoryStream.Position = 0;
-                using (var zip = new DeflateStream(compressedInMemoryStream, CompressionMode.Decompress, true))
-                using (var bson = new BsonDataReader(zip) { CloseInput = false })
-                {
-                    var messageEnvelope = DeserializeMessage<T>(bson);
+            //    compressedInMemoryStream.Position = 0;
+            //    using (var zip = new DeflateStream(compressedInMemoryStream, CompressionMode.Decompress, true))
+            //    using (var bson = new BsonDataReader(zip) { CloseInput = false })
+            //    {
+            //        var messageEnvelope = DeserializeMessage<T>(bson);
                     
-                    return messageEnvelope.Message;
-                }
-            }
-            catch
-            {
-                rewindable.CancelBuffer();
-                throw;
-            }
+            //        return messageEnvelope.Message;
+            //    }
+            //}
+            //catch
+            //{
+            //    rewindable.CancelBuffer();
+            //    throw;
+            //}
         }
 
-        async Task<T> ReadCompressedMessageRewindableAsyncCpuOptimized<T>(Stream stream, IRewindableBuffer rewindable)
+        async Task<T> ReadCompressedMessageRewindableAsyncCpuOptimized<T>(Stream stream, IRewindableBuffer rewindable, CancellationToken cancellationToken)
         {
             rewindable.StartBuffer();
             try
             {
                 using var zip = new DeflateStream(stream, CompressionMode.Decompress, true);
 
-                using var deflatedInMemoryStream = new FileOverflowMemoryStream(MemoryOverflowLimitBytes);
-                await zip.CopyToAsync(deflatedInMemoryStream);
+                using var deflatedInMemoryStream = new ReadAsyncIfPossibleStream(zip, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+                await deflatedInMemoryStream.BufferFromSourceStreamUntilLimitReached(cancellationToken);
 
                 // Find the unused bytes in the DeflateStream input buffer
                 if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
@@ -255,8 +237,7 @@ namespace Halibut.Transport.Protocol
                 {
                     rewindable.CancelBuffer();
                 }
-
-                deflatedInMemoryStream.Position = 0;
+                
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);

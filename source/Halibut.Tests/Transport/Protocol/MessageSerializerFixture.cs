@@ -1,7 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
@@ -11,6 +12,18 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.Transport.Protocol
 {
+    public class MemoryLimitTestCaseSource : IEnumerable
+    {
+        const long SmallMemoryLimit = 16L;
+        const long LargeMemoryLimit = 16L * 1024L * 1024L;
+
+        public IEnumerator GetEnumerator()
+        {
+            yield return SmallMemoryLimit;
+            yield return LargeMemoryLimit;
+        }
+    }
+
     public class MessageSerializerFixture
     {
         [Test]
@@ -28,23 +41,77 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public async Task SendReceiveMessageAsyncShouldRoundTrip()
+        [Ignore("Test for local testing purposes")]
+        public async Task GeneralTimingScratchPad_TodoRemove()
         {
-            var stopwatch = Stopwatch.StartNew();
-
             var sut = new MessageSerializerBuilder().Build();
-            using (var stream = new MemoryStream())
+
+            //{
+            //    var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\inflated-file.json");
+
+            //    var t = new ResponseMessage()
+            //    {
+            //        Id = m,
+            //        Result = m,
+            //        Error = new ServerError()
+            //        {
+            //            Details = m,
+            //            HalibutErrorType = m,
+            //            Message = m
+            //        }
+            //    };
+
+            //    using (var stream = File.OpenWrite(@"C:\Users\Stephen Burman\Downloads\inflated2.zip"))
+            //    {
+            //        await sut.WriteMessageAsync(stream, t, CancellationToken.None);
+            //        //sut.WriteMessage(stream, t);
+            //    }
+            //}
+
+
+            //using (var stream = File.OpenRead(@"C:\Users\Stephen Burman\Downloads\inflated.zip"))
+            ////using (var stream = new MemoryStream())
+            //{
+            //    //await sut.WriteMessageAsync(stream, m, CancellationToken.None);
+            //    //stream.Position = 0;
+            //    var result = await sut.ReadMessageAsync<string>(stream, CancellationToken.None);
+            //    //Assert.AreEqual(m, result);
+            //}
+
+
+            using (var stream = File.OpenRead(@"C:\Users\Stephen Burman\Downloads\inflated2.zip"))
+            //using (var stream = new MemoryStream())
             {
-                var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
-                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\small-file.json");
-                await sut.WriteMessageAsync(stream, m);
-                stream.Position = 0;
-                var result = await sut.ReadMessageAsync<string>(stream);
-                Assert.AreEqual(m, result);
+                //await sut.WriteMessageAsync(stream, m, CancellationToken.None);
+                //stream.Position = 0;
+                var r = await sut.ReadMessageAsync<ResponseMessage>(stream, CancellationToken.None);
+
+                //var r = sut.ReadMessage<ResponseMessage>(stream);
+
+                //Assert.AreEqual(m, result);
             }
 
-            var time = stopwatch.Elapsed;
+            ////var time = stopwatch.Elapsed;
             await Task.Delay(5000);
+        }
+
+        [Test]
+        [TestCaseSource(typeof(MemoryLimitTestCaseSource))]
+        public async Task SendReceiveMessageAsyncShouldRoundTrip(long readIntoMemoryLimitBytes)
+        {
+            var sut = new MessageSerializerBuilder()
+                .WithReadIntoMemoryLimitBytes(readIntoMemoryLimitBytes)
+                .Build();
+
+            using (var stream = new MemoryStream())
+            {
+                await sut.WriteMessageAsync(stream, "Some random test message", CancellationToken.None);
+                
+                stream.Position = 0;
+                var result = await sut.ReadMessageAsync<string>(stream, CancellationToken.None);
+                
+                Assert.AreEqual("Some random test message", result);
+            }
         }
 
         [Test]
@@ -120,39 +187,26 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public async Task SendReceiveMessageAsyncRewindableShouldRoundTrip()
+        [TestCaseSource(typeof(MemoryLimitTestCaseSource))]
+        public async Task SendReceiveMessageAsyncRewindableShouldRoundTrip(long readIntoMemoryLimitBytes)
         {
-            TimeSpan time;
             using (var stream = new MemoryStream())
-            using (var rewindableStream = new RewindableBufferStream(stream, 1024 * 200))
+            using (var rewindableStream = new RewindableBufferStream(stream))
             {
-                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
-                //for (int i = 0; i < 10; i++)
-                //{
-                //    File.AppendAllText(@"C:\Users\Stephen Burman\Downloads\inflated-file.json", m);
-                //    }
+                var sut = new MessageSerializerBuilder()
+                    .WithReadIntoMemoryLimitBytes(readIntoMemoryLimitBytes)
+                    .Build();
 
-                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
-                var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\inflated-file.json");
-                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\small-file.json");
+                await sut.WriteMessageAsync(stream, "Test", CancellationToken.None);
 
-                await Task.Delay(5000);
-
-                var stopwatch = Stopwatch.StartNew();
-
-                var sut = new MessageSerializerBuilder().Build();
-                
-                await sut.WriteMessageAsync(stream, m);
                 stream.Position = 0;
-                var result = await sut.ReadMessageAsync<string>(rewindableStream);
-                Assert.AreEqual(m, result);
+                var result = await sut.ReadMessageAsync<string>(rewindableStream, CancellationToken.None);
 
-                
-                time = stopwatch.Elapsed;
-                await Task.Delay(5000);
+                Assert.AreEqual("Test", result);
             }
         }
 
+        [Test]
         public void ReadMessage_Rewindable_ObservesThatMessageIsRead()
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
@@ -200,22 +254,26 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public async Task ReadMessageAsyncRewindableShouldNotConsumeTrailingData()
+        [TestCaseSource(typeof(MemoryLimitTestCaseSource))]
+        public async Task ReadMessageAsyncRewindableShouldNotConsumeTrailingData(long readIntoMemoryLimitBytes)
         {
             const string trailingData = "SomeOtherData";
 
-            var sut = new MessageSerializerBuilder().Build();
+            var sut = new MessageSerializerBuilder()
+                .WithReadIntoMemoryLimitBytes(readIntoMemoryLimitBytes)
+                .Build();
+
             using (var ms = new MemoryStream())
             using (var stream = new RewindableBufferStream(ms))
             {
-                await sut.WriteMessageAsync(stream, "Test");
+                await sut.WriteMessageAsync(stream, "Test", CancellationToken.None);
                 var trailingBytes = Encoding.UTF8.GetBytes(trailingData);
                 stream.Write(trailingBytes, 0, trailingBytes.Length);
                 ms.Position = 0;
 
                 using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
                 {
-                    _ = await sut.ReadMessageAsync<string>(stream);
+                    _ = await sut.ReadMessageAsync<string>(stream, CancellationToken.None);
                     var trailingResult = await reader.ReadToEndAsync();
                     Assert.AreEqual(trailingData, trailingResult);
                 }
