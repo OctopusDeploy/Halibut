@@ -42,7 +42,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             // This will communicate with the Halibut Service created in the Test Process (the Tentacle were trying to test against)
             using (var client = new HalibutRuntimeBuilder()
                        .WithServerCertificate(clientCert)
-                       .WithLogFactory(new TestContextLogFactory("ProxyClient"))
+                       .WithLogFactory(new TestContextLogFactory("ProxyClient", SettingsHelper.GetHalibutLogLevel()))
                        .Build())
             {
                 Console.WriteLine("Next line should be: 36F35047CE8B000CF4C671819A2DD1AFCDE3403D");
@@ -70,7 +70,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 using (var proxyService = new HalibutRuntimeBuilder()
                            .WithServiceFactory(services)
                            .WithServerCertificate(serviceCert)
-                           .WithLogFactory(new TestContextLogFactory("ProxyService"))
+                           .WithLogFactory(new TestContextLogFactory("ProxyService", SettingsHelper.GetHalibutLogLevel()))
                            .Build())
                 {
                     switch (serviceConnectionType)

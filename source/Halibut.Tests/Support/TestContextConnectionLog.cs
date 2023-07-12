@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Logging;
-using NUnit.Framework;
 using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support
@@ -12,11 +11,13 @@ namespace Halibut.Tests.Support
     {
         readonly string endpoint;
         readonly string name;
+        readonly LogLevel logLevel;
 
-        public TestContextConnectionLog(string endpoint, string name)
+        public TestContextConnectionLog(string endpoint, string name, LogLevel logLevel)
         {
             this.endpoint = endpoint;
             this.name = name;
+            this.logLevel = logLevel;
         }
 
         public void Write(EventType type, string message, params object[] args)
@@ -36,11 +37,14 @@ namespace Halibut.Tests.Support
 
         void WriteInternal(LogEvent logEvent)
         {
-            var logLevel = GetLogLevel(logEvent);
+            var logEventLogLevel = GetLogLevel(logEvent);
 
-            new SerilogLoggerBuilder().Build()
-                .ForContext<TestContextConnectionLog>()
-                .Information(string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logLevel, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name));
+            if (logEventLogLevel >= logLevel)
+            {
+                new SerilogLoggerBuilder().Build()
+                    .ForContext<TestContextConnectionLog>()
+                    .Information(string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logEventLogLevel, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name));
+            }
         }
 
         static LogLevel GetLogLevel(LogEvent logEvent)

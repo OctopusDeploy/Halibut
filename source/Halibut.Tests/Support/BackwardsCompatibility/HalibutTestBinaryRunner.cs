@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Logging;
 using Octopus.Shellfish;
 using Serilog;
 
@@ -17,25 +18,27 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly string version;
         readonly ProxyDetails? proxyDetails;
+        readonly LogLevel halibutLogLevel;
         readonly ILogger logger = new SerilogLoggerBuilder().Build().ForContext<HalibutRuntimeBuilder>();
         readonly Uri webSocketServiceEndpointUri;
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails, LogLevel halibutLogLevel)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.version = version;
             this.proxyDetails = proxyDetails;
+            this.halibutLogLevel = halibutLogLevel;
         }
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails) :
-            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails proxyDetails, LogLevel halibutLoggingLevel) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel)
         {
             this.clientServicePort = clientServicePort;
         }
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails) :
-            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails, LogLevel halibutLoggingLevel) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel)
         {
             this.webSocketServiceEndpointUri = webSocketServiceEndpointUri;
         }
@@ -46,7 +49,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 { "mode", "serviceonly" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
-                { "octopusthumbprint", clientCertAndThumbprint.Thumbprint }
+                { "octopusthumbprint", clientCertAndThumbprint.Thumbprint },
+                { "halibutloglevel", halibutLogLevel.ToString() }
             };
 
             if (proxyDetails != null)
