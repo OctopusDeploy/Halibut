@@ -83,5 +83,17 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
             throw new Exception($"Unknown service type '{s}'");
         }
+
+        public static string CompatBinaryStayAliveLockFile()
+        {
+            var stayAliveFilePath = GetSetting("CompatBinaryStayAliveFilePath");
+            if (string.IsNullOrEmpty(stayAliveFilePath))
+            {
+                throw new Exception("Env var CompatBinaryStayAliveFilePath must be set");
+            }
+            
+            Console.WriteLine($"Will die when the following file can be locked or is deleted '{stayAliveFilePath}'.");
+            return stayAliveFilePath;
+        }
     }
 }

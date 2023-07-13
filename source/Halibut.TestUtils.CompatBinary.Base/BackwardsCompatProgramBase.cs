@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Halibut.ServiceModel;
 using Halibut.TestUtils.SampleProgram.Base.LogUtils;
+using Halibut.TestUtils.SampleProgram.Base.Services;
 
 namespace Halibut.TestUtils.SampleProgram.Base
 {
@@ -77,7 +78,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 await Console.Out.FlushAsync();
 
                 // Run until the Program is terminated
-                await Task.Delay(-1);
+                await StayAliveUntilHelper.WaitUntilSignaledToDie();
             }
         }
     }
