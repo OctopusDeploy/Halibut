@@ -92,6 +92,7 @@ namespace Halibut.Transport
             {
                 Name = "Accept connections on " + listener.LocalEndpoint
             };
+            backgroundThread.IsBackground = true;
             backgroundThread.Start();
 
             return ((IPEndPoint)listener.LocalEndpoint).Port;
