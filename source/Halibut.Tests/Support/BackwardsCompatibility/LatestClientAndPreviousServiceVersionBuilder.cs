@@ -87,6 +87,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
+        
+        public IClientAndServiceBuilder WithCachingService()
+        {
+            // TODO actually make the old service only have caching service if this is called.
+            return this;
+        }
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
         {
             return WithProxy();
@@ -109,7 +117,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
         }
-        
+
         public LatestClientAndPreviousServiceVersionBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;

@@ -26,10 +26,5 @@ namespace Halibut.Tests.Support
         {
             return builder.WithService<IReadDataStreamService>(() => new ReadDataStreamService());
         }
-
-        public static LatestClientAndLatestServiceBuilder WithCachingService(this LatestClientAndLatestServiceBuilder builder)
-        {
-            return builder.WithService<ICachingService>(() => new CachingService());
-        }
     }
 }

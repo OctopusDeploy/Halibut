@@ -6,6 +6,7 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
 using Halibut.Util;
 using Octopus.TestPortForwarder;
@@ -126,7 +127,14 @@ namespace Halibut.Tests.Support
         {
             return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
         }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
         
+        public LatestClientAndLatestServiceBuilder WithCachingService()
+        {
+            return this.WithService<ICachingService>(() => new CachingService());
+        }
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
         {
             return WithProxy();
