@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -15,16 +14,16 @@ namespace Halibut.Tests
     public class PollingClientConnectionHandlingFixture
     {
         [Test]
-        public void PollingClientShouldConnectQuickly()
+        public async Task PollingClientShouldConnectQuickly()
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = SetupPollingServerAndTentacle(() =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(() =>
             {
                 calls.Add(DateTime.UtcNow);
             });
-            
+
             using (clientAndService)
             {
                 doSomeActionService.Action();
@@ -35,21 +34,21 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void PollingClientShouldReConnectQuickly()
+        public async Task PollingClientShouldReConnectQuickly()
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = SetupPollingServerAndTentacle(() =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(() =>
             {
                 calls.Add(DateTime.UtcNow);
             });
-            
+
             using (clientAndService)
             {
                 doSomeActionService.Action();
 
-                clientAndService.portForwarder.CloseExistingConnections();
+                clientAndService.PortForwarder!.CloseExistingConnections();
 
                 // First Reconnect
                 try
@@ -62,7 +61,7 @@ namespace Halibut.Tests
                     doSomeActionService.Action();
                 }
 
-                clientAndService.portForwarder.CloseExistingConnections();
+                clientAndService.PortForwarder!.CloseExistingConnections();
 
                 // Second Reconnect
                 try
@@ -87,20 +86,22 @@ namespace Halibut.Tests
             secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(8));
         }
 
-        (ClientServiceBuilder.ClientAndService,
-            IEchoService echoService,
-            IDoSomeActionService doSomeActionService)
+        async Task<(ClientServiceBuilder.ClientAndService,
+                IEchoService echoService,
+                IDoSomeActionService doSomeActionService)>
             SetupPollingServerAndTentacle(Action doSomeActionServiceAction)
         {
-            var clientAndService = ClientServiceBuilder.Polling().WithPortForwarding()
-                .WithService<IDoSomeActionService>(() => new DoSomeActionService(doSomeActionServiceAction))
-                .WithService<IEchoService>(() => new EchoService())
+            var clientAndService = await ClientServiceBuilder
+                .Polling()
+                .WithPortForwarding()
+                .WithDoSomeActionService(doSomeActionServiceAction)
+                .WithEchoService()
                 .Build();
-            
-            
+
+
             var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>();
             var echoService = clientAndService.CreateClient<IEchoService>();
-            
+
             EnsureTentacleIsConnected(echoService);
 
             return (clientAndService, echoService, doSomeActionService);

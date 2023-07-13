@@ -1,4 +1,5 @@
 ﻿using System;
+using Halibut.Transport.Observability;
 using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
@@ -7,6 +8,7 @@ namespace Halibut.Transport.Protocol
     {
         ITypeRegistry typeRegistry;
         Action<JsonSerializerSettings> configureSerializer;
+        IMessageSerializerObserver messageSerializerObserver;
 
         public MessageSerializerBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
         {
@@ -17,6 +19,12 @@ namespace Halibut.Transport.Protocol
         public MessageSerializerBuilder WithSerializerSettings(Action<JsonSerializerSettings> configure)
         {
             configureSerializer = configure;
+            return this;
+        }
+
+        public MessageSerializerBuilder WithMessageSerializerObserver(IMessageSerializerObserver messageSerializerObserver)
+        {
+            this.messageSerializerObserver = messageSerializerObserver;
             return this;
         }
 
@@ -33,7 +41,9 @@ namespace Halibut.Transport.Protocol
                 return JsonSerializer.Create(settings);
             }
 
-            var messageSerializer = new MessageSerializer(typeRegistry, Serializer);
+            var messageSerializerObserver = this.messageSerializerObserver ?? new NoMessageSerializerObserver();
+
+            var messageSerializer = new MessageSerializer(typeRegistry, Serializer, messageSerializerObserver);
 
             return messageSerializer;
         }

@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut
 {
@@ -16,6 +17,7 @@ namespace Halibut
         ITrustProvider trustProvider;
         Action<MessageSerializerBuilder> configureMessageSerializerBuilder;
         ITypeRegistry typeRegistry;
+        Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -59,6 +61,12 @@ namespace Halibut
             return this;
         }
 
+        internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
+        {
+            this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
+            return this;
+        }
+
         public HalibutRuntime Build()
         {
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
@@ -75,7 +83,7 @@ namespace Halibut
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
 
-            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer);
+            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer, pollingReconnectRetryPolicy);
         }
     }
 }

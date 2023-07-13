@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
-using Halibut.ServiceModel;
+using Halibut.Logging;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using NUnit.Framework;
@@ -18,102 +18,175 @@ namespace Halibut.Tests
 {
     public class UsageFixture
     {
-        static DelegateServiceFactory GetDelegateServiceFactory()
-        {
-            var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
-            return services;
-        }
-
         [Test]
-        public void OctopusCanDiscoverTentacle()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task ClientCanSendMessagesToOldTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndServer = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithServiceVersion(PreviousVersions.v5_0_429)
+                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build())
             {
-
-                var info = clientAndServer.Octopus.Discover(clientAndServer.ServiceUri);
-                info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
-            }
-        }
-       
-
-        [Test]
-        public void OctopusCanSendMessagesToListeningTentacle()
-        {
-            using (var clientAndServer = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
-            {
-                var echo = clientAndServer.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
-                var watch = Stopwatch.StartNew();
-                for (var i = 0; i < 2000; i++)
-                {
-                    echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
-                }
 
-                Console.WriteLine("Complete in {0:n0}ms", watch.ElapsedMilliseconds);
+                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
             }
         }
 
         [Test]
-        public void OctopusCanSendMessagesToPollingTentacle()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ServiceConnectionType serviceConnectionType)
         {
-            var services = GetDelegateServiceFactory();
-            services.Register<ISupportedServices>(() => new SupportedServices());
-            using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).Build())
+            using (var clientAndService = await ClientServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build())
             {
-                var svc = clientAndService.CreateClient<ISupportedServices>();
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+
+                for (var i = 0; i < StandardIterationCount.ForServiceType(serviceConnectionType); i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+
+        [Test]
+        [TestCase(ServiceConnectionType.Polling, null, null)]
+        [TestCase(ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Polling, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        [TestCase(ServiceConnectionType.Listening, null, null)]
+        [TestCase(ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Listening, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService_AndAProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
+        {
+            using (var clientAndService = clientVersion != null ?
+                       await PreviousClientVersionAndServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithClientVersion(clientVersion)
+                           .WithHalibutLoggingLevel(LogLevel.Info)
+                           .WithProxy()
+                           .Build() : serviceVersion != null ?
+                       await ClientAndPreviousServiceVersionBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithServiceVersion(serviceVersion)
+                           .WithHalibutLoggingLevel(LogLevel.Info)
+                           .WithProxy()
+                           .Build()
+                       : await ClientServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithEchoService()
+                           .WithHalibutLoggingLevel(LogLevel.Info)
+                           .WithProxy()
+                           .Build())
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+
+                for (var i = 0; i < 10; i++)
+                {
+                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+
+        [Test]
+        [TestCase(ServiceConnectionType.Polling, null, null)]
+        [TestCase(ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Polling, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        [TestCase(ServiceConnectionType.Listening, null, null)]
+        [TestCase(ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417, null)]
+        [TestCase(ServiceConnectionType.Listening, null, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417)]
+        // PollingOverWebSockets does not support (or use) ProxyDetails if provided. If support is added, test variations should be added
+        public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ServiceConnectionType serviceConnectionType, string clientVersion, string serviceVersion)
+        {
+            using (var clientAndService = clientVersion != null ?
+                       await PreviousClientVersionAndServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithClientVersion(clientVersion)
+                           .WithHalibutLoggingLevel(LogLevel.Info)
+                           .WithProxy()
+                           .Build() : serviceVersion != null ?
+                       await ClientAndPreviousServiceVersionBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithServiceVersion(serviceVersion)
+                           .WithHalibutLoggingLevel(LogLevel.Info)
+                           .WithProxy()
+                           .Build()
+                       : await ClientServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithEchoService()
+                           .WithHalibutLoggingLevel(LogLevel.Info)
+                           .WithProxy()
+                           .Build())
+            {
+                await clientAndService.Proxy!.StopAsync(CancellationToken.None);
+
+                var echo = clientAndService.CreateClient<IEchoService>();
+                Func<string> action = () => echo.SayHello("Deploy package A");
+                action.Should().Throw<HalibutClientException>();
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ServiceConnectionType serviceConnectionType)
+        {
+            using (var clientAndService = await ClientServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build())
+            {
+                var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
                 for (var i = 1; i < 100; i++)
                 {
-                    var i1 = i;
-                    svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    {
+                        var i1 = i;
+                        svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                    }
                 }
             }
         }
 
         [Test]
-        public void HalibutSerializerIsKeptUpToDateWithPollingTentacle()
+        public async Task HalibutSerializerIsKeptUpToDateWithPollingTentacle()
         {
-            var services = GetDelegateServiceFactory();
-            services.Register<ISupportedServices>(() => new SupportedServices());
-            using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).Build()){
+            using (var clientAndService = await ClientServiceBuilder
+                       .Polling()
+                       .WithStandardServices()
+                       .Build()){
 
-                // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered                     
+                // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
                 var echo = clientAndService.CreateClient<IEchoService>();
                 // This must come before CreateClient<ISupportedServices> for the situation to occur
-                echo.SayHello("Deploy package A").Should().Be("Deploy package A" + "..."); 
+                echo.SayHello("Deploy package A").Should().Be("Deploy package A" + "...");
 
-                var svc = clientAndService.CreateClient<ISupportedServices>();
+                var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
                 // This must happen before the message loop in MessageExchangeProtocol restarts (timeout, exception, or end) for the error to occur
                 svc.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
             }
         }
-        
-        
 
         [Test]
-        public void StreamsCanBeSentToListening()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task StreamsCanBeSent(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = await ClientServiceBuilder
+                      .ForServiceConnectionType(serviceConnectionType)
+                      .WithStandardServices()
+                      .WithHalibutLoggingLevel(LogLevel.Info)
+                      .Build())
             {
-                var data = new byte[1024 * 1024 + 15];
-                new Random().NextBytes(data);
-
-                var echo = clientAndService.CreateClient<IEchoService>();
-
-                for (var i = 0; i < 100; i++)
-                {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
-                    count.Should().Be(1024 * 1024 + 15);
-                }
-            }
-        }
-
-        [Test]
-        public void StreamsCanBeSentToPolling()
-        {
-            using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(GetDelegateServiceFactory()).Build())
-            {
-
                 var echo = clientAndService.CreateClient<IEchoService>();
 
                 var data = new byte[1024 * 1024 + 15];
@@ -126,15 +199,16 @@ namespace Halibut.Tests
                 }
             }
         }
-        
+
         [Test]
-        [TestCase(ServiceConnectionType.Listening)]
-        [TestCase(ServiceConnectionType.Polling)]
-        public void StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task StreamsCanBeSentWithLatency(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder.ForMode(serviceConnectionType)
-                       .WithServiceFactory(GetDelegateServiceFactory())
+            using (var clientAndService = await ClientServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -149,21 +223,23 @@ namespace Halibut.Tests
                 }
             }
         }
-        
+
         [Test]
         [TestCase(ServiceConnectionType.Polling, 1)]
         [TestCase(ServiceConnectionType.Listening, 2)]
         [TestCase(ServiceConnectionType.Polling, 2)]
         [TestCase(ServiceConnectionType.Listening, 3)]
         [TestCase(ServiceConnectionType.Polling, 3)]
-        public void StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
+        public async Task StreamsCanBeSentWithLatencyAndTheLastNBytesArriveLate(ServiceConnectionType serviceConnectionType, int numberOfBytesToDelaySending)
         {
-            using (var clientAndService = ClientServiceBuilder.ForMode(serviceConnectionType)
-                       .WithServiceFactory(GetDelegateServiceFactory())
+            using (var clientAndService = await ClientServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithEchoService()
                        .WithPortForwarding(octopusPort => PortForwarderUtil.ForwardingToLocalPort(octopusPort)
                            .WithSendDelay(TimeSpan.FromMilliseconds(20))
                            .WithNumberOfBytesToDelaySending(numberOfBytesToDelaySending)
                            .Build())
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -180,13 +256,15 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void SupportsDifferentServiceContractMethods()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task SupportsDifferentServiceContractMethods(ServiceConnectionType serviceConnectionType)
         {
-            var services = GetDelegateServiceFactory();
-            services.Register<ISupportedServices>(() => new SupportedServices());
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
+            using (var clientAndService = await ClientServiceBuilder
+                     .ForServiceConnectionType(serviceConnectionType)
+                     .WithStandardServices()
+                     .Build())
             {
-                var echo = clientAndService.CreateClient<ISupportedServices>();
+                var echo = clientAndService.CreateClient<IMultipleParametersTestService>();
                 echo.MethodReturningVoid(12, 14);
 
                 echo.Hello().Should().Be("Hello");
@@ -217,9 +295,13 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void StreamsCanBeSentToListeningWithProgressReporting()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task StreamsCanBeSentWithProgressReporting(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = ClientServiceBuilder.Listening().WithServiceFactory(GetDelegateServiceFactory()).Build())
+            using (var clientAndService = await ClientServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithStandardServices()
+                       .Build())
             {
                 var progressReported = new List<int>();
 
@@ -235,135 +317,5 @@ namespace Halibut.Tests
                 progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
             }
         }
-
-        [TestCase("https://127.0.0.1:{port}")]
-        [TestCase("https://127.0.0.1:{port}/")]
-        [TestCase("https://localhost:{port}")]
-        [TestCase("https://localhost:{port}/")]
-        [TestCase("https://{machine}:{port}")]
-        [TestCase("https://{machine}:{port}/")]
-        public async Task SupportsHttpsGet(string uriFormat)
-        {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            {
-                var listenPort = octopus.Listen();
-                var uri = uriFormat.Replace("{machine}", Dns.GetHostName()).Replace("{port}", listenPort.ToString());
-
-                var result = await DownloadStringIgnoringCertificateValidation(uri);
-
-                result.Should().Be("<html><body><p>Hello!</p></body></html>");
-            }
-        }
-
-        [TestCase("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
-        [TestCase("Simple text works too!", null)]
-        [TestCase("", null)]
-        [TestCase(null, "<html><body><p>Hello!</p></body></html>")]
-        public async Task CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
-        {
-            var services = GetDelegateServiceFactory();
-            expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
-
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            {
-                octopus.SetFriendlyHtmlPageContent(html);
-                var listenPort = octopus.Listen();
-
-                var result = await DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
-
-                result.Should().Be(expectedResult);
-            }
-        }
-
-        [Test]
-        public async Task CanSetCustomFriendlyHtmlPageHeaders()
-        {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
-            {
-                octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> {{"X-Content-Type-Options", "nosniff"}, {"X-Frame-Options", "DENY"}});
-                var listenPort = octopus.Listen();
-
-                var result = await GetHeadersIgnoringCertificateValidation("https://localhost:" + listenPort);
-
-                result.Should().Contain(x => x.Key == "X-Content-Type-Options" && x.Value == "nosniff");
-                result.Should().Contain(x => x.Key == "X-Frame-Options" && x.Value == "DENY");
-            }
-        }
-
-        [Test]
-        [System.ComponentModel.Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
-        public async Task ConnectingOverHttpShouldFailQuickly()
-        {
-            var logger = new SerilogLoggerBuilder().Build();
-            using (var octopus = new HalibutRuntime(GetDelegateServiceFactory(), Certificates.Octopus))
-            {
-                logger.Information("Halibut runtime created.");
-                var listenPort = octopus.Listen();
-                logger.Information("Got port to listen on..");
-                var sw = new Stopwatch();
-                Assert.ThrowsAsync<HttpRequestException>(() =>
-                {
-                    logger.Information("Sending request.");
-                    sw.Start();
-                    try
-                    {
-                        return DownloadStringIgnoringCertificateValidation("http://localhost:" + listenPort);
-                    }
-                    finally
-                    {
-                        sw.Stop();
-                    }
-                });
-                
-
-                sw.Elapsed.Should().BeLessOrEqualTo(TimeSpan.FromSeconds(5));
-            }
-        }
-
-        static async Task<string> DownloadStringIgnoringCertificateValidation(string uri)
-        {
-            using (var httpClientHandler = new HttpClientHandler())
-            {
-                httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
-                using (var client = new HttpClient(httpClientHandler))
-                {
-                    return await client.GetStringAsync(uri);
-                }
-            }
-        }
-
-        static async Task<List<KeyValuePair<string, string>>> GetHeadersIgnoringCertificateValidation(string uri)
-        {
-            using (var httpClientHandler = new HttpClientHandler())
-            {
-                httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
-                using (var client = new HttpClient(httpClientHandler))
-                {
-                    var headers = new List<KeyValuePair<string, string>>();
-                    var existingServerCertificateValidationCallback = ServicePointManager.ServerCertificateValidationCallback;
-                    try
-                    {
-                        // We need to ignore server certificate validation errors - the server certificate is self-signed
-                        ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
-                        var response = await client.GetAsync(uri);
-                        foreach (var key in response.Headers)
-                        {
-                            headers.Add(new KeyValuePair<string, string>(key.Key, key.Value.First()));
-                        }
-                    }
-                    finally
-                    {
-                        // And restore it back to default behaviour
-                        ServicePointManager.ServerCertificateValidationCallback = existingServerCertificateValidationCallback;
-                    }
-
-                    return headers;
-                }
-            }
-        }
-
-        
     }
 }

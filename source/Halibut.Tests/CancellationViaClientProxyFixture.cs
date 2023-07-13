@@ -3,9 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
-using Halibut.Tests.BackwardsCompatibility.Util;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
@@ -14,11 +15,11 @@ namespace Halibut.Tests
     public class CancellationViaClientProxyFixture
     {
         [Test]
-        public void CancellationCanBeDoneViaClientProxy()
+        public async Task CancellationCanBeDoneViaClientProxy()
         {
-            using (var clientAndService = ClientServiceBuilder.Listening()
+            using (var clientAndService = await ClientServiceBuilder.Listening()
                        .NoService()
-                       .WithService<IEchoService>(() => new EchoService())
+                       .WithEchoService()
                        .Build())
             {
                 var data = new byte[1024 * 1024 + 15];
@@ -39,9 +40,9 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void CannotHaveServiceWithHalibutProxyRequestOptions()
+        public async Task CannotHaveServiceWithHalibutProxyRequestOptions()
         {
-            using (var clientAndService = ClientServiceBuilder.Listening()
+            using (var clientAndService = await ClientServiceBuilder.Listening()
                        .NoService()
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
                        .Build())
@@ -51,11 +52,10 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCase(ServiceConnectionType.Listening)]
-        [TestCase(ServiceConnectionType.Polling)]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.WithService(serviceConnectionType).WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").Build())
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
                     {
@@ -64,7 +64,7 @@ namespace Halibut.Tests
                     });
 
                 var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
-                res.Should().Be("Hello!!");
+                res.Should().Be("Hello!!...");
             }
         }
 

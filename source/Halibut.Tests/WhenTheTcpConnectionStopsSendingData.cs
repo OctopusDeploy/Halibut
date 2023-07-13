@@ -2,11 +2,9 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
-using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -15,8 +13,9 @@ namespace Halibut.Tests
         [Test]
         public async Task HalibutCanRecoverFromIdleTcpDisconnect2()
         {
-            using (var clientAndService = ClientServiceBuilder.Listening()
-                       .WithService<IEchoService>(() => new EchoService())
+            using (var clientAndService = await ClientServiceBuilder
+                       .Listening()
+                       .WithEchoService()
                        .WithPortForwarding()
                        .Build())
             {
@@ -27,7 +26,7 @@ namespace Halibut.Tests
 
                 echo.SayHello("Bob");
 
-                clientAndService.portForwarder.PauseExistingConnections();
+                clientAndService.PortForwarder!.PauseExistingConnections();
 
                 var sayHelloTask = Task.Run(() => echo.SayHello("Bob"));
 
@@ -36,6 +35,9 @@ namespace Halibut.Tests
                 await Task.WhenAny(sayHelloTask, Task.Delay(HalibutLimits.TcpClientHeartbeatReceiveTimeout + HalibutLimits.TcpClientHeartbeatReceiveTimeout));
 
                 sayHelloTask.IsCompleted.Should().BeTrue("We should be able to detect dead TCP connections and retry requests with a new TCP connection.");
+
+                (HalibutLimits.TcpClientHeartbeatReceiveTimeout + TimeSpan.FromSeconds(10)).Should().BeLessThan(HalibutLimits.TcpClientReceiveTimeout, 
+                    "This depend on the heart beat timeouts being less than the regular TCP timeouts, if that is not true this test isn't testing the correct timeout.");
             }
         }
     }

@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
-using Halibut.Tests.BackwardsCompatibility.Util;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.Transport.Caching;
 using NUnit.Framework;
 
@@ -18,8 +18,8 @@ namespace Halibut.Tests
         {
             new object[] { ServiceConnectionType.Polling, null },
             new object[] { ServiceConnectionType.Listening, null },
-            new object[] { ServiceConnectionType.Polling, PreviousServiceVersions.v5_0_237_Used_In_Tentacle_6_3_417 },
-            new object[] { ServiceConnectionType.Listening, PreviousServiceVersions.v5_0_237_Used_In_Tentacle_6_3_417 }
+            new object[] { ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417 },
+            new object[] { ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417 }
         };
 
         [Test]
@@ -208,9 +208,9 @@ namespace Halibut.Tests
         static async Task<IClientAndService> CreateClientAndService(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
         {
             return halibutServiceVersion == null ?
-                ClientServiceBuilder
-                    .ForMode(serviceConnectionType)
-                    .WithService<ICachingService>(() => new CachingService())
+                await ClientServiceBuilder
+                    .ForServiceConnectionType(serviceConnectionType)
+                    .WithCachingService()
                     .Build() :
                 await ClientAndPreviousServiceVersionBuilder
                     .ForServiceConnectionType(serviceConnectionType)

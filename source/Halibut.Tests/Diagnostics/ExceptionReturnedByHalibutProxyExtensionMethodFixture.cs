@@ -5,8 +5,9 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.Transport.Proxy;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
@@ -24,7 +25,7 @@ namespace Halibut.Tests.Diagnostics
                     .Should()
                     .Be(HalibutNetworkExceptionType.NotANetworkError);
             }
-            
+
             [Test]
             public void ServiceNotFoundHalibutClientException_ItIsNotANetworkError()
             {
@@ -32,7 +33,7 @@ namespace Halibut.Tests.Diagnostics
                     .Should()
                     .Be(HalibutNetworkExceptionType.NotANetworkError);
             }
-            
+
             [Test]
             public void AmbiguousMethodMatchHalibutClientException_ItIsNotANetworkError()
             {
@@ -41,20 +42,19 @@ namespace Halibut.Tests.Diagnostics
                     .Be(HalibutNetworkExceptionType.NotANetworkError);
             }
         }
+
         public class WhenTheHalibutProxyThrowsAnException
         {
             [Test]
             public async Task WhenTheConnectionTerminatesWaitingForAResponseFromAPollingTentacle()
             {
-                var services = new DelegateServiceFactory();
-                DoSomeActionService doSomeActionService = new DoSomeActionService();
-                services.Register<IDoSomeActionService>(() => doSomeActionService);
-                
-                using (var clientAndService = ClientServiceBuilder.Polling().WithServiceFactory(services).WithPortForwarding().Build())
+                using (var clientAndService = await ClientServiceBuilder
+                           .Polling()
+                           .WithPortForwarding(out var portForwarder)
+                           .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
+                           .Build())
                 {
                     var svc = clientAndService.CreateClient<IDoSomeActionService>();
-
-                    doSomeActionService.ActionDelegate = () => clientAndService.portForwarder.Dispose();
 
                     // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
                     var exception = Assert.Throws<HalibutClientException>(() => svc.Action());
@@ -70,16 +70,13 @@ namespace Halibut.Tests.Diagnostics
             {
                 var services = new DelegateServiceFactory();
                 services.Register<IEchoService>(() => new EchoService());
-                using (var octopus = new HalibutRuntimeBuilder()
-                           .WithServerCertificate(Certificates.Octopus)
+
+                using (var clientAndService = await ClientServiceBuilder
+                           .Polling()
+                           .NoService()
                            .Build())
                 {
-                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-                    var serviceEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-                    serviceEndpoint.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1);
-
-                    var echo = octopus.CreateClient<IEchoService>(serviceEndpoint);
+                    var echo = clientAndService.CreateClient<IEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
 
                     Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
                         .IsNetworkError()
@@ -89,9 +86,9 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            public void BecauseTheTentacleIsNotResponding()
+            public async Task BecauseTheListeningTentacleIsNotResponding()
             {
-                using (var clientAndService = ClientServiceBuilder.Listening().NoService().Build())
+                using (var clientAndService = await ClientServiceBuilder.Listening().NoService().Build())
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
 
@@ -126,19 +123,16 @@ namespace Halibut.Tests.Diagnostics
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
                 }
             }
-            
-            [Test]
-            public void BecauseOfAInvalidCertificateException_ItIsNotANetworkError()
-            {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
-                using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-                {
-                    var tentaclePort = tentacleListening.Listen();
-                    tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
-                    var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, "Wrong Thumbrprint");
+            [Test]
+            public async Task BecauseOfAInvalidCertificateException_WhenConnectingToListening_ItIsNotANetworkError()
+            {
+                using (var clientAndService = await ClientServiceBuilder
+                           .Listening()
+                           .WithEchoService()
+                           .Build())
+                {
+                    var echo = clientAndService.CreateClient<IEchoService>(remoteThumbprint: "Wrong Thumbrprint");
 
                     Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
                         .IsNetworkError()
@@ -146,99 +140,58 @@ namespace Halibut.Tests.Diagnostics
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
-            
+
             [Test]
-            public void BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSendingToListening_ItIsNotANetworkError()
+            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
-                using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+                using (var clientAndService = await ClientServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithEchoService()
+                           .Build())
                 {
-                    var tentaclePort = tentacleListening.Listen();
-                    tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+                    var echo = clientAndService.CreateClient<IEchoService>();
 
-                    var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                    var dataStream = new DataStream(10, _ => new FileStream("DoesNotExist2497546", FileMode.Open).Dispose());
 
-                    var dataStream = new DataStream(10, stream =>
-                    {
-                        new FileStream("DoesNotExist2497546", FileMode.Open).Dispose();
-                    });
                     Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
-            
+
             [Test]
-            public void BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSendingToPolling_ItIsNotANetworkError()
+            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
-                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+                using (var clientAndService = await ClientServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithEchoService()
+                           .Build())
                 {
-                    var octopusPort = octopus.Listen();
-                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+                    var echo = clientAndService.CreateClient<IEchoService>();
 
-                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
+                    var dataStream = new DataStream(10, _ => throw new FileNotFoundException());
 
-                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
-                    var dataStream = new DataStream(10, stream =>
-                    {
-                        new FileStream("DoesNotExist2497546", FileMode.Open).Dispose();
-                    });
                     Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }
-            
+
             [Test]
-            public void BecauseTheDataStreamThrowAFileNotFoundException_WhenSendingToPolling_ItIsNotANetworkError()
+            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
             {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
-                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
+                using (var clientAndService = await ClientServiceBuilder
+                           .ForServiceConnectionType(serviceConnectionType)
+                           .WithEchoService()
+                           .Build())
                 {
-                    var octopusPort = octopus.Listen();
-                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
+                    var echo = clientAndService.CreateClient<IEchoService>();
 
-                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
-
-                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
-                    var dataStream = new DataStream(10, stream =>
-                    {
-                        throw new FileNotFoundException();
-                    });
-                    Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
-                        .IsNetworkError()
-                        .Should()
-                        .Be(HalibutNetworkExceptionType.NotANetworkError);
-                }
-            }
-            
-            [Test]
-            public void BecauseTheServiceThrowAnException_ItIsNotANetworkError()
-            {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
-                using (var tentaclePolling = new HalibutRuntime(services, Certificates.TentaclePolling))
-                {
-                    var octopusPort = octopus.Listen();
-                    octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-                    tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + octopusPort), Certificates.OctopusPublicThumbprint));
-
-                    var echo = octopus.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", Certificates.TentaclePollingPublicThumbprint);
-
-                    
                     var exception = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
                     exception.IsNetworkError().Should().Be(HalibutNetworkExceptionType.NotANetworkError);
                 }

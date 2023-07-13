@@ -8,12 +8,12 @@ namespace Halibut.TestUtils.SampleProgram.Base
     {
         public string SayHello(string name)
         {
-            return name;
+            return name + "...";
         }
 
         public bool Crash()
         {
-            throw new Exception();
+            throw new DivideByZeroException();
         }
 
         public int LongRunningOperation()

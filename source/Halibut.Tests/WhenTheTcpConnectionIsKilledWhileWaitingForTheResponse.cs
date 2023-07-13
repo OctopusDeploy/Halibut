@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.ServiceModel;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -11,17 +11,16 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse
     {
         [Test]
-        public async Task ToPolling_AResponseShouldBeQuicklyReturned()
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task AResponseShouldBeQuicklyReturned(ServiceConnectionType serviceConnectionType)
         {
-            DoSomeActionService doSomeActionService = new DoSomeActionService();
-            using (var clientAndService = ClientServiceBuilder.Polling()
-                       .WithService<IDoSomeActionService>(() => doSomeActionService)
-                       .WithPortForwarding()
+            using (var clientAndService = await ClientServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithPortForwarding(out var portForwarder)
+                       .WithDoSomeActionService(() => portForwarder.Value.Dispose())
                        .Build())
             {
                 var svc = clientAndService.CreateClient<IDoSomeActionService>();
-
-                doSomeActionService.ActionDelegate = () => clientAndService.PortForwarder.Dispose();
 
                 // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
                 var killPortForwarderTask = Task.Run(() => svc.Action());
