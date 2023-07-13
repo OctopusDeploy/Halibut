@@ -173,6 +173,11 @@ namespace Halibut.Transport
                 client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
                 client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
+                log?.Write(EventType.Error, $"Halibut test error log. Written from: {GetType()}");
+                log?.Write(EventType.OpeningNewConnection, $"Halibut test debug log. Written from: {GetType()}");
+                log?.Write(EventType.Diagnostic, $"Halibut test trace log. Written from: {GetType()}");
+                log?.Write(EventType.FileTransfer, $"Halibut test information log. Written from: {GetType()}");
+
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
                 await ExecuteRequest(client).ConfigureAwait(false);
             }

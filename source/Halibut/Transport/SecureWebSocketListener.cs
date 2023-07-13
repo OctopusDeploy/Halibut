@@ -62,6 +62,12 @@ namespace Halibut.Transport
             listener.Start();
 
             log = logFactory.ForPrefix(endPoint);
+
+            log?.Write(EventType.Error, $"Halibut test error log. Written from: {GetType()}");
+            log?.Write(EventType.OpeningNewConnection, $"Halibut test debug log. Written from: {GetType()}");
+            log?.Write(EventType.Diagnostic, $"Halibut test trace log. Written from: {GetType()}");
+            log?.Write(EventType.FileTransfer, $"Halibut test information log. Written from: {GetType()}");
+            
             log.Write(EventType.ListenerStarted, "Listener started");
             Task.Run(async () => await Accept().ConfigureAwait(false)).ConfigureAwait(false);
         }
