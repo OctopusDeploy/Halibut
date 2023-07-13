@@ -11,7 +11,7 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionStopsSendingData
     {
         [Test]
-        public async Task HalibutCanRecoverFromIdleTcpDisconnect2()
+        public async Task HalibutCanRecoverFromIdleTcpDisconnect()
         {
             using (var clientAndService = await ClientServiceBuilder
                        .Listening()
