@@ -1,23 +1,19 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Halibut.TestProxy
 {
-    interface IProxyConnectionService
+    interface IProxyConnectionService : IDisposable
     {
         IProxyConnection GetProxyConnection(ProxyEndpoint endpoint);
     }
 
-    class ProxyConnectionService : IProxyConnectionService, IHostedService
+    class ProxyConnectionService : IProxyConnectionService
     {
         readonly IProxyConnectionFactory proxyConnectionFactory;
         readonly ILogger<ProxyConnectionService> logger;
-        readonly ConcurrentDictionary<ProxyEndpoint, IProxyConnection> proxies = new();
+        ConcurrentDictionary<ProxyEndpoint, IProxyConnection>? proxies = new();
 
         public ProxyConnectionService(
             IProxyConnectionFactory proxyConnectionFactory,
@@ -29,29 +25,26 @@ namespace Halibut.TestProxy
 
         public IProxyConnection GetProxyConnection(ProxyEndpoint endpoint)
         {
-            return proxies.GetOrAdd(endpoint, e => proxyConnectionFactory.CreateProxyConnection(e));
+            return proxies!.GetOrAdd(endpoint, e => proxyConnectionFactory.CreateProxyConnection(e));
         }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+        public void Dispose()
         {
-            return Task.CompletedTask;
-        }
-
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            logger.LogInformation("Closing proxy connections");
-
-            try
+            if (proxies != null)
             {
-                await Task.WhenAll(
-                    proxies.Values.ToList().Select(async (proxyConnection) =>
+                foreach (var proxy in proxies!)
+                {
+                    try
                     {
-                        proxyConnection.Dispose();
-                    }));
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "An error has occurred closing proxy connections");
+                        proxies.TryRemove(proxy.Key, out _);
+                        proxy.Value.Dispose();
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                proxies = null;
             }
         }
     }
