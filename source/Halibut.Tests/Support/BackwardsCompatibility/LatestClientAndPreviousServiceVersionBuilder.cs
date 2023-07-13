@@ -87,6 +87,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
+        {
+            return WithProxy();
+        }
+
         public LatestClientAndPreviousServiceVersionBuilder WithProxy()
         {
             this.proxyFactory = () =>

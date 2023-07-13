@@ -9,6 +9,7 @@ namespace Halibut.Tests.Support
     {
         Task<IClientAndService> Build();
         IClientAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> func);
+        IClientAndServiceBuilder WithProxy();
         IClientAndServiceBuilder WithStandardServices();
         IClientAndServiceBuilder WithHalibutLoggingLevel(LogLevel info);
     }

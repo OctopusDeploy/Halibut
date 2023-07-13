@@ -24,7 +24,7 @@ namespace Halibut.Tests.Support.TestCases
             this.clientAndServiceTestVersion = clientAndServiceTestVersion;
         }
 
-        public IClientAndServiceBuilder CreateBaseTestCaseBuilder()
+        public IClientAndServiceBuilder CreateTestCaseBuilder()
         {
             var logger = new SerilogLoggerBuilder().Build();
             var builder = ClientAndServiceBuilderFactory.ForVersion(clientAndServiceTestVersion)(ServiceConnectionType);

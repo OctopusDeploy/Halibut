@@ -107,6 +107,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return WithEchoServiceService(new EchoService()).WithCachingService(new CachingService()).WithMultipleParametersTestService(new MultipleParametersTestService());
         }
         
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
+        {
+            return WithProxy();
+        }
+
         public PreviousClientVersionAndLatestServiceBuilder WithProxy()
         {
             this.proxyFactory = () =>
