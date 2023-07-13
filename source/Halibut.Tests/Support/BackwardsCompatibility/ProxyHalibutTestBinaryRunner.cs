@@ -38,11 +38,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public async Task<RoundTripRunningOldHalibutBinary> Run()
         {
+            var compatBinaryStayAlive = new CompatBinaryStayAlive();
             var settings = new Dictionary<string, string>
             {
                 { "mode", "proxy" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
-                { "octopuscertpath", clientCertAndThumbprint.CertificatePfxPath }
+                { "octopuscertpath", clientCertAndThumbprint.CertificatePfxPath },
+                {CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.lockFile}
             };
 
             if (proxyDetails != null)
@@ -74,7 +76,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                 var (task, serviceListenPort, proxyClientListenPort) = await StartHalibutTestBinary(version, settings, tmp, cts.Token);
 
-                return new RoundTripRunningOldHalibutBinary(cts, task, tmp, serviceListenPort, proxyClientListenPort);
+                return new RoundTripRunningOldHalibutBinary(cts, task, tmp, serviceListenPort, proxyClientListenPort, compatBinaryStayAlive);
             }
             catch (Exception)
             {
@@ -148,25 +150,29 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly CancellationTokenSource cts;
             readonly Task runningOldHalibutTask;
             readonly TmpDirectory tmpDirectory;
+            readonly CompatBinaryStayAlive compatBinaryStayAlive;
 
             public RoundTripRunningOldHalibutBinary(
                 CancellationTokenSource cts,
                 Task runningOldHalibutTask,
                 TmpDirectory tmpDirectory,
                 int? serviceListenPort,
-                int? proxyClientListenPort)
+                int? proxyClientListenPort, CompatBinaryStayAlive compatBinaryStayAlive)
             {
                 this.cts = cts;
                 this.runningOldHalibutTask = runningOldHalibutTask;
                 this.tmpDirectory = tmpDirectory;
-                this.ServiceListenPort = serviceListenPort;
-                this.ProxyClientListenPort = proxyClientListenPort;
+                ServiceListenPort = serviceListenPort;
+                ProxyClientListenPort = proxyClientListenPort;
+                this.compatBinaryStayAlive = compatBinaryStayAlive;
             }
             public int? ServiceListenPort { get; }
             public int? ProxyClientListenPort { get; }
 
             public void Dispose()
             {
+                compatBinaryStayAlive.Dispose();
+                Thread.Sleep(10000);
                 cts.Cancel();
                 runningOldHalibutTask.GetAwaiter().GetResult();
                 tmpDirectory.Dispose();

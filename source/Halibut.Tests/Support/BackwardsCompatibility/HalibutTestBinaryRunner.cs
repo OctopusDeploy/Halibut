@@ -42,11 +42,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public async Task<RunningOldHalibutBinary> Run()
         {
+            var compatBinaryStayAlive = new CompatBinaryStayAlive(); 
             var settings = new Dictionary<string, string>
             {
                 { "mode", "serviceonly" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
-                { "octopusthumbprint", clientCertAndThumbprint.Thumbprint }
+                { "octopusthumbprint", clientCertAndThumbprint.Thumbprint },
+                {CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.lockFile}
             };
 
             if (proxyDetails != null)
@@ -78,7 +80,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                 var (task, serviceListenPort) = await StartHalibutTestBinary(version, settings, tmp, cts.Token);
 
-                return new RunningOldHalibutBinary(cts, task, tmp, serviceListenPort);
+                return new RunningOldHalibutBinary(cts, task, tmp, serviceListenPort, compatBinaryStayAlive);
             }
             catch (Exception)
             {
@@ -145,16 +147,20 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly TmpDirectory tmpDirectory;
             public int? ServiceListenPort { get; }
 
-            public RunningOldHalibutBinary(CancellationTokenSource cts, Task runningOldHalibutTask, TmpDirectory tmpDirectory, int? serviceListenPort)
+            readonly CompatBinaryStayAlive compatBinaryStayAlive;
+
+            public RunningOldHalibutBinary(CancellationTokenSource cts, Task runningOldHalibutTask, TmpDirectory tmpDirectory, int? serviceListenPort, CompatBinaryStayAlive compatBinaryStayAlive)
             {
                 this.cts = cts;
                 this.runningOldHalibutTask = runningOldHalibutTask;
                 this.tmpDirectory = tmpDirectory;
                 this.ServiceListenPort = serviceListenPort;
+                this.compatBinaryStayAlive = compatBinaryStayAlive;
             }
 
             public void Dispose()
             {
+                compatBinaryStayAlive.Dispose();
                 cts.Cancel();
                 runningOldHalibutTask.GetAwaiter().GetResult();
                 tmpDirectory.Dispose();
