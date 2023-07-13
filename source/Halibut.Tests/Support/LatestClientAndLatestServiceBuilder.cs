@@ -127,6 +127,11 @@ namespace Halibut.Tests.Support
             return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
         }
         
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
+        {
+            return WithProxy();
+        }
+
         public LatestClientAndLatestServiceBuilder WithProxy()
         {
             this.proxyFactory = () =>
