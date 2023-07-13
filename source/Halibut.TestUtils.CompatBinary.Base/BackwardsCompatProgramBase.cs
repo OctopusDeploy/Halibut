@@ -78,7 +78,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 await Console.Out.FlushAsync();
 
                 // Run until the Program is terminated
-                StayAliveUntilHelper.WaitUntilSignaledToDie();
+                await StayAliveUntilHelper.WaitUntilSignaledToDie();
             }
         }
     }

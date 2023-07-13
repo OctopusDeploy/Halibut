@@ -8,7 +8,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
 {
     public class StayAliveUntilHelper
     {
-        public static void WaitUntilSignaledToDie()
+        public static async Task WaitUntilSignaledToDie()
         {
             var stayAliveFile = SettingsHelper.CompatBinaryStayAliveLockFile();
             while (true)
@@ -16,11 +16,20 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
                 try
                 {
                     Console.WriteLine("Waiting to lock");
-                    var fileStreamLock = new FileStream(stayAliveFile, FileMode.Open, FileAccess.Read, FileShare.None);
-                    Console.WriteLine("Got a lock, going to die now");
-                    fileStreamLock.Dispose();
-                    File.Delete(stayAliveFile);
-                    Environment.Exit(0);
+                    using (var fileStreamLock = new FileStream(stayAliveFile, FileMode.Open, FileAccess.Read, FileShare.None))
+                    {
+                        Console.WriteLine("Got a lock, going to die now");
+                        fileStreamLock.Dispose();    
+                    }
+
+                    try
+                    {
+                        File.Delete(stayAliveFile);
+                    }
+                    finally
+                    {
+                        Environment.Exit(0);
+                    }
                 }
                 catch (Exception e)
                 {

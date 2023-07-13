@@ -86,14 +86,14 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         public static string CompatBinaryStayAliveLockFile()
         {
-            var tentacleCertPath = GetSetting("CompatBinaryStayAliveFilePath");
-            if (tentacleCertPath == null || tentacleCertPath.Length == 0)
+            var stayAliveFilePath = GetSetting("CompatBinaryStayAliveFilePath");
+            if (string.IsNullOrEmpty(stayAliveFilePath))
             {
                 throw new Exception("Env var CompatBinaryStayAliveFilePath must be set");
             }
             
-            Console.WriteLine($"Will die when the following file can be locked or is deleted '{tentacleCertPath}'.");
-            return tentacleCertPath;
+            Console.WriteLine($"Will die when the following file can be locked or is deleted '{stayAliveFilePath}'.");
+            return stayAliveFilePath;
         }
     }
 }

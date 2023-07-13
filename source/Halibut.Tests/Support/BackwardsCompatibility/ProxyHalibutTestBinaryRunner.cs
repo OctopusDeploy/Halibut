@@ -44,7 +44,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "mode", "proxy" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
                 { "octopuscertpath", clientCertAndThumbprint.CertificatePfxPath },
-                {CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.lockFile}
+                {CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile}
             };
 
             if (proxyDetails != null)
@@ -157,7 +157,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 Task runningOldHalibutTask,
                 TmpDirectory tmpDirectory,
                 int? serviceListenPort,
-                int? proxyClientListenPort, CompatBinaryStayAlive compatBinaryStayAlive)
+                int? proxyClientListenPort,
+                CompatBinaryStayAlive compatBinaryStayAlive)
             {
                 this.cts = cts;
                 this.runningOldHalibutTask = runningOldHalibutTask;
@@ -172,7 +173,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public void Dispose()
             {
                 compatBinaryStayAlive.Dispose();
-                Thread.Sleep(10000);
                 cts.Cancel();
                 runningOldHalibutTask.GetAwaiter().GetResult();
                 tmpDirectory.Dispose();

@@ -48,7 +48,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "mode", "serviceonly" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
                 { "octopusthumbprint", clientCertAndThumbprint.Thumbprint },
-                {CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.lockFile}
+                { CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile }
             };
 
             if (proxyDetails != null)
