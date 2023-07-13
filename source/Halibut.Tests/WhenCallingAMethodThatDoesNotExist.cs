@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenCallingAMethodThatDoesNotExist
+    public class WhenCallingAMethodThatDoesNotExist : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
@@ -22,7 +22,7 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceFactory(services)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
 

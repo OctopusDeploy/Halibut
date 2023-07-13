@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenCallingAServiceThatDoesNotExist
+    public class WhenCallingAServiceThatDoesNotExist : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
@@ -17,7 +17,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
