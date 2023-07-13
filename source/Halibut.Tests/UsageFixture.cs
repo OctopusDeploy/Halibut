@@ -15,7 +15,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class UsageFixture
+    public class UsageFixture : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(LatestAndPreviousClientAndServiceVersionsTestCases))]
@@ -24,7 +24,7 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
@@ -44,7 +44,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
@@ -64,7 +64,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
@@ -84,7 +84,7 @@ namespace Halibut.Tests
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .WithProxy()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
@@ -105,7 +105,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .WithProxy()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
@@ -126,7 +126,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .WithProxy()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 await clientAndService.HttpProxy!.StopAsync(CancellationToken.None);
 
@@ -144,7 +144,7 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
                 for (var i = 1; i < clientAndServiceTestCase.RecommendedIterations; i++)
@@ -164,7 +164,7 @@ namespace Halibut.Tests
                        .Polling()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build()){
+                       .Build(CancellationToken)){
 
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -184,7 +184,7 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                       .WithStandardServices()
                       .WithHalibutLoggingLevel(LogLevel.Info)
-                      .Build())
+                      .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
 
@@ -206,7 +206,7 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IMultipleParametersTestService>();
                 echo.MethodReturningVoid(12, 14);
@@ -245,7 +245,7 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var progressReported = new List<int>();
 

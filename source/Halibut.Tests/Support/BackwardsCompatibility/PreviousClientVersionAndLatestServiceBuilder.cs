@@ -142,12 +142,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
-            return await Build();
+            return await Build(cancellationToken);
         }
 
-        public async Task<ClientAndService> Build()
+        public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             if (version == null)
             {

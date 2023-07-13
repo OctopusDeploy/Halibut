@@ -12,7 +12,7 @@ using ICachingService = Halibut.Tests.TestServices.ICachingService;
 
 namespace Halibut.Tests
 {
-    public class ResponseMessageCacheFixture
+    public class ResponseMessageCacheFixture : BaseTest
     {
         public static object[] ServiceConnectionTypeAndVersion =
         {
@@ -205,17 +205,17 @@ namespace Halibut.Tests
             }
         }
 
-        static async Task<IClientAndService> CreateClientAndService(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        async Task<IClientAndService> CreateClientAndService(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
         {
             return halibutServiceVersion == null ?
                 await LatestClientAndLatestServiceBuilder
                     .ForServiceConnectionType(serviceConnectionType)
                     .WithCachingService()
-                    .Build() :
+                    .Build(CancellationToken) :
                 await LatestClientAndPreviousServiceVersionBuilder
                     .ForServiceConnectionType(serviceConnectionType)
                     .WithServiceVersion(halibutServiceVersion)
-                    .Build();
+                    .Build(CancellationToken);
         }
 
         public interface IClientCachingService

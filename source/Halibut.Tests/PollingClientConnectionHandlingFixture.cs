@@ -12,7 +12,7 @@ using NUnit.Framework;
 namespace Halibut.Tests
 {
     [NonParallelizable]
-    public class PollingClientConnectionHandlingFixture
+    public class PollingClientConnectionHandlingFixture : BaseTest
     {
         [Test]
         public async Task PollingClientShouldConnectQuickly()
@@ -97,7 +97,7 @@ namespace Halibut.Tests
                 .WithPortForwarding()
                 .WithDoSomeActionService(doSomeActionServiceAction)
                 .WithEchoService()
-                .Build();
+                .Build(CancellationToken);
 
             var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>();
             var echoService = clientAndService.CreateClient<IEchoService>();

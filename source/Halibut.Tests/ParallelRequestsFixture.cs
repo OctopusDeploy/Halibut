@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class ParallelRequestsFixture
+    public class ParallelRequestsFixture : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
@@ -23,7 +23,8 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .WithServiceFactory(services).Build())
+                       .WithServiceFactory(services)
+                       .WithServiceFactory(services).Build(CancellationToken))
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 

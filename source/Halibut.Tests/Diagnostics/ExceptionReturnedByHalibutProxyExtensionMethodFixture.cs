@@ -44,7 +44,7 @@ namespace Halibut.Tests.Diagnostics
             }
         }
 
-        public class WhenTheHalibutProxyThrowsAnException
+        public class WhenTheHalibutProxyThrowsAnException : BaseTest
         {
             [Test]
             public async Task WhenTheConnectionTerminatesWaitingForAResponseFromAPollingTentacle()
@@ -53,7 +53,7 @@ namespace Halibut.Tests.Diagnostics
                            .Polling()
                            .WithPortForwarding(out var portForwarder)
                            .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var svc = clientAndService.CreateClient<IDoSomeActionService>();
 
@@ -75,7 +75,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Polling()
                            .NoService()
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
 
@@ -89,7 +89,7 @@ namespace Halibut.Tests.Diagnostics
             [Test]
             public async Task BecauseTheListeningTentacleIsNotResponding()
             {
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().NoService().Build())
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().NoService().Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
 
@@ -131,7 +131,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Listening()
                            .WithEchoService()
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(remoteThumbprint: "Wrong Thumbrprint");
 
@@ -149,7 +149,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
 
@@ -169,7 +169,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
 
@@ -189,7 +189,7 @@ namespace Halibut.Tests.Diagnostics
                 using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .ForServiceConnectionType(serviceConnectionType)
                            .WithEchoService()
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
 

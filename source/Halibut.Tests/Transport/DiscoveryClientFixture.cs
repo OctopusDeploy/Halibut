@@ -9,7 +9,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
 {
-    public class DiscoveryClientFixture
+    public class DiscoveryClientFixture : BaseTest
     {
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
@@ -59,7 +59,7 @@ namespace Halibut.Tests.Transport
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().WithServiceFactory(services).Build())
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().WithServiceFactory(services).Build(CancellationToken))
             {
                 var info = clientAndService.Client.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
