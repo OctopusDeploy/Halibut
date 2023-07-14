@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class TimeoutsFixture
+    public class TimeoutsFixture : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
@@ -22,7 +22,7 @@ namespace Halibut.Tests
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
-                       .Build())
+                       .Build(CancellationToken))
             {
                 portForwarderRef.Value = clientAndService.PortForwarder;
                 var echo = clientAndService.CreateClient<IEchoService>();

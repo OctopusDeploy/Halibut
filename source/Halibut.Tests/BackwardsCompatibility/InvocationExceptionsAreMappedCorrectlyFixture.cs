@@ -10,7 +10,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.BackwardsCompatibility
 {
-    public class InvocationExceptionsAreMappedCorrectlyFixture
+    public class InvocationExceptionsAreMappedCorrectlyFixture : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
@@ -19,7 +19,7 @@ namespace Halibut.Tests.BackwardsCompatibility
             using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceVersion(PreviousVersions.v5_0_429)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>(se =>
                 {

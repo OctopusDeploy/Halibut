@@ -28,13 +28,15 @@ namespace Halibut.TestUtils.SampleProgram.Base
         /// <returns></returns>
         public static DelegateServiceFactory CreateProxyingServicesServiceFactory(HalibutRuntime clientWhichTalksToLatestHalibut, ServiceEndPoint realServiceEndpoint)
         {
-            var forwardingEchoService = clientWhichTalksToLatestHalibut.CreateClient<IEchoService>(realServiceEndpoint);
-            var forwardingCachingService = clientWhichTalksToLatestHalibut.CreateClient<ICachingService>(realServiceEndpoint);
-            var forwardingMultipleParametersTestService = clientWhichTalksToLatestHalibut.CreateClient<IMultipleParametersTestService>(realServiceEndpoint);
             var services = new DelegateServiceFactory();
+            
+            var forwardingEchoService = clientWhichTalksToLatestHalibut.CreateClient<IEchoService>(realServiceEndpoint);
             services.Register<IEchoService>(() => new DelegateEchoService(forwardingEchoService));
-            services.Register<ICachingService>(() => new DelegateCachingService(forwardingCachingService));
+            
+            var forwardingMultipleParametersTestService = clientWhichTalksToLatestHalibut.CreateClient<IMultipleParametersTestService>(realServiceEndpoint);
             services.Register<IMultipleParametersTestService>(() => new DelegateMultipleParametersTestService(forwardingMultipleParametersTestService));
+            
+            // The ICachingService is not supported since, the new attributes are not available in the versions of Halibut in the compat library.
             return services;
         }
     }

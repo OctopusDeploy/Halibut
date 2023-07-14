@@ -8,7 +8,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse
+    public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
@@ -18,7 +18,7 @@ namespace Halibut.Tests
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithPortForwarding(out var portForwarder)
                        .WithDoSomeActionService(() => portForwarder.Value.Dispose())
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var svc = clientAndService.CreateClient<IDoSomeActionService>();
 

@@ -15,7 +15,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class FailureModesFixture
+    public class FailureModesFixture : BaseTest
     {
         static DelegateServiceFactory GetDelegateServiceFactory()
         {
@@ -30,7 +30,7 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .Polling()
                        .NoService()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>(point =>
                 {
@@ -50,7 +50,7 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
@@ -142,7 +142,7 @@ namespace Halibut.Tests
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        // This test is very noisy for the test logs
                        .WithHalibutLoggingLevel(LogLevel.Fatal)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 

@@ -10,7 +10,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.BackwardsCompatibility
 {
-    public class TestOldClientWithNewService
+    public class TestOldClientWithNewService : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
@@ -20,7 +20,7 @@ namespace Halibut.Tests.BackwardsCompatibility
             using (var clientAndService = await PreviousClientVersionAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
                        .WithClientVersion(PreviousVersions.v5_0_429)
                        .WithEchoServiceService(echoService)
-                       .Build())
+                       .Build(CancellationToken))
             {
 
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -39,7 +39,7 @@ namespace Halibut.Tests.BackwardsCompatibility
                        .WithClientVersion(PreviousVersions.v5_0_429)
                        .WithEchoServiceService(echoService)
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
-                       .Build())
+                       .Build(CancellationToken))
             {
                 
                 var echo = clientAndService.CreateClient<IEchoService>();

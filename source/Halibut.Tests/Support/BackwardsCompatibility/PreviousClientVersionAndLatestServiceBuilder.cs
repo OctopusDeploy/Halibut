@@ -26,7 +26,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Func<HttpProxyService>? proxyFactory;
         readonly CancellationTokenSource cancellationTokenSource = new();
         IEchoService echoService = new EchoService();
-        Halibut.TestUtils.Contracts.ICachingService cachingService = new CachingService();
+        ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
@@ -67,13 +67,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            return WithPortForwarding(func);
+            return WithPortForwarding(portForwarderFactory);
         }
 
         public PreviousClientVersionAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
+            if (this.portForwarderFactory != null)
+            {
+                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
+            }
+
             this.portForwarderFactory = portForwarderFactory;
             return this;
         }
@@ -90,10 +95,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithCachingService(Halibut.TestUtils.Contracts.ICachingService cachingService)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService()
         {
-            this.cachingService = cachingService;
-            return this;
+            throw new Exception("Caching service is not supported, when testing on the old Client. Since the old client is on external CLR which does not have the new caching attributes which this service is used to test.");
         }
 
         public PreviousClientVersionAndLatestServiceBuilder WithMultipleParametersTestService(IMultipleParametersTestService multipleParametersTestService)
@@ -109,7 +113,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public PreviousClientVersionAndLatestServiceBuilder WithStandardServices()
         {
-            return WithEchoServiceService(new EchoService()).WithCachingService(new CachingService()).WithMultipleParametersTestService(new MultipleParametersTestService());
+            return WithEchoServiceService(new EchoService()).WithMultipleParametersTestService(new MultipleParametersTestService());
         }
         
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
@@ -134,7 +138,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
         }
-        
+
         public PreviousClientVersionAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
@@ -142,12 +146,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
-            return await Build();
+            return await Build(cancellationToken);
         }
 
-        public async Task<ClientAndService> Build()
+        public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             if (version == null)
             {

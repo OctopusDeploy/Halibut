@@ -6,6 +6,7 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
 using Halibut.Util;
 using Octopus.TestPortForwarder;
@@ -96,14 +97,19 @@ namespace Halibut.Tests.Support
             return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            return this.WithPortForwarding(func);
+            return this.WithPortForwarding(portForwarderFactory);
         }
 
-        public LatestClientAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> func)
+        public LatestClientAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            this.portForwarderFactory = func;
+            if (this.portForwarderFactory != null)
+            {
+                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
+            }
+
+            this.portForwarderFactory = portForwarderFactory;
             return this;
         }
 
@@ -126,7 +132,14 @@ namespace Halibut.Tests.Support
         {
             return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
         }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
         
+        public LatestClientAndLatestServiceBuilder WithCachingService()
+        {
+            return this.WithService<ICachingService>(() => new CachingService());
+        }
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
         {
             return WithProxy();
@@ -169,12 +182,12 @@ namespace Halibut.Tests.Support
             return this;
         }
         
-        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
-            return await Build();
+            return await Build(cancellationToken);
         }
 
-        public async Task<ClientAndService> Build()
+        public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             serviceFactory ??= new DelegateServiceFactory();

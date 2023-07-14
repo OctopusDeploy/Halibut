@@ -16,9 +16,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         string? version = null;
-        Func<int, PortForwarder> portForwarderFactory;
+        Func<int, PortForwarder>? portForwarderFactory;
         Func<HttpProxyService>? proxyFactory;
-        CancellationTokenSource cancellationTokenSource = new();
+        readonly CancellationTokenSource cancellationTokenSource = new();
         LogLevel halibutLogLevel;
 
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
@@ -63,13 +63,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            return WithPortForwarding(func);
+            return WithPortForwarding(portForwarderFactory);
         }
 
         public LatestClientAndPreviousServiceVersionBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
+            if (this.portForwarderFactory != null)
+            {
+                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
+            }
+
             this.portForwarderFactory = portForwarderFactory;
             return this;
         }
@@ -84,6 +89,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             // TODO: EchoService is registered by default, so we don't need to do anything else here.
             // It would be better to be able to configure the Tentacle binary to register/not register
             // specific services, but we'll do that later.
+            return this;
+        }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
+        
+        public IClientAndServiceBuilder WithCachingService()
+        {
+            // TODO actually make the old service only have caching service if this is called.
             return this;
         }
 
@@ -109,7 +122,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
         }
-        
+
         public LatestClientAndPreviousServiceVersionBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
@@ -117,12 +130,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        async Task<IClientAndService> IClientAndServiceBuilder.Build()
+        async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
-            return await Build();
+            return await Build(cancellationToken);
         }
         
-        public async Task<ClientAndService> Build()
+        public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             if (version == null)
             {

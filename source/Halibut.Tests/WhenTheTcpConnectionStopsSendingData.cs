@@ -8,7 +8,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenTheTcpConnectionStopsSendingData
+    public class WhenTheTcpConnectionStopsSendingData : BaseTest
     {
         [Test]
         public async Task HalibutCanRecoverFromIdleTcpDisconnect()
@@ -17,7 +17,7 @@ namespace Halibut.Tests
                        .Listening()
                        .WithEchoService()
                        .WithPortForwarding()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var data = new byte[1024];
                 new Random().NextBytes(data);

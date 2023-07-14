@@ -12,7 +12,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class CancellationViaClientProxyFixture
+    public class CancellationViaClientProxyFixture : BaseTest
     {
         [Test]
         public async Task CancellationCanBeDoneViaClientProxy()
@@ -20,7 +20,7 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
                        .NoService()
                        .WithEchoService()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
@@ -45,7 +45,7 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
                        .NoService()
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
-                       .Build())
+                       .Build(CancellationToken))
             {
                 Assert.Throws<TypeNotAllowedException>(() => clientAndService.CreateClient<IAmNotAllowed>());
             }
@@ -55,7 +55,7 @@ namespace Halibut.Tests
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
                     {
