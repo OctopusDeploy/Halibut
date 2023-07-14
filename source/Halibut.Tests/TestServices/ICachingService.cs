@@ -3,6 +3,9 @@ using Halibut.Transport.Caching;
 
 namespace Halibut.Tests.TestServices
 {
+    /// <summary>
+    /// Use this interface when generating the proxy client in tests.
+    /// </summary>
     public interface ICachingService
     {
         Guid NonCachableCall();
