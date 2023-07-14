@@ -191,7 +191,7 @@ namespace Halibut.Tests.ServiceModel
                 request.Should().Be(expectedRequest);
             }
 
-            await ApplyResponsesAndEnsureAllQueueResponsesShouldMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
+            await ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
         }
 
         [Test]
@@ -221,7 +221,7 @@ namespace Halibut.Tests.ServiceModel
                 requestsInOrder.Should().Contain(request);
             }
 
-            await ApplyResponsesAndEnsureAllQueueResponsesShouldMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
+            await ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
         }
 
         [Test]
@@ -406,7 +406,7 @@ namespace Halibut.Tests.ServiceModel
             return task;
         }
         
-        static async Task ApplyResponsesAndEnsureAllQueueResponsesShouldMatch(
+        static async Task ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(
             PendingRequestQueue sut,
             List<RequestMessage> requestsInOrder,
             List<Task<ResponseMessage>> queueAndWaitTasksInOrder)
