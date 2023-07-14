@@ -215,6 +215,7 @@ namespace Halibut.Tests
                 await LatestClientAndPreviousServiceVersionBuilder
                     .ForServiceConnectionType(serviceConnectionType)
                     .WithServiceVersion(halibutServiceVersion)
+                    .WithCachingService()
                     .Build(CancellationToken);
         }
 

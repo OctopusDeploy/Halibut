@@ -15,7 +15,6 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
             {
                 try
                 {
-                    Console.WriteLine("Waiting to lock");
                     using (var fileStreamLock = new FileStream(stayAliveFile, FileMode.Open, FileAccess.Read, FileShare.None))
                     {
                         Console.WriteLine("Got a lock, going to die now");

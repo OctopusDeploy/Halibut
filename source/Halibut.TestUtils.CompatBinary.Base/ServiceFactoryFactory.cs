@@ -12,10 +12,19 @@ namespace Halibut.TestUtils.SampleProgram.Base
         /// <returns></returns>
         public static DelegateServiceFactory CreateServiceFactory()
         {
+            
             var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
-            services.Register<ICachingService>(() => new CachingService());
-            services.Register<IMultipleParametersTestService>(() => new MultipleParametersTestService());
+            if (SettingsHelper.IsWithStandardServices())
+            {
+                services.Register<IEchoService>(() => new EchoService());
+                services.Register<IMultipleParametersTestService>(() => new MultipleParametersTestService());
+            }
+
+            if (SettingsHelper.IsWithCachingService())
+            {
+                services.Register<ICachingService>(() => new CachingService());
+            }
+
             return services;
         }
 
@@ -29,7 +38,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public static DelegateServiceFactory CreateProxyingServicesServiceFactory(HalibutRuntime clientWhichTalksToLatestHalibut, ServiceEndPoint realServiceEndpoint)
         {
             var services = new DelegateServiceFactory();
-            
+            // No need to check if is with standard services since, the Test itself has the service and so controls that.
+
             var forwardingEchoService = clientWhichTalksToLatestHalibut.CreateClient<IEchoService>(realServiceEndpoint);
             services.Register<IEchoService>(() => new DelegateEchoService(forwardingEchoService));
             
