@@ -38,7 +38,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public static DelegateServiceFactory CreateProxyingServicesServiceFactory(HalibutRuntime clientWhichTalksToLatestHalibut, ServiceEndPoint realServiceEndpoint)
         {
             var services = new DelegateServiceFactory();
-            // No need to check if is with standard services since, the Test itself has the service and so controls that.
+            // No need to check if is with standard services since, the Test itself has the service and so controls what is available
+            // or not. This will just pass on the request to the service that may or may not exist.
 
             var forwardingEchoService = clientWhichTalksToLatestHalibut.CreateClient<IEchoService>(realServiceEndpoint);
             services.Register<IEchoService>(() => new DelegateEchoService(forwardingEchoService));
