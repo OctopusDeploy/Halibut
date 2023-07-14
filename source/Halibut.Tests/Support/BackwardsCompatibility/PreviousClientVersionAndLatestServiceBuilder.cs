@@ -26,7 +26,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Func<HttpProxyService>? proxyFactory;
         readonly CancellationTokenSource cancellationTokenSource = new();
         IEchoService echoService = new EchoService();
-        Halibut.TestUtils.Contracts.ICachingService cachingService = new CachingService();
+        ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
@@ -67,13 +67,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            return WithPortForwarding(func);
+            return WithPortForwarding(portForwarderFactory);
         }
 
         public PreviousClientVersionAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
+            if (this.portForwarderFactory != null)
+            {
+                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
+            }
+
             this.portForwarderFactory = portForwarderFactory;
             return this;
         }

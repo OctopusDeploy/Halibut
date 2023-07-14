@@ -16,9 +16,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         string? version = null;
-        Func<int, PortForwarder> portForwarderFactory;
+        Func<int, PortForwarder>? portForwarderFactory;
         Func<HttpProxyService>? proxyFactory;
-        CancellationTokenSource cancellationTokenSource = new();
+        readonly CancellationTokenSource cancellationTokenSource = new();
         LogLevel halibutLogLevel;
 
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
@@ -63,13 +63,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            return WithPortForwarding(func);
+            return WithPortForwarding(portForwarderFactory);
         }
 
         public LatestClientAndPreviousServiceVersionBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
+            if (this.portForwarderFactory != null)
+            {
+                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
+            }
+
             this.portForwarderFactory = portForwarderFactory;
             return this;
         }
