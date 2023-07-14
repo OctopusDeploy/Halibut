@@ -28,6 +28,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         IEchoService echoService = new EchoService();
         ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
+        IComplexObjectService complexObjectService = new ComplexObjectService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
         
@@ -106,6 +107,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        public PreviousClientVersionAndLatestServiceBuilder WithComplexObjectService(IComplexObjectService complexObjectService)
+        {
+            this.complexObjectService = complexObjectService;
+            return this;
+        }
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
             return WithStandardServices();
@@ -113,7 +120,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public PreviousClientVersionAndLatestServiceBuilder WithStandardServices()
         {
-            return WithEchoServiceService(new EchoService()).WithMultipleParametersTestService(new MultipleParametersTestService());
+            return WithEchoServiceService(new EchoService())
+                .WithMultipleParametersTestService(new MultipleParametersTestService())
+                .WithComplexObjectService(new ComplexObjectService());
         }
         
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
@@ -168,7 +177,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .WithServiceFactory(new DelegateServiceFactory()
                     .Register(() => echoService)
                     .Register(() => cachingService)
-                    .Register(() => multipleParametersTestService))
+                    .Register(() => multipleParametersTestService)
+                    .Register(() => complexObjectService))
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogFactory("Tentacle", halibutLogLevel))
                 .Build();

@@ -62,8 +62,8 @@ namespace Halibut.Tests
                        .Polling()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .Build(CancellationToken)){
-
+                       .Build(CancellationToken))
+            {
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
                 var echo = clientAndService.CreateClient<IEchoService>();
                 // This must come before CreateClient<ISupportedServices> for the situation to occur
@@ -80,9 +80,9 @@ namespace Halibut.Tests
         public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                      .WithStandardServices()
-                      .WithHalibutLoggingLevel(LogLevel.Info)
-                      .Build(CancellationToken))
+                       .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
 
@@ -157,6 +157,48 @@ namespace Halibut.Tests
                 count.Should().Be(1024 * 1024 * 16 + 15);
 
                 progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
+            }
+        }
+
+        [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        public async Task OctopusCanSendAndReceiveComplexObjectsWithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using (var clientAndService = await clientAndServiceTestCase
+                       .CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .Build(CancellationToken))
+            {
+                var service = clientAndService.CreateClient<IComplexObjectService>();
+                var requestId = "TestRequestIdentifier";
+                var payload = "ThisIsMyTestString";
+                var childPayload1 = "ChildPayload1";
+                var childPayload2 = "ChildPayload2";
+
+                for (int i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
+                {
+                    var result = service.Process(new ComplexRequest
+                    {
+                        RequestId = requestId,
+                        NumberOfCopies = 3,
+                        Payload = DataStream.FromString(payload),
+                        Child = new ComplexObjectChild
+                        {
+                            First = DataStream.FromString(childPayload1),
+                            Second = DataStream.FromString(childPayload2)
+                        }
+                    });
+                    result.RequestId.Should().Be(requestId);
+
+                    var payloads = result.Payloads.ToArray();
+                    payloads.Length.Should().Be(3);
+                    payloads[0].ReadAsString().Should().Be(ComplexObjectService.ProcessPayload(1, payload).ReadAsString());
+                    payloads[1].ReadAsString().Should().Be(ComplexObjectService.ProcessPayload(2, payload).ReadAsString());
+                    payloads[2].ReadAsString().Should().Be(ComplexObjectService.ProcessPayload(3, payload).ReadAsString());
+
+                    result.Child.First.ReadAsString().Should().Be(ComplexObjectService.ProcessFirst(DataStream.FromString(childPayload1)).ReadAsString());
+                    result.Child.Second.ReadAsString().Should().Be(ComplexObjectService.ProcessSecond(DataStream.FromString(childPayload2)).ReadAsString());
+                }
             }
         }
     }

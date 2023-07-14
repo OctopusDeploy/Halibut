@@ -130,7 +130,11 @@ namespace Halibut.Tests.Support
         
         public LatestClientAndLatestServiceBuilder WithStandardServices()
         {
-            return this.WithEchoService().WithMultipleParametersTestService().WithCachingService();
+            return this
+                .WithEchoService()
+                .WithMultipleParametersTestService()
+                .WithCachingService()
+                .WithComplexObjectService();
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
