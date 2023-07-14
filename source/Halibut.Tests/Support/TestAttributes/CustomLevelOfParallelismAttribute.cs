@@ -17,7 +17,7 @@ namespace Halibut.Tests.Support.TestAttributes
     [AttributeUsage( AttributeTargets.Assembly, AllowMultiple=false, Inherited=false )]
     public class CustomLevelOfParallelismAttribute : PropertyAttribute
     {
-        public CustomLevelOfParallelismAttribute(int level) : base(LevelOfParallelismAttributePropertyName(), NumberOfCpusToUse())
+        public CustomLevelOfParallelismAttribute() : base(LevelOfParallelismAttributePropertyName(), NumberOfCpusToUse())
         {
         }
         
