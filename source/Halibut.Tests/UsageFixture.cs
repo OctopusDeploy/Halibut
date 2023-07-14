@@ -137,7 +137,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
