@@ -105,7 +105,7 @@ namespace Halibut.Tests.ServiceModel
 
         [Test]
         [TestCaseSource(typeof(AsyncTestCase))]
-        public async Task QueueAndWait_WhenRequestIsDequeued_ButPollingRequestQueueTimeoutIsReached_AndPollingRequestMaximumMessageProcessingTimeoutIsReach_WillStopWaitingAndClearRequest(bool async)
+        public async Task QueueAndWait_WhenRequestIsDequeued_ButPollingRequestQueueTimeoutIsReached_AndPollingRequestMaximumMessageProcessingTimeoutIsReached_WillStopWaitingAndClearRequest(bool async)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
@@ -284,7 +284,7 @@ namespace Halibut.Tests.ServiceModel
 
         [Test]
         [TestCaseSource(typeof(AsyncTestCase))]
-        public async Task QueueAndWait_CancellingAPendingRequestAfterItIsDequeued_AndPollingRequestMaximumMessageProcessingTimeoutIsReach_WillStopWaiting(bool async)
+        public async Task QueueAndWait_CancellingAPendingRequestAfterItIsDequeued_AndPollingRequestMaximumMessageProcessingTimeoutIsReached_WillStopWaiting(bool async)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
@@ -417,15 +417,7 @@ namespace Halibut.Tests.ServiceModel
                 sut.ApplyResponse(response, request.Destination);
             }
 
-            while (true)
-            {
-                var leftOvers = queueAndWaitTasks.Where(t => !t.IsCompleted).ToList();
-                if (leftOvers.Count == 0) return;
-
-                await Task.Delay(100);
-            }
-
-            //await Task.WhenAll(queueAndWaitTasks);
+            await Task.WhenAll(queueAndWaitTasks);
         }
     }
 }
