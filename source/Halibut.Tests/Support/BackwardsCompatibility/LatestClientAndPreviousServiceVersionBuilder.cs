@@ -20,6 +20,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Func<HttpProxyService>? proxyFactory;
         readonly CancellationTokenSource cancellationTokenSource = new();
         LogLevel halibutLogLevel;
+        OldServiceAvailableServices availableServices = new(false, false);
 
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -86,9 +87,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public LatestClientAndPreviousServiceVersionBuilder WithStandardServices()
         {
-            // TODO: EchoService is registered by default, so we don't need to do anything else here.
-            // It would be better to be able to configure the Tentacle binary to register/not register
-            // specific services, but we'll do that later.
+            availableServices.HasStandardServices = true;
             return this;
         }
 
@@ -96,7 +95,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         
         public IClientAndServiceBuilder WithCachingService()
         {
-            // TODO actually make the old service only have caching service if this is called.
+            availableServices.HasCachingService = true;
             return this;
         }
 
@@ -178,7 +177,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     serviceCertAndThumbprint,
                     version,
                     proxyDetails,
-                    halibutLogLevel).Run();
+                    halibutLogLevel,
+                    availableServices).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
@@ -208,7 +208,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     serviceCertAndThumbprint,
                     version,
                     proxyDetails,
-                    halibutLogLevel).Run();
+                    halibutLogLevel,
+                    availableServices).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
@@ -218,7 +219,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     serviceCertAndThumbprint,
                     version,
                     proxyDetails,
-                    halibutLogLevel).Run();
+                    halibutLogLevel,
+                    availableServices).Run();
 
                 var listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
 
