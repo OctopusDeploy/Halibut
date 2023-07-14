@@ -42,7 +42,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             return Environment.GetEnvironmentVariable(name);
         }
         
-        public static bool GetMandatoryBool(string name)
+        static bool GetMandatoryBool(string name)
         {
             var boolAsString = GetSetting(name);
             if (string.IsNullOrEmpty(boolAsString))
