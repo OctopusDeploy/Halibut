@@ -90,10 +90,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithCachingService(Halibut.TestUtils.Contracts.ICachingService cachingService)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService()
         {
-            this.cachingService = cachingService;
-            return this;
+            throw new Exception("Caching service is not supported, when testing on the old Client. Since the old client is on external CLR which does not have the new caching attributes which this service is used to test.");
         }
 
         public PreviousClientVersionAndLatestServiceBuilder WithMultipleParametersTestService(IMultipleParametersTestService multipleParametersTestService)
@@ -109,7 +108,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public PreviousClientVersionAndLatestServiceBuilder WithStandardServices()
         {
-            return WithEchoServiceService(new EchoService()).WithCachingService(new CachingService()).WithMultipleParametersTestService(new MultipleParametersTestService());
+            return WithEchoServiceService(new EchoService()).WithMultipleParametersTestService(new MultipleParametersTestService());
         }
         
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
@@ -134,7 +133,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
         }
-        
+
         public PreviousClientVersionAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
