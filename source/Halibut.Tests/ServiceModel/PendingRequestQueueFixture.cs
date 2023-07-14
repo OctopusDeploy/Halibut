@@ -177,11 +177,11 @@ namespace Halibut.Tests.ServiceModel
                 .ToList();
 
             // Act
-            var queueAndWaitTasks = new List<Task<ResponseMessage>>();
+            var queueAndWaitTasksInOrder = new List<Task<ResponseMessage>>();
             foreach (var request in requestsInOrder)
             {
                 var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(async, sut, request);
-                queueAndWaitTasks.Add(queueAndWaitTask);
+                queueAndWaitTasksInOrder.Add(queueAndWaitTask);
             }
 
             // Assert
@@ -191,7 +191,7 @@ namespace Halibut.Tests.ServiceModel
                 request.Should().Be(expectedRequest);
             }
 
-            await ApplyResponsesToCompleteWaitingTasks(sut, requestsInOrder, queueAndWaitTasks);
+            await ApplyResponsesAndEnsureAllQueueResponsesShouldMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
         }
 
         [Test]
@@ -203,25 +203,25 @@ namespace Halibut.Tests.ServiceModel
 
             var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
 
-            var requests = Enumerable.Range(0, 30)
+            var requestsInOrder = Enumerable.Range(0, 30)
                 .Select(_ => new RequestMessageBuilder(endpoint).Build())
                 .ToList();
 
             // Act
-            var queueAndWaitTasks = requests
+            var queueAndWaitTasksInOrder = requestsInOrder
                 .Select(request => StartQueueAndWait(async, sut, request))
                 .ToList();
 
-            await WaitForQueueCountToBecome(sut, requests.Count);
+            await WaitForQueueCountToBecome(sut, requestsInOrder.Count);
 
             // Assert
-            for (int i = 0; i < requests.Count; i++)
+            for (int i = 0; i < requestsInOrder.Count; i++)
             {
                 var request = await sut.DequeueAsync();
-                requests.Should().Contain(request);
+                requestsInOrder.Should().Contain(request);
             }
 
-            await ApplyResponsesToCompleteWaitingTasks(sut, requests, queueAndWaitTasks);
+            await ApplyResponsesAndEnsureAllQueueResponsesShouldMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
         }
 
         [Test]
@@ -406,18 +406,30 @@ namespace Halibut.Tests.ServiceModel
             return task;
         }
         
-        static async Task ApplyResponsesToCompleteWaitingTasks(
+        static async Task ApplyResponsesAndEnsureAllQueueResponsesShouldMatch(
             PendingRequestQueue sut,
-            IEnumerable<RequestMessage> requests,
-            List<Task<ResponseMessage>> queueAndWaitTasks)
+            List<RequestMessage> requestsInOrder,
+            List<Task<ResponseMessage>> queueAndWaitTasksInOrder)
         {
-            foreach (var request in requests)
-            {
-                var response = ResponseMessageBuilder.FromRequest(request).Build();
-                sut.ApplyResponse(response, request.Destination);
-            }
+            var expectedResponsesInOrder = requestsInOrder
+                .Select(request => ResponseMessageBuilder.FromRequest(request).Build())
+                .ToList();
 
-            await Task.WhenAll(queueAndWaitTasks);
+            //Concurrently apply responses to prove this does not cause issues.
+            var applyResponseTasks = requestsInOrder
+                .Select((r,i) => Task.Factory.StartNew(() => sut.ApplyResponse(expectedResponsesInOrder[i], r.Destination)))
+                .ToList();
+            
+            await Task.WhenAll(applyResponseTasks);
+
+            var index = 0;
+            foreach (var queueAndWaitTask in queueAndWaitTasksInOrder)
+            {
+                var response = await queueAndWaitTask;
+
+                var expectedResponse = expectedResponsesInOrder[index++];
+                response.Should().Be(expectedResponse);
+            }
         }
     }
 }
