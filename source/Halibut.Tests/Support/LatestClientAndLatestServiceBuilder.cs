@@ -97,14 +97,19 @@ namespace Halibut.Tests.Support
             return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> func)
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            return this.WithPortForwarding(func);
+            return this.WithPortForwarding(portForwarderFactory);
         }
 
-        public LatestClientAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> func)
+        public LatestClientAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
         {
-            this.portForwarderFactory = func;
+            if (this.portForwarderFactory != null)
+            {
+                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
+            }
+
+            this.portForwarderFactory = portForwarderFactory;
             return this;
         }
 
