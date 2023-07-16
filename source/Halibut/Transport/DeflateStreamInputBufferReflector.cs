@@ -1,25 +1,12 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.IO.Compression;
-#if !NETFRAMEWORK
 using System.Reflection;
-#endif
+using Halibut.Diagnostics;
 
-namespace Halibut.Transport.Protocol
+namespace Halibut.Transport
 {
-
-    #if NETFRAMEWORK
-    /// <summary>
-    /// Not supported on NETFRAMEWORK. Reflects <see cref="DeflateStream"/> to determine the number of bytes available in its input buffer.
-    /// </summary>
-    class DeflateStreamInputBufferReflector
-    {
-        public bool TryGetAvailableInputBufferSize(DeflateStream stream, out uint unusedSizeBytes)
-        {
-            throw new PlatformNotSupportedException();
-        }
-    }
-    #else
-
     /// <summary>
     /// Reflects <see cref="DeflateStream"/> to determine the number of bytes available in an instance's input buffer.
     /// </summary>
@@ -32,56 +19,59 @@ namespace Halibut.Transport.Protocol
     /// </remarks>
     class DeflateStreamInputBufferReflector
     {
-        readonly bool canReflect;
-        FieldInfo inflaterField;
-        FieldInfo zlibStreamField;
-        PropertyInfo availInProperty;
+        readonly FieldInfo? inflaterFieldCached;
+        readonly FieldInfo? zlibStreamFieldCached;
+        readonly PropertyInfo? availInPropertyCached;
+        ILog log;
 
-        public DeflateStreamInputBufferReflector()
+        public DeflateStreamInputBufferReflector(ILog log)
         {
-            CacheTypeInfo();
-            canReflect = inflaterField != null && zlibStreamField != null && availInProperty != null;
+            this.log = log;
+            inflaterFieldCached = typeof(DeflateStream).GetField("_inflater", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (inflaterFieldCached == null) inflaterFieldCached = typeof(DeflateStream).GetField("inflater", BindingFlags.NonPublic | BindingFlags.Instance);
+            
+            // Only in net6 will this work
+            zlibStreamFieldCached = inflaterFieldCached?.FieldType.GetField("_zlibStream", BindingFlags.NonPublic | BindingFlags.Instance);
+            availInPropertyCached = zlibStreamFieldCached?.FieldType.GetProperty("AvailIn");
         }
 
         public bool TryGetAvailableInputBufferSize(DeflateStream stream, out uint inputBufferAvailSize)
         {
-            if (!canReflect)
+            try
             {
+                return _TryGetAvailableInputBufferSize(stream, out inputBufferAvailSize);
+            }
+            catch (Exception e)
+            {
+                log.Write(EventType.Error, "Could not find internal buffer size field.", e);
                 inputBufferAvailSize = 0;
                 return false;
             }
+        }
+        bool _TryGetAvailableInputBufferSize(DeflateStream stream, out uint inputBufferAvailSize)
+        {
+            inputBufferAvailSize = 0;
 
-            var inflater = inflaterField.GetValue(stream);
-            if (inflater == null)
-            {
-                inputBufferAvailSize = 0;
-                return false;
-            }
+            if (inflaterFieldCached == null) return false;
 
+            var inflater = inflaterFieldCached.GetValue(stream);
+            if (inflater == null) return false;
+
+            // in Net48 we need to look at the actual inflater object since otherwise we are looking at a interface with no zlibstream.
+            var zlibStreamField = zlibStreamFieldCached ?? inflater.GetType().GetField("_zlibStream", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (zlibStreamField == null) return false;
+            
             var zlibStream = zlibStreamField.GetValue(inflater);
-            if (zlibStream is null)
-            {
-                inputBufferAvailSize = 0;
-                return false;
-            }
+            if (zlibStream is null) return false;
 
+            var availInProperty = availInPropertyCached ?? zlibStream.GetType().GetProperty("AvailIn");
+            if (availInProperty == null) return false;
+            
             var size = (uint?)availInProperty.GetValue(zlibStream);
-            if (size is null)
-            {
-                inputBufferAvailSize = 0;
-                return false;
-            }
+            if (size is null) return false;
 
             inputBufferAvailSize = size.Value;
             return true;
         }
-
-        void CacheTypeInfo()
-        {
-            inflaterField = typeof(DeflateStream).GetField("_inflater", BindingFlags.NonPublic | BindingFlags.Instance);
-            zlibStreamField = inflaterField?.FieldType.GetField("_zlibStream", BindingFlags.NonPublic | BindingFlags.Instance);
-            availInProperty = zlibStreamField?.FieldType.GetProperty("AvailIn");
-        }
     }
-    #endif
 }

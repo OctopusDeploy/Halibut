@@ -19,7 +19,7 @@ namespace Halibut.Transport.Protocol
         const string MxSubscriber = "MX-SUBSCRIBER";
         const string MxServer = "MX-SERVER";
 
-        readonly Stream stream;
+        readonly RewindableBufferStream stream;
         readonly ILog log;
         readonly StreamWriter streamWriter;
         readonly IMessageSerializer serializer;
@@ -28,11 +28,7 @@ namespace Halibut.Transport.Protocol
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
-            #if NETFRAMEWORK
-            this.stream = stream;
-            #else
             this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
-            #endif
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             this.serializer = serializer;
