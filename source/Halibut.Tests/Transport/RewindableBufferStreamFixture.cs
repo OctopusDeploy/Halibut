@@ -176,6 +176,55 @@ namespace Halibut.Tests.Transport
                 Assert.AreEqual(0, sut.Read(rewoundOutputBuffer, 0, 1));
             }
         }
+        
+        [Test]
+        public void ReadingMoreThanTheBufferSizeShouldSupportRewindingA()
+        {
+            using (var baseStream = new MemoryStream(2))
+            using (var sut =  new RewindableBufferStream(baseStream, 2))
+            {
+                var inputBuffer = Encoding.ASCII.GetBytes("Test");
+                baseStream.Write(inputBuffer, 0, inputBuffer.Length);
+                baseStream.Position = 0;
+
+                sut.StartBuffer();
+                var outputBuffer = new byte[inputBuffer.Length];
+                while (sut.Read(outputBuffer, 0, inputBuffer.Length) > 0)
+                {
+                }
+                
+                sut.FinishAndRewind(2);
+
+                var rewoundOutputBuffer = new byte[8];
+                Assert.AreEqual(2, sut.Read(rewoundOutputBuffer, 0, 8));
+                var postRewindValue = Encoding.ASCII.GetString(rewoundOutputBuffer.AsSpan(0, 2).ToArray());
+                Assert.AreEqual("st", postRewindValue);
+            }
+        }
+        
+        [Test]
+        public async Task ReadingMoreThanTheBufferSizeShouldSupportRewindingAsync()
+        {
+            using (var baseStream = new MemoryStream(2))
+            using (var sut =  new RewindableBufferStream(baseStream, 2))
+            {
+                var inputBuffer = Encoding.ASCII.GetBytes("Test");
+                baseStream.Write(inputBuffer, 0, inputBuffer.Length);
+                baseStream.Position = 0;
+
+                sut.StartBuffer();
+                var outputBuffer = new byte[inputBuffer.Length];
+                while (await sut.ReadAsync(outputBuffer, 0, inputBuffer.Length) > 0)
+                {
+                }
+                sut.FinishAndRewind(2);
+
+                var rewoundOutputBuffer = new byte[8];
+                Assert.AreEqual(2, sut.Read(rewoundOutputBuffer, 0, 8));
+                var postRewindValue = Encoding.ASCII.GetString(rewoundOutputBuffer.AsSpan(0, 2).ToArray());
+                Assert.AreEqual("st", postRewindValue);
+            }
+        }
 
         static class RewindableBufferStreamBuilder
         {
