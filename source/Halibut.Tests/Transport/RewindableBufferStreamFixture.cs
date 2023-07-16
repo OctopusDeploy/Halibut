@@ -178,7 +178,7 @@ namespace Halibut.Tests.Transport
         }
         
         [Test]
-        public void ReadingMoreThanTheBufferSizeShouldSupportRewindingA()
+        public void ReadingMoreThanTheBufferSizeShouldSupportRewinding()
         {
             using (var baseStream = new MemoryStream(2))
             using (var sut =  new RewindableBufferStream(baseStream, 2))
