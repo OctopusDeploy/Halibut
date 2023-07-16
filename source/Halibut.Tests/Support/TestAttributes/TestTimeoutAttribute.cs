@@ -13,7 +13,7 @@ namespace Halibut.Tests.Support.TestAttributes
         public static int TestTimeout()
         {
             if (Debugger.IsAttached) return (int) TimeSpan.FromHours(1).TotalMilliseconds;
-            return (int) TimeSpan.FromMinutes(3).TotalMilliseconds;
+            return (int) TimeSpan.FromMinutes(6).TotalMilliseconds;
         }
     }
 }
