@@ -31,12 +31,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var pauseConnections = clientAndService.CreateClient<IDoSomeActionService>(point =>
-                {
-                    // We don't want to measure the polling queue timeouts.
-                    point.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromMinutes(10);
-                    point.PollingRequestQueueTimeout = TimeSpan.FromMinutes(10);
-                });
+                var pauseConnections = clientAndService.CreateClient<IDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
                 var e = Assert.Throws<HalibutClientException>(() => pauseConnections.Action());
@@ -56,29 +51,17 @@ namespace Halibut.Tests
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
-                       .WithReturnSomeDataStreamService(() =>
-                       {
-                           var helloBytes = "hello".GetBytesUtf8();
-                           var allDoneBytes = "All done".GetBytesUtf8();
-                           return new DataStream(helloBytes.Length + allDoneBytes.Length , stream =>
-                           {
-                               stream.Write(helloBytes);
-                               portForwarderRef.Value!.PauseExistingConnections();
-                               stream.Write(allDoneBytes);
-                           });
-                       })
+                       .WithReturnSomeDataStreamService(() => DataStreamUtil.From(
+                           firstSend: "hello",
+                           andThenRun: portForwarderRef.Value!.PauseExistingConnections,
+                           thenSend: "All done"))
                        .Build(CancellationToken))
             {
                 portForwarderRef.Value = clientAndService.PortForwarder;
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var pauseConnections = clientAndService.CreateClient<IReturnSomeDataStreamService>(point =>
-                {
-                    // We don't want to measure the polling queue timeouts.
-                    point.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromMinutes(10);
-                    point.PollingRequestQueueTimeout = TimeSpan.FromMinutes(10);
-                });
+                var pauseConnections = clientAndService.CreateClient<IReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
                 var e = Assert.Throws<HalibutClientException>(() => pauseConnections.SomeDataStream());
@@ -89,7 +72,7 @@ namespace Halibut.Tests
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
         }
-        
+
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task WhenThenNetworkIsPaused_WhileSendingARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
@@ -98,23 +81,7 @@ namespace Halibut.Tests
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
-                           .WithDataObserver(() =>
-                           {
-                               long count = 0;
-                               var pauseTcpPumpOnceEnoughDataHasBeenPumped = new DataTransferObserverBuilder()
-                                   .WithWritingDataObserver(((pump, stream) =>
-                                   {
-                                       var current = Interlocked.Add(ref count, stream.Length);
-                                       new SerilogLoggerBuilder().Build().Information("Current: " + current);
-                                       if (current > numberOfBytesBeforePausingAStream)
-                                       {
-                                           pump.Pause();
-                                       }
-                                   }))
-                                   .Build();
-                               
-                               return new BiDirectionalDataTransferObserver(pauseTcpPumpOnceEnoughDataHasBeenPumped, pauseTcpPumpOnceEnoughDataHasBeenPumped);
-                           })
+                           .PauseSingleStreamAfterANumberOfBytesHaveBeenSet(numberOfBytesBeforePausingAStream)
                            .Build())
                        .WithEchoService()
                        .Build(CancellationToken))
@@ -122,12 +89,7 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService>(point =>
-                {
-                    // We don't want to measure the polling queue timeouts.
-                    point.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromMinutes(10);
-                    point.PollingRequestQueueTimeout = TimeSpan.FromMinutes(10);
-                });
+                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService>(IncreasePollingQueueTimeout());
 
                 var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 100);
                 var sw = Stopwatch.StartNew();
@@ -145,13 +107,23 @@ namespace Halibut.Tests
                     // for that to complete.
                     addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;
                 }
-                
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout * 2 + addControlMessageTimeout, TimeSpan.FromSeconds(5), 
+
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout * 2 + addControlMessageTimeout, TimeSpan.FromSeconds(5),
                     "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
-                    "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout." );
-                
+                    "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
+
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
+        }
+
+        static Action<ServiceEndPoint> IncreasePollingQueueTimeout()
+        {
+            return point =>
+            {
+                // We don't want to measure the polling queue timeouts.
+                point.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromMinutes(10);
+                point.PollingRequestQueueTimeout = TimeSpan.FromMinutes(10);
+            };
         }
     }
 }
