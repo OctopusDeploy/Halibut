@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.SampleProgram.Base.Utils;
 
@@ -29,10 +31,13 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         static ComplexResponse FixResponseDataStreams(ComplexResponse response)
         {
+            var newPayloads = new Dictionary<Guid, IList<DataStream>>();
             foreach (var pair in response.Payloads)
             {
-                response.Payloads[pair.Key] = pair.Value.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
+                newPayloads[pair.Key] = pair.Value.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
             }
+
+            response.Payloads = newPayloads;
             response.Child.First = response.Child.First.ConfigureWriterOnReceivedDataStream();
             response.Child.Second = response.Child.Second.ConfigureWriterOnReceivedDataStream();
             return response;
