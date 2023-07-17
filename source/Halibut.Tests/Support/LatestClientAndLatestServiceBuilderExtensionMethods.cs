@@ -26,6 +26,11 @@ namespace Halibut.Tests.Support
         {
             return builder.WithService<IDoSomeActionService>(() => new DoSomeActionService(action));
         }
+        
+        public static LatestClientAndLatestServiceBuilder WithReturnSomeDataStreamService(this LatestClientAndLatestServiceBuilder builder, Func<DataStream> dataStreamCreator)
+        {
+            return builder.WithService<IReturnSomeDataStreamService>(() => new ReturnSomeDataStreamService(dataStreamCreator));
+        }
 
         public static LatestClientAndLatestServiceBuilder WithReadDataStreamService(this LatestClientAndLatestServiceBuilder builder)
         {
