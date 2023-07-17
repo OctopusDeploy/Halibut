@@ -108,7 +108,7 @@ namespace Halibut.Tests
                     addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;
                 }
 
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout * 2 + addControlMessageTimeout, TimeSpan.FromSeconds(5),
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout + HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout, TimeSpan.FromSeconds(5),
                     "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
                     "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
 
