@@ -29,7 +29,10 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         static ComplexResponse FixResponseDataStreams(ComplexResponse response)
         {
-            response.Payloads = response.Payloads.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
+            foreach (var pair in response.Payloads)
+            {
+                response.Payloads[pair.Key] = pair.Value.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
+            }
             response.Child.First = response.Child.First.ConfigureWriterOnReceivedDataStream();
             response.Child.Second = response.Child.Second.ConfigureWriterOnReceivedDataStream();
             return response;

@@ -171,9 +171,16 @@ namespace Halibut.Tests
             {
                 var service = clientAndService.CreateClient<IComplexObjectService>();
                 var requestId = "TestRequestIdentifier";
+                
                 var payload = "ThisIsMyTestString";
+                var resultPayload1 = "1: ThisIsMyTestString";
+                var resultPayload2 = "2: ThisIsMyTestString";
+                var resultPayload3 = "3: ThisIsMyTestString";
+                
                 var childPayload1 = "ChildPayload1";
                 var childPayload2 = "ChildPayload2";
+                var resultChildPayload1 = "First: ChildPayload1";
+                var resultChildPayload2 = "Second: ChildPayload2";
 
                 for (int i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
@@ -190,14 +197,14 @@ namespace Halibut.Tests
                     });
                     result.RequestId.Should().Be(requestId);
 
-                    var payloads = result.Payloads.ToArray();
-                    payloads.Length.Should().Be(3);
-                    payloads[0].ReadAsString().Should().Be(ComplexObjectService.ProcessPayload(1, payload).ReadAsString());
-                    payloads[1].ReadAsString().Should().Be(ComplexObjectService.ProcessPayload(2, payload).ReadAsString());
-                    payloads[2].ReadAsString().Should().Be(ComplexObjectService.ProcessPayload(3, payload).ReadAsString());
+                    result.Payloads.Count.Should().Be(1);
+                    var payloads = result.Payloads.First().Value.ToArray();
+                    payloads[0].ReadAsString().Should().Be(resultPayload1);
+                    payloads[1].ReadAsString().Should().Be(resultPayload2);
+                    payloads[2].ReadAsString().Should().Be(resultPayload3);
 
-                    result.Child.First.ReadAsString().Should().Be(ComplexObjectService.ProcessFirst(DataStream.FromString(childPayload1)).ReadAsString());
-                    result.Child.Second.ReadAsString().Should().Be(ComplexObjectService.ProcessSecond(DataStream.FromString(childPayload2)).ReadAsString());
+                    result.Child.First.ReadAsString().Should().Be(resultChildPayload1);
+                    result.Child.Second.ReadAsString().Should().Be(resultChildPayload2);
                 }
             }
         }

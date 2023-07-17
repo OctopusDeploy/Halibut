@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Halibut.TestUtils.Contracts
 {
@@ -19,7 +20,7 @@ namespace Halibut.TestUtils.Contracts
     public class ComplexResponse
     {
         public string RequestId;
-        public IList<DataStream> Payloads;
+        public IDictionary<Guid, IList<DataStream>> Payloads;
 
         public ComplexObjectChild Child;
     }
@@ -38,35 +39,22 @@ namespace Halibut.TestUtils.Contracts
             string payload = request.Payload.ReadAsString();
             for (int i = 1; i <= request.NumberOfCopies; i++)
             {
-                dataStreams.Add(ProcessPayload(i, payload));
+                dataStreams.Add(DataStream.FromString(i + ": " + payload));
             }
 
             return new ComplexResponse
             {
                 RequestId = request.RequestId,
-                Payloads = dataStreams,
+                Payloads = new Dictionary<Guid, IList<DataStream>>
+                {
+                    {Guid.NewGuid(), dataStreams}
+                },
                 Child = new ComplexObjectChild
                 {
-                    First = ProcessFirst(request.Child.First),
-                    Second = ProcessSecond(request.Child.Second),
+                    First = DataStream.FromString("First: " + request.Child.First.ReadAsString()),
+                    Second = DataStream.FromString("Second: " + request.Child.Second.ReadAsString()),
                 }
-                
             };
-        }
-
-        public static DataStream ProcessPayload(int copyNumber, string payload)
-        {
-            return DataStream.FromString(copyNumber + ": " + payload);
-        }
-
-        public static DataStream ProcessFirst(DataStream payload)
-        {
-            return DataStream.FromString("First: " + payload.ReadAsString());
-        }
-
-        public static DataStream ProcessSecond(DataStream payload)
-        {
-            return DataStream.FromString("Second: " + payload.ReadAsString());
         }
     }
 }
