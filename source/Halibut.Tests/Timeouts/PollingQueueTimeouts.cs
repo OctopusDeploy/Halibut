@@ -44,7 +44,7 @@ namespace Halibut.Tests.Timeouts
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                timeSpansBetweenDataFlowing.Clear();
+                timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
 
                 await Task.Delay(TimeSpan.FromSeconds(20));
 
