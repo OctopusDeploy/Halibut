@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
@@ -10,11 +9,10 @@ using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
-    public class TimeoutsFixture : BaseTest
+    public class SendingAndReceivingRequestMessagesTimeoutsFixture : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
