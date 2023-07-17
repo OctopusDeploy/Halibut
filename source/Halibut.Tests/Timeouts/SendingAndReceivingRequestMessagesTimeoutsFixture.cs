@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions.Primitives;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
@@ -92,7 +93,7 @@ namespace Halibut.Tests.Timeouts
                 var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 100);
                 var sw = Stopwatch.StartNew();
                 var e = Assert.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.SayHello(stringToSend));
-                e.Message.Should().Contain("Unable to write data to the transport connection: Connection timed out.");
+                AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
                 new SerilogLoggerBuilder().Build().Error(e, "Received error when making the request (as expected)");
 
@@ -137,7 +138,7 @@ namespace Halibut.Tests.Timeouts
                     andThenRun: portForwarderRef.Value!.PauseExistingConnections,
                     thenSend: "All done" + Some.RandomAsciiStringOfLength(100*1024*1024)
                 )));
-                e.Message.Should().Contain("Unable to write data to the transport connection: Connection timed out.");
+                AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
                 new SerilogLoggerBuilder().Build().Error(e, "Received error when making the request (as expected)");
                 
@@ -146,6 +147,14 @@ namespace Halibut.Tests.Timeouts
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
+        }
+
+        static void AssertExceptionLooksLikeAWriteTimeout(HalibutClientException? e)
+        {
+            
+            e.Message.Should().ContainAny(
+        "Unable to write data to the transport connection: Connection timed out.",
+                    " Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
         }
 
         static Action<ServiceEndPoint> IncreasePollingQueueTimeout()
