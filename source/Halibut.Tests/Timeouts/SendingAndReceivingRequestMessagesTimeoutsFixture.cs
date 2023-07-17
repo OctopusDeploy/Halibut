@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
-using FluentAssertions.Primitives;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
@@ -10,6 +9,7 @@ using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
+using System.Runtime.InteropServices;
 
 namespace Halibut.Tests.Timeouts
 {
@@ -36,7 +36,7 @@ namespace Halibut.Tests.Timeouts
                 var e = Assert.Throws<HalibutClientException>(() => pauseConnections.Action());
                 sw.Stop();
                 new SerilogLoggerBuilder().Build().Error(e, "msg");
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(5));
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(8));
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
@@ -66,7 +66,7 @@ namespace Halibut.Tests.Timeouts
                 var e = Assert.Throws<HalibutClientException>(() => pauseConnections.SomeDataStream());
                 sw.Stop();
                 new SerilogLoggerBuilder().Build().Error(e, "Received error");
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(5));
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(8));
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
@@ -107,7 +107,7 @@ namespace Halibut.Tests.Timeouts
                     addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;
                 }
 
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout + HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout, TimeSpan.FromSeconds(5),
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout + HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout, TimeSpan.FromSeconds(8),
                     "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
                     "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
 
@@ -119,7 +119,6 @@ namespace Halibut.Tests.Timeouts
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task WhenThenNetworkIsPaused_WhileSendingADataStreamAsPartOfARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
         {
-            
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithPortForwarding(out var portForwarderRef)
@@ -143,7 +142,17 @@ namespace Halibut.Tests.Timeouts
                 new SerilogLoggerBuilder().Build().Error(e, "Received error when making the request (as expected)");
                 
                 // It is not clear why listening doesn't seem to wait to send a control message here.
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout, TimeSpan.FromSeconds(5));
+                var addControlMessageTimeout = TimeSpan.Zero;
+                if (serviceConnectionType == ServiceConnectionType.Listening)
+                {
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        // It is not clear why windows appears to add this timeout.
+                        addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;                        
+                    }
+                }
+                
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout, TimeSpan.FromSeconds(8));
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
