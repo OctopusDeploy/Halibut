@@ -17,7 +17,7 @@ namespace Halibut.Tests.Timeouts
     {
         [Test]
         [TestCaseSource(typeof(PollingServiceConnectionTypesToTest))]
-        public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessage_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
+        public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive(ServiceConnectionType serviceConnectionType)
         {
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
