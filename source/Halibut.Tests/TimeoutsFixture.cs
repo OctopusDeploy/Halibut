@@ -115,6 +115,40 @@ namespace Halibut.Tests
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
         }
+        
+        [Test]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        public async Task WhenThenNetworkIsPaused_WhileSendingADataStreamAsPartOfARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
+        {
+            
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithPortForwarding(out var portForwarderRef)
+                       .WithEchoService()
+                       .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateClient<IEchoService>();
+                echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+
+                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService>(IncreasePollingQueueTimeout());
+
+                
+                var sw = Stopwatch.StartNew();
+                var e = Assert.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.CountBytes(DataStreamUtil.From(
+                    firstSend: "hello",
+                    andThenRun: portForwarderRef.Value!.PauseExistingConnections,
+                    thenSend: "All done" + Some.RandomAsciiStringOfLength(100*1024*1024)
+                )));
+                e.Message.Should().Contain("Unable to write data to the transport connection: Connection timed out.");
+                sw.Stop();
+                new SerilogLoggerBuilder().Build().Error(e, "Received error when making the request (as expected)");
+                
+                // It is not clear why listening doesn't seem to wait to send a control message here.
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout, TimeSpan.FromSeconds(5));
+                
+                echo.SayHello("A new request can be made on a new unpaused TCP connection");
+            }
+        }
 
         static Action<ServiceEndPoint> IncreasePollingQueueTimeout()
         {

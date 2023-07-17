@@ -6,8 +6,8 @@ namespace Halibut.Tests.Util
     {
         public static DataStream From(string firstSend, Action andThenRun, string thenSend)
         {
-            var helloBytes = "hello".GetBytesUtf8();
-            var allDoneBytes = "All done".GetBytesUtf8();
+            var helloBytes = firstSend.GetBytesUtf8();
+            var allDoneBytes = thenSend.GetBytesUtf8();
             return new DataStream(helloBytes.Length + allDoneBytes.Length, stream =>
             {
                 stream.Write(helloBytes);
