@@ -10,10 +10,10 @@ namespace Halibut.Tests.Util
             var allDoneBytes = thenSend.GetBytesUtf8();
             return new DataStream(helloBytes.Length + allDoneBytes.Length, stream =>
             {
-                stream.Write(helloBytes);
+                stream.Write(helloBytes, 0, helloBytes.Length);
                 stream.Flush();
                 andThenRun();
-                stream.Write(allDoneBytes);
+                stream.Write(allDoneBytes, 0, allDoneBytes.Length);
                 stream.Flush();
             });
         }
