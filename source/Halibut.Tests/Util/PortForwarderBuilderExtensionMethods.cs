@@ -6,7 +6,8 @@ namespace Halibut.Tests.Util
     public static class PortForwarderBuilderExtensionMethods
     {
         /// <summary>
-        /// 
+        ///  Pause port forwarder TCP streams after a number of bytes have been received on either end of the forwarder
+        /// TCP connection.
         /// </summary>
         /// <param name="portForwarderBuilder"></param>
         /// <param name="numberOfBytesBeforePausingAStream">When this many bytes have been received by a single port forwarder TCPPump
