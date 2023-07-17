@@ -19,7 +19,6 @@ namespace Halibut.Tests.Timeouts
         [TestCaseSource(typeof(PollingServiceConnectionTypesToTest))]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessage_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
         {
-            
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
@@ -46,7 +45,6 @@ namespace Halibut.Tests.Timeouts
                 echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
                 timeSpansBetweenDataFlowing.Clear();
-
 
                 await Task.Delay(TimeSpan.FromSeconds(20));
 

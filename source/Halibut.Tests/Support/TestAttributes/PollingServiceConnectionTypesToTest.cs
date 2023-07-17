@@ -1,7 +1,6 @@
-﻿
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
@@ -9,7 +8,7 @@ namespace Halibut.Tests.Support.TestAttributes
     {
         public IEnumerator<ServiceConnectionType> GetEnumerator()
         {
-            var toTest = new List<ServiceConnectionType>()
+            var toTest = new List<ServiceConnectionType>
             {
                 ServiceConnectionType.Polling,
 // Disabled while these are causing flakey Team City Tests
@@ -17,7 +16,7 @@ namespace Halibut.Tests.Support.TestAttributes
 //             ServiceConnectionType.PollingOverWebSocket
 //#endif
             };
-            return ((IEnumerable<ServiceConnectionType>)toTest).GetEnumerator();
+            return ((IEnumerable<ServiceConnectionType>) toTest).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
