@@ -170,41 +170,127 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var service = clientAndService.CreateClient<IComplexObjectService>();
-                var requestId = "TestRequestIdentifier";
+                var requestId = "RequestIdentifier";
                 
-                var payload = "ThisIsMyTestString";
-                var resultPayload1 = "1: ThisIsMyTestString";
-                var resultPayload2 = "2: ThisIsMyTestString";
-                var resultPayload3 = "3: ThisIsMyTestString";
+                var requestPayload1 = "Payload #1";
+                var responsePayload1 = "Response: Payload #1";
+                var requestPayload2 = "Payload #2";
+                var responsePayload2 = "Response: Payload #2";
                 
-                var childPayload1 = "ChildPayload1";
-                var childPayload2 = "ChildPayload2";
-                var resultChildPayload1 = "First: ChildPayload1";
-                var resultChildPayload2 = "Second: ChildPayload2";
+                var requestChild1Payload1 = "Child #1, Payload #1";
+                var responseChild1Payload1 = "Response: Child #1, Payload #1";
+                var requestChild1Payload2 = "Child #1, Payload #2";
+                var responseChild1Payload2 = "Response: Child #1, Payload #2";
+                var requestChild2Payload1 = "Child #2, Payload #1";
+                var responseChild2Payload1 = "Response: Child #2, Payload #1";
+                var requestChild2Payload2 = "Child #2, Payload #2";
+                var responseChild2Payload2 = "Response: Child #2, Payload #2";
+
+                var requestList1 = new[] { "Child #1, List Item #1", "Child #1, List Item #2", "Child #1, List Item #3" };
+                var responseList1 = new[] { "Response: Child #1, List Item #1", "Response: Child #1, List Item #2", "Response: Child #1, List Item #3" };
+                
+                var requestList2 = new[] { "Child #2, List Item #1", "Child #2, List Item #2", "Child #2, List Item #3" };
+                var responseList2 = new[] { "Response: Child #2, List Item #1", "Response: Child #2, List Item #2", "Response: Child #2, List Item #3" };
+
+                var requestEnum1 = ComplexRequestEnum.RequestValue1;
+                var responseEnum1 = ComplexResponseEnum.ResponseValue1;
+
+                var requestEnum2 = ComplexRequestEnum.RequestValue2;
+                var responseEnum2 = ComplexResponseEnum.ResponseValue2;
+
+                var guid_1_1 = Guid.NewGuid();
+                var guid_1_2 = Guid.NewGuid();
+                var guid_2_1 = Guid.NewGuid();
+                var guid_2_2 = Guid.NewGuid();
+
+                var requestDictionary1 = new Dictionary<Guid, string>
+                {
+                    { guid_1_1, "Child #1, Dictionary #1" },
+                    { guid_1_2, "Child #1, Dictionary #2" },
+                };
+                var responseDictionary1 = new Dictionary<Guid, string>
+                {
+                    { guid_1_1, "Response: Child #1, Dictionary #1" },
+                    { guid_1_2, "Response: Child #1, Dictionary #2" },
+                };
+                
+                var requestDictionary2 = new Dictionary<Guid, string>
+                {
+                    { guid_2_1, "Child #2, Dictionary #1" },
+                    { guid_2_2, "Child #2, Dictionary #2" },
+                };
+                var responseDictionary2 = new Dictionary<Guid, string>
+                {
+                    { guid_2_1, "Response: Child #2, Dictionary #1" },
+                    { guid_2_2, "Response: Child #2, Dictionary #2" },
+                };
+
+                var requestSet1 = new HashSet<ComplexPair<ComplexRequestEnum, string>>
+                {
+                    new(ComplexRequestEnum.RequestValue1, "Child #1, ComplexSet #1"),
+                    new(ComplexRequestEnum.RequestValue3, "Child #1, ComplexSet #3"),
+                };
+                var responseSet1 = new HashSet<ComplexPair<ComplexResponseEnum, string>>
+                {
+                    new(ComplexResponseEnum.ResponseValue1, "Response: Child #1, ComplexSet #1"),
+                    new(ComplexResponseEnum.ResponseValue3, "Response: Child #1, ComplexSet #3"),
+                };
+
+                var requestSet2 = new HashSet<ComplexPair<ComplexRequestEnum, string>>
+                {
+                    new(ComplexRequestEnum.RequestValue1, "Child #2, ComplexSet #1"),
+                    new(ComplexRequestEnum.RequestValue3, "Child #2, ComplexSet #3"),
+                };
+                var responseSet2 = new HashSet<ComplexPair<ComplexResponseEnum, string>>
+                {
+                    new(ComplexResponseEnum.ResponseValue1, "Response: Child #2, ComplexSet #1"),
+                    new(ComplexResponseEnum.ResponseValue3, "Response: Child #2, ComplexSet #3"),
+                };
 
                 for (int i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
-                    var result = service.Process(new ComplexRequest
+                    var response = service.Process(new ComplexRequest
                     {
                         RequestId = requestId,
-                        NumberOfCopies = 3,
-                        Payload = DataStream.FromString(payload),
-                        Child = new ComplexObjectChild
+                        Payload1 = DataStream.FromString(requestPayload1),
+                        Payload2 = DataStream.FromString(requestPayload2),
+                        Child1 = new ComplexRequestChild
                         {
-                            First = DataStream.FromString(childPayload1),
-                            Second = DataStream.FromString(childPayload2)
-                        }
+                            ChildPayload1 = DataStream.FromString(requestChild1Payload1),
+                            ChildPayload2 = DataStream.FromString(requestChild1Payload2),
+                            ListOfStreams = requestList1.Select(DataStream.FromString).ToList(),
+                            EnumPayload = requestEnum1,
+                            DictionaryPayload = requestDictionary1,
+                            ComplexPayloadSet = requestSet1.Select(x => new ComplexPair<ComplexRequestEnum, DataStream>(x.Item1, DataStream.FromString(x.Item2))).ToHashSet()
+                        },
+                        Child2 = new ComplexRequestChild
+                        {
+                            ChildPayload1 = DataStream.FromString(requestChild2Payload1),
+                            ChildPayload2 = DataStream.FromString(requestChild2Payload2),
+                            ListOfStreams = requestList2.Select(DataStream.FromString).ToList(),
+                            EnumPayload = requestEnum2,
+                            DictionaryPayload = requestDictionary2,
+                            ComplexPayloadSet = requestSet2.Select(x => new ComplexPair<ComplexRequestEnum, DataStream>(x.Item1, DataStream.FromString(x.Item2))).ToHashSet()
+                        },
                     });
-                    result.RequestId.Should().Be(requestId);
 
-                    result.Payloads.Count.Should().Be(1);
-                    var payloads = result.Payloads.First().Value.ToArray();
-                    payloads[0].ReadAsString().Should().Be(resultPayload1);
-                    payloads[1].ReadAsString().Should().Be(resultPayload2);
-                    payloads[2].ReadAsString().Should().Be(resultPayload3);
+                    response.RequestId.Should().Be(requestId);
 
-                    result.Child.First.ReadAsString().Should().Be(resultChildPayload1);
-                    result.Child.Second.ReadAsString().Should().Be(resultChildPayload2);
+                    response.Payload1.ReadAsString().Should().Be(responsePayload1);
+                    response.Payload2.ReadAsString().Should().Be(responsePayload2);
+                    response.Child1.ChildPayload1.ReadAsString().Should().Be(responseChild1Payload1);
+                    response.Child1.ChildPayload2.ReadAsString().Should().Be(responseChild1Payload2);
+                    response.Child1.ListOfStreams.Select(x => x.ReadAsString()).ToList().Should().BeEquivalentTo(responseList1);
+                    response.Child1.EnumPayload.Should().Be(responseEnum1);
+                    response.Child1.DictionaryPayload.Should().BeEquivalentTo(responseDictionary1);
+                    response.Child1.ComplexPayloadSet.Select(x => new ComplexPair<ComplexResponseEnum, string>(x.Item1, x.Item2.ReadAsString())).ToHashSet().Should().BeEquivalentTo(responseSet1);
+                    
+                    response.Child2.ChildPayload1.ReadAsString().Should().Be(responseChild2Payload1);
+                    response.Child2.ChildPayload2.ReadAsString().Should().Be(responseChild2Payload2);
+                    response.Child2.ListOfStreams.Select(x => x.ReadAsString()).ToList().Should().BeEquivalentTo(responseList2);
+                    response.Child2.EnumPayload.Should().Be(responseEnum2);
+                    response.Child2.DictionaryPayload.Should().BeEquivalentTo(responseDictionary2);
+                    response.Child2.ComplexPayloadSet.Select(x => new ComplexPair<ComplexResponseEnum, string>(x.Item1, x.Item2.ReadAsString())).ToHashSet().Should().BeEquivalentTo(responseSet2);
                 }
             }
         }
