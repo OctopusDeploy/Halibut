@@ -10,7 +10,7 @@ using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
-namespace Halibut.Tests
+namespace Halibut.Tests.Timeouts
 {
     public class SendingAndReceivingRequestMessagesTimeoutsFixture : BaseTest
     {
