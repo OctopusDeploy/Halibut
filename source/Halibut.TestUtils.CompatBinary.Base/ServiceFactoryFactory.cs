@@ -18,6 +18,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             {
                 services.Register<IEchoService>(() => new EchoService());
                 services.Register<IMultipleParametersTestService>(() => new MultipleParametersTestService());
+                services.Register<IComplexObjectService>(() => new ComplexObjectService());
             }
 
             if (SettingsHelper.IsWithCachingService())
@@ -46,6 +47,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
             
             var forwardingMultipleParametersTestService = clientWhichTalksToLatestHalibut.CreateClient<IMultipleParametersTestService>(realServiceEndpoint);
             services.Register<IMultipleParametersTestService>(() => new DelegateMultipleParametersTestService(forwardingMultipleParametersTestService));
+
+            var forwardingComplexObjectTestService = clientWhichTalksToLatestHalibut.CreateClient<IComplexObjectService>(realServiceEndpoint);
+            services.Register<IComplexObjectService>(() => new DelegateComplexObjectService(forwardingComplexObjectTestService));
             
             // The ICachingService is not supported since, the new attributes are not available in the versions of Halibut in the compat library.
             return services;
