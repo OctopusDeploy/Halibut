@@ -26,7 +26,6 @@ namespace Halibut.Tests.Timeouts
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {
-                portForwarderRef.Value = clientAndService.PortForwarder;
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
@@ -57,7 +56,6 @@ namespace Halibut.Tests.Timeouts
                            thenSend: "All done"))
                        .Build(CancellationToken))
             {
-                portForwarderRef.Value = clientAndService.PortForwarder;
                 var echo = clientAndService.CreateClient<IEchoService>();
                 echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
