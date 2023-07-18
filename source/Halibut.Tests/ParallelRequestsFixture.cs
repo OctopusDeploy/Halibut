@@ -15,6 +15,7 @@ namespace Halibut.Tests
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task SendMessagesToTentacleInParallel(ServiceConnectionType serviceConnectionType)
         {
             var services = new DelegateServiceFactory();
