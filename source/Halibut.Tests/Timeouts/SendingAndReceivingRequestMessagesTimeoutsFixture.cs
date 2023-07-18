@@ -35,13 +35,14 @@ namespace Halibut.Tests.Timeouts
                 var sw = Stopwatch.StartNew();
                 var e = Assert.Throws<HalibutClientException>(() => pauseConnections.Action());
                 sw.Stop();
-                new SerilogLoggerBuilder().Build().Error(e, "msg");
+                Logger.Error(e, "Received error");
+                AssertExceptionMessageLooksLikeAReadTimeout(e);
                 sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(8));
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
         }
-        
+
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessageDataStream_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
@@ -65,7 +66,8 @@ namespace Halibut.Tests.Timeouts
                 var sw = Stopwatch.StartNew();
                 var e = Assert.Throws<HalibutClientException>(() => pauseConnections.SomeDataStream());
                 sw.Stop();
-                new SerilogLoggerBuilder().Build().Error(e, "Received error");
+                Logger.Error(e, "Received error");
+                AssertExceptionMessageLooksLikeAReadTimeout(e);
                 sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(8));
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
@@ -95,7 +97,7 @@ namespace Halibut.Tests.Timeouts
                 var e = Assert.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.SayHello(stringToSend));
                 AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
-                new SerilogLoggerBuilder().Build().Error(e, "Received error when making the request (as expected)");
+                Logger.Error(e, "Received error when making the request (as expected)");
 
                 var addControlMessageTimeout = TimeSpan.Zero;
                 if (serviceConnectionType == ServiceConnectionType.Listening)
@@ -139,7 +141,7 @@ namespace Halibut.Tests.Timeouts
                 )));
                 AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
-                new SerilogLoggerBuilder().Build().Error(e, "Received error when making the request (as expected)");
+                Logger.Error(e, "Received error when making the request (as expected)");
                 
                 // It is not clear why listening doesn't seem to wait to send a control message here.
                 var addControlMessageTimeout = TimeSpan.Zero;
@@ -164,6 +166,13 @@ namespace Halibut.Tests.Timeouts
             e.Message.Should().ContainAny(
         "Unable to write data to the transport connection: Connection timed out.",
                     " Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
+        }
+        
+        static void AssertExceptionMessageLooksLikeAReadTimeout(HalibutClientException? e)
+        {
+            e.Message.Should().ContainAny(
+                "Unable to read data from the transport connection: Connection timed out.",
+                "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
         }
 
         static Action<ServiceEndPoint> IncreasePollingQueueTimeout()
