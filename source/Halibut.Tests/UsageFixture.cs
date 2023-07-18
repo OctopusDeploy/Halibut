@@ -9,6 +9,7 @@ using Halibut.Logging;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -31,6 +32,29 @@ namespace Halibut.Tests
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+        
+        [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        public async Task LargeMessages(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
+            {
+                var random = new Random();
+                var echo = clientAndService.CreateClient<IEchoService>();
+                for (var i = 1; i < 5; i++)
+                {
+                    {
+                        int length = 1000000 + random.Next(8196);
+                        Logger.Information("Sending message of length {Length}", length);
+                        var s = Some.RandomAsciiStringOfLength(length);
+                        echo.SayHello(s).Should().Be(s + "...");
+                    }
                 }
             }
         }
