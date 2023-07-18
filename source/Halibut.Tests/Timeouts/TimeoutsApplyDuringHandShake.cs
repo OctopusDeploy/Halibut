@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
@@ -21,15 +22,19 @@ namespace Halibut.Tests.Timeouts
         [Test]
         public async Task WhenTheFirstWriteOverTheWireOccursOnAConnectionThatImmediatelyPauses_AWriteTimeoutShouldApply(
             [ValuesOfType(typeof(ServiceConnectionTypesToTest))] ServiceConnectionType serviceConnectionType,
-            [Values(true, false)] bool onClientToOrigin) // Don't dewll on what this means, we just want to test all combinations of where the timeout can occur.
+            [Values(true, false)] bool onClientToOrigin, // Don't dewll on what this means, we just want to test all combinations of where the timeout can occur.
+            [Values(1, 2)]int writeNumberToPauseOn // Ie pause on the first or second write
+            ) 
         {
             bool hasPausedAConnection = false;
+            int numberOfWritesSeen = 0;
             
             var dataTransferObserverPauser = new DataTransferObserverBuilder()
                 .WithWritingDataObserver((tcpPump, Stream) =>
                 {
 
-                    if (!hasPausedAConnection)
+                    Interlocked.Increment(ref numberOfWritesSeen);
+                    if (!hasPausedAConnection && numberOfWritesSeen == writeNumberToPauseOn)
                     {
                         hasPausedAConnection = true;
                         tcpPump.Pause();
