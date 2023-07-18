@@ -16,8 +16,8 @@ namespace Halibut.TestUtils.Contracts
         public DataStream Payload1;
         public DataStream Payload2;
 
-        public ComplexRequestChild Child1;
-        public ComplexRequestChild Child2;
+        public ComplexChild Child1;
+        public ComplexChild Child2;
     }
 
     public class ComplexResponse
@@ -27,76 +27,61 @@ namespace Halibut.TestUtils.Contracts
         public DataStream Payload1;
         public DataStream Payload2;
 
-        public ComplexResponseChild Child1;
-        public ComplexResponseChild Child2;
+        public ComplexChild Child1;
+        public ComplexChild Child2;
     }
 
-    public abstract class ComplexChildBase<T>
+    public class ComplexChild
     {
         public DataStream ChildPayload1;
         public DataStream ChildPayload2;
 
         public IList<DataStream> ListOfStreams;
         public IDictionary<Guid, string> DictionaryPayload;
-        public T EnumPayload;
-        public ISet<ComplexPair<T, DataStream>> ComplexPayloadSet;
+        public ComplexEnum EnumPayload;
+        public ISet<ComplexPair<DataStream>> ComplexPayloadSet;
     }
 
-    public class ComplexRequestChild : ComplexChildBase<ComplexRequestEnum>
-    {
-    }
-
-    public class ComplexResponseChild : ComplexChildBase<ComplexResponseEnum>
-    {
-    }
-
-    public enum ComplexRequestEnum
+    public enum ComplexEnum
     {
         RequestValue1,
         RequestValue2,
         RequestValue3
     }
 
-    public class ComplexPair<T1, T2>: IEquatable<ComplexPair<T1, T2>>
+    public class ComplexPair<T>: IEquatable<ComplexPair<T>>
     {
-        public ComplexPair(T1 item1, T2 item2)
+        public ComplexPair(ComplexEnum enumValue, T payload)
         {
-            Item1 = item1;
-            Item2 = item2;
+            EnumValue = enumValue;
+            Payload = payload;
         }
 
-        public readonly T1 Item1;
-        public readonly T2 Item2;
+        public readonly ComplexEnum EnumValue;
+        public readonly T Payload;
 
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ComplexPair<T1, T2>)obj);
+            return Equals((ComplexPair<T>)obj);
         }
 
-        public bool Equals(ComplexPair<T1, T2> other)
+        public bool Equals(ComplexPair<T> other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Item1.Equals(other.Item1) && Item2.Equals(other.Item2);
+            return EnumValue.Equals(other.EnumValue) && Payload.Equals(other.Payload);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return (EqualityComparer<T1>.Default.GetHashCode(Item1) * 397) ^ EqualityComparer<T2>.Default.GetHashCode(Item2);
+                return (EqualityComparer<ComplexEnum>.Default.GetHashCode(EnumValue) * 397) ^ EqualityComparer<T>.Default.GetHashCode(Payload);
             }
         }
-    }
-
-    public enum ComplexResponseEnum
-    {
-        ResponseValue1,
-        ResponseValue2,
-        ResponseValue3
     }
 
     public class ComplexObjectService : IComplexObjectService
@@ -106,41 +91,33 @@ namespace Halibut.TestUtils.Contracts
             return new ComplexResponse
             {
                 RequestId = request.RequestId,
-                Payload1 = AddResponsePrefix(request.Payload1),
-                Payload2 = AddResponsePrefix(request.Payload2),
+                Payload1 = ReadIntoNewDataStream(request.Payload1),
+                Payload2 = ReadIntoNewDataStream(request.Payload2),
                 Child1 = MapToResponseChild(request.Child1),
                 Child2 = MapToResponseChild(request.Child2)
             };
         }
 
-        DataStream AddResponsePrefix(DataStream ds)
+        DataStream ReadIntoNewDataStream(DataStream ds)
         {
-            return DataStream.FromString(AddResponsePrefix(ds.ReadAsString()));
+            // Read the source DataStream, then write into
+            // a new DataStream, to simulate some work.
+            // i.e. we don't want to just re-use the exact same
+            // DataStream instance
+            return DataStream.FromString(ds.ReadAsString());
         }
 
-        string AddResponsePrefix(string s)
+        ComplexChild MapToResponseChild(ComplexChild child)
         {
-            return "Response: " + s;
-        }
-
-        ComplexResponseChild MapToResponseChild(ComplexRequestChild requestChild)
-        {
-            return new ComplexResponseChild
+            return new ComplexChild
             {
-                ChildPayload1 = AddResponsePrefix(requestChild.ChildPayload1),
-                ChildPayload2 = AddResponsePrefix(requestChild.ChildPayload2),
-                ListOfStreams = requestChild.ListOfStreams.Select(AddResponsePrefix).ToList(),
-                EnumPayload = EnumMap[requestChild.EnumPayload],
-                DictionaryPayload = requestChild.DictionaryPayload.ToDictionary(pair => pair.Key, pair => AddResponsePrefix(pair.Value)),
-                ComplexPayloadSet = requestChild.ComplexPayloadSet.Select(x => new ComplexPair<ComplexResponseEnum, DataStream>(EnumMap[x.Item1], AddResponsePrefix(x.Item2))).ToHashSet()
+                ChildPayload1 = ReadIntoNewDataStream(child.ChildPayload1),
+                ChildPayload2 = ReadIntoNewDataStream(child.ChildPayload2),
+                ListOfStreams = child.ListOfStreams.Select(ReadIntoNewDataStream).ToList(),
+                EnumPayload = child.EnumPayload,
+                DictionaryPayload = child.DictionaryPayload.ToDictionary(pair => pair.Key, pair => pair.Value),
+                ComplexPayloadSet = child.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, ReadIntoNewDataStream(x.Payload))).ToHashSet()
             };
         }
-
-        static readonly Dictionary<ComplexRequestEnum, ComplexResponseEnum> EnumMap = new()
-        {
-            { ComplexRequestEnum.RequestValue1, ComplexResponseEnum.ResponseValue1 },
-            { ComplexRequestEnum.RequestValue2, ComplexResponseEnum.ResponseValue2 },
-            { ComplexRequestEnum.RequestValue3, ComplexResponseEnum.ResponseValue3 }
-        };
     }
 }

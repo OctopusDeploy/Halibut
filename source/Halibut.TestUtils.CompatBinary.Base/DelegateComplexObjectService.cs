@@ -27,11 +27,11 @@ namespace Halibut.TestUtils.SampleProgram.Base
             request.Child1.ChildPayload1 = request.Child1.ChildPayload1.ConfigureWriterOnReceivedDataStream();
             request.Child1.ChildPayload2 = request.Child1.ChildPayload2.ConfigureWriterOnReceivedDataStream();
             request.Child1.ListOfStreams = request.Child1.ListOfStreams.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
-            request.Child1.ComplexPayloadSet = request.Child1.ComplexPayloadSet.Select(x => new ComplexPair<ComplexRequestEnum, DataStream>(x.Item1, x.Item2.ConfigureWriterOnReceivedDataStream())).ToHashSet();
+            request.Child1.ComplexPayloadSet = request.Child1.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
             request.Child2.ChildPayload1 = request.Child2.ChildPayload1.ConfigureWriterOnReceivedDataStream();
             request.Child2.ChildPayload2 = request.Child2.ChildPayload2.ConfigureWriterOnReceivedDataStream();
             request.Child2.ListOfStreams = request.Child2.ListOfStreams.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
-            request.Child2.ComplexPayloadSet = request.Child2.ComplexPayloadSet.Select(x => new ComplexPair<ComplexRequestEnum, DataStream>(x.Item1, x.Item2.ConfigureWriterOnReceivedDataStream())).ToHashSet();
+            request.Child2.ComplexPayloadSet = request.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
             return request;
         }
 
@@ -42,11 +42,11 @@ namespace Halibut.TestUtils.SampleProgram.Base
             response.Child1.ChildPayload1 = response.Child1.ChildPayload1.ConfigureWriterOnReceivedDataStream();
             response.Child1.ChildPayload2 = response.Child1.ChildPayload2.ConfigureWriterOnReceivedDataStream();
             response.Child1.ListOfStreams = response.Child1.ListOfStreams.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
-            response.Child1.ComplexPayloadSet = response.Child1.ComplexPayloadSet.Select(x => new ComplexPair<ComplexResponseEnum, DataStream>(x.Item1, x.Item2.ConfigureWriterOnReceivedDataStream())).ToHashSet();
+            response.Child1.ComplexPayloadSet = response.Child1.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
             response.Child2.ChildPayload1 = response.Child2.ChildPayload1.ConfigureWriterOnReceivedDataStream();
             response.Child2.ChildPayload2 = response.Child2.ChildPayload2.ConfigureWriterOnReceivedDataStream();
             response.Child2.ListOfStreams = response.Child2.ListOfStreams.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
-            response.Child2.ComplexPayloadSet = response.Child2.ComplexPayloadSet.Select(x => new ComplexPair<ComplexResponseEnum, DataStream>(x.Item1, x.Item2.ConfigureWriterOnReceivedDataStream())).ToHashSet();
+            response.Child2.ComplexPayloadSet = response.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
             return response;
         }
     }
