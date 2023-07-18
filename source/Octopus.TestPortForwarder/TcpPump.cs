@@ -118,6 +118,7 @@ namespace Octopus.TestPortForwarder
                 {
 
                     var socketStatus = await socketPump.PumpBytes(readFrom, writeTo, cancellationToken).ConfigureAwait(false);
+                    await socketPump.PausePump(cancellationToken);
                     if(socketStatus == SocketPump.SocketStatus.SOCKET_CLOSED) break;
                 }
                 catch (SocketException socketException)
@@ -132,6 +133,7 @@ namespace Octopus.TestPortForwarder
                 {
                     logger.Warning(ex, "Received pump exception: {Message}.", ex.Message);
                 }
+                await socketPump.PausePump(cancellationToken);
             }
         }
 

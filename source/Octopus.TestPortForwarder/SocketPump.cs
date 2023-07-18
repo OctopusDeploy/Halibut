@@ -59,13 +59,16 @@ namespace Octopus.TestPortForwarder
             if (readFrom.Available > 0 || buffer.Length == 0)
             {
                 var receivedByteCount = await ReadFromSocket(readFrom, buffer, cancellationToken);
+                await PausePump(cancellationToken);
                 if (receivedByteCount == 0) return SocketStatus.SOCKET_CLOSED;
                 stopwatch = Stopwatch.StartNew();
             }
 
             await PausePump(cancellationToken);
 
-            if ((readFrom.Available == 0 && stopwatch.Elapsed >= sendDelay) || buffer.Length > 100 * 1024 * 1024)
+            bool shouldWrite = sendDelay == TimeSpan.Zero 
+                || (readFrom.Available == 0 && stopwatch.Elapsed >= sendDelay) || buffer.Length > 100 * 1024 * 1024; 
+            if (shouldWrite)
             {
                 // Send the data
                 dataTransferObserver.WritingData(tcpPump, buffer);
@@ -82,7 +85,7 @@ namespace Octopus.TestPortForwarder
             return SocketStatus.SOCKET_OPEN;
         }
 
-        async Task PausePump(CancellationToken cancellationToken)
+        internal async Task PausePump(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
             while (isPumpPaused())
