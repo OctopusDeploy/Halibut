@@ -28,7 +28,7 @@ namespace Halibut.Tests.Support.TestAttributes
             return LevelOfParallelismFromEnvVar()??NUnitTestAssemblyRunner.DefaultLevelOfParallelism * 2;
         }
         
-        static int? LevelOfParallelismFromEnvVar()
+        public static int? LevelOfParallelismFromEnvVar()
         {
             var nunitLevelOfParallelismSetting = Environment.GetEnvironmentVariable("CustomLevelOfParallelism");
             if (!string.IsNullOrEmpty(nunitLevelOfParallelismSetting))
