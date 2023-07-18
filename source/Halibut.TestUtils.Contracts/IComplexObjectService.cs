@@ -6,42 +6,36 @@ namespace Halibut.TestUtils.Contracts
 {
     public interface IComplexObjectService
     {
-        ComplexResponse Process(ComplexRequest request);
+        ComplexObjectMultipleDataStreams Process(ComplexObjectMultipleDataStreams request);
+        ComplexObjectMultipleChildren Process(ComplexObjectMultipleChildren request);
     }
 
-    public class ComplexRequest
+    public class ComplexObjectMultipleDataStreams
     {
-        public string RequestId;
-
         public DataStream Payload1;
         public DataStream Payload2;
-
-        public ComplexChild Child1;
-        public ComplexChild Child2;
     }
 
-    public class ComplexResponse
+    public class ComplexObjectMultipleChildren
     {
-        public string RequestId;
-
-        public DataStream Payload1;
-        public DataStream Payload2;
-
-        public ComplexChild Child1;
-        public ComplexChild Child2;
+        public ComplexChild1 Child1;
+        public ComplexChild2 Child2;
     }
 
-    public class ComplexChild
+    public class ComplexChild1
     {
         public DataStream ChildPayload1;
         public DataStream ChildPayload2;
-
         public IList<DataStream> ListOfStreams;
         public IDictionary<Guid, string> DictionaryPayload;
+    }
+
+    public class ComplexChild2
+    {
         public ComplexEnum EnumPayload;
         public ISet<ComplexPair<DataStream>> ComplexPayloadSet;
     }
-
+    
     public enum ComplexEnum
     {
         RequestValue1,
@@ -49,7 +43,7 @@ namespace Halibut.TestUtils.Contracts
         RequestValue3
     }
 
-    public class ComplexPair<T>: IEquatable<ComplexPair<T>>
+    public class ComplexPair<T> : IEquatable<ComplexPair<T>>
     {
         public ComplexPair(ComplexEnum enumValue, T payload)
         {
@@ -86,15 +80,31 @@ namespace Halibut.TestUtils.Contracts
 
     public class ComplexObjectService : IComplexObjectService
     {
-        public ComplexResponse Process(ComplexRequest request)
+        public ComplexObjectMultipleDataStreams Process(ComplexObjectMultipleDataStreams request)
         {
-            return new ComplexResponse
+            return new ComplexObjectMultipleDataStreams
             {
-                RequestId = request.RequestId,
                 Payload1 = ReadIntoNewDataStream(request.Payload1),
-                Payload2 = ReadIntoNewDataStream(request.Payload2),
-                Child1 = MapToResponseChild(request.Child1),
-                Child2 = MapToResponseChild(request.Child2)
+                Payload2 = ReadIntoNewDataStream(request.Payload2)
+            };
+        }
+
+        public ComplexObjectMultipleChildren Process(ComplexObjectMultipleChildren request)
+        {
+            return new ComplexObjectMultipleChildren
+            {
+                Child1 = new ComplexChild1
+                {
+                    ChildPayload1 = ReadIntoNewDataStream(request.Child1.ChildPayload1),
+                    ChildPayload2 = ReadIntoNewDataStream(request.Child1.ChildPayload2),
+                    ListOfStreams = request.Child1.ListOfStreams.Select(ReadIntoNewDataStream).ToList(),
+                    DictionaryPayload = request.Child1.DictionaryPayload.ToDictionary(pair => pair.Key, pair => pair.Value),
+                },
+                Child2 = new ComplexChild2
+                {
+                    EnumPayload = request.Child2.EnumPayload,
+                    ComplexPayloadSet = request.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, ReadIntoNewDataStream(x.Payload))).ToHashSet()
+                }
             };
         }
 
@@ -105,19 +115,6 @@ namespace Halibut.TestUtils.Contracts
             // i.e. we don't want to just re-use the exact same
             // DataStream instance
             return DataStream.FromString(ds.ReadAsString());
-        }
-
-        ComplexChild MapToResponseChild(ComplexChild child)
-        {
-            return new ComplexChild
-            {
-                ChildPayload1 = ReadIntoNewDataStream(child.ChildPayload1),
-                ChildPayload2 = ReadIntoNewDataStream(child.ChildPayload2),
-                ListOfStreams = child.ListOfStreams.Select(ReadIntoNewDataStream).ToList(),
-                EnumPayload = child.EnumPayload,
-                DictionaryPayload = child.DictionaryPayload.ToDictionary(pair => pair.Key, pair => pair.Value),
-                ComplexPayloadSet = child.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, ReadIntoNewDataStream(x.Payload))).ToHashSet()
-            };
         }
     }
 }

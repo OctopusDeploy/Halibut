@@ -162,7 +162,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases]
-        public async Task OctopusCanSendAndReceiveComplexObjectsWithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase
                        .CreateTestCaseBuilder()
@@ -170,114 +170,89 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var service = clientAndService.CreateClient<IComplexObjectService>();
-                var requestId = "RequestIdentifier";
-                
                 var payload1 = "Payload #1";
                 var payload2 = "Payload #2";
-                
-                var child1Payload1 = "Child #1, Payload #1";
-                var child1Payload2 = "Child #1, Payload #2";
-                var child2Payload1 = "Child #2, Payload #1";
-                var child2Payload2 = "Child #2, Payload #2";
-
-                var list1 = new[] { "Child #1, List Item #1", "Child #1, List Item #2", "Child #1, List Item #3" };
-                var list2 = new[] { "Child #2, List Item #1", "Child #2, List Item #2", "Child #2, List Item #3" };
-
-                var enum1 = ComplexEnum.RequestValue1;
-                var enum2 = ComplexEnum.RequestValue2;
-
-                var child1Guid1 = Guid.NewGuid();
-                var child1Guid2 = Guid.NewGuid();
-                var child2Guid1 = Guid.NewGuid();
-                var child2Guild2 = Guid.NewGuid();
-
-                var dictionary1 = new Dictionary<Guid, string>
-                {
-                    { child1Guid1, "Child #1, Dictionary #1" },
-                    { child1Guid2, "Child #1, Dictionary #2" },
-                };
-                
-                var dictionary2 = new Dictionary<Guid, string>
-                {
-                    { child2Guid1, "Child #2, Dictionary #1" },
-                    { child2Guild2, "Child #2, Dictionary #2" },
-                };
-
-                var set1 = new HashSet<ComplexPair<string>>
-                {
-                    new(ComplexEnum.RequestValue1, "Child #1, ComplexSet #1"),
-                    new(ComplexEnum.RequestValue3, "Child #1, ComplexSet #3"),
-                };
-
-                var set2 = new HashSet<ComplexPair<string>>
-                {
-                    new(ComplexEnum.RequestValue1, "Child #2, ComplexSet #1"),
-                    new(ComplexEnum.RequestValue3, "Child #2, ComplexSet #3"),
-                };
 
                 for (int i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
-                    var request = new ComplexRequest
+                    var request = new ComplexObjectMultipleDataStreams
                     {
-                        RequestId = requestId,
                         Payload1 = DataStream.FromString(payload1),
                         Payload2 = DataStream.FromString(payload2),
-                        Child1 = new ComplexChild
-                        {
-                            ChildPayload1 = DataStream.FromString(child1Payload1),
-                            ChildPayload2 = DataStream.FromString(child1Payload2),
-                            ListOfStreams = list1.Select(DataStream.FromString).ToList(),
-                            EnumPayload = enum1,
-                            DictionaryPayload = dictionary1,
-                            ComplexPayloadSet = set1.Select(x => new ComplexPair<DataStream>(x.EnumValue, DataStream.FromString(x.Payload))).ToHashSet()
-                        },
-                        Child2 = new ComplexChild
-                        {
-                            ChildPayload1 = DataStream.FromString(child2Payload1),
-                            ChildPayload2 = DataStream.FromString(child2Payload2),
-                            ListOfStreams = list2.Select(DataStream.FromString).ToList(),
-                            EnumPayload = enum2,
-                            DictionaryPayload = dictionary2,
-                            ComplexPayloadSet = set2.Select(x => new ComplexPair<DataStream>(x.EnumValue, DataStream.FromString(x.Payload))).ToHashSet()
-                        },
                     };
-                    
-                    var response = service.Process(request);
 
-                    response.RequestId.Should().Be(requestId);
+                    var response = service.Process(request);
 
                     response.Payload1.Should().NotBeSameAs(request.Payload1);
                     response.Payload1.ReadAsString().Should().Be(payload1);
-                    
+
                     response.Payload2.Should().NotBeSameAs(request.Payload2);
                     response.Payload2.ReadAsString().Should().Be(payload2);
-
-                    response.Child1.Should().NotBeSameAs(request.Child1);
-                    response.Child1.ChildPayload1.Should().NotBeSameAs(request.Child1.ChildPayload1);
-                    response.Child1.ChildPayload1.ReadAsString().Should().Be(child1Payload1);
-                    response.Child1.ChildPayload2.Should().NotBeSameAs(request.Child1.ChildPayload2);
-                    response.Child1.ChildPayload2.ReadAsString().Should().Be(child1Payload2);
-                    response.Child1.ListOfStreams.Should().NotBeSameAs(request.Child1.ListOfStreams);
-                    response.Child1.ListOfStreams.Select(x => x.ReadAsString()).ToList().Should().BeEquivalentTo(list1);
-                    response.Child1.EnumPayload.Should().Be(enum1);
-                    response.Child1.DictionaryPayload.Should().NotBeSameAs(request.Child1.DictionaryPayload);
-                    response.Child1.DictionaryPayload.Should().BeEquivalentTo(dictionary1);
-                    response.Child1.ComplexPayloadSet.Should().NotBeSameAs(request.Child1.ComplexPayloadSet);
-                    response.Child1.ComplexPayloadSet.Select(x => new ComplexPair<string>(x.EnumValue, x.Payload.ReadAsString())).ToHashSet().Should().BeEquivalentTo(set1);
-
-                    response.Child2.Should().NotBeSameAs(request.Child2);
-                    response.Child2.ChildPayload1.Should().NotBeSameAs(request.Child2.ChildPayload1);
-                    response.Child2.ChildPayload1.ReadAsString().Should().Be(child2Payload1);
-                    response.Child2.ChildPayload2.Should().NotBeSameAs(request.Child2.ChildPayload2);
-                    response.Child2.ChildPayload2.ReadAsString().Should().Be(child2Payload2);
-                    response.Child2.ListOfStreams.Should().NotBeSameAs(request.Child2.ListOfStreams);
-                    response.Child2.ListOfStreams.Select(x => x.ReadAsString()).ToList().Should().BeEquivalentTo(list2);
-                    response.Child2.EnumPayload.Should().Be(enum2);
-                    response.Child2.DictionaryPayload.Should().NotBeSameAs(request.Child2.DictionaryPayload);
-                    response.Child2.DictionaryPayload.Should().BeEquivalentTo(dictionary2);
-                    response.Child2.ComplexPayloadSet.Should().NotBeSameAs(request.Child2.ComplexPayloadSet);
-                    response.Child2.ComplexPayloadSet.Select(x => new ComplexPair<string>(x.EnumValue, x.Payload.ReadAsString())).ToHashSet().Should().BeEquivalentTo(set2);
                 }
+            }
+        }
+
+        [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleComplexChildren(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var childPayload1 = "Child Payload #1";
+            var childPayload2 = "Child Payload #2";
+
+            var list = new[] { "List Item #1", "List Item #2", "List Item #3" };
+
+            var enumValue = ComplexEnum.RequestValue1;
+
+            var dictionary = new Dictionary<Guid, string>
+            {
+                { Guid.NewGuid(), "Dictionary #1" },
+                { Guid.NewGuid(), "Dictionary #2" },
+            };
+
+            var set = new HashSet<ComplexPair<string>>
+            {
+                new(ComplexEnum.RequestValue1, "ComplexSet #1"),
+                new(ComplexEnum.RequestValue3, "ComplexSet #3"),
+            };
+
+            using (var clientAndService = await clientAndServiceTestCase
+                       .CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .Build(CancellationToken))
+            {
+                var service = clientAndService.CreateClient<IComplexObjectService>();
+                var request = new ComplexObjectMultipleChildren
+                {
+                    Child1 = new ComplexChild1
+                    {
+                        ChildPayload1 = DataStream.FromString(childPayload1),
+                        ChildPayload2 = DataStream.FromString(childPayload2),
+                        DictionaryPayload = dictionary,
+                        ListOfStreams = list.Select(DataStream.FromString).ToList(),
+                    },
+                    Child2 = new ComplexChild2
+                    {
+                        EnumPayload = enumValue,
+                        ComplexPayloadSet = set.Select(x => new ComplexPair<DataStream>(x.EnumValue, DataStream.FromString(x.Payload))).ToHashSet()
+                    }
+                };
+
+                var response = service.Process(request);
+
+                response.Child1.Should().NotBeSameAs(request.Child1);
+                response.Child1.ChildPayload1.Should().NotBeSameAs(request.Child1.ChildPayload1);
+                response.Child1.ChildPayload1.ReadAsString().Should().Be(childPayload1);
+                response.Child1.ChildPayload2.Should().NotBeSameAs(request.Child1.ChildPayload2);
+                response.Child1.ChildPayload2.ReadAsString().Should().Be(childPayload2);
+                response.Child1.ListOfStreams.Should().NotBeSameAs(request.Child1.ListOfStreams);
+                response.Child1.ListOfStreams.Select(x => x.ReadAsString()).ToList().Should().BeEquivalentTo(list);
+                response.Child1.DictionaryPayload.Should().NotBeSameAs(request.Child1.DictionaryPayload);
+                response.Child1.DictionaryPayload.Should().BeEquivalentTo(dictionary);
+                
+                response.Child2.Should().NotBeSameAs(request.Child2);
+                response.Child2.EnumPayload.Should().Be(enumValue);
+                response.Child2.ComplexPayloadSet.Should().NotBeSameAs(request.Child2.ComplexPayloadSet);
+                response.Child2.ComplexPayloadSet.Select(x => new ComplexPair<string>(x.EnumValue, x.Payload.ReadAsString())).ToHashSet().Should().BeEquivalentTo(set);
             }
         }
     }
