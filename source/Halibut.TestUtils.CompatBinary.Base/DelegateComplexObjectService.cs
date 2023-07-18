@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.SampleProgram.Base.Utils;
@@ -14,33 +13,32 @@ namespace Halibut.TestUtils.SampleProgram.Base
         {
             this.service = service;
         }
-
-        public ComplexResponse Process(ComplexRequest request)
+        
+        public ComplexObjectMultipleDataStreams Process(ComplexObjectMultipleDataStreams request)
         {
-            var response = service.Process(FixRequestDataStreams(request));
-            return FixResponseDataStreams(response);
+            return FixDataStreams(service.Process(FixDataStreams(request)));
         }
 
-        static ComplexRequest FixRequestDataStreams(ComplexRequest request)
+        ComplexObjectMultipleDataStreams FixDataStreams(ComplexObjectMultipleDataStreams complexObject)
         {
-            request.Payload = request.Payload.ConfigureWriterOnReceivedDataStream();
-            request.Child.First = request.Child.First.ConfigureWriterOnReceivedDataStream();
-            request.Child.Second = request.Child.Second.ConfigureWriterOnReceivedDataStream();
-            return request;
+            complexObject.Payload1 = complexObject.Payload1.ConfigureWriterOnReceivedDataStream();
+            complexObject.Payload2 = complexObject.Payload2.ConfigureWriterOnReceivedDataStream();
+            return complexObject;
         }
 
-        static ComplexResponse FixResponseDataStreams(ComplexResponse response)
+        public ComplexObjectMultipleChildren Process(ComplexObjectMultipleChildren request)
         {
-            var newPayloads = new Dictionary<Guid, IList<DataStream>>();
-            foreach (var pair in response.Payloads)
-            {
-                newPayloads[pair.Key] = pair.Value.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
-            }
+            return FixDataStreams(service.Process(FixDataStreams(request)));
+        }
 
-            response.Payloads = newPayloads;
-            response.Child.First = response.Child.First.ConfigureWriterOnReceivedDataStream();
-            response.Child.Second = response.Child.Second.ConfigureWriterOnReceivedDataStream();
-            return response;
+        ComplexObjectMultipleChildren FixDataStreams(ComplexObjectMultipleChildren complexObject)
+        {
+            complexObject.Child1.ChildPayload1 = complexObject.Child1.ChildPayload1.ConfigureWriterOnReceivedDataStream();
+            complexObject.Child1.ChildPayload2 = complexObject.Child1.ChildPayload2.ConfigureWriterOnReceivedDataStream();
+            complexObject.Child1.ListOfStreams = complexObject.Child1.ListOfStreams.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
+            complexObject.Child2.ComplexPayloadSet = complexObject.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
+            complexObject.Child2.ComplexPayloadSet = complexObject.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
+            return complexObject;
         }
     }
 }
