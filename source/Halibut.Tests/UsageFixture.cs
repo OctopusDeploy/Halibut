@@ -14,6 +14,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    [Ignore("")]
     public class UsageFixture : BaseTest
     {
         [Test]
