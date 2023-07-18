@@ -5,6 +5,10 @@ using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
+    /// <summary>
+    /// Only supports rewinding the last read of the underlying stream. Which appears to be all
+    /// that is required when rewinding from a Deflate stream over read.
+    /// </summary>
     class RewindableBufferStream : Stream, IRewindableBuffer
     {
         readonly Stream baseStream;
@@ -79,6 +83,7 @@ namespace Halibut.Transport
         /// <returns><inheritdoc cref="Stream.Read" path="/returns"/></returns>
         public override int Read(byte[] buffer, int offset, int count)
         {
+            count = ReduceReadCountToBufferSize(count);
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
             
             // Do not attempt to read from the base stream if the buffer has been partially filled
@@ -104,6 +109,7 @@ namespace Halibut.Transport
         /// <returns><inheritdoc/></returns>
         public async override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            count = ReduceReadCountToBufferSize(count);
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
 
             // Do not attempt to read from the base stream if the buffer has been partially filled
@@ -218,6 +224,11 @@ namespace Halibut.Transport
             rewindBufferOffset = 0;
             rewindBufferCount = 0;
             rewindBufferPopulated = false;
+        }
+
+        private int ReduceReadCountToBufferSize(int count)
+        {
+            return Math.Min(rewindBuffer.Length, count);
         }
     }
 }
