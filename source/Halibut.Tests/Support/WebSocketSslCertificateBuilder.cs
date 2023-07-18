@@ -14,7 +14,7 @@ namespace Halibut.Tests.Support
 
         public WebSocketSslCertificate Build()
         {
-            WebSocketSslCertificateHelper.AddSslCertToLocalStoreAndRegisterFor(bindingAddress);
+            WebSocketSslCertificateHelper.AddSslCertBindingFor(bindingAddress);
 
             var webSocketSslCertificate = new WebSocketSslCertificate(bindingAddress);
 
