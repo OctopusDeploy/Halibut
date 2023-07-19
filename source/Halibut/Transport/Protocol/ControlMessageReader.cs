@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 
 namespace Halibut.Transport.Protocol
 {
@@ -57,17 +59,18 @@ namespace Halibut.Transport.Protocol
 
         internal async Task<string> ReadControlMessageAsync(Stream stream)
         {
+            var cts = GetCancellationTokenSourceFromStreamReadTimeout(stream);
             StringBuilder sb = new StringBuilder();
             while (true)
             {
                 var nextByte = new byte[1];
-                var read = await stream.ReadAsync(nextByte, 0, nextByte.Length);
+                var read = await stream.ReadAsync(nextByte, 0, nextByte.Length, cts.Token);
                 if (read == 0) throw new EndOfStreamException();
                 
                 // Control messages must end with \r\n and must not contain \r or \n
                 if (nextByte[0] == '\r')
                 {
-                    read = await stream.ReadAsync(nextByte, 0, nextByte.Length);
+                    read = await stream.ReadAsync(nextByte, 0, nextByte.Length, cts.Token);
                     if (read == 0) throw new EndOfStreamException();
 
                     if (nextByte[0] != '\n')
@@ -82,6 +85,16 @@ namespace Halibut.Transport.Protocol
 
                 sb.Append((char) nextByte[0]);
             }
+        }
+
+        static CancellationTokenSource GetCancellationTokenSourceFromStreamReadTimeout(Stream stream)
+        {
+            if (stream.CanTimeout)
+            {
+                return new CancellationTokenSource(stream.ReadTimeout);
+            }
+
+            return new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout); // Just default to a higher timeout, rather than be cancellation token none
         }
     }
 }
