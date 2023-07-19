@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -70,11 +71,14 @@ namespace Halibut.Tests.Util.AsyncEx
         [Test]
         public async Task When_TaskThrowsExceptionAfterTimeout_ExceptionsAreObserved()
         {
+            var msg = "this task threw an exception after timeout " + Guid.NewGuid().ToString();
             await VerifyNoUnobservedExceptions<TimeoutException>(Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
-                throw new ApplicationException("this task threw an exception after timeout");
-            }).TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None));
+                throw new ApplicationException(msg);
+            }).TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None),
+                e => e.Message.Equals(msg)
+            );
         }
         
         [Test]
@@ -89,19 +93,29 @@ namespace Halibut.Tests.Util.AsyncEx
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
                 cancellationTokenSource.Cancel();
             });
+            var msg = "this task threw an exception after timeout " + Guid.NewGuid().ToString();
             await VerifyNoUnobservedExceptions<OperationCanceledException>(Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(200));
-                throw new ApplicationException("this task threw an exception after timeout");
-            }).TimeoutAfter(TimeSpan.FromMilliseconds(150), cancellationTokenSource.Token));
+                throw new ApplicationException(msg);
+            }).TimeoutAfter(TimeSpan.FromMilliseconds(150), cancellationTokenSource.Token),
+                e => e.Message.Equals(msg)
+                );
         }
 
-        static async Task VerifyNoUnobservedExceptions<T>(Task task)
+        static async Task VerifyNoUnobservedExceptions<T>(Task task, Func<Exception, bool> exceptionThrown)
             where T : Exception
         {
             //inspired by https://stackoverflow.com/a/21269145/779192
             var mre = new ManualResetEvent(initialState: false);
-            void Subscription(object s, UnobservedTaskExceptionEventArgs args) => mre.Set();
+            void Subscription(object s, UnobservedTaskExceptionEventArgs args)
+            {
+                if (exceptionThrown(args.Exception) || args.Exception.InnerExceptions.Any(exceptionThrown))
+                {
+                    mre.Set();
+                }
+            }
+
             TaskScheduler.UnobservedTaskException += Subscription;
             try
             {
