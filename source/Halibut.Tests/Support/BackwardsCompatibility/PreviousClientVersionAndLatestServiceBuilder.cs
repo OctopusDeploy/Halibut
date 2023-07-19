@@ -6,7 +6,11 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.TestUtils.Contracts;
+using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
+using Octopus.Tentacle.Contracts;
+using Octopus.Tentacle.Contracts.Capabilities;
+using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
 
@@ -30,7 +34,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         IComplexObjectService complexObjectService = new ComplexObjectService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
-        
+        bool withTentacleServices = false;
+
         PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
@@ -123,7 +128,19 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .WithMultipleParametersTestService(new MultipleParametersTestService())
                 .WithComplexObjectService(new ComplexObjectService());
         }
-        
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithTentacleServices()
+        {
+            return WithTenancyServices();
+        }
+
+        public PreviousClientVersionAndLatestServiceBuilder WithTenancyServices()
+        {
+            withTentacleServices = true;
+
+            return this;
+        }
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
         {
             return WithProxy();
@@ -172,13 +189,23 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var proxyClient = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
 
+            var serviceFactory = new DelegateServiceFactory()
+                .Register(() => echoService)
+                .Register(() => cachingService)
+                .Register(() => multipleParametersTestService)
+                .Register(() => complexObjectService);
+
+            if (withTentacleServices)
+            {
+                serviceFactory.Register<IFileTransferService>(() => new FileTransferService());
+                serviceFactory.Register<IScriptService>(() => new ScriptService());
+                serviceFactory.Register<IScriptServiceV2>(() => new ScriptServiceV2());
+                serviceFactory.Register<ICapabilitiesServiceV2>(() => new CapabilitiesServiceV2());
+            }
+
             // The Halibut Runtime that will be used as the Service (Tentacle)
             var service = new HalibutRuntimeBuilder()
-                .WithServiceFactory(new DelegateServiceFactory()
-                    .Register(() => echoService)
-                    .Register(() => cachingService)
-                    .Register(() => multipleParametersTestService)
-                    .Register(() => complexObjectService))
+                .WithServiceFactory(serviceFactory)
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogFactory("Tentacle", halibutLogLevel))
                 .Build();

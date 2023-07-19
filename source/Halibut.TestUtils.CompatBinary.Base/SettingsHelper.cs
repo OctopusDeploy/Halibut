@@ -131,5 +131,10 @@ namespace Halibut.TestUtils.SampleProgram.Base
         {
             return GetMandatoryBool("WithCachingService");
         }
+
+        public static bool IsWithTentacleServices()
+        {
+            return GetMandatoryBool("WithTentacleServices");
+        }
     }
 }

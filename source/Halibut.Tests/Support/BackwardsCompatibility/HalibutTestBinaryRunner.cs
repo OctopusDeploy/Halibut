@@ -57,6 +57,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile },
                 { "WithStandardServices", availableServices.HasStandardServices.ToString() },
                 { "WithCachingService", availableServices.HasCachingService.ToString() },
+                { "WithTentacleServices", availableServices.HasTentacleServices.ToString() }
             };
 
             if (proxyDetails != null)

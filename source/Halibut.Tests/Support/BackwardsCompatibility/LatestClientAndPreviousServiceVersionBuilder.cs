@@ -85,9 +85,20 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return WithStandardServices();
         }
 
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithTentacleServices()
+        {
+            return WithTentacleServices();
+        }
+
         public LatestClientAndPreviousServiceVersionBuilder WithStandardServices()
         {
             availableServices.HasStandardServices = true;
+            return this;
+        }
+
+        public LatestClientAndPreviousServiceVersionBuilder WithTentacleServices()
+        {
+            availableServices.HasTentacleServices = true;
             return this;
         }
 
