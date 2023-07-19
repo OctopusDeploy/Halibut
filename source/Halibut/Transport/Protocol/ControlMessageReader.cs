@@ -59,7 +59,7 @@ namespace Halibut.Transport.Protocol
 
         internal async Task<string> ReadControlMessageAsync(Stream stream)
         {
-            var cts = new CancellationTokenSource(stream.ReadTimeout);
+            var cts = GetCancellationTokenSourceFromStreamReadTimeout(stream);
             StringBuilder sb = new StringBuilder();
             while (true)
             {
@@ -85,6 +85,16 @@ namespace Halibut.Transport.Protocol
 
                 sb.Append((char) nextByte[0]);
             }
+        }
+
+        static CancellationTokenSource GetCancellationTokenSourceFromStreamReadTimeout(Stream stream)
+        {
+            if (stream.CanTimeout)
+            {
+                return new CancellationTokenSource(stream.ReadTimeout);
+            }
+
+            return new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout); // Just default to a higher timeout, rather than be cancellation token none
         }
     }
 }
