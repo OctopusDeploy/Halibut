@@ -103,17 +103,41 @@ class Build : NukeBuild
     [PublicAPI]
     Target TestWindows => _ => _
         .DependsOn(Compile)
+        .DependsOn(TestWindowsNet48)
+        .DependsOn(TestWindowsNet60);
+
+    [PublicAPI]
+    Target TestWindowsNet60 => _ => _
+        .DependsOn(Compile)
         .Executes(() =>
         {
             DotMemoryUnit(
-                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --no-build");
-            
+                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --framework=net6.0 --no-build");
+
             DotNetTest(_ => _
                 .SetProjectFile(Solution.Halibut_Tests)
                 .SetConfiguration(Configuration)
+                .SetFramework("net6.0")
                 .EnableNoBuild()
                 .EnableNoRestore());
-            
+
+        });
+
+    [PublicAPI]
+    Target TestWindowsNet48 => _ => _
+        .DependsOn(Compile)
+        .Executes(() =>
+        {
+            DotMemoryUnit(
+                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --framework=net48 --no-build");
+
+            DotNetTest(_ => _
+                .SetProjectFile(Solution.Halibut_Tests)
+                .SetConfiguration(Configuration)
+                .SetFramework("net48")
+                .EnableNoBuild()
+                .EnableNoRestore());
+
         });
 
     [PublicAPI]
