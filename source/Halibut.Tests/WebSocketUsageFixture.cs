@@ -8,7 +8,6 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    [NonParallelizable]
     public class WebSocketUsageFixture : BaseTest
     {
 #if SUPPORTS_WEB_SOCKET_CLIENT
@@ -36,7 +35,6 @@ namespace Halibut.Tests
 #endif
         public async Task OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
-
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .PollingOverWebSocket()
                        .WithStandardServices()

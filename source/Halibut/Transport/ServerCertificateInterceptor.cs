@@ -10,7 +10,7 @@ namespace Halibut.Transport
     {
         public const string Header = "X-Octopus-RequestId";
 
-        static readonly Dictionary<string, X509Certificate2> certificates = new Dictionary<string, X509Certificate2>();
+        static readonly Dictionary<string, X509Certificate2> certificates = new();
         static bool initialized;
 
 
