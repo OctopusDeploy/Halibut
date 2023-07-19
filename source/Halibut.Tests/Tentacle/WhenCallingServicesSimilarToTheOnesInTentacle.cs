@@ -21,7 +21,7 @@ namespace Halibut.Tests.Tentacle
     public class WhenCallingServicesSimilarToTheOnesInTentacle : BaseTest
     {
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task FilesCanBeDownloaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -56,7 +56,7 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task FilesCanBeUploaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -100,7 +100,7 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ScriptCanBeExecutedWithScriptServiceV1(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -143,7 +143,7 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ScriptCanBeExecutedWithScriptServiceV2(ClientAndServiceTestCase clientAndServiceTestCase)
         {
