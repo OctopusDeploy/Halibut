@@ -3,10 +3,8 @@ using System;
 using JetBrains.Annotations;
 using Nuke.Common;
 using Nuke.Common.CI;
-using Nuke.Common.Execution;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
-using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities;
@@ -15,7 +13,6 @@ using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotMemoryUnit.DotMemoryUnitTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
-[CheckBuildProjectConfigurations]
 [ShutdownDotNetAfterServerBuild]
 class Build : NukeBuild
 {
@@ -28,17 +25,16 @@ class Build : NukeBuild
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
-    [Solution(GenerateProjects = true)] readonly Solution Solution;
+    [Solution(GenerateProjects = true)] 
+    readonly Solution Solution;
 
     [Parameter("Whether to auto-detect the branch name - this is okay for a local build, but should not be used under CI.")]
     readonly bool AutoDetectBranch = IsLocalBuild;
 
-    [Parameter("Branch name for OctoVersion to use to calculate the version number. Can be set via the environment variable OCTOVERSION_CurrentBranch.",
-        Name = "OCTOVERSION_CurrentBranch")]
+    [Parameter("Branch name for OctoVersion to use to calculate the version number. Can be set via the environment variable OCTOVERSION_CurrentBranch.", Name = "OCTOVERSION_CurrentBranch")]
     readonly string BranchName;
 
-    [OctoVersion(UpdateBuildNumber = true, BranchParameter = nameof(BranchName),
-        AutoDetectBranchParameter = nameof(AutoDetectBranch), Framework = "net6.0")]
+    [OctoVersion(UpdateBuildNumber = true, BranchMember = nameof(BranchName), AutoDetectBranchMember = nameof(AutoDetectBranch), Framework = "net6.0")]
     readonly OctoVersionInfo OctoVersionInfo;
 
     static AbsolutePath SourceDirectory => RootDirectory / "source";
@@ -57,76 +53,67 @@ class Build : NukeBuild
         .Executes(() =>
         {
             DotNetRestore(s => s
-                .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut)));
-            
-            DotNetRestore(s => s
-                .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut_Tests_DotMemory)));
-            
-            DotNetRestore(s => s
-                .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut_Tests)));
-            
+                .SetProjectFile(Solution));
+
+
         });
 
-    Target Compile => _ => _
-        .DependsOn(Restore)
-        .Executes(() =>
-        {
-            DotNetBuild(s => s
-                .SetConfiguration(Configuration)
-                .SetVersion(OctoVersionInfo.FullSemVer)
-                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
-                .EnableNoRestore()
-                .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut)));
-            
-            
-            DotNetBuild(s => s
-                .SetConfiguration(Configuration)
-                .SetVersion(OctoVersionInfo.FullSemVer)
-                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
-                .EnableNoRestore()
-                .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut_Tests)));
-            
-            DotNetBuild(s => s
-                .SetConfiguration(Configuration)
-                .SetVersion(OctoVersionInfo.FullSemVer)
-                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
-                .EnableNoRestore()
-                .CombineWith(ss => ss
-                    .SetProjectFile(Solution.Halibut_Tests_DotMemory)));
-        });
+    Target Compile => _ => CompileDefinition(_, null);
+
+    Target CompileNet48 => _ => CompileDefinition(_, "net48");
+
+    Target CompileNet60 => _ => CompileDefinition(_, "net6.0");
+
+    ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
+    {
+        return targetDefinition
+            .DependsOn(Restore)
+            .Executes(() =>
+            {
+                DotNetBuild(s => s
+                    .SetProjectFile(Solution)
+                    .SetConfiguration(Configuration)
+                    .SetFramework(framework)
+                    .SetVersion(OctoVersionInfo.FullSemVer)
+                    .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
+                    .EnableNoRestore());
+            });
+    }
 
     [PublicAPI]
-    Target TestWindows => _ => _
-        .DependsOn(Compile)
-        .Executes(() =>
-        {
-            DotMemoryUnit(
-                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --no-build");
-            
-            DotNetTest(_ => _
-                .SetProjectFile(Solution.Halibut_Tests)
-                .SetConfiguration(Configuration)
-                .EnableNoBuild()
-                .EnableNoRestore());
-            
-        });
+    Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests:true);
 
     [PublicAPI]
-    Target TestLinux => _ => _
-        .DependsOn(Compile)
-        .Executes(() =>
-        {
-            DotNetTest(_ => _
-                .SetProjectFile(Solution.Halibut_Tests)
-                .SetConfiguration(Configuration)
-                .EnableNoBuild()
-                .EnableNoRestore());
-        });
+    Target TestLinux => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
+
+    [PublicAPI]
+    Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
+
+    [PublicAPI]
+    Target TestWindowsNet60 => _ => TestDefinition(_, CompileNet60, "net6.0", runDotMemoryTests: true);
+
+    ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
+    {
+        return targetDefinition
+            .DependsOn(dependsOn)
+            .Executes(() =>
+            {
+                if (runDotMemoryTests)
+                {
+                    var frameworkOption = framework != null ? $"--framework={framework}" : "";
+
+                    DotMemoryUnit($"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} {frameworkOption} --no-build");
+                }
+                
+                DotNetTest(_ => _
+                    .SetProjectFile(Solution.Halibut_Tests)
+                    .SetConfiguration(Configuration)
+                    .SetFramework(framework)
+                    .EnableNoBuild()
+                    .EnableNoRestore());
+
+            });
+    }
 
     Target Pack => _ => _
         .DependsOn(Compile)
