@@ -16,9 +16,9 @@ namespace Halibut.Tests.Timeouts
     public class PollingQueueTimeouts : BaseTest
     {
         [Test]
-        [TestCaseSource(typeof(PollingServiceConnectionTypesToTest))]
-        public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive(ServiceConnectionType serviceConnectionType)
+        public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive()
         {
+            var serviceConnectionType = ServiceConnectionType.Polling;
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)

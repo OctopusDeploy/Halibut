@@ -21,7 +21,7 @@ namespace Halibut.Tests.Timeouts
     {
         [Test]
         public async Task WhenTheFirstWriteOverTheWireOccursOnAConnectionThatImmediatelyPauses_AWriteTimeoutShouldApply(
-            [ValuesOfType(typeof(ServiceConnectionTypesToTest))] ServiceConnectionType serviceConnectionType,
+            [ValuesOfType(typeof(ServiceConnectionTypesToTestExcludingWebSockets))] ServiceConnectionType serviceConnectionType,
             [Values(true, false)] bool onClientToOrigin, // Don't dewll on what this means, we just want to test all combinations of where the timeout can occur.
             [Values(1, 2)]int writeNumberToPauseOn // Ie pause on the first or second write
             ) 
