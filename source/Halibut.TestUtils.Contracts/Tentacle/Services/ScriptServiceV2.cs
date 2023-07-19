@@ -96,7 +96,7 @@ namespace Halibut.TestUtils.Contracts.Tentacle.Services
 
                 var logLines = FullScriptOutput.Split('\n');
                 var take = ProcessState == ProcessState.Complete ? int.MaxValue : new Random().Next(1, 20);
-                var logs = logLines.Skip(lastLogSequence).Take(take).Select(x => new ProcessOutput(ProcessOutputSource.StdOut, x)).ToList();
+                var logs = logLines.Skip(lastLogSequence).Take(take).Select(x => new ProcessOutput(ProcessOutputSource.StdOut, x.Trim('\r', '\n'))).ToList();
 
                 return (logs, lastLogSequence + logs.Count);
             }
@@ -105,7 +105,7 @@ namespace Halibut.TestUtils.Contracts.Tentacle.Services
             {
                 var logLines = FullScriptOutput.Split('\n');
 
-                return new List<ProcessOutput>{ new (ProcessOutputSource.StdOut, logLines.ElementAt(index)) };
+                return new List<ProcessOutput>{ new (ProcessOutputSource.StdOut, logLines.ElementAt(index).Trim('\r', '\n')) };
             }
         }
     }
