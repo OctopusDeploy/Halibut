@@ -24,7 +24,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         string? version = null;
         Func<HttpProxyService>? proxyFactory;
-        readonly CancellationTokenSource cancellationTokenSource = new();
         IEchoService echoService = new EchoService();
         ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
@@ -162,6 +161,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
+            CancellationTokenSource cancellationTokenSource = new();
             if (version == null)
             {
                 throw new Exception("The version of the service must be set.");
@@ -371,14 +371,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public void Dispose()
             {
-                cancellationTokenSource?.Cancel();
-                Client.Dispose();
-                runningOldHalibutBinary.Dispose();
-                service.Dispose();
-                HttpProxy?.Dispose();
-                PortForwarder?.Dispose();
-                disposableCollection.Dispose();
-                cancellationTokenSource?.Dispose();
+                var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
+                logger.Information("Dispose called");
+                Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
+                
+                Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);
+                Try.CatchingError(Client.Dispose, logError);
+                Try.CatchingError(runningOldHalibutBinary.Dispose, logError);
+                Try.CatchingError(service.Dispose, logError);
+                Try.CatchingError(() => HttpProxy?.Dispose(), logError);
+                Try.CatchingError(() => PortForwarder?.Dispose(), logError);
+                Try.CatchingError(disposableCollection.Dispose, logError); ;
+                Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
             }
         }
     }

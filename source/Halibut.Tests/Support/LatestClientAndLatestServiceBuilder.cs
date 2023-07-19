@@ -26,7 +26,6 @@ namespace Halibut.Tests.Support
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
         Func<HttpProxyService>? proxyFactory;
-        readonly CancellationTokenSource cancellationTokenSource = new();
         LogLevel halibutLogLevel = LogLevel.Trace;
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
@@ -194,6 +193,8 @@ namespace Halibut.Tests.Support
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
+            CancellationTokenSource cancellationTokenSource = new();
+            
             serviceFactory ??= new DelegateServiceFactory();
 
             var octopusLogFactory = new TestContextLogFactory("Client", halibutLogLevel);
@@ -376,13 +377,17 @@ namespace Halibut.Tests.Support
 
             public void Dispose()
             {
-                cancellationTokenSource?.Cancel();
-                Client.Dispose();
-                Service?.Dispose();
-                HttpProxy?.Dispose();
-                PortForwarder?.Dispose();
-                disposableCollection.Dispose();
-                cancellationTokenSource?.Dispose();
+                var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
+                logger.Information("Dispose called");
+                Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
+
+                Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);
+                Try.CatchingError(Client.Dispose, logError);
+                Try.CatchingError(() => Service?.Dispose(), logError);
+                Try.CatchingError(() => HttpProxy?.Dispose(), logError);
+                Try.CatchingError(() => PortForwarder?.Dispose(), logError);
+                Try.CatchingError(disposableCollection.Dispose, logError);
+                Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
             }
         }
     }
