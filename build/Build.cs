@@ -103,8 +103,18 @@ class Build : NukeBuild
     [PublicAPI]
     Target TestWindows => _ => _
         .DependsOn(Compile)
-        .DependsOn(TestWindowsNet48)
-        .DependsOn(TestWindowsNet60);
+        .Executes(() =>
+        {
+            DotMemoryUnit(
+                $"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} --no-build");
+
+            DotNetTest(_ => _
+                .SetProjectFile(Solution.Halibut_Tests)
+                .SetConfiguration(Configuration)
+                .EnableNoBuild()
+                .EnableNoRestore());
+
+        });
 
     [PublicAPI]
     Target TestWindowsNet60 => _ => _
