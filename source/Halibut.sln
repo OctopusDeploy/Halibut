@@ -161,7 +161,4 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {FDCBBB7C-27C9-42B6-9E5B-2F398BF5405C}
 	EndGlobalSection
-	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = Halibut.SampleClient\Halibut.SampleClient.csproj
-	EndGlobalSection
 EndGlobal
