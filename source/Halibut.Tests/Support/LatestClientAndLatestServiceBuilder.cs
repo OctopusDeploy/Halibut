@@ -270,12 +270,14 @@ namespace Halibut.Tests.Support
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
+                using var tcpPortConflictLock = await TcpPortHelper.WaitForLock(cancellationToken);
                 var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
                 var webSocketPath = Guid.NewGuid().ToString();
                 var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
                 var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
 
                 client.ListenWebSocket(webSocketListeningUrl);
+                tcpPortConflictLock.Dispose();
 
                 var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
                 disposableCollection.Add(webSocketSslCertificate);
