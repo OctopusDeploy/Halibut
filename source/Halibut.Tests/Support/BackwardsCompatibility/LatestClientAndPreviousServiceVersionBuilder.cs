@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Transport.Proxy;
@@ -18,7 +19,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         string? version = null;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<HttpProxyService>? proxyFactory;
-        readonly CancellationTokenSource cancellationTokenSource = new();
         LogLevel halibutLogLevel;
         OldServiceAvailableServices availableServices = new(false, false);
 
@@ -136,6 +136,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
+            CancellationTokenSource cancellationTokenSource = new();
             if (version == null)
             {
                 throw new Exception("The version of the service must be set.");
@@ -302,13 +303,17 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public void Dispose()
             {
-                cancellationTokenSource?.Cancel();
-                Client.Dispose();
-                runningOldHalibutBinary.Dispose();
-                HttpProxy?.Dispose();
-                PortForwarder?.Dispose();
-                disposableCollection.Dispose();
-                cancellationTokenSource?.Dispose();
+                var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
+                logger.Information("Dispose called");
+                Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
+                
+                Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);
+                Try.CatchingError(Client.Dispose, logError);
+                Try.CatchingError(runningOldHalibutBinary.Dispose, logError);
+                Try.CatchingError(() => HttpProxy?.Dispose(), logError);
+                Try.CatchingError(() => PortForwarder?.Dispose(), logError);
+                Try.CatchingError(() => disposableCollection.Dispose(), logError);
+                Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
             }
         }
     }
