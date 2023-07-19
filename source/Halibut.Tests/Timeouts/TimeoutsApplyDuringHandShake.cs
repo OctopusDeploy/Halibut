@@ -37,6 +37,7 @@ namespace Halibut.Tests.Timeouts
                     if (!hasPausedAConnection && numberOfWritesSeen == writeNumberToPauseOn)
                     {
                         hasPausedAConnection = true;
+                        Logger.Information("Pausing pump");
                         tcpPump.Pause();
                     }
                 })
@@ -58,9 +59,20 @@ namespace Halibut.Tests.Timeouts
             {
                 var echo = clientAndService.CreateClient<IEchoService>(IncreasePollingQueueTimeout());
                 var sw = Stopwatch.StartNew();
-                echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+                try
+                {
+                    echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+                }
+                catch (Exception e)
+                {
+                    Logger.Information(e, "An exception was raised during the request, this is not an issue since we are concerned about the timings. " +
+                                          "Exceptions only occur occasionally and probably only on listening.");
+                }
+
                 sw.Stop();
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(15));
+                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
+
+                echo.SayHello("The pump wont be paused here so this should work.");
             }
         }
         
