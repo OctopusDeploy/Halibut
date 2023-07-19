@@ -10,5 +10,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public bool HasStandardServices { get; set; }
         public bool HasCachingService { get; set; }
+        public bool HasTentacleServices { get; set; }
     }
 }

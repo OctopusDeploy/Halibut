@@ -7,8 +7,12 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.TestUtils.Contracts;
+using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
 using Halibut.Util;
+using Octopus.Tentacle.Contracts;
+using Octopus.Tentacle.Contracts.Capabilities;
+using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
 
@@ -126,7 +130,12 @@ namespace Halibut.Tests.Support
         {
             return WithStandardServices();
         }
-        
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithTentacleServices()
+        {
+            return WithTentacleServices();
+        }
+
         public LatestClientAndLatestServiceBuilder WithStandardServices()
         {
             return this
@@ -134,6 +143,15 @@ namespace Halibut.Tests.Support
                 .WithMultipleParametersTestService()
                 .WithCachingService()
                 .WithComplexObjectService();
+        }
+
+        public LatestClientAndLatestServiceBuilder WithTentacleServices()
+        {
+            return this
+                .WithService<IFileTransferService>(() => new FileTransferService())
+                .WithService<IScriptService>(() => new ScriptService())
+                .WithService<IScriptServiceV2>(() => new ScriptServiceV2())
+                .WithService<ICapabilitiesServiceV2>(() => new CapabilitiesServiceV2());
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();

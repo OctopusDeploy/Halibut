@@ -12,6 +12,7 @@ namespace Halibut.Tests.Support
         IClientAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> func);
         IClientAndServiceBuilder WithProxy();
         IClientAndServiceBuilder WithStandardServices();
+        IClientAndServiceBuilder WithTentacleServices();
         IClientAndServiceBuilder WithHalibutLoggingLevel(LogLevel info);
         IClientAndServiceBuilder WithCachingService();
     }
