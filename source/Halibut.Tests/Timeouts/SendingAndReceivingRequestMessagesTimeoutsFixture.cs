@@ -16,8 +16,7 @@ namespace Halibut.Tests.Timeouts
     public class SendingAndReceivingRequestMessagesTimeoutsFixture : BaseTest
     {
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        [FailedWebSocketTestsBecomeInconclusive]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessage_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
@@ -44,8 +43,7 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        [FailedWebSocketTestsBecomeInconclusive]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessageDataStream_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
@@ -75,8 +73,7 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        [FailedWebSocketTestsBecomeInconclusive]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
         public async Task WhenThenNetworkIsPaused_WhileSendingARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
         {
             int numberOfBytesBeforePausingAStream = 1024 * 1024; // 1MB
@@ -119,8 +116,7 @@ namespace Halibut.Tests.Timeouts
         }
         
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        [FailedWebSocketTestsBecomeInconclusive]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
         public async Task WhenThenNetworkIsPaused_WhileSendingADataStreamAsPartOfARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder
