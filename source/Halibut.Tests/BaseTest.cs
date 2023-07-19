@@ -9,7 +9,6 @@ namespace Halibut.Tests
 {
     public class BaseTest
     {
-
         CancellationTokenSource? cancellationTokenSource;
         public CancellationToken CancellationToken { get; private set; }
         public ILogger Logger { get; private set; } = null!;
@@ -27,7 +26,7 @@ namespace Halibut.Tests
                 Assert.Fail("The test timed out.");
             });
         }
-
+        
         [TearDown]
         public void TearDown()
         {

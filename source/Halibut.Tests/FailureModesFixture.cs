@@ -45,6 +45,7 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task FailWhenServerThrowsAnException(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder

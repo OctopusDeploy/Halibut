@@ -6,13 +6,18 @@ namespace Halibut.Tests.Support
 {
     static class WebSocketSslCertificateHelper
     {
-        internal static void AddSslCertToLocalStoreAndRegisterFor(string address)
+        internal static void AddSslCertToLocalStore()
         {
             var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             store.Open(OpenFlags.ReadWrite);
-            store.Add(Certificates.Ssl);
-            store.Close();
 
+            store.Add(Certificates.Ssl);
+
+            store.Close();
+        }
+
+        internal static void AddSslCertBindingFor(string address)
+        {
             var proc = new Process
             {
                 StartInfo = new ProcessStartInfo("netsh", $"http add sslcert ipport={address} certhash={Certificates.SslThumbprint} appid={{2e282bfb-fce9-40fc-a594-2136043e1c8f}}")

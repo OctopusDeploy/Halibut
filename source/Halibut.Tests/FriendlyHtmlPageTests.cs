@@ -13,6 +13,9 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    // These tests change the behaviour of ServicePointManager.ServerCertificateValidationCallback
+    // And can interfere with other tests
+    [NonParallelizable]
     public class FriendlyHtmlPageTests
     {
         static DelegateServiceFactory GetDelegateServiceFactory()

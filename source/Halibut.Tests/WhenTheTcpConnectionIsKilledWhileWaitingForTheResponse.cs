@@ -12,6 +12,7 @@ namespace Halibut.Tests
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task AResponseShouldBeQuicklyReturned(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder

@@ -14,11 +14,12 @@ using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
-{
+{    
     public class UsageFixture : BaseTest
     {
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -61,6 +62,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -101,6 +103,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -123,6 +126,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -162,6 +166,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -186,6 +191,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase
@@ -218,6 +224,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleComplexChildren(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var childPayload1 = "Child Payload #1";

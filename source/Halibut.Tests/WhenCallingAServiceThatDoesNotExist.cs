@@ -13,6 +13,7 @@ namespace Halibut.Tests
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task AServiceNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ServiceConnectionType serviceConnectionType)
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder

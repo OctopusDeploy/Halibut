@@ -13,10 +13,9 @@ namespace Halibut.Tests.Support
             {
                ServiceConnectionType.Listening,
                ServiceConnectionType.Polling,
-// Disabled while these are causing flakey Team City Tests
-//#if SUPPORTS_WEB_SOCKET_CLIENT
-//             ServiceConnectionType.PollingOverWebSocket
-//#endif
+#if SUPPORTS_WEB_SOCKET_CLIENT
+             ServiceConnectionType.PollingOverWebSocket
+#endif
         };
 
         public static ServiceConnectionType[] AllExceptWebSockets => new[]
