@@ -36,7 +36,9 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(8));
+                sw.Elapsed.Should().BeGreaterThan(HalibutLimits.TcpClientReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                    .And
+                    .BeLessThan(HalibutLimits.TcpClientReceiveTimeout + LowerHalibutLimitsForAllTests.HalftheTcpRecieveTimeout, "We should be timing out on the tcp receive timeout");
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
@@ -66,8 +68,10 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(8));
-                
+                sw.Elapsed.Should().BeGreaterThan(HalibutLimits.TcpClientReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                    .And
+                    .BeLessThan(HalibutLimits.TcpClientReceiveTimeout + LowerHalibutLimitsForAllTests.HalftheTcpRecieveTimeout, "We should be timing out on the tcp receive timeout");
+
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
         }
@@ -107,9 +111,16 @@ namespace Halibut.Tests.Timeouts
                     addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;
                 }
 
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout + HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout, TimeSpan.FromSeconds(8),
-                    "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
-                    "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
+                var expecedTimeOut = HalibutLimits.TcpClientSendTimeout // What we actually expected. 
+                                     + HalibutLimits.TcpClientSendTimeout // an extra timeout because of the dispose method of the zip stream (see below)
+                                     + addControlMessageTimeout;
+                sw.Elapsed.Should().BeGreaterThan( expecedTimeOut- TimeSpan.FromSeconds(2), 
+                        "We 'should' wait the send timeout amount of time NOT the heart beat timeout, however when an error occurs writing to the zip (deflate)" +
+                                "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.") // -2s give it a little slack to avoid it timed out slightly too early.
+                    .And
+                    .BeLessThan(expecedTimeOut + LowerHalibutLimitsForAllTests.HalftheTcpRecieveTimeout, 
+                        "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
+                            "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
@@ -151,8 +162,12 @@ namespace Halibut.Tests.Timeouts
                         addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;                        
                     }
                 }
+
+                var expectedTimeout = HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout;
+                sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                    .And
+                    .BeLessThan(expectedTimeout + LowerHalibutLimitsForAllTests.HalftheTcpRecieveTimeout, "We should be timing out on the tcp receive timeout");
                 
-                sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout, TimeSpan.FromSeconds(8));
                 
                 echo.SayHello("A new request can be made on a new unpaused TCP connection");
             }
