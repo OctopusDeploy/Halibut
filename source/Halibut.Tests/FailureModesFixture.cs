@@ -141,8 +141,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [Timeout(15000)]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)] // TODO - A bug in the PollingOverWebSocket implementation means this never completes
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task FailWhenServerThrowsDuringADataStream(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -163,8 +162,8 @@ namespace Halibut.Tests
                     Assert.Throws<HalibutClientException>(() => readDataSteamService.SendData(new DataStream(10000, stream => throw new Exception("Oh noes"))));
                 }
 
-                var recieved = readDataSteamService.SendData(DataStream.FromString("hello"));
-                recieved.Should().Be(5);
+                var received = readDataSteamService.SendData(DataStream.FromString("hello"));
+                received.Should().Be(5);
             }
         }
     }
