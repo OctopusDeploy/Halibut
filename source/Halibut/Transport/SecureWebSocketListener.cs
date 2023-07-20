@@ -20,7 +20,7 @@ namespace Halibut.Transport
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
-        readonly CancellationTokenSource cts = new CancellationTokenSource();
+        readonly CancellationTokenSource cts = new();
         readonly ExchangeActionAsync exchangeAction;
         ILog log;
         HttpListener listener;
@@ -116,9 +116,6 @@ namespace Halibut.Transport
 
         async Task ExecuteRequest(HttpListenerContext listenerContext)
         {
-            // By default we will close the stream to cater for failure scenarios
-            var keepConnection = false;
-
             var clientName = listenerContext.Request.RemoteEndPoint;
 
             WebSocketStream webSocketStream = null;
@@ -146,9 +143,6 @@ namespace Halibut.Transport
                 {
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                     await ExchangeMessages(webSocketStream).ConfigureAwait(false);
-
-                    // Mark the stream as delegated once everything has succeeded
-                    keepConnection = true;
                 }
             }
             catch (TaskCanceledException)
@@ -162,12 +156,9 @@ namespace Halibut.Transport
             }
             finally
             {
-                if (!keepConnection)
-                {
-                    // Closing an already closed stream or client is safe, better not to leak
-                    webSocketStream?.Dispose();
-                    listenerContext.Response.Close();
-                }
+                // Closing an already closed stream or client is safe, better not to leak
+                webSocketStream?.Dispose();
+                listenerContext.Response.Close();
             }
         }
 
@@ -231,8 +222,7 @@ namespace Halibut.Transport
                 throw new Exception("The X509 certificate provided does not have a private key, and so it cannot be used for listening.");
             }
         }
-
-
+        
         public void Dispose()
         {
             cts.Cancel();
