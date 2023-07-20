@@ -15,12 +15,14 @@ namespace Halibut.Tests
     public class PollingClientConnectionHandlingFixture : BaseTest
     {
         [Test]
-        public async Task PollingClientShouldConnectQuickly()
+        [TestCase(ServiceConnectionType.Polling)]
+        [TestCase(ServiceConnectionType.PollingOverWebSocket)]
+        public async Task PollingClientShouldConnectQuickly(ServiceConnectionType serviceConnectionType)
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(() =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(serviceConnectionType, () =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -31,16 +33,18 @@ namespace Halibut.Tests
             }
 
             calls.Should().HaveCount(1);
-            calls.ElementAt(0).Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(5));
+            calls.ElementAt(0).Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 5 : 30));
         }
 
         [Test]
-        public async Task PollingClientShouldReConnectQuickly()
+        [TestCase(ServiceConnectionType.Polling)]
+        [TestCase(ServiceConnectionType.PollingOverWebSocket)]
+        public async Task PollingClientShouldReConnectQuickly(ServiceConnectionType serviceConnectionType)
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(() =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(serviceConnectionType, () =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -82,18 +86,18 @@ namespace Halibut.Tests
             var firstReconnect = calls.ElementAt(1);
             var secondReconnect = calls.ElementAt(2);
 
-            firstCall.Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(5));
-            firstReconnect.Should().BeOnOrAfter(firstCall).And.BeCloseTo(firstCall, TimeSpan.FromSeconds(8));
-            secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(8));
+            firstCall.Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 5 : 30));
+            firstReconnect.Should().BeOnOrAfter(firstCall).And.BeCloseTo(firstCall, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
+            secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
         }
 
         async Task<(LatestClientAndLatestServiceBuilder.ClientAndService,
                 IEchoService echoService,
                 IDoSomeActionService doSomeActionService)>
-            SetupPollingServerAndTentacle(Action doSomeActionServiceAction)
+            SetupPollingServerAndTentacle(ServiceConnectionType serviceConnectionType, Action doSomeActionServiceAction)
         {
             var clientAndService = await LatestClientAndLatestServiceBuilder
-                .Polling()
+                .ForServiceConnectionType(serviceConnectionType)
                 .WithPortForwarding()
                 .WithDoSomeActionService(doSomeActionServiceAction)
                 .WithEchoService()
