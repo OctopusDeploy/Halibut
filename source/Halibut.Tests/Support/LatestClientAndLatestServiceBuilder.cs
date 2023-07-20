@@ -8,6 +8,7 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
@@ -18,6 +19,7 @@ using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
 using ILog = Halibut.Diagnostics.ILog;
+using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
 namespace Halibut.Tests.Support
 {
@@ -164,7 +166,8 @@ namespace Halibut.Tests.Support
                 .WithCachingService()
                 .WithComplexObjectService()
                 .WithLockService()
-                .WithCountingService();
+                .WithCountingService()
+                .WithReadDataStreamService();
         }
 
         public LatestClientAndLatestServiceBuilder WithTentacleServices()

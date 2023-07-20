@@ -22,7 +22,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 services.Register<IEchoService>(() => new EchoService())
                     .Register<IMultipleParametersTestService>(() => new MultipleParametersTestService())
                     .Register<IComplexObjectService>(() => new ComplexObjectService())
-                    .Register<ILockService>(() => new LockService());
+                    .Register<ILockService>(() => new LockService())
+                    .Register<IReadDataStreamService>(() => new ReadDataStreamService());
 
                 var singleCountingService = new CountingService();
                 services.Register<ICountingService>(() => singleCountingService);
@@ -61,6 +62,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             RegisterDelegateService<IMultipleParametersTestService>(s => new DelegateMultipleParametersTestService(s));
             RegisterDelegateService<IComplexObjectService>(s => new DelegateComplexObjectService(s));
             RegisterDelegateService<IFileTransferService>(s => new DelegateFileTransferService(s));
+			RegisterDelegateService<IReadDataStreamService>(s => new DelegateReadDataStreamService(s));
             RegisterDelegateService<IScriptService>(s => new DelegateScriptService(s));
             RegisterDelegateService<IScriptServiceV2>(s => new DelegateScriptServiceV2(s));
             RegisterDelegateService<ICapabilitiesServiceV2>(s => new DelegateCapabilitiesServiceV2(s));

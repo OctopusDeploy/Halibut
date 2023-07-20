@@ -1,6 +1,6 @@
-using System.Xml.Schema;
+using System;
 
-namespace Halibut.Tests.TestServices
+namespace Halibut.TestUtils.Contracts
 {
     public class ReadDataStreamService : IReadDataStreamService
     {
