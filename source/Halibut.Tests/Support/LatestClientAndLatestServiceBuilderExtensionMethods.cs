@@ -21,6 +21,11 @@ namespace Halibut.Tests.Support
         {
             return builder.WithService<IComplexObjectService>(() => new ComplexObjectService());
         }
+        
+        public static LatestClientAndLatestServiceBuilder WithLockService(this LatestClientAndLatestServiceBuilder builder)
+        {
+            return builder.WithService<ILockService>(() => new LockService());
+        }
 
         public static LatestClientAndLatestServiceBuilder WithDoSomeActionService(this LatestClientAndLatestServiceBuilder builder, Action action)
         {

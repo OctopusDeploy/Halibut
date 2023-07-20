@@ -1,10 +1,10 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
@@ -20,9 +20,9 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task CancellationCanBeDoneViaClientProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
-                       .WithPortForwarding()
-                       .WithEchoService()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
+                       .WithStandardServices()
                        .Build(CancellationToken))
             {
                 clientAndService.PortForwarder.EnterKillNewAndExistingConnectionsMode();
@@ -37,9 +37,9 @@ namespace Halibut.Tests
 
                 var cts = new CancellationTokenSource();
                 cts.CancelAfter(TimeSpan.FromMilliseconds(100));
-                var func = new Func<string>(() => echo.SayHello("hello", new HalibutProxyRequestOptions(cts.Token)));
-                var ex = Assert.Throws<HalibutClientException>(() => echo.SayHello("hello", new HalibutProxyRequestOptions(cts.Token)));
-                ex.Message.Should().ContainAny("The operation was canceled");
+
+                Assert.That(() => echo.SayHello("hello", new HalibutProxyRequestOptions(cts.Token)), Throws.Exception
+                    .With.Message.Contains("The operation was canceled"));
             }
         }
 
@@ -75,6 +75,50 @@ namespace Halibut.Tests
                 res.Should().Be("Hello!!...");
             }
         }
+        
+        
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task HalibutProxyRequestOptions_CanNotCancel_InFlightRequests(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .Build(CancellationToken))
+            {
+                var lockService = clientAndService.CreateClient<ILockService, IClientLockService>();
+
+                var cts = new CancellationTokenSource();
+                using var tmpDir = new TemporaryDirectory();
+                var fileThatOnceDeletedEndsTheCall = tmpDir.CreateRandomFile();
+                var callStartedFile = tmpDir.RandomFileName();
+
+                var takeLockASecondTime = Task.Run(() => lockService.WaitForFileToBeDeleted(fileThatOnceDeletedEndsTheCall, callStartedFile, new HalibutProxyRequestOptions(CancellationToken.None)));
+
+                Logger.Information("Waiting for the RPC call to be inflight");
+                while (!File.Exists(callStartedFile))
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), CancellationToken);
+                }
+                
+                // The second call is now in flight.
+                // Call cancel on the cancellation token for that in flight request.
+                cts.Cancel();
+                
+                // Give time for the cancellation to do something
+                await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);
+                
+                if (takeLockASecondTime.Status == TaskStatus.Faulted) await takeLockASecondTime;
+                
+                takeLockASecondTime.Status.Should().Be(TaskStatus.Running, "The cancellation token can not cancel in flight requests.");
+                
+                File.Delete(fileThatOnceDeletedEndsTheCall);
+
+                // Now the lock is released we should be able to complete the request.
+                await takeLockASecondTime;
+            }
+        }
 
         public interface IClientEchoService
         {
@@ -85,6 +129,11 @@ namespace Halibut.Tests
             bool Crash(HalibutProxyRequestOptions halibutProxyRequestOptions);
 
             int CountBytes(DataStream stream, HalibutProxyRequestOptions halibutProxyRequestOptions);
+        }
+        
+        public interface IClientLockService
+        {
+            public void WaitForFileToBeDeleted(string fileToWaitFor, string fileSignalWhenRequestIsStarted, HalibutProxyRequestOptions halibutProxyRequestOptions);
         }
     }
 
