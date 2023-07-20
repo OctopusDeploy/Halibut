@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     [NonParallelizable]
-    public class PollingClientConnectionHandlingFixture
+    public class PollingClientConnectionHandlingFixture : BaseTest
     {
         [Test]
         public async Task PollingClientShouldConnectQuickly()
@@ -86,18 +87,17 @@ namespace Halibut.Tests
             secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(8));
         }
 
-        async Task<(ClientServiceBuilder.ClientAndService,
+        async Task<(LatestClientAndLatestServiceBuilder.ClientAndService,
                 IEchoService echoService,
                 IDoSomeActionService doSomeActionService)>
             SetupPollingServerAndTentacle(Action doSomeActionServiceAction)
         {
-            var clientAndService = await ClientServiceBuilder
+            var clientAndService = await LatestClientAndLatestServiceBuilder
                 .Polling()
                 .WithPortForwarding()
                 .WithDoSomeActionService(doSomeActionServiceAction)
                 .WithEchoService()
-                .Build();
-
+                .Build(CancellationToken);
 
             var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>();
             var echoService = clientAndService.CreateClient<IEchoService>();

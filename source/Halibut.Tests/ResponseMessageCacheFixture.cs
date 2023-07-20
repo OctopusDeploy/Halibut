@@ -6,13 +6,13 @@ using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
-using Halibut.Tests.TestServices;
 using Halibut.Transport.Caching;
 using NUnit.Framework;
+using ICachingService = Halibut.Tests.TestServices.ICachingService;
 
 namespace Halibut.Tests
 {
-    public class ResponseMessageCacheFixture
+    public class ResponseMessageCacheFixture : BaseTest
     {
         public static object[] ServiceConnectionTypeAndVersion =
         {
@@ -173,7 +173,7 @@ namespace Halibut.Tests
         {
             using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
             {
-                clientAndService.Octopus.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
+                clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
 
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -205,17 +205,18 @@ namespace Halibut.Tests
             }
         }
 
-        static async Task<IClientAndService> CreateClientAndService(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        async Task<IClientAndService> CreateClientAndService(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
         {
             return halibutServiceVersion == null ?
-                await ClientServiceBuilder
+                await LatestClientAndLatestServiceBuilder
                     .ForServiceConnectionType(serviceConnectionType)
                     .WithCachingService()
-                    .Build() :
-                await ClientAndPreviousServiceVersionBuilder
+                    .Build(CancellationToken) :
+                await LatestClientAndPreviousServiceVersionBuilder
                     .ForServiceConnectionType(serviceConnectionType)
                     .WithServiceVersion(halibutServiceVersion)
-                    .Build();
+                    .WithCachingService()
+                    .Build(CancellationToken);
         }
 
         public interface IClientCachingService

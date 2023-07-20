@@ -7,6 +7,7 @@
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
     <TargetFrameworks>net48;net6.0</TargetFrameworks>
@@ -22,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Halibut.TestProxy\Halibut.TestProxy.csproj" />
+    <ProjectReference Include="..\Halibut.TestUtils.Contracts\Halibut.TestUtils.Contracts.csproj" />
     <ProjectReference Include="..\Octopus.TestPortForwarder\Octopus.TestPortForwarder.csproj" />
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
     <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v5_0_429\Halibut.TestUtils.CompatBinary.v5_0_429.csproj" ReferenceOutputAssembly="false" />

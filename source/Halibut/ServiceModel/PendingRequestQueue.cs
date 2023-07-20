@@ -15,10 +15,17 @@ namespace Halibut.ServiceModel
         readonly object sync = new();
         readonly AsyncManualResetEvent hasItems = new();
         readonly ILog log;
+        readonly TimeSpan pollingQueueWaitTimeout;
 
-        public PendingRequestQueue(ILog log)
+        public PendingRequestQueue(ILog log) : this(log, HalibutLimits.PollingQueueWaitTimeout)
         {
             this.log = log;
+        }
+
+        public PendingRequestQueue(ILog log, TimeSpan pollingQueueWaitTimeout)
+        {
+            this.log = log;
+            this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
         }
 
         [Obsolete]
@@ -68,6 +75,17 @@ namespace Halibut.ServiceModel
             }
         }
 
+        public int Count
+        {
+            get
+            {
+                lock (sync)
+                {
+                    return queue.Count;
+                }
+            }
+        }
+
 
         public RequestMessage Dequeue()
         {
@@ -87,8 +105,8 @@ namespace Halibut.ServiceModel
             {
                 return first;
             }
-
-            using (var cts = new CancellationTokenSource(HalibutLimits.PollingQueueWaitTimeout))
+            
+            using (var cts = new CancellationTokenSource(pollingQueueWaitTimeout))
                 hasItems.Wait(cts.Token);
 
             hasItems.Reset();
@@ -110,7 +128,7 @@ namespace Halibut.ServiceModel
                 return first;
             }
 
-            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(HalibutLimits.PollingQueueWaitTimeout));
+            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(pollingQueueWaitTimeout));
             hasItems.Reset();
             return TakeFirst();
         }

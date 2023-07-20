@@ -4,7 +4,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NSubstitute;

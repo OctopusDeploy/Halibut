@@ -112,7 +112,7 @@ String, <null>
                 Message = "Attempted to divide by zero.",
                 Details = @"System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.
  ---> System.DivideByZeroException: Attempted to divide by zero.
-   at Halibut.Tests.TestServices.EchoService.Crash() in /home/auser/Documents/octopus/Halibut4/source/Halibut.Tests/TestServices/EchoService.cs:line 16
+   at Halibut.TestUtils.Contracts.EchoService.Crash() in /home/auser/Documents/octopus/Halibut4/source/Halibut.Tests/TestServices/EchoService.cs:line 16
    --- End of inner exception stack trace ---
    at System.RuntimeMethodHandle.InvokeMethod(Object target, Span`1& arguments, Signature sig, Boolean constructor, Boolean wrapExceptions)
    at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)

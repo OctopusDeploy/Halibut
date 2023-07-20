@@ -11,6 +11,9 @@
     <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
         <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
+    <ItemGroup>
+      <Compile Include="..\Halibut.Tests\Support\TcpPortHelper.cs" Link="TcpPortHelper.cs" />
+    </ItemGroup>
 
     <ItemGroup>
         <!-- Earlier versions contain bugs that can cause Halibut to hang
@@ -18,6 +21,10 @@
             It is probably best to never test versions earlier than this, since those tests will be unreliable.
         -->
         <PackageReference Include="Halibut" Version="5.0.205" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Halibut.TestUtils.Contracts\Halibut.TestUtils.Contracts.csproj" />
     </ItemGroup>
 
 </Project>

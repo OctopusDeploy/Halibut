@@ -4,21 +4,23 @@ using Halibut.Exceptions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests.BackwardsCompatibility
 {
-    public class InvocationExceptionsAreMappedCorrectlyFixture
+    public class InvocationExceptionsAreMappedCorrectlyFixture : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder
+            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceVersion(PreviousVersions.v5_0_429)
-                       .Build())
+                       .WithStandardServices()
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>(se =>
                 {

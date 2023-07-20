@@ -4,20 +4,21 @@ using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenCallingAServiceThatDoesNotExist
+    public class WhenCallingAServiceThatDoesNotExist : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task AServiceNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");

@@ -3,13 +3,13 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
 {
-    public class DiscoveryClientFixture
+    public class DiscoveryClientFixture : BaseTest
     {
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
@@ -59,9 +59,9 @@ namespace Halibut.Tests.Transport
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             
-            using (var clientAndService = await ClientServiceBuilder.Listening().WithServiceFactory(services).Build())
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().WithServiceFactory(services).Build(CancellationToken))
             {
-                var info = clientAndService.Octopus.Discover(clientAndService.ServiceUri);
+                var info = clientAndService.Client.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }

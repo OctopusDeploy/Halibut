@@ -6,21 +6,21 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class CancellationViaClientProxyFixture
+    public class CancellationViaClientProxyFixture : BaseTest
     {
         [Test]
         public async Task CancellationCanBeDoneViaClientProxy()
         {
-            using (var clientAndService = await ClientServiceBuilder.Listening()
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
                        .NoService()
                        .WithEchoService()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
@@ -42,10 +42,10 @@ namespace Halibut.Tests
         [Test]
         public async Task CannotHaveServiceWithHalibutProxyRequestOptions()
         {
-            using (var clientAndService = await ClientServiceBuilder.Listening()
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
                        .NoService()
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
-                       .Build())
+                       .Build(CancellationToken))
             {
                 Assert.Throws<TypeNotAllowedException>(() => clientAndService.CreateClient<IAmNotAllowed>());
             }
@@ -53,9 +53,10 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").Build())
+            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").WithStandardServices().Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
                     {

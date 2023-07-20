@@ -1,4 +1,7 @@
 ﻿using System;
+using System.IO;
+using Halibut.TestUtils.Contracts;
+using Halibut.TestUtils.SampleProgram.Base.Utils;
 
 namespace Halibut.TestUtils.SampleProgram.Base
 {
@@ -29,10 +32,11 @@ namespace Halibut.TestUtils.SampleProgram.Base
             return echoService.Crash();
         }
 
-        public int CountBytes(DataStream stream)
+        public int CountBytes(DataStream dataStream)
         {
+            dataStream = dataStream.ConfigureWriterOnReceivedDataStream();
             Console.WriteLine("Forwarding CountBytes() call to delegate");
-            return echoService.CountBytes(stream);
+            return echoService.CountBytes(dataStream);
         }
     }
 }

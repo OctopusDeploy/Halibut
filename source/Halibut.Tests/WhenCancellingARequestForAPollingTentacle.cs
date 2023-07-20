@@ -14,20 +14,20 @@ namespace Halibut.Tests
 {
     public class WhenCancellingARequestForAPollingTentacle
     {
-        public class AndTheRequestIsStillQueued
+        public class AndTheRequestIsStillQueued : BaseTest
         {
             [Test]
             public async Task TheRequestShouldBeCancelled()
             {
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Polling()
                            // No Tentacle
                            .NoService()
                            // CancelWhenRequestQueuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
                            .WithPendingRequestQueueFactory(logFactory => new CancelWhenRequestQueuedPendingRequestQueueFactory(logFactory, cancellationTokenSource))
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>(cancellationTokenSource.Token);
 
@@ -48,7 +48,7 @@ namespace Halibut.Tests
             }
         }
 
-        public class AndTheRequestHasBeenDequeuedButNoResponseReceived
+        public class AndTheRequestHasBeenDequeuedButNoResponseReceived : BaseTest
         {
             [Test]
             public async Task TheRequestShouldNotBeCancelled()
@@ -56,7 +56,7 @@ namespace Halibut.Tests
                 var calls = new List<DateTime>();
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = await ClientServiceBuilder
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder
                            .Polling()
                            .WithDoSomeActionService(() =>
                            {
@@ -71,7 +71,7 @@ namespace Halibut.Tests
                            })
                            // CancelWhenRequestDequeuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
                            .WithPendingRequestQueueFactory(logFactory => new CancelWhenRequestDequeuedPendingRequestQueueFactory(logFactory, cancellationTokenSource))
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     clientAndService.CreateClient<IDoSomeActionService>(cancellationTokenSource.Token).Action();
                 }

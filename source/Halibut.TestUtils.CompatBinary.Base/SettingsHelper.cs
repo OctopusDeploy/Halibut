@@ -33,13 +33,28 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 }
             }
 
-            Console.WriteLine("Not using a Proxy");
+            Console.WriteLine("Not using an Http Proxy");
             return null;
         }
 
         public static string GetSetting(string name)
         {
             return Environment.GetEnvironmentVariable(name);
+        }
+        
+        static bool GetMandatoryBool(string name)
+        {
+            var boolAsString = GetSetting(name);
+            if (string.IsNullOrEmpty(boolAsString))
+            {
+                throw new Exception($"Env var {name} must be set");
+            }
+
+            if (bool.TryParse(boolAsString, out var boolValue))
+            {
+                return boolValue;
+            }
+            throw new Exception($"Env var {name} must be a bool it was: {boolAsString}");
         }
 
         public static ServiceConnectionType GetServiceConnectionType()
@@ -105,6 +120,21 @@ namespace Halibut.TestUtils.SampleProgram.Base
             
             Console.WriteLine($"Will die when the following file can be locked or is deleted '{stayAliveFilePath}'.");
             return stayAliveFilePath;
+        }
+
+        public static bool IsWithStandardServices()
+        {
+            return GetMandatoryBool("WithStandardServices");
+        }
+
+        public static bool IsWithCachingService()
+        {
+            return GetMandatoryBool("WithCachingService");
+        }
+
+        public static bool IsWithTentacleServices()
+        {
+            return GetMandatoryBool("WithTentacleServices");
         }
     }
 }

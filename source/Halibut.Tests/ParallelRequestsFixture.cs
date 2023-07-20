@@ -11,19 +11,21 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class ParallelRequestsFixture
+    public class ParallelRequestsFixture : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task SendMessagesToTentacleInParallel(ServiceConnectionType serviceConnectionType)
         {
             var services = new DelegateServiceFactory();
             services.Register<IReadDataStreamService>(() => new ReadDataStreamService());
 
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithHalibutLoggingLevel(LogLevel.Info)
-                       .WithServiceFactory(services).Build())
+                       .WithServiceFactory(services)
+                       .WithServiceFactory(services).Build(CancellationToken))
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 

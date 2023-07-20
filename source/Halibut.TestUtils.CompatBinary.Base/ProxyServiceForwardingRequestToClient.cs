@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 using Halibut.TestUtils.SampleProgram.Base.Services;
 
@@ -18,58 +18,66 @@ namespace Halibut.TestUtils.SampleProgram.Base
     {
         public static async Task Run()
         {
+            var serviceConnectionType = SettingsHelper.GetServiceConnectionType();
             var serviceCert = SettingsHelper.GetServiceCertificate();
             var clientCert = SettingsHelper.GetClientCertificate();
-            Console.WriteLine($"This should be bob: {clientCert}");
-
-            var serviceConnectionType = SettingsHelper.GetServiceConnectionType();
             var proxyDetails = SettingsHelper.GetProxyDetails();
 
-            string addressToPoll = null;
-            if (serviceConnectionType == ServiceConnectionType.Polling)
+            string proxyClientAddressToPoll = null;
+            if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
-                addressToPoll = SettingsHelper.GetSetting("octopusservercommsport");
-                Console.WriteLine($"Will poll: {addressToPoll}");
+                proxyClientAddressToPoll = SettingsHelper.GetSetting("octopusservercommsport");
+                Console.WriteLine($"Proxy Service will Poll: {proxyClientAddressToPoll}");
             }
 
             string serviceAddressToConnectTo = null;
             if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 serviceAddressToConnectTo = SettingsHelper.GetSetting("realServiceListenAddress");
-                Console.WriteLine($"Will forward request to: {serviceAddressToConnectTo}");
+                Console.WriteLine($"Proxy Service will forward request to: {serviceAddressToConnectTo}");
             }
 
-            // A Halibut Runtime which is the previous version of Halibut the Test is trying to test.
+            // A Halibut Runtime Client which is the previous version of Halibut the Test is trying to test.
             // This will communicate with the Halibut Service created in the Test Process (the Tentacle were trying to test against)
             using (var client = new HalibutRuntimeBuilder()
                        .WithServerCertificate(clientCert)
-                       .WithLogFactory(new TestContextLogFactory("ProxyClient", SettingsHelper.GetHalibutLogLevel()))
+                       .WithLogFactory(new TestContextLogFactory("PreviousVersionOfClient", SettingsHelper.GetHalibutLogLevel()))
                        .Build())
             {
-                Console.WriteLine("Next line should be: 36F35047CE8B000CF4C671819A2DD1AFCDE3403D");
                 Console.WriteLine("Client will trust: " + serviceCert.Thumbprint);
                 client.Trust(serviceCert.Thumbprint);
 
-                Uri realServiceUri;
+                ServiceEndPoint realServiceEndpoint;
                 switch (serviceConnectionType)
                 {
                     case ServiceConnectionType.Polling:
                         var clientPollingListeningPort = client.Listen();
+                        // Do not change the log message as it is used by the HalibutTestBinaryRunners
                         Console.WriteLine("Polling listener is listening on port: " + clientPollingListeningPort);
-                        realServiceUri = new Uri("poll://SQ-TENTAPOLL");
+                        realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
+                        break;
+                    case ServiceConnectionType.PollingOverWebSocket:
+                        var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
+                        var webSocketPath = SettingsHelper.GetSetting("websocketpath");
+                        var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
+
+                        client.ListenWebSocket(webSocketListeningUrl);
+                        Console.WriteLine($"WebSocket Polling listener is listening on: {webSocketListeningUrl}");
+                        // Do not change the log message as it is used by the HalibutTestBinaryRunners
+                        Console.WriteLine("Polling listener is listening on port: " + webSocketListeningPort);
+                        realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
                         break;
                     case ServiceConnectionType.Listening:
-                        realServiceUri = new Uri(serviceAddressToConnectTo!);
+                        realServiceEndpoint = new ServiceEndPoint(new Uri(serviceAddressToConnectTo!), serviceCert.Thumbprint, proxyDetails);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
 
-                var realServiceEndpoint = new ServiceEndPoint(realServiceUri, serviceCert.Thumbprint, proxyDetails);
-
-                var services = ServiceFactoryFactory.CreateProxyingServicesServiceFactory(client, realServiceEndpoint);
+                // A Halibut Runtime which will be the Service that proxies requests to the real Service (Tentacle) in the Test CLR
+                // using an old version of Halibut as the Client which is the thing we are trying to test
                 using (var proxyService = new HalibutRuntimeBuilder()
-                           .WithServiceFactory(services)
+                           .WithServiceFactory(ServiceFactoryFactory.CreateProxyingServicesServiceFactory(client, realServiceEndpoint))
                            .WithServerCertificate(serviceCert)
                            .WithLogFactory(new TestContextLogFactory("ProxyService", SettingsHelper.GetHalibutLogLevel()))
                            .Build())
@@ -77,11 +85,14 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     switch (serviceConnectionType)
                     {
                         case ServiceConnectionType.Polling:
-                            proxyService.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll!), clientCert.Thumbprint));
+                        case ServiceConnectionType.PollingOverWebSocket:
+                            // PollingOverWebsockets exposes a proxy client that is just Polling for simplicity
+                            proxyService.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(proxyClientAddressToPoll!), clientCert.Thumbprint));
                             break;
                         case ServiceConnectionType.Listening:
-                            var port = proxyService.Listen();
-                            Console.WriteLine($"Listening on port: {port}");
+                            var proxyServiceListeningPort = proxyService.Listen();
+                            // Do not change the log message as it is used by the HalibutTestBinaryRunners
+                            Console.WriteLine($"Listening on port: {proxyServiceListeningPort}");
                             proxyService.Trust(clientCert.Thumbprint);
                             break;
                         default:

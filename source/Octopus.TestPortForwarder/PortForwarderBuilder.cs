@@ -54,9 +54,9 @@ namespace Octopus.TestPortForwarder
             return this;
         }
 
-        public Octopus.TestPortForwarder.PortForwarder Build()
+        public PortForwarder Build()
         {
-            return new Octopus.TestPortForwarder.PortForwarder(originServer, sendDelay, () =>
+            return new PortForwarder(originServer, sendDelay, () =>
                 {
                     var results = observerFactory.Select(factory => factory()).ToArray();
                     return BiDirectionalDataTransferObserver.Combiner(results);

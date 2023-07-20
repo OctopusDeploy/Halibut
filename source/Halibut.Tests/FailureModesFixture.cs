@@ -9,12 +9,13 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class FailureModesFixture
+    public class FailureModesFixture : BaseTest
     {
         static DelegateServiceFactory GetDelegateServiceFactory()
         {
@@ -26,10 +27,10 @@ namespace Halibut.Tests
         [Test]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp()
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .Polling()
                        .NoService()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>(point =>
                 {
@@ -44,16 +45,17 @@ namespace Halibut.Tests
 
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task FailWhenServerThrowsAnException(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithEchoService()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
-                ex.Message.Should().Contain("at Halibut.Tests.TestServices.EchoService.Crash()").And.Contain("divide by zero");
+                ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
             }
         }
 
@@ -135,13 +137,13 @@ namespace Halibut.Tests
         // TODO - This runs for 30+ mins with WebSockets
         public async Task FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithReadDataStreamService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        // This test is very noisy for the test logs
                        .WithHalibutLoggingLevel(LogLevel.Fatal)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 

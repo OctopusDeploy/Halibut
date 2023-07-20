@@ -1,24 +1,24 @@
-#if SUPPORTS_WEB_SOCKET_CLIENT
+
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    [NonParallelizable]
-    public class WebSocketUsageFixture
+    public class WebSocketUsageFixture : BaseTest
     {
+#if SUPPORTS_WEB_SOCKET_CLIENT
         [Test]
+#endif
         public async Task HalibutSerializerIsKeptUpToDateWithWebSocketPollingTentacle()
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .PollingOverWebSocket()
                        .WithStandardServices()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
                 // This must come before CreateClient<ISupportedServices> for the situation to occur
@@ -30,14 +30,15 @@ namespace Halibut.Tests
             }
         }
 
+#if SUPPORTS_WEB_SOCKET_CLIENT
         [Test]
+#endif
         public async Task OctopusCanSendMessagesToWebSocketPollingTentacle()
         {
-
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .PollingOverWebSocket()
                        .WithStandardServices()
-                       .Build())
+                       .Build(CancellationToken))
             {
 
                 var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
@@ -51,4 +52,4 @@ namespace Halibut.Tests
 
     }
 }
-#endif
+

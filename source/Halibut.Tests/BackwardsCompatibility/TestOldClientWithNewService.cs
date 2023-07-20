@@ -5,21 +5,22 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests.BackwardsCompatibility
 {
-    public class TestOldClientWithNewService
+    public class TestOldClientWithNewService : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
         public async Task SimplePreviousClientTest(ServiceConnectionType serviceConnectionType)
         {
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndServiceBuilder.ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await PreviousClientVersionAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
                        .WithClientVersion(PreviousVersions.v5_0_429)
                        .WithEchoServiceService(echoService)
-                       .Build())
+                       .Build(CancellationToken))
             {
 
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -34,11 +35,11 @@ namespace Halibut.Tests.BackwardsCompatibility
         public async Task SimplePreviousClientTestWithLatency(ServiceConnectionType serviceConnectionType)
         {
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndServiceBuilder.ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await PreviousClientVersionAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
                        .WithClientVersion(PreviousVersions.v5_0_429)
                        .WithEchoServiceService(echoService)
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
-                       .Build())
+                       .Build(CancellationToken))
             {
                 
                 var echo = clientAndService.CreateClient<IEchoService>();

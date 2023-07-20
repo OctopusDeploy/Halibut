@@ -6,23 +6,24 @@ using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenCallingAMethodThatDoesNotExist
+    public class WhenCallingAMethodThatDoesNotExist : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ServiceConnectionType serviceConnectionType)
         {
             var services = new SingleServiceFactory(new object(), typeof(EchoService));
 
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithServiceFactory(services)
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
 

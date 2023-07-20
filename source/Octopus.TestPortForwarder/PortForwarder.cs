@@ -67,6 +67,7 @@ namespace Octopus.TestPortForwarder
                 throw;
             }
             logger.Information("Listening on {LoadBalancerEndpoint}", listeningSocket.LocalEndPoint?.ToString());
+            logger.Information("Forwarding to {OriginServer}", originServer);
             active = true;
         }
 
@@ -88,7 +89,7 @@ namespace Octopus.TestPortForwarder
             KillNewConnectionsImmediatlyMode = true;
             this.CloseExistingConnections();
         }
-        
+
         public void ReturnToNormalMode()
         {
             KillNewConnectionsImmediatlyMode = false;
@@ -146,7 +147,7 @@ namespace Octopus.TestPortForwarder
 
         private void AddNewPump(TcpPump pump, CancellationToken cancellationToken)
         {
-            
+
             lock (pumps)
             {
                 if (cancellationToken.IsCancellationRequested || !active || KillNewConnectionsImmediatlyMode)
@@ -157,7 +158,7 @@ namespace Octopus.TestPortForwarder
                     }
                     catch (Exception)
                     {
-                        
+
                     }
                 }
                 else

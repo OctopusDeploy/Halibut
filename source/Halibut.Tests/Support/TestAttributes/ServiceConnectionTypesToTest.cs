@@ -7,13 +7,7 @@ namespace Halibut.Tests.Support.TestAttributes
     {
         public IEnumerator<ServiceConnectionType> GetEnumerator()
         {
-            yield return ServiceConnectionType.Polling;
-            yield return ServiceConnectionType.Listening;
-
-#if SUPPORTS_WEB_SOCKET_CLIENT
-            // Removed for now since it is so unreliable
-            //yield return ServiceConnectionType.PollingOverWebSocket;
-#endif
+            return ((IEnumerable<ServiceConnectionType>)ServiceConnectionTypes.All).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

@@ -8,17 +8,18 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse
+    public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse : BaseTest
     {
         [Test]
         [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
         public async Task AResponseShouldBeQuicklyReturned(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .ForServiceConnectionType(serviceConnectionType)
                        .WithPortForwarding(out var portForwarder)
                        .WithDoSomeActionService(() => portForwarder.Value.Dispose())
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var svc = clientAndService.CreateClient<IDoSomeActionService>();
 

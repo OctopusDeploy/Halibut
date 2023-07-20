@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -9,11 +8,14 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    // These tests change the behaviour of ServicePointManager.ServerCertificateValidationCallback
+    // And can interfere with other tests
+    [NonParallelizable]
     public class FriendlyHtmlPageTests
     {
         static DelegateServiceFactory GetDelegateServiceFactory()

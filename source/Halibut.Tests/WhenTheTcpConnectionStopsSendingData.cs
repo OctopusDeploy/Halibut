@@ -1,23 +1,24 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
-using Halibut.Tests.TestServices;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class WhenTheTcpConnectionStopsSendingData
+    public class WhenTheTcpConnectionStopsSendingData : BaseTest
     {
         [Test]
-        public async Task HalibutCanRecoverFromIdleTcpDisconnect2()
+        public async Task HalibutCanRecoverFromIdleTcpDisconnect()
         {
-            using (var clientAndService = await ClientServiceBuilder
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
                        .Listening()
                        .WithEchoService()
                        .WithPortForwarding()
-                       .Build())
+                       .Build(CancellationToken))
             {
                 var data = new byte[1024];
                 new Random().NextBytes(data);
@@ -28,16 +29,13 @@ namespace Halibut.Tests
 
                 clientAndService.PortForwarder!.PauseExistingConnections();
 
-                var sayHelloTask = Task.Run(() => echo.SayHello("Bob"));
+                var sw = Stopwatch.StartNew();
+                echo.SayHello("Bob");
+                sw.Stop();
 
-                // The test knows that Halibut should be using the shorter TcpClientHeartbeatReceiveTimeout when checking
-                // the TCP connection pulled out of the pool. Doing this reduces the test time in the failure case.
-                await Task.WhenAny(sayHelloTask, Task.Delay(HalibutLimits.TcpClientHeartbeatReceiveTimeout + HalibutLimits.TcpClientHeartbeatReceiveTimeout));
-
-                sayHelloTask.IsCompleted.Should().BeTrue("We should be able to detect dead TCP connections and retry requests with a new TCP connection.");
-
-                (HalibutLimits.TcpClientHeartbeatReceiveTimeout + TimeSpan.FromSeconds(10)).Should().BeLessThan(HalibutLimits.TcpClientReceiveTimeout, 
-                    "This depend on the heart beat timeouts being less than the regular TCP timeouts, if that is not true this test isn't testing the correct timeout.");
+                sw.Elapsed.Should().BeGreaterThanOrEqualTo(HalibutLimits.TcpClientHeartbeatReceiveTimeout - TimeSpan.FromSeconds(1), // Allow for some slack, don't care if it actually waited just under.  
+                    "Since we should test connections in the pool using using the heart beat timeout.")
+                    .And.BeLessThan(HalibutLimits.TcpClientReceiveTimeout, "Since we should test connections in the pool using using the shorter timeout.");
             }
         }
     }

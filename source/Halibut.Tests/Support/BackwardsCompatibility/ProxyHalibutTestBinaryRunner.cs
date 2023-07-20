@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -11,30 +12,34 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     public class ProxyHalibutTestBinaryRunner
     {
         readonly ServiceConnectionType serviceConnectionType;
-        readonly int? clientServicePort;
+        readonly int? proxyClientListeningPort;
         readonly CertAndThumbprint clientCertAndThumbprint;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly string version;
-        readonly ProxyDetails proxyDetails;
+        readonly ProxyDetails? proxyDetails;
+        readonly string? webSocketPath;
         readonly LogLevel halibutLogLevel;
-        readonly Uri realServiceListenAddress;
+        readonly Uri? realServiceListenAddress;
 
-        public ProxyHalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType,
-            int? clientServicePort,
+        public ProxyHalibutTestBinaryRunner(
+            ServiceConnectionType serviceConnectionType,
+            int? proxyClientListeningPort,
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint,
-            Uri realServiceListenAddress,
+            Uri? realServiceListenAddress,
             string version,
-            ProxyDetails proxyDetails,
+            ProxyDetails? proxyDetails,
+            string? webSocketPath,
             LogLevel halibutLogLevel)
         {
             this.serviceConnectionType = serviceConnectionType;
-            this.clientServicePort = clientServicePort;
+            this.proxyClientListeningPort = proxyClientListeningPort;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.version = version;
             this.proxyDetails = proxyDetails;
             this.halibutLogLevel = halibutLogLevel;
+            this.webSocketPath = webSocketPath;
             this.realServiceListenAddress = realServiceListenAddress;
         }
 
@@ -46,6 +51,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "mode", "proxy" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
                 { "octopuscertpath", clientCertAndThumbprint.CertificatePfxPath },
+                { "websocketpath", webSocketPath ?? string.Empty },
+                { "ServiceConnectionType", serviceConnectionType.ToString() },
+                { "sslthubprint", Certificates.SslThumbprint },
                 { "halibutloglevel", halibutLogLevel.ToString() },
                 { CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile }
             };
@@ -59,17 +67,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 settings.Add("proxydetails_type", proxyDetails.Type.ToString());
             }
 
-            if (clientServicePort != null)
+            if (proxyClientListeningPort != null)
             {
-                settings.Add("octopusservercommsport", "https://localhost:" + clientServicePort);
+                settings.Add("octopusservercommsport", "https://localhost:" + proxyClientListeningPort);
             }
 
             if (realServiceListenAddress != null)
             {
                 settings.Add("realServiceListenAddress", realServiceListenAddress.ToString());
             }
-
-            settings.Add("ServiceConnectionType", serviceConnectionType.ToString());
 
             var cts = new CancellationTokenSource();
 
@@ -88,7 +94,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        async Task<(Task, int?, int?)> StartHalibutTestBinary(string version, Dictionary<string, string> envs, TmpDirectory tmp, CancellationToken cancellationToken)
+        async Task<(Task, int?, int?)> StartHalibutTestBinary(string version, Dictionary<string, string> settings, TmpDirectory tmp, CancellationToken cancellationToken)
         {
             var hasTentacleStarted = new ManualResetEventSlim();
             hasTentacleStarted.Reset();
@@ -123,7 +129,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         ProcessLogs,
                         ProcessLogs,
                         ProcessLogs,
-                        customEnvironmentVariables: envs,
+                        customEnvironmentVariables: settings,
                         cancel: cancellationToken
                     );
                 }

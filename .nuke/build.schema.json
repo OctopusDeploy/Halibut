@@ -82,13 +82,17 @@
             "enum": [
               "Clean",
               "Compile",
+              "CompileNet48",
+              "CompileNet60",
               "CopyToLocalPackages",
               "Default",
               "Pack",
               "PackTestPortForwarder",
               "Restore",
               "TestLinux",
-              "TestWindows"
+              "TestWindows",
+              "TestWindowsNet48",
+              "TestWindowsNet60"
             ]
           }
         },
@@ -104,13 +108,17 @@
             "enum": [
               "Clean",
               "Compile",
+              "CompileNet48",
+              "CompileNet60",
               "CopyToLocalPackages",
               "Default",
               "Pack",
               "PackTestPortForwarder",
               "Restore",
               "TestLinux",
-              "TestWindows"
+              "TestWindows",
+              "TestWindowsNet48",
+              "TestWindowsNet60"
             ]
           }
         },
