@@ -11,10 +11,9 @@ namespace Halibut.Tests.Support.TestAttributes
             var toTest = new List<ServiceConnectionType>
             {
                 ServiceConnectionType.Polling,
-// Disabled while these are causing flakey Team City Tests
-//#if SUPPORTS_WEB_SOCKET_CLIENT
-//             ServiceConnectionType.PollingOverWebSocket
-//#endif
+#if SUPPORTS_WEB_SOCKET_CLIENT
+                ServiceConnectionType.PollingOverWebSocket
+#endif
             };
             return ((IEnumerable<ServiceConnectionType>) toTest).GetEnumerator();
         }
