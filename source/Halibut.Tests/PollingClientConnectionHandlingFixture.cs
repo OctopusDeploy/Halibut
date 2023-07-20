@@ -16,7 +16,9 @@ namespace Halibut.Tests
     {
         [Test]
         [TestCase(ServiceConnectionType.Polling)]
+#if SUPPORTS_WEB_SOCKET_CLIENT
         [TestCase(ServiceConnectionType.PollingOverWebSocket)]
+#endif
         public async Task PollingClientShouldConnectQuickly(ServiceConnectionType serviceConnectionType)
         {
             var started = DateTime.UtcNow;
@@ -38,7 +40,9 @@ namespace Halibut.Tests
 
         [Test]
         [TestCase(ServiceConnectionType.Polling)]
+#if SUPPORTS_WEB_SOCKET_CLIENT
         [TestCase(ServiceConnectionType.PollingOverWebSocket)]
+#endif
         public async Task PollingClientShouldReConnectQuickly(ServiceConnectionType serviceConnectionType)
         {
             var started = DateTime.UtcNow;
