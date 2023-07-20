@@ -7,9 +7,9 @@ using NUnit.Framework;
 namespace Halibut.Tests.Support.TestAttributes
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
-    public class LatestAndPreviousServiceVersionsTestCasesAttribute : TestCaseSourceAttribute
+    public class LatestClientAndLatestAndPreviousServiceVersionsTestCasesAttribute : TestCaseSourceAttribute
     {
-        public LatestAndPreviousServiceVersionsTestCasesAttribute(bool testWebSocket = true, bool testNetworkConditions = true) :
+        public LatestClientAndLatestAndPreviousServiceVersionsTestCasesAttribute(bool testWebSocket = true, bool testNetworkConditions = true) :
             base(
                 typeof(LatestAndPreviousServiceVersionsTestCases),
                 nameof(LatestAndPreviousServiceVersionsTestCases.GetEnumerator),

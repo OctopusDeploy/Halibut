@@ -16,7 +16,7 @@ namespace Halibut.Tests
     public class ResponseMessageCacheFixture : BaseTest
     {
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatDoesNotSupportCaching_ResponsesShouldNotBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -35,7 +35,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatDoesNotSupportCaching_WithClientInterface_ResponsesShouldNotBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -54,7 +54,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -73,7 +73,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_WithClientInterface_ResponseShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -92,7 +92,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_ResponseForServiceWithInputParametersShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -112,7 +112,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_CachedItemShouldBeInvalidatedAfterTheCacheDurationExpires(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -137,7 +137,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -156,7 +156,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentEndpoints(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -182,7 +182,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentInputParameters(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -201,7 +201,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_ClientShouldBeAbleToForceSpecificErrorResponsesToBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -226,7 +226,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task ForAServiceThatSupportsCaching_ErrorResponsesShouldNotBeCachedByDefault(ClientAndServiceTestCase clientAndServiceTestCase)
         {
