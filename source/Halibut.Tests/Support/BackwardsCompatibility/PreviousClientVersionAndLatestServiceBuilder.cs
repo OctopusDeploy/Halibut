@@ -175,6 +175,16 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return await Build(cancellationToken);
         }
+        
+        public PreviousClientVersionAndLatestServiceBuilder NoService()
+        {
+            throw new NotImplementedException();
+        }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.NoService()
+        {
+            return NoService();
+        }
 
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {

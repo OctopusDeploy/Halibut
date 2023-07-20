@@ -15,5 +15,6 @@ namespace Halibut.Tests.Support
         IClientAndServiceBuilder WithTentacleServices();
         IClientAndServiceBuilder WithHalibutLoggingLevel(LogLevel info);
         IClientAndServiceBuilder WithCachingService();
+        IClientAndServiceBuilder NoService();
     }
 }
