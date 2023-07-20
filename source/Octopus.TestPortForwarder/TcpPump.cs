@@ -28,17 +28,17 @@ namespace Octopus.TestPortForwarder
         bool isDisposing;
         bool isDisposed;
         public bool IsPaused { get; set; }
-        private Func<BiDirectionalDataTransferObserver> factory;
+        private BiDirectionalDataTransferObserver biDirectionalDataTransferObserver;
         public long PumpNumber { get; } = NextTcpPumpNumber();
 
-        public TcpPump(Socket clientSocket, Socket originSocket, EndPoint originEndPoint, TimeSpan sendDelay, Func<BiDirectionalDataTransferObserver> factory, int numberOfBytesToDelaySending, ILogger logger)
+        public TcpPump(Socket clientSocket, Socket originSocket, EndPoint originEndPoint, TimeSpan sendDelay, BiDirectionalDataTransferObserver biDirectionalDataTransferObserver, int numberOfBytesToDelaySending, ILogger logger)
         {
             this.logger = logger.ForContext<TcpPump>();
             this.clientSocket = clientSocket ?? throw new ArgumentNullException(nameof(clientSocket));
             this.originSocket = originSocket ?? throw new ArgumentNullException(nameof(originSocket));
             this.originEndPoint = originEndPoint ?? throw new ArgumentNullException(nameof(originEndPoint));
             this.sendDelay = sendDelay;
-            this.factory = factory;
+            this.biDirectionalDataTransferObserver = biDirectionalDataTransferObserver;
             this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             clientEndPoint = clientSocket.RemoteEndPoint ?? throw new ArgumentException("Remote endpoint is null", nameof(clientSocket));
         }
@@ -70,11 +70,10 @@ namespace Octopus.TestPortForwarder
 #endif
 
                         cancellationToken.ThrowIfCancellationRequested();
-
-                        var biDirectionalCallBack = factory();
+                        
                         // If the connection was ok, then set-up a pump both ways
-                        var pump1 = Task.Run(async () => await PumpBytes(clientSocket, originSocket, new SocketPump(this, () => this.IsPaused, sendDelay, biDirectionalCallBack.DataTransferObserverClientToOrigin, numberOfBytesToDelaySending, logger), cancellationToken).ConfigureAwait(false), cancellationToken);
-                        var pump2 = Task.Run(async () => await PumpBytes(originSocket, clientSocket, new SocketPump(this, () => this.IsPaused, sendDelay, biDirectionalCallBack.DataTransferObserverOriginToClient, numberOfBytesToDelaySending, logger), cancellationToken).ConfigureAwait(false), cancellationToken);
+                        var pump1 = Task.Run(async () => await PumpBytes(clientSocket, originSocket, new SocketPump(this, () => this.IsPaused, sendDelay, biDirectionalDataTransferObserver.DataTransferObserverClientToOrigin, numberOfBytesToDelaySending, logger), cancellationToken).ConfigureAwait(false), cancellationToken);
+                        var pump2 = Task.Run(async () => await PumpBytes(originSocket, clientSocket, new SocketPump(this, () => this.IsPaused, sendDelay, biDirectionalDataTransferObserver.DataTransferObserverOriginToClient, numberOfBytesToDelaySending, logger), cancellationToken).ConfigureAwait(false), cancellationToken);
 
                         // When one is finished, they are both "done" so stop them
                         await Task.WhenAny(pump1, pump2).ConfigureAwait(false);
