@@ -110,7 +110,7 @@ namespace Halibut.Tests
                     await Task.Delay(TimeSpan.FromMilliseconds(100), CancellationToken);
                 }
                 
-                // The second call is now in flight.
+                // The call is now in flight.
                 // Call cancel on the cancellation token for that in flight request.
                 cts.Cancel();
                 
