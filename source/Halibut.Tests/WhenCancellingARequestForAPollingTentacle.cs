@@ -6,6 +6,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -17,12 +18,12 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued : BaseTest
         {
             [Test]
-            public async Task TheRequestShouldBeCancelled()
+            [TestCaseSource(typeof(PollingServiceConnectionTypesToTest))]
+            public async Task TheRequestShouldBeCancelled(ServiceConnectionType serviceConnectionType)
             {
                 var cancellationTokenSource = new CancellationTokenSource();
-
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .Polling()
+                
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
                            // No Tentacle
                            .NoService()
                            // CancelWhenRequestQueuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
@@ -51,13 +52,13 @@ namespace Halibut.Tests
         public class AndTheRequestHasBeenDequeuedButNoResponseReceived : BaseTest
         {
             [Test]
-            public async Task TheRequestShouldNotBeCancelled()
+            [TestCaseSource(typeof(PollingServiceConnectionTypesToTest))]
+            public async Task TheRequestShouldNotBeCancelled(ServiceConnectionType serviceConnectionType)
             {
                 var calls = new List<DateTime>();
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .Polling()
+                using (var clientAndService = await LatestClientAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
                            .WithDoSomeActionService(() =>
                            {
                                calls.Add(DateTime.UtcNow);
