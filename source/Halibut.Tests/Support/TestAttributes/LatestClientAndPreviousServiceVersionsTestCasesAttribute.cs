@@ -7,23 +7,22 @@ using NUnit.Framework;
 namespace Halibut.Tests.Support.TestAttributes
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
-    public class LatestClientAndLatestAndPreviousServiceVersionsTestCasesAttribute : TestCaseSourceAttribute
+    public class LatestClientAndPreviousServiceVersionsTestCasesAttribute : TestCaseSourceAttribute
     {
-        public LatestClientAndLatestAndPreviousServiceVersionsTestCasesAttribute(bool testWebSocket = true, bool testNetworkConditions = true) :
+        public LatestClientAndPreviousServiceVersionsTestCasesAttribute(bool testWebSocket = true, bool testNetworkConditions = true) :
             base(
-                typeof(LatestAndPreviousServiceVersionsTestCases),
-                nameof(LatestAndPreviousServiceVersionsTestCases.GetEnumerator),
+                typeof(LatestClientAndPreviousServiceVersionsTestCases),
+                nameof(LatestClientAndPreviousServiceVersionsTestCases.GetEnumerator),
                 new object[] { testWebSocket, testNetworkConditions })
         {
         }
         
-        static class LatestAndPreviousServiceVersionsTestCases
+        static class LatestClientAndPreviousServiceVersionsTestCases
         {
             public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions)
             {
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] {
-                        ClientAndServiceTestVersion.Latest(),
                         ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417),
                     },
                     testWebSocket ? ServiceConnectionTypes.All : ServiceConnectionTypes.AllExceptWebSockets,
