@@ -7,8 +7,11 @@ using Halibut.Exceptions;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
@@ -25,11 +28,15 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .Polling()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
                        .NoService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>(point =>
@@ -44,13 +51,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
-        public async Task FailWhenServerThrowsAnException(ServiceConnectionType serviceConnectionType)
+        public async Task FailWhenServerThrowsAnException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithEchoService()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -133,28 +141,29 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
-        // TODO - This runs for 30+ mins with WebSockets
-        public async Task FailWhenServerThrowsDuringADataStream(ServiceConnectionType serviceConnectionType)
+        [Timeout(15000)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)] // TODO - A bug in the PollingOverWebSocket implementation means this never completes
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task FailWhenServerThrowsDuringADataStream(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .WithHalibutLoggingLevel(LogLevel.Trace)
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithReadDataStreamService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
-                       // This test is very noisy for the test logs
-                       .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 
                 // Previously tentacle would eventually stop responding only after many failed calls.
                 // This loop ensures (at the time) the test shows the problem.
-                for (int i = 0; i < 128; i++)
+                for (var i = 0; i < 128; i++)
                 {
                     Assert.Throws<HalibutClientException>(() => readDataSteamService.SendData(new DataStream(10000, stream => throw new Exception("Oh noes"))));
                 }
 
-                long recieved = readDataSteamService.SendData(DataStream.FromString("hello"));
+                var recieved = readDataSteamService.SendData(DataStream.FromString("hello"));
                 recieved.Should().Be(5);
             }
         }

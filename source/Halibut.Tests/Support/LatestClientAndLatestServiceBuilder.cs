@@ -80,6 +80,11 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        IClientAndServiceBuilder IClientAndServiceBuilder.NoService()
+        {
+            return NoService();
+        }
+
         public LatestClientAndLatestServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
             this.serviceFactory = serviceFactory;

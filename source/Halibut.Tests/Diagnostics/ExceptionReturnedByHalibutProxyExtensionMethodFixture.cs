@@ -4,9 +4,11 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
@@ -185,13 +187,13 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
             [FailedWebSocketTestsBecomeInconclusive]
-            public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
+            public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .ForServiceConnectionType(serviceConnectionType)
-                           .WithEchoService()
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .WithStandardServices()
+                           .WithHalibutLoggingLevel(LogLevel.Info)
                            .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
