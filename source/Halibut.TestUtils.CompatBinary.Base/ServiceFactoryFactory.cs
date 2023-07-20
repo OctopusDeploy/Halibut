@@ -25,6 +25,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 services.Register<IMultipleParametersTestService>(() => new MultipleParametersTestService());
                 services.Register<IComplexObjectService>(() => new ComplexObjectService());
                 services.Register<ILockService>(() => new LockService());
+                var singleCountingService = new CountingService();
+                services.Register<ICountingService>(() => singleCountingService);
             }
 
             if (SettingsHelper.IsWithCachingService())

@@ -36,6 +36,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         LogLevel halibutLogLevel;
         bool withTentacleServices = false;
         ILockService lockService;
+        ICountingService countingService;
 
         PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -123,6 +124,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.lockService = lockService;
             return this;
         }
+        
+        public PreviousClientVersionAndLatestServiceBuilder WithCountingService(ICountingService countingService)
+        {
+            this.countingService = countingService;
+            return this;
+        }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
@@ -134,7 +141,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return WithEchoServiceService(new EchoService())
                 .WithMultipleParametersTestService(new MultipleParametersTestService())
                 .WithComplexObjectService(new ComplexObjectService())
-                .WithLockService(new LockService());
+                .WithLockService(new LockService())
+                .WithCountingService(new CountingService());
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithTentacleServices()
@@ -202,7 +210,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .Register(() => cachingService)
                 .Register(() => multipleParametersTestService)
                 .Register(() => complexObjectService)
-                .Register(() => lockService);
+                .Register(() => lockService)
+                .Register(() => countingService);
 
             if (withTentacleServices)
             {

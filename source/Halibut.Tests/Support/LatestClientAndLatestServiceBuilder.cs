@@ -143,7 +143,8 @@ namespace Halibut.Tests.Support
                 .WithMultipleParametersTestService()
                 .WithCachingService()
                 .WithComplexObjectService()
-                .WithLockService();
+                .WithLockService()
+                .WithCountingService();
         }
 
         public LatestClientAndLatestServiceBuilder WithTentacleServices()

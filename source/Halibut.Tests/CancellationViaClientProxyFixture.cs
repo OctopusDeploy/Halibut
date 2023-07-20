@@ -25,11 +25,12 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
+                
                 clientAndService.PortForwarder.EnterKillNewAndExistingConnectionsMode();
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
-                var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(point =>
+                var echo = clientAndService.CreateClient<ICountingService, IClientCountingService>(point =>
                     {
                         point.RetryCountLimit = 1000000;
                         point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
@@ -38,8 +39,15 @@ namespace Halibut.Tests
                 var cts = new CancellationTokenSource();
                 cts.CancelAfter(TimeSpan.FromMilliseconds(100));
 
-                Assert.That(() => echo.SayHello("hello", new HalibutProxyRequestOptions(cts.Token)), Throws.Exception
+                Assert.That(() => echo.Increment(new HalibutProxyRequestOptions(cts.Token)), Throws.Exception
                     .With.Message.Contains("The operation was canceled"));
+                
+                clientAndService.PortForwarder.ReturnToNormalMode();
+                
+                echo.Increment(new HalibutProxyRequestOptions(CancellationToken));
+
+                echo.GetCurrentValue(new HalibutProxyRequestOptions(CancellationToken))
+                    .Should().Be(1, "Since we cancelled the first call");
             }
         }
 
@@ -134,6 +142,12 @@ namespace Halibut.Tests
         public interface IClientLockService
         {
             public void WaitForFileToBeDeleted(string fileToWaitFor, string fileSignalWhenRequestIsStarted, HalibutProxyRequestOptions halibutProxyRequestOptions);
+        }
+        
+        public interface IClientCountingService
+        {
+            public int Increment(HalibutProxyRequestOptions halibutProxyRequestOptions);
+            public int GetCurrentValue(HalibutProxyRequestOptions halibutProxyRequestOptions);
         }
     }
 
