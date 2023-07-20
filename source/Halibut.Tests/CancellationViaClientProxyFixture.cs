@@ -56,13 +56,12 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
-        public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
+        public async Task HalibutProxyRequestOptionsCanBeSentToLatestAndOldServicesThatPreDateHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithServiceVersion("5.0.429")
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -71,27 +70,6 @@ namespace Halibut.Tests
                         se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
                         se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
                     });
-
-                var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
-                res.Should().Be("Hello!!...");
-            }
-        }
-        
-        [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-        [FailedWebSocketTestsBecomeInconclusive]
-        public async Task HalibutProxyOptionsCanBeSentByTheClient(ServiceConnectionType serviceConnectionType)
-        {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithStandardServices()
-                       .Build(CancellationToken))
-            {
-                var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
-                {
-                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
-                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
-                });
 
                 var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
                 res.Should().Be("Hello!!...");
