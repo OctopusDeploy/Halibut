@@ -18,7 +18,7 @@ namespace Halibut.Tests.Support
         public string CreateRandomFile()
         {
             string randomFile = RandomFileName();
-            File.Create(randomFile);
+            File.Create(randomFile).Dispose();
             return randomFile;
         }
 
