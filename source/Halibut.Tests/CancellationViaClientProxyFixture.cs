@@ -102,7 +102,7 @@ namespace Halibut.Tests
                 var fileThatOnceDeletedEndsTheCall = tmpDir.CreateRandomFile();
                 var callStartedFile = tmpDir.RandomFileName();
 
-                var takeLockASecondTime = Task.Run(() => lockService.WaitForFileToBeDeleted(fileThatOnceDeletedEndsTheCall, callStartedFile, new HalibutProxyRequestOptions(CancellationToken.None)));
+                var inFlightRequest = Task.Run(() => lockService.WaitForFileToBeDeleted(fileThatOnceDeletedEndsTheCall, callStartedFile, new HalibutProxyRequestOptions(CancellationToken.None)));
 
                 Logger.Information("Waiting for the RPC call to be inflight");
                 while (!File.Exists(callStartedFile))
@@ -117,14 +117,14 @@ namespace Halibut.Tests
                 // Give time for the cancellation to do something
                 await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);
                 
-                if (takeLockASecondTime.Status == TaskStatus.Faulted) await takeLockASecondTime;
+                if (inFlightRequest.Status == TaskStatus.Faulted) await inFlightRequest;
                 
-                takeLockASecondTime.Status.Should().Be(TaskStatus.Running, "The cancellation token can not cancel in flight requests.");
+                inFlightRequest.Status.Should().Be(TaskStatus.Running, "The cancellation token can not cancel in flight requests.");
                 
                 File.Delete(fileThatOnceDeletedEndsTheCall);
 
                 // Now the lock is released we should be able to complete the request.
-                await takeLockASecondTime;
+                await inFlightRequest;
             }
         }
 
