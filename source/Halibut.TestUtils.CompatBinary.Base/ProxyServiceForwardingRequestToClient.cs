@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Tests.Support;
 using Halibut.TestUtils.SampleProgram.Base.LogUtils;
@@ -57,15 +58,18 @@ namespace Halibut.TestUtils.SampleProgram.Base
                         realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
                         break;
                     case ServiceConnectionType.PollingOverWebSocket:
-                        var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
-                        var webSocketPath = SettingsHelper.GetSetting("websocketpath");
-                        var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
+                        using (await TcpPortHelper.WaitForLock(CancellationToken.None))
+                        {
+                            var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
+                            var webSocketPath = SettingsHelper.GetSetting("websocketpath");
+                            var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
 
-                        client.ListenWebSocket(webSocketListeningUrl);
-                        Console.WriteLine($"WebSocket Polling listener is listening on: {webSocketListeningUrl}");
-                        // Do not change the log message as it is used by the HalibutTestBinaryRunners
-                        Console.WriteLine("Polling listener is listening on port: " + webSocketListeningPort);
-                        realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
+                            client.ListenWebSocket(webSocketListeningUrl);
+                            Console.WriteLine($"WebSocket Polling listener is listening on: {webSocketListeningUrl}");
+                            // Do not change the log message as it is used by the HalibutTestBinaryRunners
+                            Console.WriteLine("Polling listener is listening on port: " + webSocketListeningPort);
+                            realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
+                        }
                         break;
                     case ServiceConnectionType.Listening:
                         realServiceEndpoint = new ServiceEndPoint(new Uri(serviceAddressToConnectTo!), serviceCert.Thumbprint, proxyDetails);

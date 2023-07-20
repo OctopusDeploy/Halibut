@@ -214,12 +214,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
+                using var tcpPortConflictLock = await TcpPortHelper.WaitForLock(cancellationToken);
                 var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
                 var webSocketPath = Guid.NewGuid().ToString();
                 var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
                 var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
 
                 octopus.ListenWebSocket(webSocketListeningUrl);
+                tcpPortConflictLock.Dispose();
+
                 portForwarder = portForwarderFactory?.Invoke(webSocketListeningPort);
 
                 var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
