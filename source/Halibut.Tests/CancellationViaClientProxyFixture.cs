@@ -6,6 +6,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -15,13 +16,16 @@ namespace Halibut.Tests
     public class CancellationViaClientProxyFixture : BaseTest
     {
         [Test]
-        public async Task CancellationCanBeDoneViaClientProxy()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        public async Task CancellationCanBeDoneViaClientProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
-                       .NoService()
+                       .WithPortForwarding()
                        .WithEchoService()
                        .Build(CancellationToken))
             {
+                clientAndService.PortForwarder.EnterKillNewAndExistingConnectionsMode();
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
@@ -56,13 +60,38 @@ namespace Halibut.Tests
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task CanTalkToOldServicesWhichDontKnowAboutHalibutProxyRequestOptions(ServiceConnectionType serviceConnectionType)
         {
-            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(serviceConnectionType).WithServiceVersion("5.0.429").WithStandardServices().Build(CancellationToken))
+            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithServiceVersion("5.0.429")
+                       .WithStandardServices()
+                       .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
                     {
                         se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
                         se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
                     });
+
+                var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
+                res.Should().Be("Hello!!...");
+            }
+        }
+        
+        [Test]
+        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task HalibutProxyOptionsCanBeSentByTheClient(ServiceConnectionType serviceConnectionType)
+        {
+            using (var clientAndService = await LatestClientAndLatestServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithStandardServices()
+                       .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
+                {
+                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
+                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
+                });
 
                 var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
                 res.Should().Be("Hello!!...");
