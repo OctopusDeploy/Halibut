@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestCases;
