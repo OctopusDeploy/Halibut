@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -14,14 +16,15 @@ namespace Halibut.Tests
     public class WhenCallingAMethodThatDoesNotExist : BaseTest
     {
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
-        public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ServiceConnectionType serviceConnectionType)
+        public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var services = new SingleServiceFactory(new object(), typeof(EchoService));
 
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithServiceFactory(services)
                        .Build(CancellationToken))
             {

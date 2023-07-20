@@ -59,12 +59,12 @@ namespace Halibut.Tests.Support.TestCases
 
             if (IsPreviousClient())
             {
-                return $"vClient:{ClientVersion}";
+                return $"vClient:{ClientVersion};vService:Latest";
             }
 
             if (IsPreviousService())
             {
-                return $"vService:{ServiceVersion}";
+                return $"vClient:Latest;vService:{ServiceVersion}";
             }
 
             throw new Exception("Invalid client and service version.");

@@ -104,7 +104,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testWebSocket:true, testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -144,7 +144,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testWebSocket: true, testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
