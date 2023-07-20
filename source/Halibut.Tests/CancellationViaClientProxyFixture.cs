@@ -73,14 +73,11 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>(se =>
-                    {
-                        se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
-                        se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
-                    });
+                var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>();
 
-                var res = echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()));
-                res.Should().Be("Hello!!...");
+                echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()))
+                    .Should()
+                    .Be("Hello!!...");
             }
         }
         
