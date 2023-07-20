@@ -3,9 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
+using Halibut.Logging;
 using Halibut.ServiceModel;
-using Halibut.Tests.Support;
-using Halibut.Tests.Support.BackwardsCompatibility;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Transport.Caching;
 using NUnit.Framework;
 using ICachingService = Halibut.Tests.TestServices.ICachingService;
@@ -14,19 +15,15 @@ namespace Halibut.Tests
 {
     public class ResponseMessageCacheFixture : BaseTest
     {
-        public static object[] ServiceConnectionTypeAndVersion =
-        {
-            new object[] { ServiceConnectionType.Polling, null },
-            new object[] { ServiceConnectionType.Listening, null },
-            new object[] { ServiceConnectionType.Polling, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417 },
-            new object[] { ServiceConnectionType.Listening, PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417 }
-        };
-
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatDoesNotSupportCaching_ResponsesShouldNotBeCached(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatDoesNotSupportCaching_ResponsesShouldNotBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -38,10 +35,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatDoesNotSupportCaching_WithClientInterface_ResponsesShouldNotBeCached(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatDoesNotSupportCaching_WithClientInterface_ResponsesShouldNotBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService, IClientCachingService>();
 
@@ -53,10 +54,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeCached(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -68,10 +73,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_WithClientInterface_ResponseShouldBeCached(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_WithClientInterface_ResponseShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService, IClientCachingService>();
 
@@ -83,10 +92,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ResponseForServiceWithInputParametersShouldBeCached(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_ResponseForServiceWithInputParametersShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -99,10 +112,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_CachedItemShouldBeInvalidatedAfterTheCacheDurationExpires(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_CachedItemShouldBeInvalidatedAfterTheCacheDurationExpires(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -120,10 +137,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentServices(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -135,15 +156,23 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentEndpoints(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentEndpoints(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndServiceOne = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndServiceOne = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var clientOne = clientAndServiceOne.CreateClient<ICachingService>();
 
-                using var clientAndServiceTwo = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
-                var clientTwo = clientAndServiceTwo.CreateClient<ICachingService>();
+                using var clientAndServiceTwo = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .WithCachingService()
+                           .WithHalibutLoggingLevel(LogLevel.Info)
+                           .Build(CancellationToken);
+
+                    var clientTwo = clientAndServiceTwo.CreateClient<ICachingService>();
 
                 var result1 = clientOne.CachableCall();
                 var result2 = clientTwo.CachableCall();
@@ -153,10 +182,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentInputParameters(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentInputParameters(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -168,10 +201,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ClientShouldBeAbleToForceSpecificErrorResponsesToBeCached(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_ClientShouldBeAbleToForceSpecificErrorResponsesToBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
 
@@ -189,10 +226,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [TestCaseSource(nameof(ServiceConnectionTypeAndVersion))]
-        public async Task ForAServiceThatSupportsCaching_ErrorResponsesShouldNotBeCachedByDefault(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
+        [LatestAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [FailedWebSocketTestsBecomeInconclusive]
+        public async Task ForAServiceThatSupportsCaching_ErrorResponsesShouldNotBeCachedByDefault(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await CreateClientAndService(serviceConnectionType, halibutServiceVersion);
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithCachingService()
+                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
 
@@ -204,21 +245,7 @@ namespace Halibut.Tests
                 exception1!.Message.Should().NotBe(exception2.Message);
             }
         }
-
-        async Task<IClientAndService> CreateClientAndService(ServiceConnectionType serviceConnectionType, string halibutServiceVersion)
-        {
-            return halibutServiceVersion == null ?
-                await LatestClientAndLatestServiceBuilder
-                    .ForServiceConnectionType(serviceConnectionType)
-                    .WithCachingService()
-                    .Build(CancellationToken) :
-                await LatestClientAndPreviousServiceVersionBuilder
-                    .ForServiceConnectionType(serviceConnectionType)
-                    .WithServiceVersion(halibutServiceVersion)
-                    .WithCachingService()
-                    .Build(CancellationToken);
-        }
-
+        
         public interface IClientCachingService
         {
             Guid NonCachableCall(HalibutProxyRequestOptions halibutProxyRequestOptions);
