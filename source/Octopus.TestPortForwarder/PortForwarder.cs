@@ -18,14 +18,23 @@ namespace Octopus.TestPortForwarder
         readonly ILogger logger;
         readonly TimeSpan sendDelay;
         readonly int numberOfBytesToDelaySending;
-        Func<BiDirectionalDataTransferObserver> factory;
+        Func<BiDirectionalDataTransferObserver> biDirectionalDataTransferObserverFactory;
         bool active = false;
 
         public int ListeningPort { get; }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="originServer"></param>
+        /// <param name="sendDelay"></param>
+        /// <param name="biDirectionalDataTransferObserverFactory">Will be created for each new accepted TCP connection by the proxy.</param>
+        /// <param name="numberOfBytesToDelaySending"></param>
+        /// <param name="logger"></param>
+        /// <param name="listeningPort"></param>
         public PortForwarder(Uri originServer,
             TimeSpan sendDelay,
-            Func<BiDirectionalDataTransferObserver> factory,
+            Func<BiDirectionalDataTransferObserver> biDirectionalDataTransferObserverFactory,
             int numberOfBytesToDelaySending,
             ILogger logger,
             int? listeningPort = null)
@@ -33,7 +42,7 @@ namespace Octopus.TestPortForwarder
             logger = logger.ForContext<PortForwarder>();
             this.originServer = originServer;
             this.sendDelay = sendDelay;
-            this.factory = factory;
+            this.biDirectionalDataTransferObserverFactory = biDirectionalDataTransferObserverFactory;
             this.logger = logger;
             this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             var scheme = originServer.Scheme;
@@ -106,20 +115,30 @@ namespace Octopus.TestPortForwarder
                     {
                         var clientSocket = await listeningSocket?.AcceptAsync();
 
-                        if (!active || KillNewConnectionsImmediatlyMode || cancellationToken.IsCancellationRequested)
+                        try
                         {
+                            // Must be created as soon as the TCP connection is accepted.
+                            var biDirectionalDataTransferObserver = biDirectionalDataTransferObserverFactory();
 
-                            CloseSocketIgnoringErrors(clientSocket);
+                            if (!active || KillNewConnectionsImmediatlyMode || cancellationToken.IsCancellationRequested)
+                            {
+                                CloseSocketIgnoringErrors(clientSocket);
 
-                            if(!active) throw new OperationCanceledException("Port forwarder is not active");
-                            continue;
+                                if (!active) throw new OperationCanceledException("Port forwarder is not active");
+                                continue;
+                            }
+
+                            var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
+                            var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+
+                            var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, biDirectionalDataTransferObserver, numberOfBytesToDelaySending, logger);
+                            AddNewPump(pump, cancellationToken);
                         }
-
-                        var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
-                        var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-
-                        var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, factory, numberOfBytesToDelaySending, logger);
-                        AddNewPump(pump, cancellationToken);
+                        catch (Exception exception)
+                        {
+                            logger.Verbose(exception, "Error after accepting connection, closing it immediately");
+                            CloseSocketIgnoringErrors(clientSocket);
+                        }
                     }
                     catch (SocketException ex)
                     {

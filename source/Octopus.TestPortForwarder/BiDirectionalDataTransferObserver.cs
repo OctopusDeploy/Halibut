@@ -3,6 +3,9 @@ using System.Linq;
 
 namespace Octopus.TestPortForwarder
 {
+    /// <summary>
+    /// Observes data flowing over a single proxied connection.
+    /// </summary>
     public class BiDirectionalDataTransferObserver
     {
         public BiDirectionalDataTransferObserver(IDataTransferObserver dataTransferObserverClientToOrigin, IDataTransferObserver dataTransferObserverOriginToClient)
