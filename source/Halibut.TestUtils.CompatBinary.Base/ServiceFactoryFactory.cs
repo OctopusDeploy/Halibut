@@ -24,6 +24,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 services.Register<IEchoService>(() => new EchoService());
                 services.Register<IMultipleParametersTestService>(() => new MultipleParametersTestService());
                 services.Register<IComplexObjectService>(() => new ComplexObjectService());
+                services.Register<ILockService>(() => new LockService());
+                var singleCountingService = new CountingService();
+                services.Register<ICountingService>(() => singleCountingService);
             }
 
             if (SettingsHelper.IsWithCachingService())
@@ -62,6 +65,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             RegisterDelegateService<IScriptService>(s => new DelegateScriptService(s));
             RegisterDelegateService<IScriptServiceV2>(s => new DelegateScriptServiceV2(s));
             RegisterDelegateService<ICapabilitiesServiceV2>(s => new DelegateCapabilitiesServiceV2(s));
+            RegisterDelegateService<ILockService>(s => new DelegateLockService(s));
 
             void RegisterDelegateService<T>(Func<T,T> createDelegateFunc)
             {

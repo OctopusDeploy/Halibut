@@ -35,6 +35,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
         bool withTentacleServices = false;
+        ILockService lockService;
+        ICountingService countingService;
 
         PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -116,6 +118,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.complexObjectService = complexObjectService;
             return this;
         }
+        
+        public PreviousClientVersionAndLatestServiceBuilder WithLockService(ILockService lockService)
+        {
+            this.lockService = lockService;
+            return this;
+        }
+        
+        public PreviousClientVersionAndLatestServiceBuilder WithCountingService(ICountingService countingService)
+        {
+            this.countingService = countingService;
+            return this;
+        }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
@@ -126,7 +140,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return WithEchoServiceService(new EchoService())
                 .WithMultipleParametersTestService(new MultipleParametersTestService())
-                .WithComplexObjectService(new ComplexObjectService());
+                .WithComplexObjectService(new ComplexObjectService())
+                .WithLockService(new LockService())
+                .WithCountingService(new CountingService());
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithTentacleServices()
@@ -203,7 +219,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .Register(() => echoService)
                 .Register(() => cachingService)
                 .Register(() => multipleParametersTestService)
-                .Register(() => complexObjectService);
+                .Register(() => complexObjectService)
+                .Register(() => lockService)
+                .Register(() => countingService);
 
             if (withTentacleServices)
             {

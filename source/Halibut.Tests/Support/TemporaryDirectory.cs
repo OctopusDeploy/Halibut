@@ -15,6 +15,18 @@ namespace Halibut.Tests.Support
 
         public string DirectoryPath { get; }
 
+        public string CreateRandomFile()
+        {
+            string randomFile = RandomFileName();
+            File.Create(randomFile).Dispose();
+            return randomFile;
+        }
+
+        public string RandomFileName()
+        {
+            return Path.Combine(DirectoryPath, Guid.NewGuid().ToString());
+        }
+
         string GetTempBasePath()
         {
             var path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
