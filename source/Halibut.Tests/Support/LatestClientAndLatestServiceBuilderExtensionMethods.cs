@@ -1,6 +1,7 @@
 ﻿using System;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
+using Halibut.Util;
 using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
 namespace Halibut.Tests.Support
@@ -46,6 +47,11 @@ namespace Halibut.Tests.Support
         public static LatestClientAndLatestServiceBuilder WithReadDataStreamService(this LatestClientAndLatestServiceBuilder builder)
         {
             return builder.WithService<IReadDataStreamService>(() => new ReadDataStreamService());
+        }
+
+        public static LatestClientAndLatestServiceBuilder WithInstantReconnectPollingRetryPolicy(this LatestClientAndLatestServiceBuilder builder)
+        {
+            return builder.WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero));
         }
     }
 }
