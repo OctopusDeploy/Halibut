@@ -36,7 +36,7 @@ namespace Halibut.Transport
             var stream = new WebSocketStream(client);
 
             log.Write(EventType.Security, "Performing handshake");
-            stream.WriteTextMessage("MX");
+            stream.WriteTextMessage("MX").ConfigureAwait(false).GetAwaiter().GetResult();
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
