@@ -123,7 +123,7 @@ namespace Halibut.Tests.Support
 
         public LatestClientAndLatestServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
         {
-            this.WithPortForwarding();
+            if(this.portForwarderFactory == null) this.WithPortForwarding();
 
             this.portForwarderReference = new Reference<PortForwarder>();
             portForwarder = this.portForwarderReference;
