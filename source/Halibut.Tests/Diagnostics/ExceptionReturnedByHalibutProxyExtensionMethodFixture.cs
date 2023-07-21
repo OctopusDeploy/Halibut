@@ -145,13 +145,12 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
             [FailedWebSocketTestsBecomeInconclusive]
-            public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
+            public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .ForServiceConnectionType(serviceConnectionType)
-                           .WithEchoService()
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .WithStandardServices()
                            .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
@@ -166,13 +165,12 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
             [FailedWebSocketTestsBecomeInconclusive]
-            public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ServiceConnectionType serviceConnectionType)
+            public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .ForServiceConnectionType(serviceConnectionType)
-                           .WithEchoService()
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .WithStandardServices()
                            .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>();
