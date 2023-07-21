@@ -26,7 +26,7 @@ namespace Halibut.Tests.Support.TestAttributes
             if (TeamCityDetection.IsRunningInTeamCity())
             {
                 //return LevelOfParallelismInTeamCity();
-                return NUnitTestAssemblyRunner.DefaultLevelOfParallelism;
+                return NUnitTestAssemblyRunner.DefaultLevelOfParallelism * 2;
             }
             
             return LevelOfParallelismFromEnvVar()??NUnitTestAssemblyRunner.DefaultLevelOfParallelism * 2;
