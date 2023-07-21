@@ -117,7 +117,6 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithReadDataStreamService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))
             {
