@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
@@ -23,7 +24,6 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithPortForwarding()
                        .WithInstantReconnectPollingRetryPolicy()
                        .WithPendingRequestQueueFactory(logFactory =>
                        {
@@ -35,24 +35,43 @@ namespace Halibut.Tests
                        })
                        .Build(CancellationToken))
             {
+                
                 var echoService = clientAndService.CreateClient<IEchoService>();
                 echoService.SayHello("Make sure the pending request queue exists");
                 pendingRequestQueue.Should().NotBeNull();
 
-                // Kill the connection so requests can pile up
-                clientAndService.PortForwarder.EnterKillNewAndExistingConnectionsMode();
+                using var tmpDir = new TemporaryDirectory();
+                var fileStoppingNewRequests = tmpDir.CreateRandomFile();
+                
+                // Send a request to polling tentacle that wont complete, until we let it complete.
+                var lockService = clientAndService.CreateClient<ILockService>();
+                var fileThatLetsUsKnowThePollingTentacleIsBusy = tmpDir.RandomFileName();
+                var pollingTentacleKeptBusyRequest = Task.Run(() => lockService.WaitForFileToBeDeleted(fileStoppingNewRequests, fileThatLetsUsKnowThePollingTentacleIsBusy));
+                Wait.For(async () =>
+                {
+                    await pollingTentacleKeptBusyRequest.AwaitIfFaulted();
+                    return File.Exists(fileThatLetsUsKnowThePollingTentacleIsBusy);
+                }, CancellationToken);
+                
 
                 var countingService = clientAndService.CreateClient<ICountingService>();
 
                 var tasks = new List<Task<int>>();
                 for (int i = 0; i < 10; i++)
                 {
-                    tasks.Add(Task.Run(() => countingService.Increment()));
+                    var task = Task.Run(() => countingService.Increment());
+                    tasks.Add(task);
                     // Wait for the RPC call to get on to the queue before proceeding
-                    await Wait.For(() => pendingRequestQueue.Count == i + 1, CancellationToken);
+                    await Wait.For(async () =>
+                    {
+                        await task.AwaitIfFaulted();
+                        return pendingRequestQueue.Count == i + 1;
+                    }, CancellationToken);
                 }
-
-                clientAndService.PortForwarder.ReturnToNormalMode();
+                
+                // Complete the task tentacle is doing, so it can pick up more work.
+                File.Delete(fileStoppingNewRequests);
+                await pollingTentacleKeptBusyRequest;
 
                 var counter = 0;
                 foreach (var task in tasks)

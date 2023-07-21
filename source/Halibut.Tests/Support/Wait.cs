@@ -6,9 +6,9 @@ namespace Halibut.Tests.Support
 {
     public static class Wait
     {
-        public static async Task For(Func<bool> toBecomeTrue, CancellationToken cancellationToken)
+        public static async Task For(Func<Task<bool>> toBecomeTrue, CancellationToken cancellationToken)
         {
-            while (!toBecomeTrue())
+            while (!await toBecomeTrue())
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(20), cancellationToken);
             }
