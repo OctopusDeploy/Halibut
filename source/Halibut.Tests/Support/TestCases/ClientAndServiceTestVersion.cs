@@ -10,11 +10,12 @@ namespace Halibut.Tests.Support.TestCases
     {
         
         // null means latest.
-        public string? ClientVersion;
-        // null means latest.
-        public string? ServiceVersion;
+        public Version? ClientVersion { get; }
 
-        ClientAndServiceTestVersion(string? clientVersion, string? serviceVersion)
+        // null means latest.
+        public Version? ServiceVersion { get; }
+
+        ClientAndServiceTestVersion(Version? clientVersion, Version? serviceVersion)
         {
             ClientVersion = clientVersion;
             ServiceVersion = serviceVersion;
@@ -25,12 +26,12 @@ namespace Halibut.Tests.Support.TestCases
             return new ClientAndServiceTestVersion(null, null);
         }
 
-        public static ClientAndServiceTestVersion ClientOfVersion(string clientVersion)
+        public static ClientAndServiceTestVersion ClientOfVersion(Version clientVersion)
         {
             return new ClientAndServiceTestVersion(clientVersion, null);
         }
 
-        public static ClientAndServiceTestVersion ServiceOfVersion(string serviceVersion)
+        public static ClientAndServiceTestVersion ServiceOfVersion(Version serviceVersion)
         {
             return new ClientAndServiceTestVersion(null, serviceVersion);
         }

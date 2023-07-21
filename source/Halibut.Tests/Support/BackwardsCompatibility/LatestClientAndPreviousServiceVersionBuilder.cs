@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,9 +57,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        public LatestClientAndPreviousServiceVersionBuilder WithServiceVersion(string? version)
+        public LatestClientAndPreviousServiceVersionBuilder WithServiceVersion(Version version)
         {
-            this.version = version;
+            this.version = version.ToString();
             return this;
         }
 
