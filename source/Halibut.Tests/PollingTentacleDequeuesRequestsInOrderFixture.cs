@@ -47,7 +47,7 @@ namespace Halibut.Tests
                 var lockService = clientAndService.CreateClient<ILockService>();
                 var fileThatLetsUsKnowThePollingTentacleIsBusy = tmpDir.RandomFileName();
                 var pollingTentacleKeptBusyRequest = Task.Run(() => lockService.WaitForFileToBeDeleted(fileStoppingNewRequests, fileThatLetsUsKnowThePollingTentacleIsBusy));
-                Wait.For(async () =>
+                await Wait.For(async () =>
                 {
                     await pollingTentacleKeptBusyRequest.AwaitIfFaulted();
                     return File.Exists(fileThatLetsUsKnowThePollingTentacleIsBusy);
