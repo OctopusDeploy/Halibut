@@ -69,6 +69,11 @@ namespace Halibut.Tests.Support.TestCases
 
             throw new Exception("Invalid client and service version.");
         }
+
+        public ClientAndServiceTestVersion Clone()
+        {
+            return new ClientAndServiceTestVersion(ClientVersion, ServiceVersion);
+        }
     }
 
     public class ClientAndServiceBuilderFactory

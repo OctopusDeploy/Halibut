@@ -1,5 +1,4 @@
 using System;
-using Halibut.ServiceModel;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Octopus.Tentacle.Contracts;
@@ -15,16 +14,16 @@ namespace Halibut.TestUtils.SampleProgram.Base
         /// ie Old/Previous Service.
         /// </summary>
         /// <returns></returns>
-        public static DelegateServiceFactory CreateServiceFactory()
+        public static CompatBaseDelegateServiceFactory CreateServiceFactory()
         {
-            
-            var services = new DelegateServiceFactory();
+            var services = new CompatBaseDelegateServiceFactory();
             if (SettingsHelper.IsWithStandardServices())
             {
-                services.Register<IEchoService>(() => new EchoService());
-                services.Register<IMultipleParametersTestService>(() => new MultipleParametersTestService());
-                services.Register<IComplexObjectService>(() => new ComplexObjectService());
-                services.Register<ILockService>(() => new LockService());
+                services.Register<IEchoService>(() => new EchoService())
+                    .Register<IMultipleParametersTestService>(() => new MultipleParametersTestService())
+                    .Register<IComplexObjectService>(() => new ComplexObjectService())
+                    .Register<ILockService>(() => new LockService());
+
                 var singleCountingService = new CountingService();
                 services.Register<ICountingService>(() => singleCountingService);
             }
@@ -36,10 +35,10 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
             if (SettingsHelper.IsWithTentacleServices())
             {
-                services.Register<IFileTransferService>(() => new FileTransferService());
-                services.Register<IScriptService>(() => new ScriptService());
-                services.Register<IScriptServiceV2>(() => new ScriptServiceV2());
-                services.Register<ICapabilitiesServiceV2>(() => new CapabilitiesServiceV2());
+                services.Register<IFileTransferService>(() => new FileTransferService())
+                    .Register<IScriptService>(() => new ScriptService())
+                    .Register<IScriptServiceV2>(() => new ScriptServiceV2())
+                    .Register<ICapabilitiesServiceV2>(() => new CapabilitiesServiceV2());
             }
 
             return services;
@@ -52,9 +51,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
         /// <param name="clientWhichTalksToLatestHalibut"></param>
         /// <param name="realServiceEndpoint"></param>
         /// <returns></returns>
-        public static DelegateServiceFactory CreateProxyingServicesServiceFactory(HalibutRuntime clientWhichTalksToLatestHalibut, ServiceEndPoint realServiceEndpoint)
+        public static CompatBaseDelegateServiceFactory CreateProxyingServicesServiceFactory(HalibutRuntime clientWhichTalksToLatestHalibut, ServiceEndPoint realServiceEndpoint)
         {
-            var services = new DelegateServiceFactory();
+            var services = new CompatBaseDelegateServiceFactory();
             // No need to check if is with standard services since, the Test itself has the service and so controls what is available
             // or not. This will just pass on the request to the service that may or may not exist.
             

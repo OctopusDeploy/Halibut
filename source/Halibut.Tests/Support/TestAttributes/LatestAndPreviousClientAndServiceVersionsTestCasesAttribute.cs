@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestCases;
 using NUnit.Framework;
@@ -31,7 +32,9 @@ namespace Halibut.Tests.Support.TestAttributes
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
                 );
 
-                return builder.Build().GetEnumerator();
+                return builder.Build()
+                    .Select(WebSocketSupportHelper.ChangeWebSocketServiceVersionsToStableWebSocketVersion)
+                    .GetEnumerator();
             }
         }
     }

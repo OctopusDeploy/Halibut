@@ -35,7 +35,7 @@ namespace Halibut.Tests.Support.TestCases
                             recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType);
                         }
 
-                        yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion);
+                        yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion.Clone());
                     }
                 }
             }

@@ -42,7 +42,9 @@ namespace Halibut.Tests.Support.TestAttributes
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
                 );
 
-                return builder.Build().GetEnumerator();
+                return builder.Build()
+                    .Select(WebSocketSupportHelper.ChangeWebSocketServiceVersionsToStableWebSocketVersion)
+                    .GetEnumerator();
             }
         }
     }
