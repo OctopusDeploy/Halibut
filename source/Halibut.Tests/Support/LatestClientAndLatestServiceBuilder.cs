@@ -387,7 +387,6 @@ namespace Halibut.Tests.Support
             {
                 var serviceEndpoint = new ServiceEndPoint(ServiceUri, remoteThumbprint ?? serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
-                
                 return Client.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
 
