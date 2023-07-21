@@ -10,9 +10,9 @@ namespace Halibut.Tests.Support.TestCases
     {
         
         // null means latest.
-        public string? ClientVersion;
+        readonly public string? ClientVersion;
         // null means latest.
-        public string? ServiceVersion;
+        readonly public string? ServiceVersion;
 
         ClientAndServiceTestVersion(string? clientVersion, string? serviceVersion)
         {
@@ -68,11 +68,6 @@ namespace Halibut.Tests.Support.TestCases
             }
 
             throw new Exception("Invalid client and service version.");
-        }
-
-        public ClientAndServiceTestVersion Clone()
-        {
-            return new ClientAndServiceTestVersion(ClientVersion, ServiceVersion);
         }
     }
 

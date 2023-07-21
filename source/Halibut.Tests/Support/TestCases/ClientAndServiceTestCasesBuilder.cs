@@ -21,10 +21,13 @@ namespace Halibut.Tests.Support.TestCases
 
         public IEnumerable<ClientAndServiceTestCase> Build()
         {
-            foreach (var clientServiceTestVersion in clientServiceTestVersions)
+            foreach (var clientServiceTestVersionReadOnly in clientServiceTestVersions)
             {
+                var clientServiceTestVersion = clientServiceTestVersionReadOnly;
                 foreach (var serviceConnectionType in serviceConnectionTypes)
                 {
+                    clientServiceTestVersion = BumpVersionIfRequired(serviceConnectionType, clientServiceTestVersion);
+
                     foreach (var networkConditionTestCase in networkConditionTestCases)
                     {
                         // Slightly bad network conditions e.g. a delay of 20ms can blow out test times especially when running for 2000 iterations.
@@ -35,10 +38,20 @@ namespace Halibut.Tests.Support.TestCases
                             recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType);
                         }
 
-                        yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion.Clone());
+                        yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion);
                     }
                 }
             }
+        }
+
+        static ClientAndServiceTestVersion BumpVersionIfRequired(ServiceConnectionType serviceConnectionType, ClientAndServiceTestVersion clientServiceTestVersion)
+        {
+            if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
+            {
+                clientServiceTestVersion = clientServiceTestVersion.BumpVersionToaSafeOneForWebSockets();
+            }
+
+            return clientServiceTestVersion;
         }
     }
 }
