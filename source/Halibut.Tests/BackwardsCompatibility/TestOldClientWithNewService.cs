@@ -17,8 +17,9 @@ namespace Halibut.Tests.BackwardsCompatibility
         public async Task SimplePreviousClientTest(ServiceConnectionType serviceConnectionType)
         {
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
-                       .WithClientVersion(PreviousVersions.v5_0_429)
+            using (var clientAndService = await PreviousClientVersionAndLatestServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithClientVersion(PreviousVersions.v5_0_429.ClientVersion.ForServiceConnectionType(serviceConnectionType))
                        .WithEchoServiceService(echoService)
                        .Build(CancellationToken))
             {
@@ -35,8 +36,9 @@ namespace Halibut.Tests.BackwardsCompatibility
         public async Task SimplePreviousClientTestWithLatency(ServiceConnectionType serviceConnectionType)
         {
             var echoService = new CallRecordingEchoServiceDecorator(new EchoService());
-            using (var clientAndService = await PreviousClientVersionAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
-                       .WithClientVersion(PreviousVersions.v5_0_429)
+            using (var clientAndService = await PreviousClientVersionAndLatestServiceBuilder
+                       .ForServiceConnectionType(serviceConnectionType)
+                       .WithClientVersion(PreviousVersions.v5_0_429.ClientVersion.ForServiceConnectionType(serviceConnectionType))
                        .WithEchoServiceService(echoService)
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build())
                        .Build(CancellationToken))

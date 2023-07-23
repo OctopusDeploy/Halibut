@@ -15,7 +15,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        string? version = null;
+        Version? version = null;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<HttpProxyService>? proxyFactory;
         LogLevel halibutLogLevel;
@@ -58,7 +58,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
-        public LatestClientAndPreviousServiceVersionBuilder WithServiceVersion(string? version)
+        public LatestClientAndPreviousServiceVersionBuilder WithServiceVersion(Version? version)
         {
             this.version = version;
             return this;
@@ -206,7 +206,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         listenPort,
                         clientCertAndThumbprint,
                         serviceCertAndThumbprint,
-                        version,
+                        version?.ToString(),
                         proxyDetails,
                         halibutLogLevel,
                         availableServices).Run();
@@ -243,7 +243,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         webSocketServiceEndpointUri,
                         clientCertAndThumbprint,
                         serviceCertAndThumbprint,
-                        version,
+                        version?.ToString(),
                         proxyDetails,
                         halibutLogLevel,
                         availableServices).Run();
@@ -259,7 +259,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         serviceConnectionType,
                         clientCertAndThumbprint,
                         serviceCertAndThumbprint,
-                        version,
+                        version?.ToString(),
                         proxyDetails,
                         halibutLogLevel,
                         availableServices).Run();

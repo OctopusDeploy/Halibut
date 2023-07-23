@@ -27,7 +27,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint,
             Uri? realServiceListenAddress,
-            string version,
+            string? version,
             ProxyDetails? proxyDetails,
             string? webSocketPath,
             LogLevel halibutLogLevel)

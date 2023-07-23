@@ -18,7 +18,7 @@ namespace Halibut.Tests.BackwardsCompatibility
         {
             using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder
                        .ForServiceConnectionType(serviceConnectionType)
-                       .WithServiceVersion(PreviousVersions.v5_0_429)
+                       .WithServiceVersion(PreviousVersions.v5_0_429.ServiceVersion.ForServiceConnectionType(serviceConnectionType))
                        .WithStandardServices()
                        .Build(CancellationToken))
             {

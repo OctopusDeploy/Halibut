@@ -41,7 +41,7 @@ namespace Halibut.Tests.Support.TestCases
         public override string ToString()
         {
             // This is used as the test parameter name, so make this something someone can understand in teamcity or their IDE.
-            return $"{ServiceConnectionType}, {ClientAndServiceTestVersion}, {NetworkConditionTestCase}, RecommendedIterations: {RecommendedIterations}";
+            return $"{ServiceConnectionType}, {ClientAndServiceTestVersion.ToString(ServiceConnectionType)}, {NetworkConditionTestCase}, RecommendedIterations: {RecommendedIterations}";
         }
     }
 }

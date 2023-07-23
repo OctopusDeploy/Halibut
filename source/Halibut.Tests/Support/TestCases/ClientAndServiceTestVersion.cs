@@ -10,11 +10,11 @@ namespace Halibut.Tests.Support.TestCases
     {
         
         // null means latest.
-        public string? ClientVersion;
+        public HalibutVersion? ClientVersion;
         // null means latest.
-        public string? ServiceVersion;
+        public HalibutVersion? ServiceVersion;
 
-        ClientAndServiceTestVersion(string? clientVersion, string? serviceVersion)
+        ClientAndServiceTestVersion(HalibutVersion? clientVersion, HalibutVersion? serviceVersion)
         {
             ClientVersion = clientVersion;
             ServiceVersion = serviceVersion;
@@ -25,14 +25,14 @@ namespace Halibut.Tests.Support.TestCases
             return new ClientAndServiceTestVersion(null, null);
         }
 
-        public static ClientAndServiceTestVersion ClientOfVersion(string clientVersion)
+        public static ClientAndServiceTestVersion ClientOfVersion(HalibutVersion clientVersions)
         {
-            return new ClientAndServiceTestVersion(clientVersion, null);
+            return new ClientAndServiceTestVersion(clientVersions, null);
         }
 
-        public static ClientAndServiceTestVersion ServiceOfVersion(string serviceVersion)
+        public static ClientAndServiceTestVersion ServiceOfVersion(HalibutVersion serviceVersions)
         {
-            return new ClientAndServiceTestVersion(null, serviceVersion);
+            return new ClientAndServiceTestVersion(null, serviceVersions);
         }
 
         public bool IsLatest()
@@ -48,6 +48,26 @@ namespace Halibut.Tests.Support.TestCases
         public bool IsPreviousService()
         {
             return ServiceVersion != null;
+        }
+
+        public string ToString(ServiceConnectionType serviceConnectionType)
+        {
+            if (IsLatest())
+            {
+                return "v:Latest";
+            }
+
+            if (IsPreviousClient())
+            {
+                return $"vClient:{ClientVersion!.ForServiceConnectionType(serviceConnectionType)};vService:Latest";
+            }
+
+            if (IsPreviousService())
+            {
+                return $"vClient:Latest;vService:{ServiceVersion!.ForServiceConnectionType(serviceConnectionType)}";
+            }
+
+            throw new Exception("Invalid client and service version.");
         }
 
         public override string ToString()
@@ -82,12 +102,16 @@ namespace Halibut.Tests.Support.TestCases
 
             if (version.IsPreviousClient())
             {
-                return sct => PreviousClientVersionAndLatestServiceBuilder.ForServiceConnectionType(sct).WithClientVersion(version.ClientVersion!);
+                return sct => PreviousClientVersionAndLatestServiceBuilder
+                    .ForServiceConnectionType(sct)
+                    .WithClientVersion(version.ClientVersion!.ForServiceConnectionType(sct));
             }
 
             if (version.IsPreviousService())
             {
-                return sct => LatestClientAndPreviousServiceVersionBuilder.ForServiceConnectionType(sct).WithServiceVersion(version.ServiceVersion!);
+                return sct => LatestClientAndPreviousServiceVersionBuilder
+                    .ForServiceConnectionType(sct)
+                    .WithServiceVersion(version.ServiceVersion!.ForServiceConnectionType(sct));
             }
 
             throw new Exception($"We don't know what kind of thing to build here: version={version}");
