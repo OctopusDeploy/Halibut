@@ -23,7 +23,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly Uri webSocketServiceEndpointUri;
         readonly OldServiceAvailableServices availableServices;
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails, LogLevel halibutLogLevel, OldServiceAvailableServices availableServices)
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string? version, ProxyDetails? proxyDetails, LogLevel halibutLogLevel, OldServiceAvailableServices availableServices)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
@@ -33,13 +33,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.halibutLogLevel = halibutLogLevel;
             this.availableServices = availableServices;
         }
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails proxyDetails, LogLevel halibutLoggingLevel, OldServiceAvailableServices availableServices) :
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string? version, ProxyDetails proxyDetails, LogLevel halibutLoggingLevel, OldServiceAvailableServices availableServices) :
             this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel, availableServices)
         {
             this.clientServicePort = clientServicePort;
         }
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string version, ProxyDetails? proxyDetails, LogLevel halibutLoggingLevel, OldServiceAvailableServices availableServices) :
+        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string? version, ProxyDetails? proxyDetails, LogLevel halibutLoggingLevel, OldServiceAvailableServices availableServices) :
             this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel, availableServices)
         {
             this.webSocketServiceEndpointUri = webSocketServiceEndpointUri;

@@ -26,7 +26,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        string? version = null;
+        Version? version = null;
         Func<HttpProxyService>? proxyFactory;
         IEchoService echoService = new EchoService();
         ICachingService cachingService = new CachingService();
@@ -90,7 +90,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithClientVersion(string version)
+        public PreviousClientVersionAndLatestServiceBuilder WithClientVersion(Version version)
         {
             this.version = version;
             return this;
@@ -261,7 +261,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     new Uri("poll://SQ-TENTAPOLL"),
-                    version,
+                    version?.ToString(),
                     httpProxyDetails,
                     null,
                     halibutLogLevel).Run();
@@ -286,7 +286,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     new Uri("poll://SQ-TENTAPOLL"),
-                    version,
+                    version?.ToString(),
                     httpProxyDetails,
                     webSocketPath,
                     halibutLogLevel).Run();
@@ -323,7 +323,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     clientCertAndThumbprint,
                     serviceCertAndThumbprint,
                     new Uri("https://localhost:" + serviceListeningPort),
-                    version,
+                    version?.ToString(),
                     httpProxyDetails,
                     null,
                     halibutLogLevel).Run();
