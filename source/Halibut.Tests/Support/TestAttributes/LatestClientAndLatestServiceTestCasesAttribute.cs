@@ -13,17 +13,20 @@ namespace Halibut.Tests.Support.TestAttributes
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
     public class LatestClientAndLatestServiceTestCasesAttribute : TestCaseSourceAttribute
     {
-        public LatestClientAndLatestServiceTestCasesAttribute(bool testWebSocket = true, bool testNetworkConditions = true, bool testListening = true) :
+        public LatestClientAndLatestServiceTestCasesAttribute(bool testWebSocket = true, 
+            bool testNetworkConditions = true, 
+            bool testListening = true,
+            bool testPolling = true) :
             base(
                 typeof(LatestClientAndLatestServiceTestCases), 
                 nameof(LatestClientAndLatestServiceTestCases.GetEnumerator), 
-                new object[]{ testWebSocket, testNetworkConditions, testListening })
+                new object[]{ testWebSocket, testNetworkConditions, testListening, testPolling})
         {
         }
         
         static class LatestClientAndLatestServiceTestCases
         {
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening)
+            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -35,6 +38,11 @@ namespace Halibut.Tests.Support.TestAttributes
                 if (!testListening)
                 {
                     serviceConnectionTypes.Remove(ServiceConnectionType.Listening);
+                }
+
+                if (!testPolling)
+                {
+                    serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
 
                 var builder = new ClientAndServiceTestCasesBuilder(
