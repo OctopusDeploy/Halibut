@@ -48,10 +48,11 @@ namespace Halibut.Tests.Diagnostics
 
         public class WhenTheHalibutProxyThrowsAnException : BaseTest
         {
-            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-            public async Task WhenTheConnectionTerminatesWaitingForAResponse(ServiceConnectionType serviceConnectionType)
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
+            public async Task WhenTheConnectionTerminatesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await ClientServiceBuilder.ForServiceConnectionType(serviceConnectionType)
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .AsLatestClientAndLatestServiceBuilder()
                            .WithPortForwarding(out var portForwarder)
                            .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
                            .Build(CancellationToken))
@@ -67,13 +68,14 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
             
-            [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
-            public async Task WhenTheConnectionPausesWaitingForAResponse(ServiceConnectionType serviceConnectionType)
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
+            public async Task WhenTheConnectionPausesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await ClientServiceBuilder.ForServiceConnectionType(serviceConnectionType)
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .AsLatestClientAndLatestServiceBuilder()
                            .WithPortForwarding(out var portForwarder)
                            .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
-                           .Build())
+                           .Build(CancellationToken))
                 {
                     var svc = clientAndService.CreateClient<IDoSomeActionService>();
 

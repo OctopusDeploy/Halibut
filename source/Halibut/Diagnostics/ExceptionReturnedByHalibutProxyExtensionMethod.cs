@@ -61,6 +61,7 @@ namespace Halibut.Diagnostics
             if (exception is HalibutClientException)
             {
                 if (exception.Message.Contains("System.IO.EndOfStreamException")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("System.Net.Sockets.SocketException (110): Connection timed out")) return HalibutNetworkExceptionType.IsNetworkError;
             }
 
             return HalibutNetworkExceptionType.UnknownError;
