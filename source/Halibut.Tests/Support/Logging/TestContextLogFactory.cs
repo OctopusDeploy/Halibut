@@ -6,20 +6,43 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using ILog = Halibut.Diagnostics.ILog;
 
-namespace Halibut.Tests.Support
+namespace Halibut.Tests.Support.Logging
 {
     public class TestContextLogFactory : ILogFactory
     {
-        readonly string name;
-        readonly LogLevel logLevel;
-        readonly ConcurrentDictionary<string, TestContextConnectionLog> events = new();
+        
+        readonly Func<string, ILog> loggerFactory;
+        ConcurrentDictionary<string, ILog> loggers = new();
         readonly HashSet<Uri> endpoints = new();
         readonly HashSet<string> prefixes = new();
 
+        public TestContextLogFactory(Func<string, ILog> loggerFactory)
+        {
+            
+            this.loggerFactory = loggerFactory;
+        }
+        
+        
         public TestContextLogFactory(string name, LogLevel logLevel)
         {
-            this.name = name;
-            this.logLevel = logLevel;
+            
+            this.loggerFactory = uri => new TestContextConnectionLog(uri, name, logLevel);
+        }
+
+        public static TestContextLogFactory CreateTestLog(string name, LogLevel logLevel, params Func<string, ILog>[] loggerFactories)
+        {
+            
+            return new TestContextLogFactory(uri =>
+            {
+                var loggers = new List<ILog>();
+                loggers.Add(new TestContextConnectionLog(uri, name, logLevel));
+                foreach (var loggerFactory in loggerFactories)
+                {
+                    loggers.Add(loggerFactory(uri));
+                }
+
+                return new AggregateILog(loggers.ToArray());
+            });
         }
 
         public Uri[] GetEndpoints()
@@ -39,14 +62,14 @@ namespace Halibut.Tests.Support
             endpoint = NormalizeEndpoint(endpoint);
             lock (endpoints)
                 endpoints.Add(endpoint);
-            return events.GetOrAdd(endpoint.ToString(), e => new TestContextConnectionLog(endpoint.ToString(), name, logLevel));
+            return loggers.GetOrAdd(endpoint.ToString(), e => loggerFactory(e));
         }
 
         public ILog ForPrefix(string prefix)
         {
             lock (prefixes)
                 prefixes.Add(prefix);
-            return events.GetOrAdd(prefix, e => new TestContextConnectionLog(prefix, name, logLevel));
+            return loggers.GetOrAdd(prefix, e => loggerFactory(e));
         }
 
         static Uri NormalizeEndpoint(Uri endpoint)

@@ -1,11 +1,13 @@
 #nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.Tests.Support.Logging;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
@@ -15,6 +17,7 @@ using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
+using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support
 {
@@ -22,8 +25,8 @@ namespace Halibut.Tests.Support
     {
         IServiceFactory? serviceFactory;
         readonly ServiceConnectionType serviceConnectionType;
-        readonly CertAndThumbprint serviceCertAndThumbprint;
-        readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
+        CertAndThumbprint serviceCertAndThumbprint;
+        CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         bool hasService = true;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
@@ -31,6 +34,8 @@ namespace Halibut.Tests.Support
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
         Func<HttpProxyService>? proxyFactory;
         LogLevel halibutLogLevel = LogLevel.Trace;
+        ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
+        ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -66,6 +71,28 @@ namespace Halibut.Tests.Support
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithClientCertificate(CertAndThumbprint certAndThumbprint)
+        {
+            clientCertAndThumbprint = certAndThumbprint;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithClientCertificate(Func<CertAndThumbprint, CertAndThumbprint> certAndThumbprint)
+        {
+            return WithClientCertificate(certAndThumbprint(clientCertAndThumbprint));
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithServiceCertificate(CertAndThumbprint certAndThumbprint)
+        {
+            serviceCertAndThumbprint = certAndThumbprint;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithServiceCertificate(Func<CertAndThumbprint, CertAndThumbprint> certAndThumbprint)
+        {
+            return WithServiceCertificate(certAndThumbprint(clientCertAndThumbprint));
         }
 
         /// <summary>
@@ -206,7 +233,20 @@ namespace Halibut.Tests.Support
         public LatestClientAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
-
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder RecordingClientLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
+        {
+            inMemoryLoggers = new ConcurrentDictionary<string, ILog>();
+            this.clientInMemoryLoggers = inMemoryLoggers;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder RecordingServiceLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
+        {
+            inMemoryLoggers = new ConcurrentDictionary<string, ILog>(); 
+            this.serviceInMemoryLoggers = inMemoryLoggers;
             return this;
         }
         
@@ -221,8 +261,8 @@ namespace Halibut.Tests.Support
             CancellationTokenSource cancellationTokenSource = new();
             
             serviceFactory ??= new DelegateServiceFactory();
-
-            var octopusLogFactory = new TestContextLogFactory("Client", halibutLogLevel);
+            
+            var octopusLogFactory = BuildClientLogger();
             var octopusBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory);
@@ -241,7 +281,7 @@ namespace Halibut.Tests.Support
                 var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                    .WithLogFactory(new TestContextLogFactory("Service", halibutLogLevel));
+                    .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
                 service = serviceBuilder.Build();
@@ -337,6 +377,36 @@ namespace Halibut.Tests.Support
             }
 
             return new ClientAndService(client, service, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, cancellationTokenSource);
+        }
+
+        TestContextLogFactory BuildClientLogger()
+        {
+            if (clientInMemoryLoggers == null)
+            {
+                return TestContextLogFactory.CreateTestLog("Client", halibutLogLevel);
+            }
+
+            return TestContextLogFactory.CreateTestLog("Client", halibutLogLevel, s =>
+            {
+                var logger = new InMemoryLog();
+                clientInMemoryLoggers[s] = logger;
+                return logger;
+            });
+        }
+        
+        TestContextLogFactory BuildServiceLogger()
+        {
+            if (serviceInMemoryLoggers == null)
+            {
+                return TestContextLogFactory.CreateTestLog("Service", halibutLogLevel);
+            }
+
+            return TestContextLogFactory.CreateTestLog("Service", halibutLogLevel, s =>
+            {
+                var logger = new InMemoryLog();
+                serviceInMemoryLoggers[s] = logger;
+                return logger;
+            });
         }
 
         public class ClientAndService : IClientAndService

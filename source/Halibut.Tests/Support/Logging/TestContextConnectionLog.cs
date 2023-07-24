@@ -5,9 +5,9 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using ILog = Halibut.Diagnostics.ILog;
 
-namespace Halibut.Tests.Support
+namespace Halibut.Tests.Support.Logging
 {
-    internal class TestContextConnectionLog : ILog
+    public class TestContextConnectionLog : ILog
     {
         readonly string endpoint;
         readonly string name;
