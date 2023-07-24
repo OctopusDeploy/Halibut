@@ -25,8 +25,12 @@ namespace Halibut.Tests.Support
     {
         IServiceFactory? serviceFactory;
         readonly ServiceConnectionType serviceConnectionType;
-        CertAndThumbprint serviceCertAndThumbprint;
-        CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
+        readonly CertAndThumbprint serviceCertAndThumbprint;
+        string clientTrustsThumbprint; 
+        readonly CertAndThumbprint clientCertAndThumbprint;
+        string serviceTrustsThumbprint;
+        
+        
         bool hasService = true;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
@@ -36,26 +40,32 @@ namespace Halibut.Tests.Support
         LogLevel halibutLogLevel = LogLevel.Trace;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
+        
 
-        public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
+            CertAndThumbprint clientCertAndThumbprint,
+            CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+            this.clientCertAndThumbprint = clientCertAndThumbprint;
+            clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
+            serviceTrustsThumbprint = clientCertAndThumbprint.Thumbprint;
         }
 
         public static LatestClientAndLatestServiceBuilder Polling()
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling);
         }
 
         public static LatestClientAndLatestServiceBuilder PollingOverWebSocket()
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling);
         }
 
         public static LatestClientAndLatestServiceBuilder Listening()
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening);
         }
 
         public static LatestClientAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
@@ -71,28 +81,6 @@ namespace Halibut.Tests.Support
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
-        }
-        
-        public LatestClientAndLatestServiceBuilder WithClientCertificate(CertAndThumbprint certAndThumbprint)
-        {
-            clientCertAndThumbprint = certAndThumbprint;
-            return this;
-        }
-        
-        public LatestClientAndLatestServiceBuilder WithClientCertificate(Func<CertAndThumbprint, CertAndThumbprint> certAndThumbprint)
-        {
-            return WithClientCertificate(certAndThumbprint(clientCertAndThumbprint));
-        }
-        
-        public LatestClientAndLatestServiceBuilder WithServiceCertificate(CertAndThumbprint certAndThumbprint)
-        {
-            serviceCertAndThumbprint = certAndThumbprint;
-            return this;
-        }
-        
-        public LatestClientAndLatestServiceBuilder WithServiceCertificate(Func<CertAndThumbprint, CertAndThumbprint> certAndThumbprint)
-        {
-            return WithServiceCertificate(certAndThumbprint(clientCertAndThumbprint));
         }
 
         /// <summary>
@@ -250,6 +238,18 @@ namespace Halibut.Tests.Support
             return this;
         }
         
+        public LatestClientAndLatestServiceBuilder WithClientTrustingTheWrongCertificate()
+        {
+            clientTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithServiceTrustingTheWrongCertificate()
+        {
+            serviceTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
+            return this;
+        }
+        
         async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
             return await Build(cancellationToken);
@@ -273,7 +273,7 @@ namespace Halibut.Tests.Support
             }
 
             var client = octopusBuilder.Build();
-            client.Trust(serviceCertAndThumbprint.Thumbprint);
+            client.Trust(clientTrustsThumbprint);
 
             HalibutRuntime? service = null;
             if (hasService)
@@ -312,7 +312,7 @@ namespace Halibut.Tests.Support
                         clientListenPort = portForwarder.ListeningPort;
                     }
 
-                    service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + clientListenPort), clientCertAndThumbprint.Thumbprint, httpProxyDetails));
+                    service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + clientListenPort), serviceTrustsThumbprint, httpProxyDetails));
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
@@ -326,7 +326,9 @@ namespace Halibut.Tests.Support
                 client.ListenWebSocket(webSocketListeningUrl);
                 tcpPortConflictLock.Dispose();
 
-                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
+                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress)
+                    .WithCertificate(clientCertAndThumbprint)
+                    .Build();
                 disposableCollection.Add(webSocketSslCertificate);
 
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
@@ -340,7 +342,7 @@ namespace Halibut.Tests.Support
                     }
 
                     var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
-                    service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, httpProxyDetails));
+                    service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, serviceTrustsThumbprint, httpProxyDetails));
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
@@ -348,7 +350,7 @@ namespace Halibut.Tests.Support
                 int listenPort;
                 if (service != null)
                 {
-                    service.Trust(clientCertAndThumbprint.Thumbprint);
+                    service.Trust(serviceTrustsThumbprint);
                     listenPort = service.Listen();
                 }
                 else
@@ -376,7 +378,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientAndService(client, service, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, cancellationTokenSource);
+            return new ClientAndService(client, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, cancellationTokenSource);
         }
 
         TestContextLogFactory BuildClientLogger()
@@ -412,7 +414,7 @@ namespace Halibut.Tests.Support
         public class ClientAndService : IClientAndService
         {
             public Uri ServiceUri { get; }
-            readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
+            readonly string thumbprint;
             readonly DisposableCollection disposableCollection;
             readonly ProxyDetails? proxyDetails;
             readonly CancellationTokenSource cancellationTokenSource;
@@ -420,7 +422,7 @@ namespace Halibut.Tests.Support
             public ClientAndService(HalibutRuntime client,
                 HalibutRuntime service,
                 Uri serviceUri,
-                CertAndThumbprint serviceCertAndThumbprint,
+                string thumbprint,
                 PortForwarder? portForwarder,
                 DisposableCollection disposableCollection,
                 HttpProxyService? proxy,
@@ -430,7 +432,7 @@ namespace Halibut.Tests.Support
                 Client = client;
                 Service = service;
                 ServiceUri = serviceUri;
-                this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+                this.thumbprint = thumbprint;
                 PortForwarder = portForwarder;
                 HttpProxy = proxy;
                 this.disposableCollection = disposableCollection;
@@ -455,7 +457,7 @@ namespace Halibut.Tests.Support
 
             public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken, string? remoteThumbprint = null)
             {
-                var serviceEndpoint = new ServiceEndPoint(ServiceUri, remoteThumbprint ?? serviceCertAndThumbprint.Thumbprint, proxyDetails);
+                var serviceEndpoint = new ServiceEndPoint(ServiceUri, remoteThumbprint ?? thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
                 return Client.CreateClient<TService>(serviceEndpoint, cancellationToken);
             }
@@ -467,7 +469,7 @@ namespace Halibut.Tests.Support
 
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = new ServiceEndPoint(ServiceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
+                var serviceEndpoint = new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
                 return Client.CreateClient<TService, TClientService>(serviceEndpoint);
             }
@@ -487,5 +489,7 @@ namespace Halibut.Tests.Support
                 Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
             }
         }
+
+        
     }
 }

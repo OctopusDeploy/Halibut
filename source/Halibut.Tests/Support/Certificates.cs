@@ -22,9 +22,9 @@ namespace Halibut.Tests.Support
         public static string WrongPublicThumbprint;
         public static string WrongPfxPath;
 
-
         public static X509Certificate2 Ssl;
         public static string SslThumbprint;
+        public static string sslPfxPath;
 
         static Certificates()
         {
@@ -46,7 +46,8 @@ namespace Halibut.Tests.Support
             Wrong = new X509Certificate2(WrongPfxPath);
             WrongPublicThumbprint = Wrong.Thumbprint;
 
-            Ssl = new X509Certificate2(Path.Combine(directory, "Ssl.pfx"), "password");
+            sslPfxPath = Path.Combine(directory, "Ssl.pfx");
+            Ssl = new X509Certificate2(sslPfxPath, "password");
             SslThumbprint = Ssl.Thumbprint;
         }
     }

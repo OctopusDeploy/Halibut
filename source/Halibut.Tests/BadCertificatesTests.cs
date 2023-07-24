@@ -25,7 +25,7 @@ namespace Halibut.Tests
             var countingService = new CountingService();
             using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithClientCertificate(validCert => new CertAndThumbprint(null, CertAndThumbprint.Wrong.Certificate2, validCert.Thumbprint))
+                       .WithServiceTrustingTheWrongCertificate()
                        .WithCountingService()
                        .RecordingServiceLogs(out var serviceLoggers)
                        .Build(CancellationToken))
@@ -36,7 +36,9 @@ namespace Halibut.Tests
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
                 
                 serviceLoggers[serviceLoggers.Keys.First()].GetLogs().Should()
-                    .Contain(log => log.FormattedMessage.Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F' which is not in the list of thumbprints that we trust"));
+                    .Contain(log => log.FormattedMessage
+                        .Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint " +
+                                  "'76225C0717A16C1D0BA4A7FFA76519D286D8A248' which is not in the list of thumbprints that we trust"));
             }
         }
         
@@ -47,7 +49,7 @@ namespace Halibut.Tests
             var countingService = new CountingService();
             using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithClientCertificate(validCert => new CertAndThumbprint(null, CertAndThumbprint.Wrong.Certificate2, validCert.Thumbprint))
+                       .WithServiceTrustingTheWrongCertificate()
                        .WithCountingService()
                        .RecordingServiceLogs(out var serviceLoggers)
                        .Build(CancellationToken))
@@ -85,18 +87,20 @@ namespace Halibut.Tests
             var countingService = new CountingService();
             using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithServiceCertificate(validCert => new CertAndThumbprint(null, CertAndThumbprint.Wrong.Certificate2, validCert.Thumbprint))
+                       .WithClientTrustingTheWrongCertificate()
                        .WithCountingService(countingService)
                        .Build(CancellationToken))
             {
                 var echo = clientAndBuilder.CreateClient<ICountingService>();
                 Assert.Throws<HalibutClientException>(() => echo.Increment())
                     .Message.Should().Contain("" +
-                                              "We expected the server to present a certificate with the thumbprint '76225C0717A16C1D0BA4A7FFA76519D286D8A248'. " +
-                                              "Instead, it presented a certificate with a thumbprint of 'EC32122053C6BFF582F8246F5697633D06F0F97F'");
+                                              "We expected the server to present a certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F'. " +
+                                              "Instead, it presented a certificate with a thumbprint of '36F35047CE8B000CF4C671819A2DD1AFCDE3403D'");
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
+        
+        
         
         [Test]
         [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
@@ -105,7 +109,7 @@ namespace Halibut.Tests
             var countingService = new CountingService();
             using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithServiceCertificate(validCert => new CertAndThumbprint(null, CertAndThumbprint.Wrong.Certificate2, validCert.Thumbprint))
+                       .WithClientTrustingTheWrongCertificate()
                        .WithCountingService(countingService)
                        .RecordingClientLogs(out var serviceLoggers)
                        .Build(CancellationToken))
@@ -113,14 +117,14 @@ namespace Halibut.Tests
                 var cts = new CancellationTokenSource();
                 var echo = clientAndBuilder.CreateClient<ICountingService, CancellationViaClientProxyFixture.IClientCountingService>(point =>
                 {
-                    point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
+                    point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
                 
                 var incrementCount = Task.Run(() => echo.Increment(new HalibutProxyRequestOptions(cts.Token)));
 
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => { AllLogs(serviceLoggers).Select(l => l.FormattedMessage).ToArray()
-                        .Should().Contain(s => s.Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F' which is not in the list of thumbprints that we trust")); },
+                        .Should().Contain(s => s.Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint '4098EC3A2FC2B92B97339D3831BA230CC1DD590F' which is not in the list of thumbprints that we trust")); },
                     TimeSpan.FromSeconds(10),
                     Logger,
                     CancellationToken);
