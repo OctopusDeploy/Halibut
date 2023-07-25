@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Halibut.Transport.ErrorRecordingStream
+namespace Halibut.Transport.Streams
 {
     public class ErrorRecordingStream : Stream
     {
@@ -47,7 +45,7 @@ namespace Halibut.Transport.ErrorRecordingStream
         {
             try
             {
-                int read = await ReadAsync(buffer, offset, count, cancellationToken);
+                int read = await innerStream.ReadAsync(buffer, offset, count, cancellationToken);
                 if (read == 0) WasTheEndOfStreamEncountered = true;
                 return read;
             }

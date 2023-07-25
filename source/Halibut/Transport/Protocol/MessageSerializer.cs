@@ -4,6 +4,7 @@ using System.IO.Compression;
 using Halibut.Transport.Observability;
 using System.Linq;
 using Halibut.Diagnostics;
+using Halibut.Transport.Streams;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -65,7 +66,7 @@ namespace Halibut.Transport.Protocol
         public T ReadMessage<T>(Stream stream)
         {
             var messageReader = MessageReaderStrategyFromStream<T>(stream);
-            using (var errorRecorder = new ErrorRecordingStream.ErrorRecordingStream(stream))
+            using (var errorRecorder = new ErrorRecordingStream(stream))
             {
                 Exception exceptionFromDeserialisation = null;
                 try
