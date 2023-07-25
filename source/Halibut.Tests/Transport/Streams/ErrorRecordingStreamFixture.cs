@@ -20,10 +20,10 @@ namespace Halibut.Tests.Transport.Streams
             {
                 using (var errorRecordingStream = new ErrorRecordingStream(fs, closeInner: true))
                 {
-                    errorRecordingStream.Write("Hello".GetBytesUtf8());
+                    errorRecordingStream.WriteString("Hello");
                 }
 
-                Assert.Throws<ObjectDisposedException>(() => fs.Write("not this".GetBytesUtf8()));
+                Assert.Throws<ObjectDisposedException>(() => fs.WriteString("not this"));
             }
 
             File.ReadAllText(path).Should().Be("Hello");
@@ -38,10 +38,10 @@ namespace Halibut.Tests.Transport.Streams
             {
                 using (var errorRecordingStream = new ErrorRecordingStream(fs, closeInner: false))
                 {
-                    errorRecordingStream.Write("Hello".GetBytesUtf8());
+                    errorRecordingStream.WriteString("Hello");
                 }
 
-                fs.Write(" and this".GetBytesUtf8());
+                fs.WriteString(" and this");
             }
 
             File.ReadAllText(path).Should().Be("Hello and this");

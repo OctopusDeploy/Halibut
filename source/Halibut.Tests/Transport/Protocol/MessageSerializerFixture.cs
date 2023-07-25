@@ -151,7 +151,7 @@ namespace Halibut.Tests.Transport.Protocol
             {
                 using (var zip = new DeflateStream(memoryStream, CompressionMode.Compress, true))
                 {
-                    zip.Write(s.GetBytesUtf8(), 0, s.GetBytesUtf8().Length);
+                    zip.WriteString(s);
                     zip.Flush();
                 }
                 memoryStream.Position = 0;
