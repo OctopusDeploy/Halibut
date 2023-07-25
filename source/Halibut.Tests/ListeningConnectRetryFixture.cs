@@ -33,12 +33,12 @@ namespace Halibut.Tests
                 {
                     point.RetryListeningSleepInterval = TimeSpan.Zero;
                     point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
-                    point.RetryCountLimit = 100;
+                    point.RetryCountLimit = 20;
                 });
                 
                 Assert.Throws<HalibutClientException>(() => echoService.SayHello("hello"));
 
-                tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(100);
+                tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(20);
             }
         }
         
