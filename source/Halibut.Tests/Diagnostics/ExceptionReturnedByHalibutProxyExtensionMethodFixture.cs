@@ -65,7 +65,10 @@ namespace Halibut.Tests.Diagnostics
                     exception.IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
-                }
+                    
+                        exception.Message.Should().Contain("Attempted to read past the end of the stream.",
+                            because: "This isn't the best message, really the connection was closed before we got the data we were expecting resulting in us reading past the end of the stream");
+                    }
             }
             
             [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
@@ -85,6 +88,8 @@ namespace Halibut.Tests.Diagnostics
                     exception.IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
+                    
+                    exception.Message.Should().Contain("Unable to read data from the transport connection: Connection timed out.");
                 }
             }
 
