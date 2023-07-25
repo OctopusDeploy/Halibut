@@ -170,7 +170,7 @@ namespace Halibut.Transport.Protocol
         
         // By making this a generic type, each message specifies the exact type it sends/expects
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
-        public class MessageEnvelope<T>
+        class MessageEnvelope<T>
         {
             public T Message { get; set; }
         }

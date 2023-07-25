@@ -86,7 +86,7 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void WhenTheStreamEndsBeforeBeforeAnyBytesAreRead_AEndOfStreamExceptionIsThrown()
+        public void WhenTheStreamEndsBeforeAnyBytesAreRead_AnEndOfStreamExceptionIsThrown()
         {
             var sut = new MessageSerializerBuilder().Build();
             using (var stream = new MemoryStream(new byte[0]))
