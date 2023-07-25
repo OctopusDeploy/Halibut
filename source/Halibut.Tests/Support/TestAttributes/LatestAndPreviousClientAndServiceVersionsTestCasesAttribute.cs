@@ -17,8 +17,40 @@ namespace Halibut.Tests.Support.TestAttributes
         {
         }
         
+        public LatestAndPreviousClientAndServiceVersionsTestCasesAttribute(ServiceConnectionType serviceConnectionType, bool testNetworkConditions = true) :
+            base(
+                typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
+                nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumeratorForServiceConnectionType),
+                new object[] { new[] { serviceConnectionType}, testNetworkConditions })
+        {
+        }
+        
+        public LatestAndPreviousClientAndServiceVersionsTestCasesAttribute(ServiceConnectionType[] serviceConnectionTypes, bool testNetworkConditions = true) :
+            base(
+                typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
+                nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumeratorForServiceConnectionType),
+                new object[] { serviceConnectionTypes, testNetworkConditions })
+        {
+        }
+        
         static class LatestAndPreviousClientAndServiceVersionsTestCases
         {
+            public static IEnumerator<ClientAndServiceTestCase> GetEnumeratorForServiceConnectionType(ServiceConnectionType[] serviceConnectionTypes, bool testNetworkConditions)
+            {
+                var builder = new ClientAndServiceTestCasesBuilder(
+                    new[] {
+                        ClientAndServiceTestVersion.Latest(),
+                        ClientAndServiceTestVersion.ClientOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ClientVersion),
+                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
+                    },
+                    serviceConnectionTypes,
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
+                );
+
+                return builder.Build().GetEnumerator();
+                
+            }
+            
             public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions)
             {
                 var builder = new ClientAndServiceTestCasesBuilder(
