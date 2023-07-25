@@ -32,7 +32,7 @@ namespace Halibut.Tests.Support.TestCases
                         var recommendedIterations = 15;
                         if (networkConditionTestCase == NetworkConditionTestCase.NetworkConditionPerfect)
                         {
-                            recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType);
+                            recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType, clientServiceTestVersion);
                         }
 
                         yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion);

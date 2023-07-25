@@ -1,12 +1,19 @@
 using System;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestCases;
 
 namespace Halibut.Tests.Util
 {
     public class StandardIterationCount
     {
-        public static int ForServiceType(ServiceConnectionType connectionType)
+        public static int ForServiceType(ServiceConnectionType connectionType, ClientAndServiceTestVersion clientAndServiceTestVersion)
         {
+            if (clientAndServiceTestVersion.IsPreviousClient())
+            {
+                // Old client requires that we call a halibut which calls a halibut, so keep the iterations low for this one.
+                return 25;
+            }
+            
             switch (connectionType)
             {
                 case ServiceConnectionType.Polling:
