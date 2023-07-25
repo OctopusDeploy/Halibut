@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestCases;
 using NUnit.Framework;
@@ -9,57 +10,46 @@ namespace Halibut.Tests.Support.TestAttributes
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
     public class LatestAndPreviousClientAndServiceVersionsTestCasesAttribute : TestCaseSourceAttribute
     {
-        public LatestAndPreviousClientAndServiceVersionsTestCasesAttribute(bool testWebSocket = true, bool testNetworkConditions = true) :
+        public LatestAndPreviousClientAndServiceVersionsTestCasesAttribute(
+            bool testWebSocket = true,
+            bool testNetworkConditions = true,
+            bool testListening = true,
+            bool testPolling = true) :
             base(
                 typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
                 nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions })
-        {
-        }
-        
-        public LatestAndPreviousClientAndServiceVersionsTestCasesAttribute(ServiceConnectionType serviceConnectionType, bool testNetworkConditions = true) :
-            base(
-                typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
-                nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumeratorForServiceConnectionType),
-                new object[] { new[] { serviceConnectionType}, testNetworkConditions })
-        {
-        }
-        
-        public LatestAndPreviousClientAndServiceVersionsTestCasesAttribute(ServiceConnectionType[] serviceConnectionTypes, bool testNetworkConditions = true) :
-            base(
-                typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
-                nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumeratorForServiceConnectionType),
-                new object[] { serviceConnectionTypes, testNetworkConditions })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling })
         {
         }
         
         static class LatestAndPreviousClientAndServiceVersionsTestCases
         {
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumeratorForServiceConnectionType(ServiceConnectionType[] serviceConnectionTypes, bool testNetworkConditions)
+            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling)
             {
-                var builder = new ClientAndServiceTestCasesBuilder(
-                    new[] {
-                        ClientAndServiceTestVersion.Latest(),
-                        ClientAndServiceTestVersion.ClientOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ClientVersion),
-                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
-                    },
-                    serviceConnectionTypes,
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
-                );
+                var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
-                return builder.Build().GetEnumerator();
+                if (!testWebSocket)
+                {
+                    serviceConnectionTypes.Remove(ServiceConnectionType.PollingOverWebSocket);
+                }
+
+                if (!testListening)
+                {
+                    serviceConnectionTypes.Remove(ServiceConnectionType.Listening);
+                }
+
+                if (!testPolling)
+                {
+                    serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
+                }
                 
-            }
-            
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions)
-            {
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] {
                         ClientAndServiceTestVersion.Latest(),
                         ClientAndServiceTestVersion.ClientOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ClientVersion),
                         ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
                     },
-                    testWebSocket ? ServiceConnectionTypes.All : ServiceConnectionTypes.AllExceptWebSockets,
+                    serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
                 );
 
