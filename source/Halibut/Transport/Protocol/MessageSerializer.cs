@@ -66,12 +66,12 @@ namespace Halibut.Transport.Protocol
         public T ReadMessage<T>(Stream stream)
         {
             var messageReader = MessageReaderStrategyFromStream<T>(stream);
-            using (var errorRecorder = new ErrorRecordingStream(stream))
+            using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {
                 Exception exceptionFromDeserialisation = null;
                 try
                 {
-                    return messageReader(errorRecorder);
+                    return messageReader(errorRecordingStream);
                 }
                 catch (Exception e)
                 {
@@ -79,31 +79,24 @@ namespace Halibut.Transport.Protocol
                 }
                 finally
                 {
-                    if (errorRecorder.ReadExceptions.Count == 1)
+                    if (errorRecordingStream.ReadExceptions.Count == 1)
                     {
-                        throw errorRecorder.ReadExceptions[0];
+                        throw errorRecordingStream.ReadExceptions[0];
                     }
 
-                    if (errorRecorder.WasTheEndOfStreamEncountered)
+                    if (errorRecordingStream.WasTheEndOfStreamEncountered)
                     {
                         throw new EndOfStreamException();
                     }
 
-                    if (errorRecorder.ReadExceptions.Count == 0 && exceptionFromDeserialisation != null)
+                    if (errorRecordingStream.ReadExceptions.Count > 0)
                     {
-                        throw exceptionFromDeserialisation;
-                    }
-
-                    if (errorRecorder.ReadExceptions.Count > 0)
-                    {
-                        throw new IOException("Error Reading from stream", new AggregateException(errorRecorder.ReadExceptions));
+                        throw new IOException("Error Reading from stream", new AggregateException(errorRecordingStream.ReadExceptions));
                     }
                 }
-
-                // Can never be reached
+                
                 throw exceptionFromDeserialisation;
             }
-
         }
 
         Func<Stream, T> MessageReaderStrategyFromStream<T>(Stream stream)

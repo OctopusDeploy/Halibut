@@ -9,10 +9,12 @@ namespace Halibut.Transport.Streams
     public class ErrorRecordingStream : Stream
     {
         Stream innerStream;
+        bool closeInner;
 
-        public ErrorRecordingStream(Stream innerStream)
+        public ErrorRecordingStream(Stream innerStream, bool closeInner) : base()
         {
             this.innerStream = innerStream;
+            this.closeInner = closeInner;
         }
 
         public List<Exception> ReadExceptions { get; } = new List<Exception>();
@@ -105,6 +107,14 @@ namespace Halibut.Transport.Streams
         {
             get => innerStream.Position;
             set => innerStream.Position = value;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (closeInner && disposing)
+            {
+                innerStream.Dispose();
+            }
         }
     }
 }
