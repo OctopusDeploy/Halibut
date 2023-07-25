@@ -16,7 +16,7 @@ namespace Halibut.Tests
     public class ParallelRequestsFixture : BaseTest
     {
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(ServiceConnectionType.Listening, testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling:false, testWebSocket: false, testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
