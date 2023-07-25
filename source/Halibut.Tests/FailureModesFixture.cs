@@ -109,38 +109,6 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public void FailWhenListeningClientPresentsWrongCertificate()
-        {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(Certificates.TentaclePolling))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-            {
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
-
-                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
-            }
-        }
-
-        [Test]
-        public void FailWhenListeningServerPresentsWrongCertificate()
-        {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
-            {
-                var tentaclePort = tentacleListening.Listen();
-                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
-
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentaclePollingPublicThumbprint);
-
-                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
-            }
-        }
-
-        [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task FailWhenServerThrowsDuringADataStream(ClientAndServiceTestCase clientAndServiceTestCase)

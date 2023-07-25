@@ -33,6 +33,11 @@ namespace Halibut.Tests.Support
             var singleCountingService = new CountingService();
             return builder.WithService<ICountingService>(() => singleCountingService);
         }
+        
+        public static LatestClientAndLatestServiceBuilder WithCountingService(this LatestClientAndLatestServiceBuilder builder, ICountingService countingService)
+        {
+            return builder.WithService<ICountingService>(() => countingService);
+        }
 
         public static LatestClientAndLatestServiceBuilder WithDoSomeActionService(this LatestClientAndLatestServiceBuilder builder, Action action)
         {
