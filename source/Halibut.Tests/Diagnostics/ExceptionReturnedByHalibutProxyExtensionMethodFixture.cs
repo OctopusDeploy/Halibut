@@ -66,12 +66,19 @@ namespace Halibut.Tests.Diagnostics
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
                     
-                        exception.Message.Should().Contain("Attempted to read past the end of the stream.",
+                        exception.Message.Should().ContainAny(new String[]
+                            {
+                                "Attempted to read past the end of the stream.",
+                                "Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host.",
+                                "The I/O operation has been aborted because of either a thread exit or an application request"
+                            },
                             because: "This isn't the best message, really the connection was closed before we got the data we were expecting resulting in us reading past the end of the stream");
                     }
             }
             
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false, 
+                testWebSocket:false // Since websockets do not timeout
+                )]
             public async Task WhenTheConnectionPausesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -89,7 +96,12 @@ namespace Halibut.Tests.Diagnostics
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
                     
-                    exception.Message.Should().Contain("Unable to read data from the transport connection: Connection timed out.");
+                    exception.Message.Should().ContainAny(new[]
+                    {
+                        "Unable to read data from the transport connection: Connection timed out.",
+                        "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
+                        
+                    });
                 }
             }
 
