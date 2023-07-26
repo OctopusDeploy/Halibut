@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.Tests.Support.Logging;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
@@ -32,6 +33,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
         IComplexObjectService complexObjectService = new ComplexObjectService();
+        IReadDataStreamService readDataStreamService = new ReadDataStreamService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel;
         bool withTentacleServices = false;
@@ -131,6 +133,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
+        public PreviousClientVersionAndLatestServiceBuilder WithReadDataStreamService(IReadDataStreamService readDataStreamService)
+        {
+            this.readDataStreamService = readDataStreamService;
+            return this;
+        }
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
             return WithStandardServices();
@@ -141,6 +149,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return WithEchoServiceService(new EchoService())
                 .WithMultipleParametersTestService(new MultipleParametersTestService())
                 .WithComplexObjectService(new ComplexObjectService())
+                .WithReadDataStreamService(new ReadDataStreamService())
                 .WithLockService(new LockService())
                 .WithCountingService(new CountingService());
         }
@@ -221,7 +230,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .Register(() => multipleParametersTestService)
                 .Register(() => complexObjectService)
                 .Register(() => lockService)
-                .Register(() => countingService);
+                .Register(() => countingService)
+				.Register(() => readDataStreamService);
 
             if (withTentacleServices)
             {

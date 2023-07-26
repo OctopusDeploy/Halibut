@@ -1,12 +1,14 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
-using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
-using Halibut.Tests.TestServices;
+using Halibut.Tests.Support.TestCases;
+using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -14,33 +16,42 @@ namespace Halibut.Tests
     public class ParallelRequestsFixture : BaseTest
     {
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling:false, testWebSocket: false, testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
-        public async Task SendMessagesToTentacleInParallel(ServiceConnectionType serviceConnectionType)
+        public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var services = new DelegateServiceFactory();
-            services.Register<IReadDataStreamService>(() => new ReadDataStreamService());
-
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithHalibutLoggingLevel(LogLevel.Info)
-                       .WithServiceFactory(services)
-                       .WithServiceFactory(services).Build(CancellationToken))
+            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .WithHalibutLoggingLevel(LogLevel.Info)
+                .WithStandardServices()
+                .Build(CancellationToken);
             {
                 var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
 
                 var dataStreams = CreateDataStreams();
 
-                var messagesAreSentTheSameTimeSemaphore = new Semaphore(0, dataStreams.Length);
+                var messagesAreSentTheSameTimeSemaphore = new SemaphoreSlim(0, dataStreams.Length);
 
+                int threadCount = 64;
+                int threadCompletionCount = 0;
                 var threads = new List<Thread>();
-                for (var i = 0; i < 64; i++)
+                var exceptions = new ConcurrentBag<Exception>();
+                for (var i = 0; i < threadCount; i++)
                 {
                     var thread = new Thread(() =>
                     {
-                        messagesAreSentTheSameTimeSemaphore.WaitOne();
-                        var recieved = readDataSteamService.SendData(dataStreams);
-                        recieved.Should().Be(5 * dataStreams.Length);
+                        // Gotta handle exceptions when running in a 
+                        // Thread, or you're gonna have a bad time.
+                        try
+                        {
+                            messagesAreSentTheSameTimeSemaphore.Wait(CancellationToken);
+                            var received = readDataSteamService.SendData(dataStreams);
+                            received.Should().Be(5 * dataStreams.Length);
+                            Interlocked.Increment(ref threadCompletionCount);
+                        }
+                        catch (Exception e)
+                        {
+                            exceptions.Add(e);
+                        }
                     });
                     thread.Start();
                     threads.Add(thread);
@@ -49,6 +60,8 @@ namespace Halibut.Tests
                 messagesAreSentTheSameTimeSemaphore.Release(dataStreams.Length);
 
                 WaitForAllThreads(threads);
+                exceptions.Should().BeEmpty();
+                threadCompletionCount.Should().Be(threadCount);
             }
         }
 
@@ -65,7 +78,7 @@ namespace Halibut.Tests
             return dataStreams;
         }
 
-        static void WaitForAllThreads(List<Thread> threads)
+        void WaitForAllThreads(List<Thread> threads)
         {
             foreach (var thread in threads)
             {

@@ -23,7 +23,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
+                       .WithHalibutLoggingLevel(LogLevel.Trace)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();

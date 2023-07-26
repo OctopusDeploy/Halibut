@@ -1,4 +1,6 @@
-namespace Halibut.Tests.TestServices
+using System;
+
+namespace Halibut.TestUtils.Contracts
 {
     public interface IReadDataStreamService
     {

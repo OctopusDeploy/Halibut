@@ -16,7 +16,7 @@
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <None Update="Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
+    <None Update="Certificates/WrongCert.pfx;Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

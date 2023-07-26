@@ -17,9 +17,14 @@ namespace Halibut.Tests.Support
         public static X509Certificate2 TentaclePolling;
         public static string TentaclePollingPublicThumbprint;
         public static string TentaclePollingPfxPath;
+        
+        public static X509Certificate2 Wrong;
+        public static string WrongPublicThumbprint;
+        public static string WrongPfxPath;
 
         public static X509Certificate2 Ssl;
         public static string SslThumbprint;
+        public static string sslPfxPath;
 
         static Certificates()
         {
@@ -36,7 +41,13 @@ namespace Halibut.Tests.Support
             TentaclePollingPfxPath = Path.Combine(directory, "TentaclePolling.pfx");
             TentaclePolling = new X509Certificate2(TentaclePollingPfxPath);
             TentaclePollingPublicThumbprint = TentaclePolling.Thumbprint;
-            Ssl = new X509Certificate2(Path.Combine(directory, "Ssl.pfx"), "password");
+            
+            WrongPfxPath = Path.Combine(directory, "WrongCert.pfx");
+            Wrong = new X509Certificate2(WrongPfxPath);
+            WrongPublicThumbprint = Wrong.Thumbprint;
+
+            sslPfxPath = Path.Combine(directory, "Ssl.pfx");
+            Ssl = new X509Certificate2(sslPfxPath, "password");
             SslThumbprint = Ssl.Thumbprint;
         }
     }
