@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
 using FluentAssertions;
 using Halibut.Tests.Support;
+using Halibut.Tests.Util;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -83,7 +85,81 @@ namespace Halibut.Tests.Transport.Protocol
             }
         }
 
-        #if !NETFRAMEWORK
+        [Test]
+        public void WhenTheStreamEndsBeforeAnyBytesAreRead_AnEndOfStreamExceptionIsThrown()
+        {
+            var sut = new MessageSerializerBuilder().Build();
+            using (var stream = new MemoryStream(new byte[0]))
+            {
+                Assert.Throws<EndOfStreamException>(() => sut.ReadMessage<ResponseMessage>(stream));
+            }
+        }
+        
+        [Test]
+        public void WhenTheStreamEndsMidWayThroughReadingAMessage_AEndOfStreamExceptionIsThrown()
+        {
+            var sut = new MessageSerializerBuilder().Build();
+            var completeBytes = CreateBytesFromMessage("Hello this is the message");
+            var someOfTheBytes = completeBytes.SubArray(0, completeBytes.Length - 5);
+            using (var stream = new MemoryStream(someOfTheBytes))
+            {
+                Assert.Throws<EndOfStreamException>(() => sut.ReadMessage<ResponseMessage>(stream));
+            }
+        }
+        
+        [Test]
+        public void WhenTheStreamContainsAnIncompleteZipStream_SomeSortOfZipErrorIsThrown()
+        {
+            var sut = new MessageSerializerBuilder().Build();
+            var completeBytes = CreateBytesFromMessage(Some.RandomAsciiStringOfLength(22000));
+            var badZipStream = new byte[64000];
+            Array.Copy(completeBytes, 0, badZipStream, 0, 30);
+            
+            using (var stream = new MemoryStream(badZipStream))
+            {
+                Assert.Throws<InvalidDataException>(() => sut.ReadMessage<ResponseMessage>(stream));
+            }
+        }
+        
+        [Test]
+        public void WhenTheStreamContainsAnInvalidObject_SomeSortOfJsonErrorsThrown()
+        {
+            var sut = new MessageSerializerBuilder().Build();
+            
+            var deflatedString = DeflateString("Some invalid json/bson");
+            using (var stream = new MemoryStream(deflatedString))
+            {
+                Assert.Throws<Newtonsoft.Json.JsonSerializationException>(() => sut.ReadMessage<ResponseMessage>(stream));
+            }
+        }
+
+        private static byte[] CreateBytesFromMessage(object message)
+        {
+            var writingSerializer = new MessageSerializerBuilder().Build();
+
+            using (var stream = new MemoryStream())
+            {
+                writingSerializer.WriteMessage(stream, message);
+                stream.Position = 0;
+                return stream.ToArray();
+            }
+        }
+
+        private static byte[] DeflateString(string s)
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                using (var zip = new DeflateStream(memoryStream, CompressionMode.Compress, true))
+                {
+                    zip.WriteString(s);
+                    zip.Flush();
+                }
+                memoryStream.Position = 0;
+                return memoryStream.ToArray();
+            }
+        }
+
+#if !NETFRAMEWORK
         [Test]
         public void SendReceiveMessageRewindableShouldRoundTrip()
         {

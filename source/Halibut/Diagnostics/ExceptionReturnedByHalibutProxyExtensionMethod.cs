@@ -58,6 +58,15 @@ namespace Halibut.Diagnostics
                 return IsNetworkError(exception.InnerException);
             }
 
+            if (exception is HalibutClientException)
+            {
+                if (exception.Message.Contains("System.IO.EndOfStreamException")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("System.Net.Sockets.SocketException (110): Connection timed out")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host.")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("The I/O operation has been aborted because of either a thread exit or an application request")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.")) return HalibutNetworkExceptionType.IsNetworkError;
+            }
+
             return HalibutNetworkExceptionType.UnknownError;
         }
     }

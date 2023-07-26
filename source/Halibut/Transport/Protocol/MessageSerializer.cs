@@ -2,6 +2,9 @@
 using System.IO;
 using System.IO.Compression;
 using Halibut.Transport.Observability;
+using System.Linq;
+using Halibut.Diagnostics;
+using Halibut.Transport.Streams;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 
@@ -62,12 +65,48 @@ namespace Halibut.Transport.Protocol
 
         public T ReadMessage<T>(Stream stream)
         {
+            var messageReader = MessageReaderStrategyFromStream<T>(stream);
+            using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
+            {
+                Exception exceptionFromDeserialisation = null;
+                try
+                {
+                    return messageReader(errorRecordingStream);
+                }
+                catch (Exception e)
+                {
+                    exceptionFromDeserialisation = e;
+                }
+                finally
+                {
+                    if (errorRecordingStream.ReadExceptions.Count == 1)
+                    {
+                        throw errorRecordingStream.ReadExceptions[0];
+                    }
+
+                    if (errorRecordingStream.WasTheEndOfStreamEncountered)
+                    {
+                        throw new EndOfStreamException();
+                    }
+
+                    if (errorRecordingStream.ReadExceptions.Count > 0)
+                    {
+                        throw new IOException("Error Reading from stream", new AggregateException(errorRecordingStream.ReadExceptions));
+                    }
+                }
+                
+                throw exceptionFromDeserialisation;
+            }
+        }
+
+        Func<Stream, T> MessageReaderStrategyFromStream<T>(Stream stream)
+        {
             if (stream is IRewindableBuffer rewindable)
             {
-                return ReadCompressedMessageRewindable<T>(stream, rewindable);
+                return (s) => ReadCompressedMessageRewindable<T>(s, rewindable);
             }
 
-            return ReadCompressedMessage<T>(stream);
+            return (s) => ReadCompressedMessage<T>(s);
         }
 
         T ReadCompressedMessage<T>(Stream stream)
