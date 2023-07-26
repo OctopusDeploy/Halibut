@@ -29,10 +29,11 @@ namespace Halibut.Transport.Protocol
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
         {
             #if NETFRAMEWORK
-            this.stream = stream;
+            var myStream = stream;
             #else
-            this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+            var myStream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             #endif
+            this.stream = myStream.ToRecordingStream("msgex", log);
             this.log = log;
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             this.serializer = serializer;
