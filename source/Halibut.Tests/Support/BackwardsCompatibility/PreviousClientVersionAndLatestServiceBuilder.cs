@@ -225,6 +225,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogFactory("ProxyClient", halibutLogLevel))
                 .Build();
+            
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
 
             var serviceFactory = new DelegateServiceFactory()

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Logging;
 using Halibut.TestProxy;
+using Halibut.Tests.Support.Logging;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
@@ -170,7 +171,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 throw new Exception("The version of the service must be set.");
             }
 
-            var octopus = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
+            var octopus = new HalibutRuntimeBuilder()
+                .WithServerCertificate(clientCertAndThumbprint.Certificate2)
+                .WithLogFactory(new TestContextLogFactory("Client", halibutLogLevel))
+                .Build();
+            
             octopus.Trust(serviceCertAndThumbprint.Thumbprint);
 
             HalibutTestBinaryRunner.RunningOldHalibutBinary? runningOldHalibutBinary = null;
