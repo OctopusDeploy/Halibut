@@ -185,6 +185,7 @@ namespace Halibut.Transport.Protocol
         {
             Stream stream = this.stream;
             stream = new BufferedStream(stream, 10000000);
+            stream = stream.ToRecordingStream("Underscores_are_great", log);
             using (var capture = StreamCapture.New())
             {
                 serializer.WriteMessage(stream, message);
@@ -240,6 +241,8 @@ namespace Halibut.Transport.Protocol
 
         void ReadStream(StreamCapture capture)
         {
+            stream.TryTakeNote($"{Environment.NewLine}About to read GUID{Environment.NewLine}", OnStream.READ);
+
             var reader = new BinaryReader(stream);
             var id = new Guid(reader.ReadBytes(16));
             var length = reader.ReadInt64();
@@ -284,7 +287,9 @@ namespace Halibut.Transport.Protocol
             foreach (var dataStream in streams)
             {
                 var writer = new BinaryWriter(stream);
+                stream.TryTakeNote("\r\nWriting Guid" + dataStream.Id + "\r\n", OnStream.WRITE);
                 writer.Write(dataStream.Id.ToByteArray());
+                stream.TryTakeNote("\r\nWritten Guid" + dataStream.Id + "\r\n", OnStream.WRITE);
                 writer.Write(dataStream.Length);
                 writer.Flush();
 
