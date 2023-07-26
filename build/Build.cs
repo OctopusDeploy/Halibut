@@ -110,7 +110,8 @@ class Build : NukeBuild
                     .SetConfiguration(Configuration)
                     .SetFramework(framework)
                     .EnableNoBuild()
-                    .EnableNoRestore());
+                    .EnableNoRestore()
+                    .EnableBlameCrash());
 
             });
     }
