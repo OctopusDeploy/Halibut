@@ -111,7 +111,8 @@ class Build : NukeBuild
                     .SetFramework(framework)
                     .EnableNoBuild()
                     .EnableNoRestore()
-                    .EnableBlameCrash());
+                    .EnableBlameCrash()
+                    .SetBlameCrashDumpType("full"));
 
             });
     }
