@@ -59,7 +59,7 @@ namespace Halibut.Transport.Protocol
 
             using (var zip = new DeflateStream(compressedByteCountingStream, compressionLevel, true))
             //using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
-            using (StreamWriter writer = new StreamWriter(zip, Encoding.UTF8, -1,  true))
+            using (StreamWriter writer = new StreamWriter(zip, Encoding.UTF8, 8192,  true))
             using (var bson = new JsonTextWriter(writer) { CloseOutput = false })
             {
                 // for the moment this MUST be object so that the $type property is included
@@ -95,7 +95,7 @@ namespace Halibut.Transport.Protocol
             using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true))
             using (var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen))
             //using (var bson = new BsonDataReader(decompressedByteCountingStream) { CloseInput = false })
-            using (StreamReader reader = new StreamReader(zip, Encoding.UTF8, true, -1, true))
+            using (StreamReader reader = new StreamReader(zip, Encoding.UTF8, true, 8192, true))
             using (var bson = new JsonTextReader(reader) {CloseInput = false})
             {
                 var messageEnvelope = DeserializeMessage<T>(bson);
@@ -120,7 +120,7 @@ namespace Halibut.Transport.Protocol
                 using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true))
                 using (var decompressedObservableStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen))
                 //using (var bson = new BsonDataReader(decompressedObservableStream) { CloseInput = false })
-                using (StreamReader reader = new StreamReader(zip, Encoding.UTF8, true, -1, true))
+                using (StreamReader reader = new StreamReader(zip, Encoding.UTF8, true, 8192, true))
                 using (var bson = new JsonTextReader(reader) {CloseInput = false})
                 {
                     var messageEnvelope = DeserializeMessage<T>(bson);
