@@ -221,7 +221,10 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             // A Halibut Runtime that is used as a client to forward requests to the previous version
             // of Halibut Runtime that will actually talk to the Service (Tentacle) below
-            var proxyClient = new HalibutRuntime(clientCertAndThumbprint.Certificate2);
+            var proxyClient = new HalibutRuntimeBuilder()
+                .WithServerCertificate(clientCertAndThumbprint.Certificate2)
+                .WithLogFactory(new TestContextLogFactory("ProxyClient", halibutLogLevel))
+                .Build();
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
 
             var serviceFactory = new DelegateServiceFactory()

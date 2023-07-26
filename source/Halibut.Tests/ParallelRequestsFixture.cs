@@ -21,7 +21,7 @@ namespace Halibut.Tests
         public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                .WithHalibutLoggingLevel(LogLevel.Info)
+                .WithHalibutLoggingLevel(LogLevel.Trace)
                 .WithStandardServices()
                 .Build(CancellationToken);
             {
