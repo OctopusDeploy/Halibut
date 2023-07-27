@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using NUnit.Framework;
 
@@ -11,12 +12,12 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse : BaseTest
     {
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
-        public async Task AResponseShouldBeQuicklyReturned(ServiceConnectionType serviceConnectionType)
+        public async Task AResponseShouldBeQuicklyReturned(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(out var portForwarder)
                        .WithDoSomeActionService(() => portForwarder.Value.Dispose())
                        .Build(CancellationToken))

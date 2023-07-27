@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
@@ -15,16 +17,17 @@ namespace Halibut.Tests
     public class PollingClientConnectionHandlingFixture : BaseTest
     {
         [Test]
-        [TestCase(ServiceConnectionType.Polling)]
-#if SUPPORTS_WEB_SOCKET_CLIENT
-        [TestCase(ServiceConnectionType.PollingOverWebSocket)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false
+#if !SUPPORTS_WEB_SOCKET_CLIENT
+            ,testWebSocket: false
 #endif
-        public async Task PollingClientShouldConnectQuickly(ServiceConnectionType serviceConnectionType)
+            )]
+        public async Task PollingClientShouldConnectQuickly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(serviceConnectionType, () =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(clientAndServiceTestCase, () =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -35,20 +38,21 @@ namespace Halibut.Tests
             }
 
             calls.Should().HaveCount(1);
-            calls.ElementAt(0).Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 5 : 30));
+            calls.ElementAt(0).Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Polling ? 5 : 30));
         }
 
         [Test]
-        [TestCase(ServiceConnectionType.Polling)]
-#if SUPPORTS_WEB_SOCKET_CLIENT
-        [TestCase(ServiceConnectionType.PollingOverWebSocket)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false
+#if !SUPPORTS_WEB_SOCKET_CLIENT
+            ,testWebSocket: false
 #endif
-        public async Task PollingClientShouldReConnectQuickly(ServiceConnectionType serviceConnectionType)
+        )]
+        public async Task PollingClientShouldReConnectQuickly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(serviceConnectionType, () =>
+            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(clientAndServiceTestCase, () =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -90,18 +94,18 @@ namespace Halibut.Tests
             var firstReconnect = calls.ElementAt(1);
             var secondReconnect = calls.ElementAt(2);
 
-            firstCall.Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 5 : 30));
-            firstReconnect.Should().BeOnOrAfter(firstCall).And.BeCloseTo(firstCall, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
-            secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(serviceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
+            firstCall.Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Polling ? 5 : 30));
+            firstReconnect.Should().BeOnOrAfter(firstCall).And.BeCloseTo(firstCall, TimeSpan.FromSeconds(clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
+            secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
         }
 
         async Task<(LatestClientAndLatestServiceBuilder.ClientAndService,
                 IEchoService echoService,
                 IDoSomeActionService doSomeActionService)>
-            SetupPollingServerAndTentacle(ServiceConnectionType serviceConnectionType, Action doSomeActionServiceAction)
+            SetupPollingServerAndTentacle(ClientAndServiceTestCase clientAndServiceTestCase, Action doSomeActionServiceAction)
         {
-            var clientAndService = await LatestClientAndLatestServiceBuilder
-                .ForServiceConnectionType(serviceConnectionType)
+            var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .As<LatestClientAndLatestServiceBuilder>()
                 .WithPortForwarding()
                 .WithDoSomeActionService(doSomeActionServiceAction)
                 .WithEchoService()

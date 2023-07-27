@@ -52,9 +52,11 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public async Task CannotHaveServiceWithHalibutProxyRequestOptions()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
+        public async Task CannotHaveServiceWithHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .NoService()
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
                        .Build(CancellationToken))

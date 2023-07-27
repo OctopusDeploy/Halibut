@@ -7,6 +7,7 @@ using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
@@ -20,10 +21,14 @@ namespace Halibut.Tests.Timeouts
     public class TimeoutsApplyDuringHandShake : BaseTest
     {
         [Test]
+        [LatestClientAndLatestServiceTestCasesPOC(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { true, 1 })]
+        [LatestClientAndLatestServiceTestCasesPOC(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { false, 1 })]
+        [LatestClientAndLatestServiceTestCasesPOC(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { true, 2 })]
+        [LatestClientAndLatestServiceTestCasesPOC(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { false, 2 })]
         public async Task WhenTheFirstWriteOverTheWireOccursOnAConnectionThatImmediatelyPauses_AWriteTimeoutShouldApply(
-            [ValuesOfType(typeof(ServiceConnectionTypesToTestExcludingWebSockets))] ServiceConnectionType serviceConnectionType,
-            [Values(true, false)] bool onClientToOrigin, // Don't dewll on what this means, we just want to test all combinations of where the timeout can occur.
-            [Values(1, 2)]int writeNumberToPauseOn // Ie pause on the first or second write
+            ClientAndServiceTestCase clientAndServiceTestCase,
+            bool onClientToOrigin, // Don't dwell on what this means, we just want to test all combinations of where the timeout can occur.
+            int writeNumberToPauseOn // Ie pause on the first or second write
             ) 
         {
             bool hasPausedAConnection = false;
@@ -44,8 +49,8 @@ namespace Halibut.Tests.Timeouts
                 .Build();
             var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
             
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithDataObserver(() =>
                            {
