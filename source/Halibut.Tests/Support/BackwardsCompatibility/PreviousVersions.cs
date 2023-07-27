@@ -6,10 +6,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     {
         // The earliest release with a stable WebSocket implementation
         static readonly Version v6_0_658_WebSocket_Stability_Fixes = new("6.0.658");
-
-        // Version prior to new exception types being added to Halibut. All exceptions are HalibutClientException
-        public static readonly HalibutVersions v5_0_429 = new (new Version("5.0.429"), pollingOverWebSocketServiceVersion: v6_0_658_WebSocket_Stability_Fixes);
-
+        
         // The last release with meaningful changes prior to Script Service V2
         public static readonly HalibutVersions v5_0_236_Used_In_Tentacle_6_3_417 = new(new Version("5.0.236"), pollingOverWebSocketServiceVersion: v6_0_658_WebSocket_Stability_Fixes);
     }
