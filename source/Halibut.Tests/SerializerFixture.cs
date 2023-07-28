@@ -11,11 +11,7 @@ namespace Halibut.Tests
     public class SerializerFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false
-#if !SUPPORTS_WEB_SOCKET_CLIENT
-            , testWebSocket: false
-#endif
-        )]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket: false)]
         public async Task HalibutSerializerIsKeptUpToDateWithPollingTentacle(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

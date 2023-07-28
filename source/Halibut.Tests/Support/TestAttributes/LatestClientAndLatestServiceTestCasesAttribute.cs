@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Support.TestCases;
@@ -13,20 +14,23 @@ namespace Halibut.Tests.Support.TestAttributes
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
     public class LatestClientAndLatestServiceTestCasesAttribute : TestCaseSourceAttribute
     {
-        public LatestClientAndLatestServiceTestCasesAttribute(bool testWebSocket = true, 
-            bool testNetworkConditions = true, 
+        public LatestClientAndLatestServiceTestCasesAttribute(
+            bool testWebSocket = true,
+            bool testNetworkConditions = true,
             bool testListening = true,
-            bool testPolling = true) :
+            bool testPolling = true,
+            params object[] additionalParameters
+            ) :
             base(
-                typeof(LatestClientAndLatestServiceTestCases), 
-                nameof(LatestClientAndLatestServiceTestCases.GetEnumerator), 
-                new object[]{ testWebSocket, testNetworkConditions, testListening, testPolling})
+                typeof(LatestClientAndLatestServiceTestCases),
+                nameof(LatestClientAndLatestServiceTestCases.GetEnumerator),
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, additionalParameters })
         {
         }
-        
+
         static class LatestClientAndLatestServiceTestCases
         {
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, object[] additionalParameters)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -50,8 +54,30 @@ namespace Halibut.Tests.Support.TestAttributes
                     serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
                 );
+                
+                foreach (var clientAndServiceTestCase in builder.Build())
+                {
+                    if (additionalParameters.Any())
+                    {
+                        var clientAndServiceTestCaseWithParameters = CombineTestCaseWithAdditionalParameters(clientAndServiceTestCase, additionalParameters);
+                        yield return clientAndServiceTestCaseWithParameters;
+                    }
+                    else
+                    {
+                        yield return clientAndServiceTestCase;
+                    }
+                }
+            }
 
-                return builder.Build().GetEnumerator();
+            static object[] CombineTestCaseWithAdditionalParameters(ClientAndServiceTestCase clientAndServiceTestCase, object[] additionalParameters)
+            {
+                var parameters = new object[1 + additionalParameters.Length];
+
+                parameters[0] = clientAndServiceTestCase;
+
+                Array.Copy(additionalParameters, 0, parameters, 1, additionalParameters.Length);
+
+                return parameters;
             }
         }
     }
