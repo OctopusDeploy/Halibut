@@ -59,7 +59,7 @@ namespace Halibut.Transport.Protocol
 
         internal async Task<string> ReadControlMessageAsync(Stream stream)
         {
-            var cts = GetCancellationTokenSourceFromStreamReadTimeout(stream);
+            using var cts = GetCancellationTokenSourceFromStreamReadTimeout(stream);
             StringBuilder sb = new StringBuilder();
             while (true)
             {
