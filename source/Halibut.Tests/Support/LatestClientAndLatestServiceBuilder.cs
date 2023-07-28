@@ -260,7 +260,6 @@ namespace Halibut.Tests.Support
 
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
             CancellationTokenSource cancellationTokenSource = new();
             
             serviceFactory ??= new DelegateServiceFactory();
