@@ -20,21 +20,21 @@ namespace Halibut
     public class HalibutRuntime : IHalibutRuntime
     {
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
-        readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new ConcurrentDictionary<Uri, IPendingRequestQueue>();
+        readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new();
         readonly IPendingRequestQueueFactory queueFactory;
         readonly X509Certificate2 serverCertificate;
-        readonly List<IDisposable> listeners = new List<IDisposable>();
+        readonly List<IDisposable> listeners = new();
         readonly ITrustProvider trustProvider;
-        readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new ConcurrentDictionary<Uri, ServiceEndPoint>();
+        readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new();
         readonly IServiceInvoker invoker;
         readonly ILogFactory logs;
-        readonly ConnectionManager connectionManager = new ConnectionManager();
-        readonly PollingClientCollection pollingClients = new PollingClientCollection();
+        readonly ConnectionManager connectionManager = new();
+        readonly PollingClientCollection pollingClients = new();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
-        Dictionary<string, string> friendlyHtmlPageHeaders = new Dictionary<string, string>();
+        Dictionary<string, string> friendlyHtmlPageHeaders = new();
         readonly IMessageSerializer messageSerializer;
         readonly ITypeRegistry typeRegistry;
-        readonly ResponseCache responseCache = new();
+        readonly Lazy<ResponseCache> responseCache = new();
         Func<RetryPolicy> PollingReconnectRetryPolicy;
 
         [Obsolete]
@@ -239,7 +239,7 @@ namespace Halibut
         {
             var endPoint = request.Destination;
 
-            var cachedResponse = responseCache.GetCachedResponse(endPoint, request, methodInfo);
+            var cachedResponse = responseCache.Value.GetCachedResponse(endPoint, request, methodInfo);
 
             if (cachedResponse != null)
             {
@@ -259,7 +259,7 @@ namespace Halibut
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
 
-            responseCache.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
+            responseCache.Value.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
 
             return response;
         }
