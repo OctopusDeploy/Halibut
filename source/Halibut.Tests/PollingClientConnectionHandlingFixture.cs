@@ -17,7 +17,7 @@ namespace Halibut.Tests
     public class PollingClientConnectionHandlingFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task PollingClientShouldConnectQuickly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var started = DateTime.UtcNow;
@@ -38,7 +38,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task PollingClientShouldReConnectQuickly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var started = DateTime.UtcNow;
