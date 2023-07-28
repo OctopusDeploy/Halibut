@@ -14,17 +14,19 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testWebSocket = true,
             bool testNetworkConditions = true,
             bool testListening = true,
-            bool testPolling = true) :
+            bool testPolling = true,
+            bool testAsyncAndSyncClients = false // False while this area of the test infra is being built out.
+            ) :
             base(
                 typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
                 nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testAsyncAndSyncClients})
         {
         }
         
         static class LatestAndPreviousClientAndServiceVersionsTestCases
         {
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling)
+            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncAndSyncClients)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -42,6 +44,12 @@ namespace Halibut.Tests.Support.TestAttributes
                 {
                     serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
+
+                ForceClientProxyType[] clientProxyTypesToTest = new ForceClientProxyType[0];
+                if (testAsyncAndSyncClients)
+                {
+                    clientProxyTypesToTest = ForceClientProxyTypeValues.All;
+                }
                 
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] {
@@ -50,8 +58,9 @@ namespace Halibut.Tests.Support.TestAttributes
                         ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
                     },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
-                );
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
+                    clientProxyTypesToTest
+                    );
 
                 return builder.Build().GetEnumerator();
             }

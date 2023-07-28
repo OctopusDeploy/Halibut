@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Halibut.Tests.Util;
 
 namespace Halibut.Tests.Support.TestCases
@@ -8,15 +9,18 @@ namespace Halibut.Tests.Support.TestCases
         readonly ClientAndServiceTestVersion[] clientServiceTestVersions;
         readonly ServiceConnectionType[] serviceConnectionTypes;
         readonly NetworkConditionTestCase[] networkConditionTestCases;
+        readonly ForceClientProxyType[] forceClientProxyTypes;
 
         public ClientAndServiceTestCasesBuilder(
             ClientAndServiceTestVersion[] clientServiceTestVersions,
             ServiceConnectionType[] ServiceConnectionTypes,
-            NetworkConditionTestCase[] networkConditionTestCases)
+            NetworkConditionTestCase[] networkConditionTestCases,
+            ForceClientProxyType[] forceClientProxyTypes)
         {
             this.clientServiceTestVersions = clientServiceTestVersions;
             serviceConnectionTypes = ServiceConnectionTypes;
             this.networkConditionTestCases = networkConditionTestCases;
+            this.forceClientProxyTypes = forceClientProxyTypes;
         }
 
         public IEnumerable<ClientAndServiceTestCase> Build()
@@ -35,7 +39,24 @@ namespace Halibut.Tests.Support.TestCases
                             recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType, clientServiceTestVersion);
                         }
 
-                        yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion);
+                        if (!forceClientProxyTypes.Any())
+                        {
+                            yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null);
+                        }
+                        else
+                        {
+                            if (clientServiceTestVersion.IsPreviousClient())
+                            {
+                                yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null);
+                            }
+                            else
+                            {
+                                foreach (var forceClientProxyType in forceClientProxyTypes)
+                                {
+                                    yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType);
+                                }
+                            }
+                        }
                     }
                 }
             }

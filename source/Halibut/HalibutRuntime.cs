@@ -227,6 +227,16 @@ namespace Halibut
             return proxy;
 #endif
         }
+        
+        public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint endpoint)
+        {
+            typeRegistry.AddToMessageContract(typeof(TService));
+            var logger = logs.ForEndpoint(endpoint.BaseUri);
+
+            var proxy = DispatchProxyAsync.Create<TAsyncClientService, HalibutProxyWithAsync>();
+            (proxy as HalibutProxyWithAsync).Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger, CancellationToken.None);
+            return proxy;
+        }
 
         // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
         [Obsolete("Consider implementing an async HalibutProxy instead")]
@@ -236,6 +246,36 @@ namespace Halibut
         }
         
         async Task<ResponseMessage> SendOutgoingRequestSynchronouslyAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        {
+            var endPoint = request.Destination;
+
+            var cachedResponse = responseCache.Value.GetCachedResponse(endPoint, request, methodInfo);
+
+            if (cachedResponse != null)
+            {
+                return cachedResponse;
+            }
+
+            ResponseMessage response;
+
+            switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
+            {
+                case "https":
+                    response = SendOutgoingHttpsRequest(request, cancellationToken);
+                    break;
+                case "poll":
+                    response = await SendOutgoingPollingRequest(request, cancellationToken);
+                    break;
+                default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
+            }
+
+            responseCache.Value.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
+
+            return response;
+        }
+        
+        // Eventually this will actually be async
+        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 

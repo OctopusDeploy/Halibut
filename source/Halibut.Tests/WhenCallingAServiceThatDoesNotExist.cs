@@ -5,6 +5,7 @@ using Halibut.Exceptions;
 using Halibut.Logging;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -20,10 +21,10 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                Func<Task<string>> readAsyncCall = async () => await echo.SayHelloAsync("Say hello to a service that does not exist.");
 
-                readAsyncCall.Should().Throw<ServiceNotFoundHalibutClientException>();
+                await readAsyncCall.Should().ThrowAsync<ServiceNotFoundHalibutClientException>();
             }
         }
     }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
@@ -22,6 +23,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         LogLevel halibutLogLevel;
         OldServiceAvailableServices availableServices = new(false, false);
         bool hasService = true;
+        ForceClientProxyType? forceClientProxyType;
 
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -157,6 +159,17 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return NoService();
         }
+        
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
+        {
+            return WithForcingClientProxyType(forceClientProxyType);
+        }
+        
+        public LatestClientAndPreviousServiceVersionBuilder WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
+        {
+            this.forceClientProxyType = forceClientProxyType;
+            return this;
+        }
 
         async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
@@ -283,7 +296,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 throw new NotSupportedException();
             }
 
-            return new ClientAndService(octopus, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxy, proxyDetails, cancellationTokenSource);
+            return new ClientAndService(octopus, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxy, proxyDetails, forceClientProxyType, cancellationTokenSource);
         }
 
         public class ClientAndService : IClientAndService
@@ -293,6 +306,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly DisposableCollection disposableCollection;
             readonly ProxyDetails? proxyDetails;
+            readonly ForceClientProxyType? forceClientProxyType;
             readonly CancellationTokenSource cancellationTokenSource;
 
             public ClientAndService(HalibutRuntime client,
@@ -303,6 +317,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 DisposableCollection disposableCollection,
                 HttpProxyService? httpProxy,
                 ProxyDetails? proxyDetails,
+                ForceClientProxyType? forceClientProxyType,
                 CancellationTokenSource cancellationTokenSource)
             {
                 Client = client;
@@ -313,6 +328,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 HttpProxy = httpProxy;
                 this.disposableCollection = disposableCollection;
                 this.proxyDetails = proxyDetails;
+                this.forceClientProxyType = forceClientProxyType;
                 this.cancellationTokenSource = cancellationTokenSource;
             }
 
@@ -320,9 +336,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
 
-            public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
+            public TService CreateClient<TService>(CancellationToken? cancellationToken = null)
             {
-                return CreateClient<TService>(s => { }, cancellationToken ?? CancellationToken.None, remoteThumbprint);
+                return CreateClient<TService>(s => { }, cancellationToken ?? CancellationToken.None);
             }
 
             public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint)
@@ -330,11 +346,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 return CreateClient<TService>(modifyServiceEndpoint, CancellationToken.None);
             }
 
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken, string? remoteThumbprint = null)
+            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, remoteThumbprint ?? serviceCertAndThumbprint.Thumbprint, proxyDetails);
+                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
-                return Client.CreateClient<TService>(serviceEndpoint, cancellationToken);
+                return new AdaptToSyncOrAsyncTestCase().Adapt<TService>(forceClientProxyType, Client, serviceEndpoint, cancellationToken);
             }
 
             public TClientService CreateClient<TService, TClientService>()
@@ -346,7 +362,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
-                return Client.CreateClient<TService, TClientService>(serviceEndpoint);
+                return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TClientService>(forceClientProxyType, Client, serviceEndpoint);
             }
 
             public void Dispose()
