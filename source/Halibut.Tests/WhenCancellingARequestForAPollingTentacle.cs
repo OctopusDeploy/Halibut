@@ -113,7 +113,6 @@ namespace Halibut.Tests
 
                 public bool IsEmpty => inner.IsEmpty;
                 public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
-                public RequestMessage Dequeue() => inner.Dequeue();
                 public async Task<RequestMessage> DequeueAsync() => await inner.DequeueAsync();
 
                 public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
@@ -165,14 +164,7 @@ namespace Halibut.Tests
 
                 public bool IsEmpty => inner.IsEmpty;
                 public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
-
-                public RequestMessage Dequeue()
-                {
-                    var response = inner.Dequeue();
-                    cancellationTokenSource.Cancel();
-                    return response;
-                }
-
+                
                 public async Task<RequestMessage> DequeueAsync()
                 {
                     var response = await inner.DequeueAsync();
