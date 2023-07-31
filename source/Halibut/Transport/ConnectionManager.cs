@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 
@@ -9,23 +10,29 @@ namespace Halibut.Transport
 {
     public class ConnectionManager : IDisposable
     {
-        readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new ConnectionPool<ServiceEndPoint, IConnection>();
-        readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new Dictionary<ServiceEndPoint, HashSet<IConnection>>();
+        readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new();
+        readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
 
         public bool IsDisposed { get; private set; }
 
-        public IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log)
-        {
-            return AcquireConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, CancellationToken.None);
-        }
-
+        [Obsolete]
         public IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             var openableConnection = GetConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
             openableConnection.Item2(); // Since this involves IO, this should never be done inside a lock
             return openableConnection.Item1;
         }
-        
+
+        public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        {
+            // TODO - ASYNC ME UP!
+            await Task.CompletedTask;
+
+#pragma warning disable CS0612
+            return AcquireConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+#pragma warning restore CS0612
+        }
+
         // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
         // For existing open connections, the openConnection method does nothing
         Tuple<IConnection, Action> GetConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)

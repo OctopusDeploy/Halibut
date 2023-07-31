@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -8,10 +9,11 @@ namespace Halibut.Transport.Protocol
 {
     public delegate MessageExchangeProtocol ExchangeProtocolBuilder(Stream stream, ILog log);
 
+    [Obsolete]
     public delegate void ExchangeAction(MessageExchangeProtocol protocol);
-
     public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol);
-    
+    public delegate Task ExchangeActionWithCancellationAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken);
+
     /// <summary>
     /// Implements the core message exchange protocol for both the client and server.
     /// </summary>
@@ -28,12 +30,23 @@ namespace Halibut.Transport.Protocol
             this.log = log;
         }
 
+        [Obsolete]
         public ResponseMessage ExchangeAsClient(RequestMessage request)
         {
             PrepareExchangeAsClient();
 
             stream.Send(request);
             return stream.Receive<ResponseMessage>();
+        }
+
+        public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
+        {
+            // TODO - ASYNC ME UP!
+            await Task.CompletedTask;
+
+#pragma warning disable CS0612
+            return ExchangeAsClient(request);
+#pragma warning restore CS0612
         }
 
         public void StopAcceptingClientRequests()
