@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Util.AsyncEx
 {
+    [Obsolete]
     internal sealed class TaskCompletionSource
     {
         /// <summary>
