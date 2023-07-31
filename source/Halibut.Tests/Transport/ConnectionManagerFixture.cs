@@ -6,6 +6,7 @@ using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -80,7 +81,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog log)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), log), log);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), AsyncHalibutFeature.Disabled, log), log);
         }
     }
 }

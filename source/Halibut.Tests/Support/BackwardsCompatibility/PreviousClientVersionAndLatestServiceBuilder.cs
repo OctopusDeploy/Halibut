@@ -230,6 +230,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var proxyClient = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogFactory("ProxyClient", halibutLogLevel))
+                .WithAsyncHalibutFeatureEnabled()
                 .Build();
             
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);

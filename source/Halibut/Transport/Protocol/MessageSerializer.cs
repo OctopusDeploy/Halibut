@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
@@ -62,6 +64,14 @@ namespace Halibut.Transport.Protocol
             observer.MessageWritten(compressedByteCountingStream.BytesWritten);
         }
 
+        public async Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
+        {
+            // TODO - ASYNC ME UP!
+            await Task.CompletedTask;
+
+            WriteMessage(stream, message);
+        }
+
         public T ReadMessage<T>(RewindableBufferStream stream)
         {
             using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
@@ -95,6 +105,14 @@ namespace Halibut.Transport.Protocol
                 
                 throw exceptionFromDeserialisation;
             }
+        }
+
+        public async Task<T> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
+        {
+            // TODO - ASYNC ME UP!
+            await Task.CompletedTask;
+
+            return ReadMessage<T>(stream);
         }
 
         T ReadCompressedMessage<T>(Stream stream, IRewindableBuffer rewindableBuffer)

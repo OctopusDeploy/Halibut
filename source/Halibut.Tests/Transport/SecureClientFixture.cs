@@ -6,10 +6,10 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -42,8 +42,7 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
+        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
             var connectionManager = new ConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
@@ -63,13 +62,11 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager);
+            var secureClient = new SecureListeningClient((stream, logger) => GetProtocol(stream, logger), endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null!;
 
 #pragma warning disable CS0612
-            await syncOrAsync
-                .WhenSync(() => secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None))
-                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None));
+            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None);
 #pragma warning restore CS0612
 
             // The pool should be cleared after the second failure
@@ -80,7 +77,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), logger), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), AsyncHalibutFeature.Disabled, logger), logger);
         }
     }
 }
