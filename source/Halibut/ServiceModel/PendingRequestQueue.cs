@@ -13,7 +13,9 @@ namespace Halibut.ServiceModel
         readonly List<PendingRequest> queue = new();
         readonly Dictionary<string, PendingRequest> inProgress = new();
         readonly object sync = new();
+#pragma warning disable CS0612
         readonly AsyncManualResetEvent hasItems = new();
+#pragma warning restore CS0612
         readonly ILog log;
         readonly TimeSpan pollingQueueWaitTimeout;
 

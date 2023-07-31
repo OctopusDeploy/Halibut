@@ -18,6 +18,7 @@ namespace Halibut.Util.AsyncEx
         /// <returns>The task if successful, otherwise a TimeoutException or OperationCanceledException</returns>
         /// <exception cref="TimeoutException">If the timeout gets reached before the task completes or before the task is cancelled</exception>
         /// <exception cref="OperationCanceledException">The task was cancelled via the cancellation token</exception>
+        [Obsolete]
         public static async Task TimeoutAfter(this Task task, TimeSpan timeout, CancellationToken cancellationToken)
         {
             var timeoutTask = Task.Delay(timeout, cancellationToken);

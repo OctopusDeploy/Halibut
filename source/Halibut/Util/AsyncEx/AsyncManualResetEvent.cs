@@ -10,6 +10,7 @@ namespace Halibut.Util.AsyncEx
     /// </summary>
     [DebuggerDisplay("Id = {Id}, IsSet = {GetStateForDebugger}")]
     [DebuggerTypeProxy(typeof(DebugView))]
+    [Obsolete]
     internal sealed class AsyncManualResetEvent
     {
         /// <summary>

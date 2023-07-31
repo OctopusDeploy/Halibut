@@ -44,7 +44,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(new RequestMessage());
             stream.SetNumberOfReads(1);
 
-            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            await protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -86,7 +86,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            await protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -147,7 +147,7 @@ namespace Halibut.Tests.Transport.Protocol
             requestQueue.DequeueAsync().Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
-            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+            await protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -223,13 +223,13 @@ namespace Halibut.Tests.Transport.Protocol
             queue.Enqueue(new RequestMessage());
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+            protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             queue.Enqueue(new RequestMessage());
 
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+            protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId

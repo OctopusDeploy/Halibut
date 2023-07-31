@@ -136,7 +136,7 @@ namespace Halibut
 
         Task HandleMessage(MessageExchangeProtocol protocol)
         {
-            return protocol.ExchangeAsServerAsync(
+            return protocol.ExchangeAsServerSynchronouslyAsync(
                 HandleIncomingRequest,
                 id => GetQueue(id.SubscriptionId));
         }
@@ -232,10 +232,10 @@ namespace Halibut
         [Obsolete("Consider implementing an async HalibutProxy instead")]
         ResponseMessage SendOutgoingRequest(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
-            return SendOutgoingRequestAsync(request, methodInfo, cancellationToken).GetAwaiter().GetResult();
+            return SendOutgoingRequestSynchronouslyAsync(request, methodInfo, cancellationToken).GetAwaiter().GetResult();
         }
-
-        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        
+        async Task<ResponseMessage> SendOutgoingRequestSynchronouslyAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
