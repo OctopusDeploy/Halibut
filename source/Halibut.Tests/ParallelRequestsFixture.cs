@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -14,6 +16,69 @@ namespace Halibut.Tests
 {
     public class ParallelRequestsFixture : BaseTest
     {
+        [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
+        public async Task MultipleRequestsCanBeInFlightInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .WithHalibutLoggingLevel(LogLevel.Info)
+                .WithStandardServices()
+                .Build(CancellationToken);
+
+            var lockService = clientAndService.CreateClient<ILockService>();
+
+            int threadCount = 64;
+            long threadCompletionCount = 0;
+            var threads = new List<Thread>();
+            var exceptions = new ConcurrentBag<Exception>();
+
+            var lockFile = Path.GetTempFileName();
+            var requestStartedFilePathBase = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            var requestStartedFilePaths = new ConcurrentBag<string>();
+            Logger.Information($"Lock file: {lockFile}");
+            Logger.Information($"Request started files: {requestStartedFilePathBase}");
+            
+            for (var i = 0; i < threadCount; i++)
+            {
+                int iteration = i;
+                var thread = new Thread(() =>
+                {
+                    // Gotta handle exceptions when running in a 
+                    // Thread, or you're gonna have a bad time.
+                    try
+                    {
+                        var requestStartedPath = $"{requestStartedFilePathBase}-{iteration}";
+                        requestStartedFilePaths.Add(requestStartedPath);
+                        lockService.WaitForFileToBeDeleted(lockFile, requestStartedPath);
+                        Interlocked.Increment(ref threadCompletionCount);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
+                });
+                thread.Start();
+                threads.Add(thread);
+            }
+
+            // Wait for all requests to be started
+            while (requestStartedFilePaths.Any(p => !File.Exists(p)))
+            {
+                await Task.Delay(10);
+            }
+
+            Interlocked.Read(ref threadCompletionCount).Should().Be(0);
+            exceptions.Should().BeEmpty();
+            
+            // Let the remote calls complete
+            File.Delete(lockFile);
+
+            WaitForAllThreads(threads);
+            
+            Interlocked.Read(ref threadCompletionCount).Should().Be(threadCount);
+            exceptions.Should().BeEmpty();
+        }
+
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling:false, testWebSocket: false, testNetworkConditions: false)]
         public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
