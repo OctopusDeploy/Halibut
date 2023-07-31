@@ -22,7 +22,6 @@ namespace Halibut.Tests.Tentacle
     {
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task FilesCanBeDownloaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -57,7 +56,6 @@ namespace Halibut.Tests.Tentacle
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task FilesCanBeUploaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -101,7 +99,6 @@ namespace Halibut.Tests.Tentacle
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task ScriptCanBeExecutedWithScriptServiceV1(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -144,7 +141,6 @@ namespace Halibut.Tests.Tentacle
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task ScriptCanBeExecutedWithScriptServiceV2(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

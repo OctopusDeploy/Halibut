@@ -7,11 +7,8 @@ using Halibut.Exceptions;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
-using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
@@ -30,7 +27,6 @@ namespace Halibut.Tests
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -53,7 +49,6 @@ namespace Halibut.Tests
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task FailWhenServerThrowsAnException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -110,7 +105,6 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task FailWhenServerThrowsDuringADataStream(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

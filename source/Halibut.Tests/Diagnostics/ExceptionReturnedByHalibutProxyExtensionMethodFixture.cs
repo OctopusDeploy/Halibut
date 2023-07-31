@@ -183,7 +183,6 @@ namespace Halibut.Tests.Diagnostics
 
             [Test]
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-            [FailedWebSocketTestsBecomeInconclusive]
             public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -203,7 +202,6 @@ namespace Halibut.Tests.Diagnostics
 
             [Test]
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-            [FailedWebSocketTestsBecomeInconclusive]
             public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -223,7 +221,6 @@ namespace Halibut.Tests.Diagnostics
 
             [Test]
             [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
-            [FailedWebSocketTestsBecomeInconclusive]
             public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
