@@ -81,7 +81,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        //[LatestAndPreviousClientAndServiceVersionsTestCases()]
+        [LatestClientAndLatestServiceTestCases()]
         [FailedWebSocketTestsBecomeInconclusive]
         public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {

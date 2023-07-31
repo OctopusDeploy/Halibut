@@ -182,10 +182,13 @@ namespace Halibut.Transport.Protocol
 
         public void Send<T>(T message)
         {
+            Stream stream = this.stream;
+            stream = new BufferedStream(stream, 10000000);
             using (var capture = StreamCapture.New())
             {
                 serializer.WriteMessage(stream, message);
-                WriteEachStream(capture.SerializedStreams);
+                WriteEachStream(capture.SerializedStreams, stream);
+                stream.Flush();
             }
 
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
@@ -275,7 +278,7 @@ namespace Halibut.Transport.Protocol
             return dataStream;
         }
 
-        void WriteEachStream(IEnumerable<DataStream> streams)
+        void WriteEachStream(IEnumerable<DataStream> streams, Stream stream)
         {
             foreach (var dataStream in streams)
             {
