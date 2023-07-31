@@ -17,18 +17,19 @@ namespace Halibut.Tests.Support
             return port;
         }
         
-        static SemaphoreSlim semaphore = new(1,1);
+        static readonly SemaphoreSlim Semaphore = new(1,1);
+
         internal static async Task<IDisposable> WaitForLock(CancellationToken cancellationToken)
         {
-            semaphore.WaitAsync(cancellationToken);
+            await Semaphore.WaitAsync(cancellationToken);
 
-            return new EnteredSemaphoreSlim(semaphore);
+            return new EnteredSemaphoreSlim(Semaphore);
         }
 
         class EnteredSemaphoreSlim : IDisposable
         {
             bool released;
-            SemaphoreSlim semaphoreSlim;
+            SemaphoreSlim? semaphoreSlim;
             readonly object releaseLock = new();
 
             public EnteredSemaphoreSlim(SemaphoreSlim semaphoreSlim)
@@ -43,7 +44,7 @@ namespace Halibut.Tests.Support
                     if (!released)
                     {
                         released = true;
-                        semaphoreSlim.Release();
+                        semaphoreSlim!.Release();
                         semaphoreSlim = null;
                     }
                 }
