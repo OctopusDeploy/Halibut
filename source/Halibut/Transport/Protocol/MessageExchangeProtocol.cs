@@ -94,23 +94,6 @@ namespace Halibut.Transport.Protocol
             stream.ExpectProceeed();
         }
 
-        public void ExchangeAsServer(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
-        {
-            var identity = stream.ReadRemoteIdentity();
-            stream.IdentifyAsServer();
-            switch (identity.IdentityType)
-            {
-                case RemoteIdentityType.Client:
-                    ProcessClientRequests(incomingRequestProcessor);
-                    break;
-                case RemoteIdentityType.Subscriber:
-                    ProcessSubscriber(pendingRequests(identity));
-                    break;
-                default:
-                    throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
-            }
-        }
-
         public async Task ExchangeAsServerAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
@@ -158,19 +141,7 @@ namespace Halibut.Transport.Protocol
                 stream.SendProceed();
             }
         }
-
-        void ProcessSubscriber(IPendingRequestQueue pendingRequests)
-        {
-            while (true)
-            {
-                var nextRequest = pendingRequests.Dequeue();
-
-                var success = ProcessReceiverInternal(pendingRequests, nextRequest);
-                if (!success)
-                    return;
-            }
-        }
-
+        
         async Task ProcessSubscriberAsync(IPendingRequestQueue pendingRequests)
         {
             while (true)
@@ -181,44 +152,6 @@ namespace Halibut.Transport.Protocol
                 if (!success)
                     return;
             }
-        }
-
-        bool ProcessReceiverInternal(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
-        {
-            try
-            {
-                stream.Send(nextRequest);
-                if (nextRequest != null)
-                {
-                    var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
-                }
-            }
-            catch (Exception ex)
-            {
-                if (nextRequest != null)
-                {
-                    var response = ResponseMessage.FromException(nextRequest, ex);
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
-                }
-                return false;
-            }
-
-            try
-            {
-                if (!stream.ExpectNextOrEnd())
-                    return false;
-            }
-            catch (Exception ex) when (ex.IsSocketConnectionTimeout())
-            {
-                // We get socket timeout on the server when the network connection to a polling client drops
-                // (in Octopus this is the server for a Polling Tentacle)
-                // In normal operation a client will poll more often than the timeout so we shouldn't see this.
-                log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
-                return false;
-            }
-            stream.SendProceed();
-            return true;
         }
 
         async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
