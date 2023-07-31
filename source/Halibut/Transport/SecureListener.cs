@@ -225,14 +225,15 @@ namespace Halibut.Transport
                         // The ExchangeMessage call can hang on reading the stream which keeps a thread alive,
                         // so we dispose the stream which will cause the thread to abort with an exceptions.
                         var weakSSL = new WeakReference(ssl);
-                        cts.Token.Register(() =>
+                        using (var registration = cts.Token.Register(() =>
                         {
                             if (weakSSL.IsAlive)
                                 ((IDisposable)weakSSL.Target).Dispose();
-                        });
-
-                        tcpClientManager.AddActiveClient(thumbprint, client);
-                        await ExchangeMessages(ssl).ConfigureAwait(false);
+                        }))
+                        {
+                            tcpClientManager.AddActiveClient(thumbprint, client);
+                            await ExchangeMessages(ssl).ConfigureAwait(false);
+                        }
                     }
                 }
                 catch (AuthenticationException ex)

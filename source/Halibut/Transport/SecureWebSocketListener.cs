@@ -226,6 +226,7 @@ namespace Halibut.Transport
         public void Dispose()
         {
             cts.Cancel();
+            cts.Dispose();
             log.Write(EventType.ListenerStopped, "Listener stopped");
         }
     }
