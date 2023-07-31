@@ -7,6 +7,8 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
@@ -17,16 +19,15 @@ namespace Halibut.Tests.Timeouts
     public class NextAndProceedControlMessageTimeoutsFixture : BaseTest
     {
         [Test]
-        public async Task PauseOnPollingTentacleSendingNextControlMessage_ShouldNotHangForEver()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket:false, testListening:false)]
+        public async Task PauseOnPollingTentacleSendingNextControlMessage_ShouldNotHangForEver(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var dataSentSizes = new List<long>();
             long? pauseStreamWhenServiceSendsMessageOfSize = null;
-            var serviceConnectionType = ServiceConnectionType.Polling;
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
-                           .WithPortForwarderDataLogging(serviceConnectionType)
-                           .WithPortForwarderServiceSentDataObserver(serviceConnectionType, (tcpPump, stream) =>
+                           .WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType)
+                           .WithPortForwarderServiceSentDataObserver(clientAndServiceTestCase.ServiceConnectionType, (tcpPump, stream) =>
                            {
                                dataSentSizes.Add(stream.Length);
                                if (pauseStreamWhenServiceSendsMessageOfSize != null && pauseStreamWhenServiceSendsMessageOfSize == stream.Length)
@@ -37,6 +38,7 @@ namespace Halibut.Tests.Timeouts
                                }
                            })
                            .Build())
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithEchoService()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))

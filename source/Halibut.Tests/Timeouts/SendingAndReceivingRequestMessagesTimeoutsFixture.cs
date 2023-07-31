@@ -10,17 +10,18 @@ using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 using System.Runtime.InteropServices;
+using Halibut.Tests.Support.TestCases;
 
 namespace Halibut.Tests.Timeouts
 {
     public class SendingAndReceivingRequestMessagesTimeoutsFixture : BaseTest
     {
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
-        public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessage_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessage_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
@@ -45,11 +46,11 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
-        public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessageDataStream_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessageDataStream_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
                        .WithReturnSomeDataStreamService(() => DataStreamUtil.From(
@@ -77,12 +78,12 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
-        public async Task WhenThenNetworkIsPaused_WhileSendingARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        public async Task WhenThenNetworkIsPaused_WhileSendingARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             int numberOfBytesBeforePausingAStream = 1024 * 1024; // 1MB
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .PauseSingleStreamAfterANumberOfBytesHaveBeenSet(numberOfBytesBeforePausingAStream)
                            .Build())
@@ -102,7 +103,7 @@ namespace Halibut.Tests.Timeouts
                 Logger.Error(e, "Received error when making the request (as expected)");
 
                 var addControlMessageTimeout = TimeSpan.Zero;
-                if (serviceConnectionType == ServiceConnectionType.Listening)
+                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening)
                 {
                     // When an error occurs in listening mode, the dispose method in SecureConnection.Dispose
                     // will be called resulting in a END control message being sent over the wire. Since the
@@ -127,11 +128,11 @@ namespace Halibut.Tests.Timeouts
         }
         
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTestExcludingWebSockets))]
-        public async Task WhenThenNetworkIsPaused_WhileSendingADataStreamAsPartOfARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ServiceConnectionType serviceConnectionType)
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        public async Task WhenThenNetworkIsPaused_WhileSendingADataStreamAsPartOfARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
                        .Build(CancellationToken))
@@ -154,7 +155,7 @@ namespace Halibut.Tests.Timeouts
                 
                 // It is not clear why listening doesn't seem to wait to send a control message here.
                 var addControlMessageTimeout = TimeSpan.Zero;
-                if (serviceConnectionType == ServiceConnectionType.Listening)
+                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {

@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -12,10 +14,12 @@ namespace Halibut.Tests
     public class ListeningConnectRetryFixture : BaseTest
     {
         [Test]
-        public async Task ListeningRetriesAttemptsUpToTheConfiguredValue()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
+        public async Task ListeningRetriesAttemptsUpToTheConfiguredValue(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
@@ -43,10 +47,12 @@ namespace Halibut.Tests
         }
         
         [Test]
-        public async Task ListeningRetriesAttemptsUpToTheConfiguredTimeout()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        public async Task ListeningRetriesAttemptsUpToTheConfiguredTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
@@ -77,10 +83,12 @@ namespace Halibut.Tests
         }
         
         [Test]
-        public async Task ListeningRetryListeningSleepIntervalWorks()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        public async Task ListeningRetryListeningSleepIntervalWorks(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
@@ -111,10 +119,12 @@ namespace Halibut.Tests
         }
         
         [Test]
-        public async Task ListeningRetriesAttemptsCanEventuallyWork()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        public async Task ListeningRetriesAttemptsCanEventuallyWork(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening()
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)

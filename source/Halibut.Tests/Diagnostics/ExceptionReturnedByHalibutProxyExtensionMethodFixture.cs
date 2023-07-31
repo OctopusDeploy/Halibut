@@ -106,13 +106,13 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            public async Task BecauseThePollingRequestWasNotCollected()
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket: false)]
+            public async Task BecauseThePollingRequestWasNotCollected(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var services = new DelegateServiceFactory();
                 services.Register<IEchoService>(() => new EchoService());
 
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .Polling()
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .NoService()
                            .Build(CancellationToken))
                 {
@@ -126,9 +126,12 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            public async Task BecauseTheListeningTentacleIsNotResponding()
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
+            public async Task BecauseTheListeningTentacleIsNotResponding(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().NoService().Build(CancellationToken))
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .NoService()
+                           .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
 
@@ -142,9 +145,6 @@ namespace Halibut.Tests.Diagnostics
             [Test]
             public void BecauseTheProxyIsNotResponding_TheExceptionShouldBeANetworkError()
             {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
-
                 using (var tcpKiller = new TCPListenerWhichKillsNewConnections())
                 using (var octopus = new HalibutRuntime(Certificates.Octopus))
                 {
@@ -165,11 +165,11 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            public async Task BecauseOfAInvalidCertificateException_WhenConnectingToListening_ItIsNotANetworkError()
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
+            public async Task BecauseOfAInvalidCertificateException_WhenConnectingToListening_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                           .Listening()
-                           .WithEchoService()
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .WithStandardServices()
                            .Build(CancellationToken))
                 {
                     var echo = clientAndService.CreateClient<IEchoService>(remoteThumbprint: "Wrong Thumbrprint");

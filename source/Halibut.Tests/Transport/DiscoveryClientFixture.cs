@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using NUnit.Framework;
@@ -54,12 +56,12 @@ namespace Halibut.Tests.Transport
         }
         
         [Test]
-        public async Task OctopusCanDiscoverTentacle()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
+        public async Task OctopusCanDiscoverTentacle(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
-            
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder.Listening().WithServiceFactory(services).Build(CancellationToken))
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .As<LatestClientAndLatestServiceBuilder>()
+                       .Build(CancellationToken))
             {
                 var info = clientAndService.Client.Discover(clientAndService.ServiceUri);
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);

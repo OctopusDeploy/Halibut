@@ -26,7 +26,6 @@
     <ProjectReference Include="..\Halibut.TestUtils.Contracts\Halibut.TestUtils.Contracts.csproj" />
     <ProjectReference Include="..\Octopus.TestPortForwarder\Octopus.TestPortForwarder.csproj" />
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
-    <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v5_0_429\Halibut.TestUtils.CompatBinary.v5_0_429.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v5_0_236\Halibut.TestUtils.CompatBinary.v5_0_236.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v6_0_658\Halibut.TestUtils.CompatBinary.v6_0_658.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>

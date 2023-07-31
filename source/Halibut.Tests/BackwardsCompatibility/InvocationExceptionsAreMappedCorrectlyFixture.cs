@@ -1,9 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using Halibut.Exceptions;
-using Halibut.Tests.Support;
-using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -12,13 +11,11 @@ namespace Halibut.Tests.BackwardsCompatibility
     public class InvocationExceptionsAreMappedCorrectlyFixture : BaseTest
     {
         [Test]
-        [TestCaseSource(typeof(ServiceConnectionTypesToTest))]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [FailedWebSocketTestsBecomeInconclusive]
-        public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException(ServiceConnectionType serviceConnectionType)
+        public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await LatestClientAndPreviousServiceVersionBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
-                       .WithServiceVersion(PreviousVersions.v5_0_429.ServiceVersion.ForServiceConnectionType(serviceConnectionType))
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -28,7 +25,7 @@ namespace Halibut.Tests.BackwardsCompatibility
                     se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
                 });
 
-                var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
+                Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
             }
         }
     }

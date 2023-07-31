@@ -7,6 +7,7 @@ using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -18,12 +19,13 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued : BaseTest
         {
             [Test]
-            [TestCaseSource(typeof(PollingServiceConnectionTypesToTest))]
-            public async Task TheRequestShouldBeCancelled(ServiceConnectionType serviceConnectionType)
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+            public async Task TheRequestShouldBeCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var cancellationTokenSource = new CancellationTokenSource();
                 
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .As<LatestClientAndLatestServiceBuilder>()
                            // No Tentacle
                            .NoService()
                            // CancelWhenRequestQueuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
@@ -52,13 +54,14 @@ namespace Halibut.Tests
         public class AndTheRequestHasBeenDequeuedButNoResponseReceived : BaseTest
         {
             [Test]
-            [TestCaseSource(typeof(PollingServiceConnectionTypesToTest))]
-            public async Task TheRequestShouldNotBeCancelled(ServiceConnectionType serviceConnectionType)
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+            public async Task TheRequestShouldNotBeCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var calls = new List<DateTime>();
                 var cancellationTokenSource = new CancellationTokenSource();
 
-                using (var clientAndService = await LatestClientAndLatestServiceBuilder.ForServiceConnectionType(serviceConnectionType)
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .As<LatestClientAndLatestServiceBuilder>()
                            .WithDoSomeActionService(() =>
                            {
                                calls.Add(DateTime.UtcNow);

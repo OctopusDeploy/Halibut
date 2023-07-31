@@ -6,6 +6,7 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
@@ -16,19 +17,18 @@ namespace Halibut.Tests.Timeouts
     public class PollingQueueTimeouts : BaseTest
     {
         [Test]
-        public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var serviceConnectionType = ServiceConnectionType.Polling;
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
-            using (var clientAndService = await LatestClientAndLatestServiceBuilder
-                       .ForServiceConnectionType(serviceConnectionType)
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithDataObserver(() =>
                            {
                                var perTcpPumpStopwatch = Stopwatch.StartNew();
                                return new BiDirectionalDataTransferObserver(
                                    new DataTransferObserverBuilder()
-                                       .WithWritingDataObserver((tcpPump, Stream) =>
+                                       .WithWritingDataObserver((_, _) =>
                                        {
                                            timeSpansBetweenDataFlowing.Add(perTcpPumpStopwatch.Elapsed);
                                            perTcpPumpStopwatch.Reset();
@@ -37,6 +37,7 @@ namespace Halibut.Tests.Timeouts
                                    new DataTransferObserverBuilder().Build());
                            })
                            .Build())
+                       .As<LatestClientAndLatestServiceBuilder>()
                        .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueue(logFactory.ForEndpoint(uri), TimeSpan.FromSeconds(1))))
                        .WithEchoService()
                        .Build(CancellationToken))
