@@ -12,7 +12,6 @@ namespace Halibut.Tests.BackwardsCompatibility
     {
         [Test]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

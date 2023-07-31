@@ -14,7 +14,6 @@ namespace Halibut.Tests
     {
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task ClientCanSendMessagesToTentacle_WithEchoService_AndPortForwrding(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -35,7 +34,6 @@ namespace Halibut.Tests
 
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task ClientCanNotSendMessagesToTentacle_WithEchoService_AndBrokenPortForwarding(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

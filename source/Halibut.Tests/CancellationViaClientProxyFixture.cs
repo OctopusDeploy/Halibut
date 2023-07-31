@@ -68,7 +68,6 @@ namespace Halibut.Tests
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task HalibutProxyRequestOptionsCanBeSentToLatestAndOldServicesThatPreDateHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -87,7 +86,6 @@ namespace Halibut.Tests
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task HalibutProxyRequestOptions_CanNotCancel_InFlightRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

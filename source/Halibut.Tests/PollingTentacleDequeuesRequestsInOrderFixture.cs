@@ -17,7 +17,6 @@ namespace Halibut.Tests
     {
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             PendingRequestQueue pendingRequestQueue = null;

@@ -14,7 +14,6 @@ namespace Halibut.Tests
     {
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        [FailedWebSocketTestsBecomeInconclusive]
         public async Task AServiceNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
