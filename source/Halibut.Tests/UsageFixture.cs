@@ -18,7 +18,7 @@ namespace Halibut.Tests
     public class UsageFixture : BaseTest
     {
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true)]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -26,18 +26,18 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
 
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
-                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                    (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
                 }
             }
         }
         
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true)]
         public async Task LargeMessages(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -46,21 +46,21 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var random = new Random();
-                var echo = clientAndService.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
                 for (var i = 1; i < 5; i++)
                 {
                     {
                         int length = 1000000 + random.Next(8196);
                         Logger.Information("Sending message of length {Length}", length);
                         var s = Some.RandomAsciiStringOfLength(length);
-                        echo.SayHello(s).Should().Be(s + "...");
+                        (await echo.SayHelloAsync(s)).Should().Be(s + "...");
                     }
                 }
             }
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true)]
         public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -68,12 +68,12 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
-                var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
+                var svc = clientAndService.CreateClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
                 for (var i = 1; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     {
                         var i1 = i;
-                        svc.GetLocation(new MapLocation { Latitude = -i, Longitude = i }).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
+                        (await svc.GetLocationAsync(new MapLocation { Latitude = -i, Longitude = i })).Should().Match<MapLocation>(x => x.Latitude == i1 && x.Longitude == -i1);
                     }
                 }
             }
@@ -103,7 +103,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true, testNetworkConditions: false)]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -142,7 +142,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true, testNetworkConditions: false)]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -156,9 +156,9 @@ namespace Halibut.Tests
                 new Random().NextBytes(data);
                 var stream = new MemoryStream(data);
 
-                var echo = clientAndService.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-                var count = echo.CountBytes(DataStream.FromStream(stream, progressReported.Add));
+                var count = await echo.CountBytesAsync(DataStream.FromStream(stream, progressReported.Add));
                 count.Should().Be(1024 * 1024 * 16 + 15);
 
                 progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));
@@ -166,7 +166,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true)]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase
@@ -175,7 +175,7 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
-                var service = clientAndService.CreateClient<IComplexObjectService>();
+                var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
                 var payload1 = "Payload #1";
                 var payload2 = "Payload #2";
 
@@ -187,7 +187,7 @@ namespace Halibut.Tests
                         Payload2 = DataStream.FromString(payload2),
                     };
 
-                    var response = service.Process(request);
+                    var response = await service.ProcessAsync(request);
 
                     response.Payload1.Should().NotBeSameAs(request.Payload1);
                     response.Payload1.ReadAsString().Should().Be(payload1);
@@ -199,7 +199,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true)]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleComplexChildren(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var childPayload1 = "Child Payload #1";
@@ -227,7 +227,7 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
-                var service = clientAndService.CreateClient<IComplexObjectService>();
+                var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
                 var request = new ComplexObjectMultipleChildren
                 {
                     Child1 = new ComplexChild1
@@ -244,7 +244,7 @@ namespace Halibut.Tests
                     }
                 };
 
-                var response = service.Process(request);
+                var response = await service.ProcessAsync(request);
 
                 response.Child1.Should().NotBeSameAs(request.Child1);
                 response.Child1.ChildPayload1.Should().NotBeSameAs(request.Child1.ChildPayload1);

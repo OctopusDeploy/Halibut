@@ -10,6 +10,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -19,7 +20,7 @@ namespace Halibut.Tests
     {
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenClientPresentsWrongCertificateToListeningService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -30,8 +31,8 @@ namespace Halibut.Tests
                        .RecordingServiceLogs(out var serviceLoggers)
                        .Build(CancellationToken))
             {
-                var echo = clientAndBuilder.CreateClient<ICountingService>();
-                Assert.Throws<HalibutClientException>(() => echo.Increment());
+                var echo = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+                Assert.ThrowsAsync<HalibutClientException>(async () => await echo.IncrementAsync());
                 
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
                 
@@ -43,7 +44,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenClientPresentsWrongCertificateToPollingService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -55,12 +56,14 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var cts = new CancellationTokenSource();
-                var echo = clientAndBuilder.CreateClient<ICountingService, CancellationViaClientProxyFixture.IClientCountingService>(point =>
+                var echo = clientAndBuilder
+                    .As<LatestClientAndLatestServiceBuilder.ClientAndService>()
+                    .CreateClientWithOptions<ICountingService, CancellationViaClientProxyFixture.IClientCountingService,  IAsyncClientCountingServiceWithOptions>(point =>
                 {
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
                 });
                 
-                var incrementCount = Task.Run(() => echo.Increment(new HalibutProxyRequestOptions(cts.Token)));
+                var incrementCount = Task.Run(async () => await echo.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)));
 
                 Func<LogEvent, bool> hasExpectedLog = logEvent =>
                     logEvent.FormattedMessage.Contains("The server at")
@@ -81,7 +84,7 @@ namespace Halibut.Tests
         
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenListeningServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -91,8 +94,8 @@ namespace Halibut.Tests
                        .WithCountingService(countingService)
                        .Build(CancellationToken))
             {
-                var echo = clientAndBuilder.CreateClient<ICountingService>();
-                Assert.Throws<HalibutClientException>(() => echo.Increment())
+                var echo = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+                Assert.ThrowsAsync<HalibutClientException>(async () => await echo.IncrementAsync())
                     .Message.Should().Contain("" +
                                               "We expected the server to present a certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F'. " +
                                               "Instead, it presented a certificate with a thumbprint of '36F35047CE8B000CF4C671819A2DD1AFCDE3403D'");
@@ -103,7 +106,7 @@ namespace Halibut.Tests
         
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenPollingServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -115,12 +118,12 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var cts = new CancellationTokenSource();
-                var echo = clientAndBuilder.CreateClient<ICountingService, CancellationViaClientProxyFixture.IClientCountingService>(point =>
+                var echo = clientAndBuilder.CreateClientWithOptions<ICountingService, CancellationViaClientProxyFixture.IClientCountingService, IAsyncClientCountingServiceWithOptions>(point =>
                 {
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
                 
-                var incrementCount = Task.Run(() => echo.Increment(new HalibutProxyRequestOptions(cts.Token)));
+                var incrementCount = Task.Run(async () => await echo.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)));
 
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => { AllLogs(serviceLoggers).Select(l => l.FormattedMessage).ToArray()

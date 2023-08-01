@@ -54,7 +54,7 @@ namespace Halibut.ServiceModel
 
         async Task<(MethodInfo, object)> MakeRpcCall(MethodInfo asyncMethod, object[] args)
         {
-            var serviceMethod = AsyncCompatibilityHelper.FindMatchingSyncMethod(asyncMethod, contractType);
+            var serviceMethod = AsyncCompatibilityHelper.FindMatchingSyncMethod(asyncMethod, contractType, true);
 
             if (!configured)
                 throw new Exception("Proxy not configured");

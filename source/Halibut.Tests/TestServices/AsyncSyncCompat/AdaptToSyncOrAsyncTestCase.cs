@@ -24,8 +24,13 @@ namespace Halibut.Tests.TestServices.AsyncSyncCompat
             }
             throw new Exception("Can't force sync or async with single generic type CreateClient, use CreateClient<TService, TClientService>");
         }
-        
+
         public TClientService Adapt<TService, TClientService>(ForceClientProxyType? forceClientProxyType, HalibutRuntime halibutRuntime, ServiceEndPoint serviceEndpoint)
+        {
+            return Adapt<TService, TService, TClientService>(forceClientProxyType, halibutRuntime, serviceEndpoint);
+        }
+
+        public TClientService Adapt<TService, TSyncClientService, TClientService>(ForceClientProxyType? forceClientProxyType, HalibutRuntime halibutRuntime, ServiceEndPoint serviceEndpoint)
         {
             if (forceClientProxyType == null)
             {
@@ -42,22 +47,33 @@ namespace Halibut.Tests.TestServices.AsyncSyncCompat
             {
                 new ServiceInterfaceInspector().EnsureAllMethodsAreAsync<TClientService>();
 
-                return CreateSyncHalibutProxyAndAdaptItToAnAsyncInterface<TService, TClientService>(halibutRuntime, serviceEndpoint);
+                return CreateSyncHalibutProxyAndAdaptItToAnAsyncInterface<TService, TSyncClientService, TClientService>(halibutRuntime, serviceEndpoint);
             }
 
             throw new Exception("It is unclear how this was reached.");
         }
-
         
-        
-        static TAsyncClientService CreateSyncHalibutProxyAndAdaptItToAnAsyncInterface<TServiceWhichMustBeSync, TAsyncClientService>(HalibutRuntime halibutRuntime, ServiceEndPoint serviceEndpoint)
+        /// <summary>
+        /// This will ask the HalibutRuntime to talk to a service of type TService e.g. IEchoService. It asks the
+        /// HalibutRuntime to create a proxy of type TServiceWhichMustBeSync e.g. ISyncClientEchoServiceWithOptions
+        /// This finally wraps that resulting proxy in an async one e.g. IAsyncClientEchoServiceWithOptions
+        /// 
+        /// </summary>
+        /// <param name="halibutRuntime"></param>
+        /// <param name="serviceEndpoint"></param>
+        /// <typeparam name="TService"></typeparam>
+        /// <typeparam name="TServiceWhichMustBeSync"></typeparam>
+        /// <typeparam name="TAsyncClientService"></typeparam>
+        /// <returns></returns>
+        static TAsyncClientService CreateSyncHalibutProxyAndAdaptItToAnAsyncInterface<TService, TServiceWhichMustBeSync, TAsyncClientService>(HalibutRuntime halibutRuntime, ServiceEndPoint serviceEndpoint)
         {
-            var syncVersionType = typeof(TServiceWhichMustBeSync);
             
-            var syncVersion = halibutRuntime.CreateClient<TServiceWhichMustBeSync>(serviceEndpoint);
+            var syncVersion = halibutRuntime.CreateClient<TService, TServiceWhichMustBeSync>(serviceEndpoint);
+            
+            var syncClientTypeToAdaptTo = typeof(TServiceWhichMustBeSync);
 
             var syncToAsyncAdaptor = DispatchProxyAsync.Create<TAsyncClientService, AdaptSyncProxyToAsyncProxy>();
-            (syncToAsyncAdaptor as AdaptSyncProxyToAsyncProxy).Configure(syncVersion, syncVersionType);
+            (syncToAsyncAdaptor as AdaptSyncProxyToAsyncProxy).Configure(syncVersion, syncClientTypeToAdaptTo);
 
             return syncToAsyncAdaptor;
         }
