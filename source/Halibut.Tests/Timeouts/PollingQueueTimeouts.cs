@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -38,7 +39,11 @@ namespace Halibut.Tests.Timeouts
                            })
                            .Build())
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueue(logFactory.ForEndpoint(uri), TimeSpan.FromSeconds(1))))
+                       .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
+                           .WithLog(logFactory.ForEndpoint(uri))
+                           .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
+                           .WithAsync(clientAndServiceTestCase.ForceClientProxyType)
+                           .Build()))
                        .WithEchoService()
                        .Build(CancellationToken))
             {

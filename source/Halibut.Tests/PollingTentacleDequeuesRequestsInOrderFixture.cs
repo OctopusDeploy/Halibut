@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -19,7 +20,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            PendingRequestQueue pendingRequestQueue = null;
+            IPendingRequestQueue pendingRequestQueue = null;
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
@@ -28,20 +29,23 @@ namespace Halibut.Tests
                        {
                            return new FuncPendingRequestQueueFactory(uri =>
                            {
-                               pendingRequestQueue = new PendingRequestQueue(logFactory.ForEndpoint(uri), TimeSpan.FromSeconds(1));
+                               pendingRequestQueue = new PendingRequestQueueBuilder()
+                                   .WithLog(logFactory.ForEndpoint(uri))
+                                   .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
+                                   .WithAsync(clientAndServiceTestCase.ForceClientProxyType)
+                                   .Build();
                                return pendingRequestQueue;
                            });
                        })
                        .Build(CancellationToken))
             {
-                
                 var echoService = clientAndService.CreateClient<IEchoService>();
                 echoService.SayHello("Make sure the pending request queue exists");
                 pendingRequestQueue.Should().NotBeNull();
 
                 using var tmpDir = new TemporaryDirectory();
                 var fileStoppingNewRequests = tmpDir.CreateRandomFile();
-                
+
                 // Send a request to polling tentacle that wont complete, until we let it complete.
                 var lockService = clientAndService.CreateClient<ILockService>();
                 var fileThatLetsUsKnowThePollingTentacleIsBusy = tmpDir.RandomFileName();
@@ -51,7 +55,7 @@ namespace Halibut.Tests
                     await pollingTentacleKeptBusyRequest.AwaitIfFaulted();
                     return File.Exists(fileThatLetsUsKnowThePollingTentacleIsBusy);
                 }, CancellationToken);
-                
+
 
                 var countingService = clientAndService.CreateClient<ICountingService>();
 
@@ -67,7 +71,7 @@ namespace Halibut.Tests
                         return pendingRequestQueue.Count == i + 1;
                     }, CancellationToken);
                 }
-                
+
                 // Complete the task tentacle is doing, so it can pick up more work.
                 File.Delete(fileStoppingNewRequests);
                 await pollingTentacleKeptBusyRequest;
