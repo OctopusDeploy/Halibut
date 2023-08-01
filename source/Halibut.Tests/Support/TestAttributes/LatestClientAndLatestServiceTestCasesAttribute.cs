@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Support.TestCases;
 using NUnit.Framework;
@@ -19,18 +18,19 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testNetworkConditions = true,
             bool testListening = true,
             bool testPolling = true,
+            bool testAsyncAndSyncClients = false, // False while this area of the test infra is being built out.
             params object[] additionalParameters
             ) :
             base(
                 typeof(LatestClientAndLatestServiceTestCases),
                 nameof(LatestClientAndLatestServiceTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, additionalParameters })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testAsyncAndSyncClients, additionalParameters })
         {
         }
 
         static class LatestClientAndLatestServiceTestCases
         {
-            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, object[] additionalParameters)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncAndSyncClients, object[] additionalParameters)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -48,11 +48,18 @@ namespace Halibut.Tests.Support.TestAttributes
                 {
                     serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
+                
+                ForceClientProxyType[] clientProxyTypesToTest = new ForceClientProxyType[0];
+                if (testAsyncAndSyncClients)
+                {
+                    clientProxyTypesToTest = ForceClientProxyTypeValues.All;
+                }
 
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] { ClientAndServiceTestVersion.Latest() },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
+                    clientProxyTypesToTest
                 );
                 
                 foreach (var clientAndServiceTestCase in builder.Build())

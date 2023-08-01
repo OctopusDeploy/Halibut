@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestCases
 {
@@ -17,12 +20,15 @@ namespace Halibut.Tests.Support.TestCases
         /// </summary>
         public int RecommendedIterations { get; }
 
-        public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType, NetworkConditionTestCase networkConditionTestCase, int recommendedIterations, ClientAndServiceTestVersion clientAndServiceTestVersion)
+        public ForceClientProxyType? ForceClientProxyType { get; }
+
+        public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType, NetworkConditionTestCase networkConditionTestCase, int recommendedIterations, ClientAndServiceTestVersion clientAndServiceTestVersion, ForceClientProxyType? forceClientProxyType)
         {
             ServiceConnectionType = serviceConnectionType;
             NetworkConditionTestCase = networkConditionTestCase;
             RecommendedIterations = recommendedIterations;
             ClientAndServiceTestVersion = clientAndServiceTestVersion;
+            ForceClientProxyType = forceClientProxyType;
         }
 
         public IClientAndServiceBuilder CreateTestCaseBuilder()
@@ -35,13 +41,28 @@ namespace Halibut.Tests.Support.TestCases
                 builder.WithPortForwarding(i => NetworkConditionTestCase.PortForwarderFactory(i, logger));
             }
 
+            if (ForceClientProxyType != null)
+            {
+                builder.WithForcingClientProxyType(ForceClientProxyType.Value);
+            }
+
             return builder;
         }
         
         public override string ToString()
         {
             // This is used as the test parameter name, so make this something someone can understand in teamcity or their IDE.
-            return $"{ServiceConnectionType}, {ClientAndServiceTestVersion.ToString(ServiceConnectionType)}, {NetworkConditionTestCase}, RecommendedIterations: {RecommendedIterations}";
+            var testParameter = new List<string>();
+            testParameter.Add(ServiceConnectionType.ToString());
+            testParameter.Add(ClientAndServiceTestVersion.ToString(ServiceConnectionType));
+            testParameter.Add(NetworkConditionTestCase.ToString());
+            testParameter.Add($"RecommendedIters: {RecommendedIterations}");
+            if (ForceClientProxyType != null)
+            {
+                testParameter.Add(ForceClientProxyType.ToString());
+            }
+            
+            return string.Join(", ", testParameter);
         }
     }
 }

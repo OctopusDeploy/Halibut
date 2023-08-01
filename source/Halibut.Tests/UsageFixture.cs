@@ -8,6 +8,7 @@ using Halibut.Exceptions;
 using Halibut.Logging;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
@@ -79,7 +80,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testAsyncAndSyncClients: true)]
         public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -87,21 +88,22 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
+                
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
-                    var count = echo.CountBytes(DataStream.FromBytes(data));
+                    var count = await echo.CountBytesAsync(DataStream.FromBytes(data));
                     count.Should().Be(1024 * 1024 + 15);
                 }
             }
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -109,33 +111,33 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IMultipleParametersTestService>();
-                echo.MethodReturningVoid(12, 14);
+                var echo = clientAndService.CreateClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
+                await echo.MethodReturningVoidAsync(12, 14);
 
-                echo.Hello().Should().Be("Hello");
-                echo.Hello("a").Should().Be("Hello a");
-                echo.Hello("a", "b").Should().Be("Hello a b");
-                echo.Hello("a", "b", "c").Should().Be("Hello a b c");
-                echo.Hello("a", "b", "c", "d").Should().Be("Hello a b c d");
-                echo.Hello("a", "b", "c", "d", "e").Should().Be("Hello a b c d e");
-                echo.Hello("a", "b", "c", "d", "e", "f").Should().Be("Hello a b c d e f");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g").Should().Be("Hello a b c d e f g");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h").Should().Be("Hello a b c d e f g h");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i").Should().Be("Hello a b c d e f g h i");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j").Should().Be("Hello a b c d e f g h i j");
-                echo.Hello("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k").Should().Be("Hello a b c d e f g h i j k");
+                (await echo.HelloAsync()).Should().Be("Hello");
+                (await echo.HelloAsync("a")).Should().Be("Hello a");
+                (await echo.HelloAsync("a", "b")).Should().Be("Hello a b");
+                (await echo.HelloAsync("a", "b", "c")).Should().Be("Hello a b c");
+                (await echo.HelloAsync("a", "b", "c", "d")).Should().Be("Hello a b c d");
+                (await echo.HelloAsync("a", "b", "c", "d", "e")).Should().Be("Hello a b c d e");
+                (await echo.HelloAsync("a", "b", "c", "d", "e", "f")).Should().Be("Hello a b c d e f");
+                (await echo.HelloAsync("a", "b", "c", "d", "e", "f", "g")).Should().Be("Hello a b c d e f g");
+                (await echo.HelloAsync("a", "b", "c", "d", "e", "f", "g", "h")).Should().Be("Hello a b c d e f g h");
+                (await echo.HelloAsync("a", "b", "c", "d", "e", "f", "g", "h", "i")).Should().Be("Hello a b c d e f g h i");
+                (await echo.HelloAsync("a", "b", "c", "d", "e", "f", "g", "h", "i", "j")).Should().Be("Hello a b c d e f g h i j");
+                (await echo.HelloAsync("a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k")).Should().Be("Hello a b c d e f g h i j k");
 
-                echo.Add(1, 2).Should().Be(3);
-                echo.Add(1.00, 2.00).Should().Be(3.00);
-                echo.Add(1.10M, 2.10M).Should().Be(3.20M);
+                (await echo.AddAsync(1, 2)).Should().Be(3);
+                (await echo.AddAsync(1.00, 2.00)).Should().Be(3.00);
+                (await echo.AddAsync(1.10M, 2.10M)).Should().Be(3.20M);
 
-                echo.Ambiguous("a", "b").Should().Be("Hello string");
-                echo.Ambiguous("a", new Tuple<string, string>("a", "b")).Should().Be("Hello tuple");
+                (await echo.AmbiguousAsync("a", "b")).Should().Be("Hello string");
+                (await echo.AmbiguousAsync("a", new Tuple<string, string>("a", "b"))).Should().Be("Hello tuple");
 
-                var ex = Assert.Throws<AmbiguousMethodMatchHalibutClientException>(() => echo.Ambiguous("a", (string)null));
+                var ex = Assert.ThrowsAsync<AmbiguousMethodMatchHalibutClientException>(async () => await echo.AmbiguousAsync("a", (string)null));
                 ex.Message.Should().Contain("Ambiguous");
 
-                echo.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
+                (await echo.GetLocationAsync(new MapLocation { Latitude = -27, Longitude = 153 })).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
             }
         }
 

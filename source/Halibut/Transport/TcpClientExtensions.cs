@@ -34,7 +34,9 @@ namespace Halibut.Transport
             try
             {
                 var task = client.ConnectAsync(host, port);
+#pragma warning disable CS0612 // Type or member is obsolete
                 await task.TimeoutAfter(timeout, cancellationToken);
+#pragma warning restore CS0612 // Type or member is obsolete
             }
             catch (TimeoutException)
             {

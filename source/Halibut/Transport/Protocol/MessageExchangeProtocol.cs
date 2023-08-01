@@ -95,7 +95,7 @@ namespace Halibut.Transport.Protocol
             stream.ExpectProceeed();
         }
 
-        public async Task ExchangeAsServerAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
+        public async Task ExchangeAsServerSynchronouslyAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests)
         {
             var identity = stream.ReadRemoteIdentity();
             stream.IdentifyAsServer();
@@ -105,7 +105,7 @@ namespace Halibut.Transport.Protocol
                     ProcessClientRequests(incomingRequestProcessor);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    await ProcessSubscriberAsync(pendingRequests(identity));
+                    await ProcessSubscriberSynchronouslyAsync(pendingRequests(identity));
                     break;
                 default:
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
@@ -143,19 +143,19 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task ProcessSubscriberAsync(IPendingRequestQueue pendingRequests)
+        async Task ProcessSubscriberSynchronouslyAsync(IPendingRequestQueue pendingRequests)
         {
             while (true)
             {
                 var nextRequest = await pendingRequests.DequeueAsync(CancellationToken.None);
 
-                var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest);
+                var success = await ProcessReceiverInternalSynchronouslyAsync(pendingRequests, nextRequest);
                 if (!success)
                     return;
             }
         }
 
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
+        async Task<bool> ProcessReceiverInternalSynchronouslyAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest)
         {
             try
             {
