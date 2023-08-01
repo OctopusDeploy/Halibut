@@ -29,7 +29,7 @@ namespace Halibut.Tests.TestServices.AsyncSyncCompat
 
         MethodInfo? GetSyncMethod(MethodInfo asyncMethodInfo)
         {
-            return AsyncCompatibilityHelper.FindMatchingSyncMethod(asyncMethodInfo, syncHalubutProxyType);
+            return AsyncCompatibilityHelper.FindMatchingSyncMethod(asyncMethodInfo, syncHalubutProxyType, false);
         }
 
         public override async Task InvokeAsync(MethodInfo asyncMethodInfo, object[] args)
