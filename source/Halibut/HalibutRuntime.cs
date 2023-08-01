@@ -238,13 +238,13 @@ namespace Halibut
             return proxy;
         }
 
-        // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#warning-sync-over-async
-        [Obsolete("Consider implementing an async HalibutProxy instead")]
+        [Obsolete("Use SendOutgoingRequestAsync")]
         ResponseMessage SendOutgoingRequest(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             return SendOutgoingRequestSynchronouslyAsync(request, methodInfo, cancellationToken).GetAwaiter().GetResult();
         }
-        
+
+        [Obsolete]
         async Task<ResponseMessage> SendOutgoingRequestSynchronouslyAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
@@ -261,6 +261,7 @@ namespace Halibut
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
+                    // ReSharper disable once MethodHasAsyncOverload
                     response = SendOutgoingHttpsRequest(request, cancellationToken);
                     break;
                 case "poll":
@@ -273,8 +274,7 @@ namespace Halibut
 
             return response;
         }
-        
-        // Eventually this will actually be async
+
         async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
@@ -291,10 +291,10 @@ namespace Halibut
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    response = SendOutgoingHttpsRequest(request, cancellationToken);
+                    response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
                     break;
                 case "poll":
-                    response = await SendOutgoingPollingRequest(request, cancellationToken);
+                    response = await SendOutgoingPollingRequest(request, cancellationToken).ConfigureAwait(false);
                     break;
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
@@ -304,6 +304,7 @@ namespace Halibut
             return response;
         }
 
+        [Obsolete]
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
@@ -313,6 +314,22 @@ namespace Halibut
             {
                 response = protocol.ExchangeAsClient(request);
             }, cancellationToken);
+            return response;
+        }
+
+        async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, CancellationToken cancellationToken)
+        {
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+
+            ResponseMessage response = null;
+
+            await client.ExecuteTransactionAsync(
+                async (protocol, cts) =>
+                {
+                    response = await protocol.ExchangeAsClientAsync(request, cts).ConfigureAwait(false);
+                }, 
+                cancellationToken).ConfigureAwait(false);
+
             return response;
         }
 
