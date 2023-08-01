@@ -8,6 +8,7 @@ namespace Halibut.Tests.Builders
     {
         string? endpoint;
         TimeSpan? pollingQueueWaitTimeout;
+        bool async;
 
         public PendingRequestQueueBuilder WithEndpoint(string endpoint)
         {
@@ -21,15 +22,25 @@ namespace Halibut.Tests.Builders
             return this;
         }
 
-        public PendingRequestQueue Build()
+        public PendingRequestQueueBuilder WithAsync(bool async)
+        {
+            this.async = async;
+            return this;
+        }
+
+        public IPendingRequestQueue Build()
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
             var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? HalibutLimits.PollingQueueWaitTimeout;
 
             var log = new InMemoryConnectionLog(endpoint);
 
-            var pendingRequestQueue = new PendingRequestQueue(log, pollingQueueWaitTimeout);
-            return pendingRequestQueue;
+            if (async)
+            {
+                return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout);
+            }
+
+            return new PendingRequestQueue(log, pollingQueueWaitTimeout);
         }
     }
 }

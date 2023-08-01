@@ -112,8 +112,9 @@ namespace Halibut.Tests
                 }
 
                 public bool IsEmpty => inner.IsEmpty;
-                public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
-                public async Task<RequestMessage> DequeueAsync() => await inner.DequeueAsync();
+                public int Count => inner.Count;
+                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
+                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
 
                 public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
                 {
@@ -163,11 +164,12 @@ namespace Halibut.Tests
                 }
 
                 public bool IsEmpty => inner.IsEmpty;
-                public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
+                public int Count => inner.Count;
+                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
                 
-                public async Task<RequestMessage> DequeueAsync()
+                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
                 {
-                    var response = await inner.DequeueAsync();
+                    var response = await inner.DequeueAsync(cancellationToken);
                     cancellationTokenSource.Cancel();
                     return response;
                 }

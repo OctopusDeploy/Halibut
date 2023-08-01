@@ -1,141 +1,138 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
-using Halibut.Util.AsyncEx;
+using Nito.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
-    public class PendingRequestQueue : IPendingRequestQueue
+    public class PendingRequestQueueAsync : IPendingRequestQueue
     {
-        readonly List<PendingRequest> queue = new();
+        readonly ConcurrentQueue<PendingRequest> queue = new();
         readonly Dictionary<string, PendingRequest> inProgress = new();
-        readonly object sync = new();
-        readonly AsyncManualResetEvent hasItems = new();
+        readonly SemaphoreSlim queueLock = new(1, 1);
+        readonly AsyncManualResetEvent hasItems = new(false);
         readonly ILog log;
         readonly TimeSpan pollingQueueWaitTimeout;
 
-        public PendingRequestQueue(ILog log) : this(log, HalibutLimits.PollingQueueWaitTimeout)
+        public PendingRequestQueueAsync(ILog log) : this(log, HalibutLimits.PollingQueueWaitTimeout)
         {
             this.log = log;
         }
 
-        public PendingRequestQueue(ILog log, TimeSpan pollingQueueWaitTimeout)
+        public PendingRequestQueueAsync(ILog log, TimeSpan pollingQueueWaitTimeout)
         {
             this.log = log;
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
         }
-
-        [Obsolete]
-        public ResponseMessage QueueAndWait(RequestMessage request)
-        {
-            return QueueAndWait(request, CancellationToken.None);
-        }
-
-        [Obsolete]
-        public ResponseMessage QueueAndWait(RequestMessage request, CancellationToken cancellationToken)
+        
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var pending = new PendingRequest(request, log);
-
-            lock (sync)
+            
+            await queueLock.WaitAsync(cancellationToken);
+            try
             {
-                queue.Add(pending);
+                queue.Enqueue(pending);
                 inProgress.Add(request.Id, pending);
                 hasItems.Set();
             }
-
-            pending.WaitUntilComplete(cancellationToken);
-
-            lock (sync)
+            finally
             {
-                inProgress.Remove(request.Id);
+                queueLock.Release();
+            }
+            
+            try
+            {
+                await pending.WaitUntilComplete(cancellationToken);
+            }
+            finally
+            {
+                await queueLock.WaitAsync(CancellationToken.None);
+                try
+                {
+                    inProgress.Remove(request.Id);
+                    //queue.//REMOVE?
+                }
+                finally
+                {
+                    queueLock.Release();
+                }
             }
 
             return pending.Response;
         }
 
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
-        {
-#pragma warning disable 612
-            var responseMessage = QueueAndWait(request, cancellationToken);
-#pragma warning restore 612
-            return await Task.FromResult(responseMessage);
-        }
-
-        public bool IsEmpty
-        {
-            get
-            {
-                lock (sync)
-                {
-                    return queue.Count == 0;
-                }
-            }
-        }
-
-        public int Count
-        {
-            get
-            {
-                lock (sync)
-                {
-                    return queue.Count;
-                }
-            }
-        }
+        public bool IsEmpty => queue.IsEmpty;
+        public int Count => queue.Count;
 
         public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
         {
-            var pending = await DequeueNextAsync();
+            var pending = await DequeueNextAsync(cancellationToken);
             if (pending == null) return null;
-            return pending.BeginTransfer() ? pending.Request : null;
+
+            var result = await pending.BeginTransfer();
+            return result ? pending.Request : null;
         }
 
-        async Task<PendingRequest> DequeueNextAsync()
+        async Task<PendingRequest> DequeueNextAsync(CancellationToken cancellationToken)
         {
-            var first = TakeFirst();
+            var first = await TakeFirst(cancellationToken);
             if (first != null)
             {
                 return first;
             }
 
-            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(pollingQueueWaitTimeout));
+            await Task.WhenAny(hasItems.WaitAsync(cancellationToken), Task.Delay(pollingQueueWaitTimeout, cancellationToken));
             hasItems.Reset();
-            return TakeFirst();
+            return await TakeFirst(cancellationToken);
         }
 
-        PendingRequest TakeFirst()
+        async Task<PendingRequest> TakeFirst(CancellationToken cancellationToken)
         {
-            lock (sync)
+            await queueLock.WaitAsync(cancellationToken);
+            try
             {
-                if (queue.Count == 0)
+                if (!queue.TryDequeue(out var first))
                 {
                     return null;
                 }
 
-                var first = queue[0];
-                queue.RemoveAt(0);
+                //TODO VERIFY
+                if (queue.IsEmpty)
+                {
+                    hasItems.Reset();
+                }
+
                 return first;
+            }
+            finally
+            {
+                queueLock.Release();
             }
         }
 
         public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination)
         {
-            await Task.CompletedTask;
-
             if (response == null)
             {
                 return;
             }
 
-            lock (sync)
+            await queueLock.WaitAsync(CancellationToken.None);
+            try
             {
                 if (inProgress.TryGetValue(response.Id, out var pending))
                 {
                     pending.SetResponse(response);
                 }
+            }
+            finally
+            {
+                queueLock.Release();
             }
         }
 
@@ -143,8 +140,9 @@ namespace Halibut.ServiceModel
         {
             readonly RequestMessage request;
             readonly ILog log;
-            readonly ManualResetEventSlim waiter;
-            readonly object sync = new();
+            
+            readonly AsyncManualResetEvent waiter = new (false);
+            readonly SemaphoreSlim requestLock = new(1, 1);
             bool transferBegun;
             bool completed;
 
@@ -152,12 +150,11 @@ namespace Halibut.ServiceModel
             {
                 this.request = request;
                 this.log = log;
-                waiter = new ManualResetEventSlim(false);
             }
 
             public RequestMessage Request => request;
 
-            public void WaitUntilComplete(CancellationToken cancellationToken)
+            public async Task WaitUntilComplete(CancellationToken cancellationToken)
             {
                 log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
@@ -166,7 +163,7 @@ namespace Halibut.ServiceModel
 
                 try
                 {
-                    success = waiter.Wait(request.Destination.PollingRequestQueueTimeout, cancellationToken);
+                    success = await WaitAsync(request.Destination.PollingRequestQueueTimeout, cancellationToken);
                     if (success)
                     {
                         log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
@@ -179,8 +176,9 @@ namespace Halibut.ServiceModel
                     // It is possible that the transfer has already started once the cancellationToken is cancelled
                     // In this case we cannot walk away from the request as it is already in progress and no longer in the connecting phase
                     cancelled = true;
-
-                    lock (sync)
+                    
+                    await requestLock.WaitAsync(CancellationToken.None);
+                    try
                     {
                         if (!transferBegun)
                         {
@@ -191,10 +189,15 @@ namespace Halibut.ServiceModel
 
                         log.Write(EventType.MessageExchange, "Request {0} was cancelled after it had been collected by the polling endpoint and will not be cancelled", request);
                     }
+                    finally
+                    {
+                        requestLock.Release();
+                    }
                 }
 
                 var waitForTransferToComplete = false;
-                lock (sync)
+                await requestLock.WaitAsync(CancellationToken.None);
+                try
                 {
                     if (transferBegun)
                     {
@@ -205,10 +208,14 @@ namespace Halibut.ServiceModel
                         completed = true;
                     }
                 }
+                finally
+                {
+                    requestLock.Release();
+                }
 
                 if (waitForTransferToComplete)
                 {
-                    success = waiter.Wait(request.Destination.PollingRequestMaximumMessageProcessingTimeout, CancellationToken.None);
+                    success = await WaitAsync(request.Destination.PollingRequestMaximumMessageProcessingTimeout, CancellationToken.None);
                     if (success)
                     {
                         // We end up here when the request is cancelled but already being transferred so we need to adjust the log message accordingly
@@ -234,9 +241,27 @@ namespace Halibut.ServiceModel
                 }
             }
 
-            public bool BeginTransfer()
+            async Task<bool> WaitAsync(TimeSpan timeout, CancellationToken cancellationToken)
             {
-                lock (sync)
+                using var cancellationTokenSource = new CancellationTokenSource(timeout);
+                try
+                {
+                    var token = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken).Token;
+                    await waiter.WaitAsync(token);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (cancellationTokenSource.IsCancellationRequested) return false;
+                    throw;
+                }
+                
+                return true;
+            }
+
+            public async Task<bool> BeginTransfer()
+            {
+                await requestLock.WaitAsync(CancellationToken.None);
+                try
                 {
                     if (completed)
                     {
@@ -245,6 +270,10 @@ namespace Halibut.ServiceModel
 
                     transferBegun = true;
                     return true;
+                }
+                finally
+                {
+                    requestLock.Release();
                 }
             }
 

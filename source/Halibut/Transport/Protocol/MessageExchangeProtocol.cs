@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
@@ -146,7 +147,7 @@ namespace Halibut.Transport.Protocol
         {
             while (true)
             {
-                var nextRequest = await pendingRequests.DequeueAsync();
+                var nextRequest = await pendingRequests.DequeueAsync(CancellationToken.None);
 
                 var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest);
                 if (!success)
@@ -162,7 +163,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
             }
             catch (Exception ex)
@@ -170,7 +171,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = ResponseMessage.FromException(nextRequest, ex);
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
                 return false;
             }

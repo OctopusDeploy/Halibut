@@ -8,8 +8,9 @@ namespace Halibut.ServiceModel
     public interface IPendingRequestQueue
     {
         bool IsEmpty { get; }
-        void ApplyResponse(ResponseMessage response, ServiceEndPoint destination);
-        Task<RequestMessage> DequeueAsync();
+        int Count { get; }
+        Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination);
+        Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken);
         Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken);
     }
 }
