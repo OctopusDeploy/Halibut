@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.Tests.Support
 {
@@ -14,6 +16,37 @@ namespace Halibut.Tests.Support
             {
                 onFailure(e);
             }        
+        }
+
+        public static async Task<Exception?> CatchingError(Func<Task> tryThisAction)
+        {
+            try
+            {
+                await tryThisAction();
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
+
+            return null;
+        }
+
+        public static async Task<Exception?> RunTillExceptionOrCancellation(Func<Task> action, CancellationToken cancellationToken)
+        {
+            Exception? actualException = null;
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                actualException = await Try.CatchingError(async () => await action());
+
+                if (actualException != null)
+                {
+                    break;
+                }
+            }
+
+            return actualException;
         }
     }
 }
