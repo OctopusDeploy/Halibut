@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using NUnit.Framework;
+using Halibut.Tests.Support.TestAttributes;
 
 namespace Halibut.Tests.Support.TestCases
 {
@@ -21,6 +20,7 @@ namespace Halibut.Tests.Support.TestCases
         public int RecommendedIterations { get; }
 
         public ForceClientProxyType? ForceClientProxyType { get; }
+        public SyncOrAsync SyncOrAsync => ForceClientProxyType.ToSyncOrAsync();
 
         public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType, NetworkConditionTestCase networkConditionTestCase, int recommendedIterations, ClientAndServiceTestVersion clientAndServiceTestVersion, ForceClientProxyType? forceClientProxyType)
         {
