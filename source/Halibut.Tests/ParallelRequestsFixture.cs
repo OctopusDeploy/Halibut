@@ -62,10 +62,7 @@ namespace Halibut.Tests
             }
 
             // Wait for all requests to be started
-            while (requestStartedFilePaths.Any(p => !File.Exists(p)))
-            {
-                await Task.Delay(10);
-            }
+            await Wait.For(() => Task.FromResult(requestStartedFilePaths.All(File.Exists)), CancellationToken);
 
             Interlocked.Read(ref threadCompletionCount).Should().Be(0);
             exceptions.Should().BeEmpty();
