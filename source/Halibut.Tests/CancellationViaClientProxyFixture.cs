@@ -7,6 +7,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -30,7 +31,7 @@ namespace Halibut.Tests
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
-                var echo = clientAndService.CreateClient<ICountingService, IClientCountingService>(point =>
+                var echo = clientAndService.CreateClient<ICountingService, ISyncClientCountingServiceWithOptions>(point =>
                     {
                         point.RetryCountLimit = 1000000;
                         point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
@@ -74,7 +75,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IClientEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService, ISyncClientEchoServiceWithOptions>();
 
                 echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()))
                     .Should()
@@ -92,7 +93,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var lockService = clientAndService.CreateClient<ILockService, IClientLockService>();
+                var lockService = clientAndService.CreateClient<ILockService, ISyncClientLockServiceWithOptions>();
 
                 var cts = new CancellationTokenSource();
                 using var tmpDir = new TemporaryDirectory();
@@ -123,28 +124,6 @@ namespace Halibut.Tests
                 // Now the lock is released we should be able to complete the request.
                 await inFlightRequest;
             }
-        }
-
-        public interface IClientEchoService
-        {
-            int LongRunningOperation(HalibutProxyRequestOptions halibutProxyRequestOptions);
-
-            string SayHello(string name, HalibutProxyRequestOptions halibutProxyRequestOptions);
-
-            bool Crash(HalibutProxyRequestOptions halibutProxyRequestOptions);
-
-            int CountBytes(DataStream stream, HalibutProxyRequestOptions halibutProxyRequestOptions);
-        }
-        
-        public interface IClientLockService
-        {
-            public void WaitForFileToBeDeleted(string fileToWaitFor, string fileSignalWhenRequestIsStarted, HalibutProxyRequestOptions halibutProxyRequestOptions);
-        }
-        
-        public interface IClientCountingService
-        {
-            public int Increment(HalibutProxyRequestOptions halibutProxyRequestOptions);
-            public int GetCurrentValue(HalibutProxyRequestOptions halibutProxyRequestOptions);
         }
     }
 
