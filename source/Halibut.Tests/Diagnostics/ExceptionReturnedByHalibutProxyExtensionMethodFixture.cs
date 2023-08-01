@@ -169,10 +169,12 @@ namespace Halibut.Tests.Diagnostics
             public async Task BecauseOfAInvalidCertificateException_WhenConnectingToListening_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                           .WithStandardServices()
+                           .AsLatestClientAndLatestServiceBuilder()
+                           .WithClientTrustingTheWrongCertificate()
+                           .WithEchoService()
                            .Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateClient<IEchoService>(remoteThumbprint: "Wrong Thumbrprint");
+                    var echo = clientAndService.CreateClient<IEchoService>();
 
                     Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
                         .IsNetworkError()

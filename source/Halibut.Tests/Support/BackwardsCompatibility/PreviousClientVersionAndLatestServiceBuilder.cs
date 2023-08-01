@@ -6,6 +6,7 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
@@ -210,6 +211,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return NoService();
         }
+        
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
+        {
+            throw new Exception("Not supported");
+        }
 
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
@@ -392,14 +398,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             /// </summary>
             /// <typeparam name="TService"></typeparam>
             /// <returns></returns>
-            public TService CreateClient<TService>(CancellationToken? cancellationToken = null, string? remoteThumbprint = null)
+            public TService CreateClient<TService>(CancellationToken? cancellationToken = null)
             {
-                if (remoteThumbprint == null) remoteThumbprint = serviceCertAndThumbprint.Thumbprint;
-                if (remoteThumbprint != serviceCertAndThumbprint.Thumbprint)
-                {
-                    throw new Exception("Setting the remote thumbprint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
-                }
-
                 if (cancellationToken != null && cancellationToken != CancellationToken.None)
                 {
                     throw new Exception("Setting the connect cancellation token to anything other than none is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
@@ -418,7 +418,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             /// <param name="remoteThumbprint"></param>
             /// <typeparam name="TService"></typeparam>
             /// <returns></returns>
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken, string? remoteThumbprint = null)
+            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
             {
                 throw new Exception("Modifying the service endpoint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
             }
@@ -430,12 +430,23 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public TClientService CreateClient<TService, TClientService>()
             {
-                return CreateClient<TService, TClientService>(s => { });
+                try
+                {
+                    new ServiceInterfaceInspector().EnsureServiceTypeAndClientServiceTypeHaveMatchingMethods<TService, TClientService>();
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"Unsupported, since types within {typeof(TClientService)} would not actually be passed on to the remote process which holds the actual client under test.", e);
+                }
+                
+                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                
+                return ProxyClient.CreateAsyncClient<TService, TClientService>(serviceEndpoint);
             }
 
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                throw new Exception($"Unsupported, since the {typeof(TClientService)} would not actually be passed on to the remote process which holds the actual client under test.");
+                throw new Exception("Modifying the service endpoint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
             }
 
             public void Dispose()

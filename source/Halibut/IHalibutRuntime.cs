@@ -46,6 +46,22 @@ namespace Halibut
         /// </typeparam>
         /// <returns></returns>
         public TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint);
+
+        /// <summary>
+        /// Creates a Halibut client mapping the methods from TClientService to TService, with support for async methods
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <typeparam name="TService">The interface the remote service implements.</typeparam>
+        /// <typeparam name="TAsyncClientService">The type that will be returned. Must have the same methods as TService except
+        /// that each method may have an additional argument at the end of HalibutProxyRequestOptions. When requests are made
+        /// to the service the HalibutProxyRequestOptions is dropped and the request is sent as though it was called on the
+        /// equivalent method of TService.
+        ///
+        /// For example if TService is interface IFoo { void Bar(string); }
+        /// TClientService would be: IClientFoo { void Bar(string, HalibutProxyRequestOptions); }
+        /// </typeparam>
+        /// <returns></returns>
+        public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint endpoint);
         void Trust(string clientThumbprint);
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);
