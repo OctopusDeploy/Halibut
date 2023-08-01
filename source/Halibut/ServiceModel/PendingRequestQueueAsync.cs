@@ -14,7 +14,7 @@ namespace Halibut.ServiceModel
         readonly ConcurrentQueue<PendingRequest> queue = new();
         readonly Dictionary<string, PendingRequest> inProgress = new();
         readonly SemaphoreSlim queueLock = new(1, 1);
-        readonly AsyncManualResetEvent hasItems = new(false);
+        readonly AsyncManualResetEvent itemAddedToQueue = new(false);
         readonly ILog log;
         readonly TimeSpan pollingQueueWaitTimeout;
 
@@ -37,7 +37,7 @@ namespace Halibut.ServiceModel
             {
                 queue.Enqueue(pending);
                 inProgress.Add(request.Id, pending);
-                hasItems.Set();
+                itemAddedToQueue.Set();
             }
 
             try
@@ -75,8 +75,8 @@ namespace Halibut.ServiceModel
                 return first;
             }
 
-            await Task.WhenAny(hasItems.WaitAsync(cancellationToken), Task.Delay(pollingQueueWaitTimeout, cancellationToken));
-            hasItems.Reset();
+            await Task.WhenAny(itemAddedToQueue.WaitAsync(cancellationToken), Task.Delay(pollingQueueWaitTimeout, cancellationToken));
+            itemAddedToQueue.Reset();
             return await TakeFirst(cancellationToken);
         }
 
@@ -91,7 +91,7 @@ namespace Halibut.ServiceModel
                 
                 if (queue.IsEmpty)
                 {
-                    hasItems.Reset();
+                    itemAddedToQueue.Reset();
                 }
 
                 return first;

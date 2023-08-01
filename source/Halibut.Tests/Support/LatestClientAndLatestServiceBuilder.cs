@@ -408,7 +408,7 @@ namespace Halibut.Tests.Support
             }
 
             var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory)
-                .WithForceClientProxyType(forceClientProxyType);
+                .WithSyncOrAsync(forceClientProxyType.ToSyncOrAsync());
 
             if (this.pendingRequestQueueFactoryBuilder != null)
             {

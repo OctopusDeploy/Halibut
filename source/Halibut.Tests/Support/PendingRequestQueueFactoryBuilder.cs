@@ -1,24 +1,26 @@
 ﻿using System;
+using System.IO;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support.TestAttributes;
 
 namespace Halibut.Tests.Support
 {
     public class PendingRequestQueueFactoryBuilder
     {
-        public ILogFactory LogFactory { get; }
+        readonly ILogFactory logFactory;
 
-        ForceClientProxyType? forceClientProxyType;
+        SyncOrAsync? syncOrAsync;
         Func<ILogFactory, IPendingRequestQueueFactory, IPendingRequestQueueFactory>? createDecorator;
 
         public PendingRequestQueueFactoryBuilder(ILogFactory logFactory)
         {
-            this.LogFactory = logFactory;
+            this.logFactory = logFactory;
         }
 
-        public PendingRequestQueueFactoryBuilder WithForceClientProxyType(ForceClientProxyType? forceClientProxyType)
+        public PendingRequestQueueFactoryBuilder WithSyncOrAsync(SyncOrAsync syncOrAsync)
         {
-            this.forceClientProxyType = forceClientProxyType;
+            this.syncOrAsync = syncOrAsync;
             return this;
         }
 
@@ -33,7 +35,7 @@ namespace Halibut.Tests.Support
             var factory =  CreateBaselinePendingRequestQueueFactory();
             if (createDecorator is not null)
             {
-                factory = createDecorator(LogFactory, factory);
+                factory = createDecorator(logFactory, factory);
             }
 
             return factory;
@@ -41,12 +43,15 @@ namespace Halibut.Tests.Support
 
         IPendingRequestQueueFactory CreateBaselinePendingRequestQueueFactory()
         {
-            if (forceClientProxyType == ForceClientProxyType.AsyncClient)
+            switch (syncOrAsync)
             {
-                return new PendingRequestQueueFactoryAsync(LogFactory);
+                case SyncOrAsync.Async:
+                    return new PendingRequestQueueFactoryAsync(logFactory);
+                case SyncOrAsync.Sync:
+                    return new DefaultPendingRequestQueueFactory(logFactory);
+                default:
+                    throw new InvalidDataException($"Unknown {nameof(SyncOrAsync)} {syncOrAsync}");
             }
-
-            return new DefaultPendingRequestQueueFactory(LogFactory);
         }
     }
 }

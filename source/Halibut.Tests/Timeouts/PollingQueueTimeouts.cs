@@ -42,7 +42,7 @@ namespace Halibut.Tests.Timeouts
                        .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
                            .WithLog(logFactory.ForEndpoint(uri))
                            .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                           .WithAsync(clientAndServiceTestCase.SyncOrAsync)
+                           .WithSyncOrAsync(clientAndServiceTestCase.SyncOrAsync)
                            .Build()))
                        .WithEchoService()
                        .Build(CancellationToken))

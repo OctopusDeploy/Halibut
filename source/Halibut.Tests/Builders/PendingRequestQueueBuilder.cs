@@ -2,7 +2,6 @@
 using System.IO;
 using Halibut.ServiceModel;
 using Halibut.Diagnostics;
-using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 
 namespace Halibut.Tests.Builders
@@ -32,7 +31,7 @@ namespace Halibut.Tests.Builders
             return this;
         }
 
-        public PendingRequestQueueBuilder WithAsync(SyncOrAsync syncOrAsync)
+        public PendingRequestQueueBuilder WithSyncOrAsync(SyncOrAsync syncOrAsync)
         {
             this.syncOrAsync = syncOrAsync;
             return this;
