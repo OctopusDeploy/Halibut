@@ -64,6 +64,7 @@ namespace Halibut.Transport
                     try
                     {
                         retry.Try();
+#pragma warning disable CS0612 // Type or member is obsolete
                         secureClient.ExecuteTransaction(protocol =>
                         {
                             // We have successfully connected at this point so reset the retry policy
@@ -72,6 +73,7 @@ namespace Halibut.Transport
 
                             protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
                         }, cancellationToken);
+#pragma warning restore CS0612 // Type or member is obsolete
                         retry.Success();
                     }
                     finally

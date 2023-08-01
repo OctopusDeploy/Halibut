@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
@@ -15,52 +18,111 @@ namespace Halibut.Tests
     public class ParallelRequestsFixture : BaseTest
     {
         [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
+        public async Task MultipleRequestsCanBeInFlightInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .WithHalibutLoggingLevel(LogLevel.Info)
+                .WithStandardServices()
+                .Build(CancellationToken);
+
+            var lockService = clientAndService.CreateClient<ILockService>();
+
+            int threadCount = 64;
+            long threadCompletionCount = 0;
+            var threads = new List<Thread>();
+            var exceptions = new ConcurrentBag<Exception>();
+
+            var lockFile = Path.GetTempFileName();
+            var requestStartedFilePathBase = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            var requestStartedFilePaths = new ConcurrentBag<string>();
+            Logger.Information($"Lock file: {lockFile}");
+            Logger.Information($"Request started files: {requestStartedFilePathBase}");
+            
+            for (var i = 0; i < threadCount; i++)
+            {
+                int iteration = i;
+                var thread = new Thread(() =>
+                {
+                    // Gotta handle exceptions when running in a 
+                    // Thread, or you're gonna have a bad time.
+                    try
+                    {
+                        var requestStartedPath = $"{requestStartedFilePathBase}-{iteration}";
+                        requestStartedFilePaths.Add(requestStartedPath);
+                        lockService.WaitForFileToBeDeleted(lockFile, requestStartedPath);
+                        Interlocked.Increment(ref threadCompletionCount);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
+                });
+                thread.Start();
+                threads.Add(thread);
+            }
+
+            // Wait for all requests to be started
+            await Wait.For(() => Task.FromResult(requestStartedFilePaths.All(File.Exists)), CancellationToken);
+
+            Interlocked.Read(ref threadCompletionCount).Should().Be(0);
+            exceptions.Should().BeEmpty();
+            
+            // Let the remote calls complete
+            File.Delete(lockFile);
+
+            WaitForAllThreads(threads);
+            
+            Interlocked.Read(ref threadCompletionCount).Should().Be(threadCount);
+            exceptions.Should().BeEmpty();
+        }
+
+        [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling:false, testWebSocket: false, testNetworkConditions: false)]
         public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                .WithHalibutLoggingLevel(LogLevel.Trace)
+                .WithHalibutLoggingLevel(LogLevel.Info)
                 .WithStandardServices()
                 .Build(CancellationToken);
+            
+            var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
+
+            var dataStreams = CreateDataStreams();
+
+            var messagesAreSentTheSameTimeSemaphore = new SemaphoreSlim(0, dataStreams.Length);
+
+            int threadCount = 64;
+            int threadCompletionCount = 0;
+            var threads = new List<Thread>();
+            var exceptions = new ConcurrentBag<Exception>();
+            for (var i = 0; i < threadCount; i++)
             {
-                var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
-
-                var dataStreams = CreateDataStreams();
-
-                var messagesAreSentTheSameTimeSemaphore = new SemaphoreSlim(0, dataStreams.Length);
-
-                int threadCount = 64;
-                int threadCompletionCount = 0;
-                var threads = new List<Thread>();
-                var exceptions = new ConcurrentBag<Exception>();
-                for (var i = 0; i < threadCount; i++)
+                var thread = new Thread(() =>
                 {
-                    var thread = new Thread(() =>
+                    // Gotta handle exceptions when running in a 
+                    // Thread, or you're gonna have a bad time.
+                    try
                     {
-                        // Gotta handle exceptions when running in a 
-                        // Thread, or you're gonna have a bad time.
-                        try
-                        {
-                            messagesAreSentTheSameTimeSemaphore.Wait(CancellationToken);
-                            var received = readDataSteamService.SendData(dataStreams);
-                            received.Should().Be(5 * dataStreams.Length);
-                            Interlocked.Increment(ref threadCompletionCount);
-                        }
-                        catch (Exception e)
-                        {
-                            exceptions.Add(e);
-                        }
-                    });
-                    thread.Start();
-                    threads.Add(thread);
-                }
-
-                messagesAreSentTheSameTimeSemaphore.Release(dataStreams.Length);
-
-                WaitForAllThreads(threads);
-                exceptions.Should().BeEmpty();
-                threadCompletionCount.Should().Be(threadCount);
+                        messagesAreSentTheSameTimeSemaphore.Wait(CancellationToken);
+                        var received = readDataSteamService.SendData(dataStreams);
+                        received.Should().Be(5 * dataStreams.Length);
+                        Interlocked.Increment(ref threadCompletionCount);
+                    }
+                    catch (Exception e)
+                    {
+                        exceptions.Add(e);
+                    }
+                });
+                thread.Start();
+                threads.Add(thread);
             }
+
+            messagesAreSentTheSameTimeSemaphore.Release(dataStreams.Length);
+
+            WaitForAllThreads(threads);
+            exceptions.Should().BeEmpty();
+            threadCompletionCount.Should().Be(threadCount);
         }
 
         static DataStream[] CreateDataStreams()

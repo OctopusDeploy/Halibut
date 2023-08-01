@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
@@ -31,8 +32,8 @@ namespace Halibut.Tests.Transport
             var connectionManager = new ConnectionManager();
 
             //do it twice because this bug only triggers on multiple enumeration, having 1 in the collection doesn't trigger the bug
-            connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
-            connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
+            connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
 
             connectionManager.Disconnect(serviceEndpoint, null);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
@@ -44,7 +45,7 @@ namespace Halibut.Tests.Transport
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
             connectionManager.ReleaseConnection(serviceEndpoint, activeConnection);
@@ -57,7 +58,7 @@ namespace Halibut.Tests.Transport
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
             activeConnection.Dispose();
@@ -70,7 +71,7 @@ namespace Halibut.Tests.Transport
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            var activeConnection = connectionManager.AcquireConnection(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
             connectionManager.Disconnect(serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
