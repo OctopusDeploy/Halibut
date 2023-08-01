@@ -11,6 +11,7 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
+using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -58,7 +59,7 @@ namespace Halibut.Tests
                 var cts = new CancellationTokenSource();
                 var echo = clientAndBuilder
                     .As<LatestClientAndLatestServiceBuilder.ClientAndService>()
-                    .CreateClientWithOptions<ICountingService, CancellationViaClientProxyFixture.IClientCountingService,  IAsyncClientCountingServiceWithOptions>(point =>
+                    .CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions,  IAsyncClientCountingServiceWithOptions>(point =>
                 {
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
                 });
@@ -118,7 +119,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var cts = new CancellationTokenSource();
-                var echo = clientAndBuilder.CreateClientWithOptions<ICountingService, CancellationViaClientProxyFixture.IClientCountingService, IAsyncClientCountingServiceWithOptions>(point =>
+                var echo = clientAndBuilder.CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
                 {
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
