@@ -250,6 +250,51 @@ namespace Halibut.Transport.Proxy
                 throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {ex.Message}", ex, true);
             }
         }
+        
+        public async Task<TcpClient> CreateConnectionAsync(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            try
+            {
+                // if we have no connection, create one
+                if (TcpClient == null)
+                {
+                    if (string.IsNullOrEmpty(ProxyHost))
+                        throw new ProxyException("ProxyHost property must contain a value", false);
+
+                    if (ProxyPort <= 0 || ProxyPort > 65535)
+                        throw new ProxyException("ProxyPort value must be greater than zero and less than 65535", false);
+
+                    if(ProxyHost.Contains("://"))
+                        throw new ProxyException("The proxy's hostname cannot contain a protocol prefix (eg http://)", false);
+
+
+                    //  create new tcp client object to the proxy server
+                    TcpClient = tcpClientFactory();
+
+                    // attempt to open the connection
+                    log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
+                    await TcpClient.ConnectWithTimeoutAsync(ProxyHost, ProxyPort, timeout, cancellationToken);
+                }
+
+                //  send connection command to proxy host for the specified destination host and port
+                await SendConnectionCommandAsync(destinationHost, destinationPort, cancellationToken);
+
+                // return the open proxied tcp client object to the caller for normal use
+                return TcpClient;
+            }
+            catch (AggregateException ae)
+            {
+                var se = ae.InnerExceptions.OfType<SocketException>().FirstOrDefault();
+                if (se != null)
+                    throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {se.Message}", se, true);
+
+                throw;
+            }
+            catch (SocketException ex)
+            {
+                throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {ex.Message}", ex, true);
+            }
+        }
 
 
         void SendConnectionCommand(string host, int port)
@@ -278,6 +323,42 @@ namespace Halibut.Transport.Proxy
             do
             {
                 var bytes = stream.Read(response, 0, TcpClient.ReceiveBufferSize);
+                sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
+            } while (stream.DataAvailable);
+
+            ParseResponse(sbuilder.ToString());
+            
+            //  evaluate the reply code for an error condition
+            if (_respCode != HttpResponseCodes.OK)
+                HandleProxyCommandError(host, port);
+        }
+        
+        async Task SendConnectionCommandAsync(string host, int port, CancellationToken cancellationToken)
+        {
+            var stream = TcpClient.GetStream();
+            var connectCmd = GetConnectCmd(host, port);
+            var request = Encoding.ASCII.GetBytes(connectCmd);
+
+            // send the connect request
+            await stream.WriteAsync(request, 0, request.Length, cancellationToken);
+
+            // wait for the proxy server to respond
+            await WaitForDataAsync(stream, cancellationToken);
+
+            // PROXY SERVER RESPONSE
+            // =======================================================================
+            //HTTP/1.0 200 Connection Established<CR><LF>
+            //[.... other HTTP header lines ending with <CR><LF>..
+            //ignore all of them]
+            //<CR><LF>    // Last Empty Line
+
+            // create an byte response array  
+            var response = new byte[TcpClient.ReceiveBufferSize];
+            var sbuilder = new StringBuilder();
+
+            do
+            {
+                var bytes = await stream.ReadAsync(response, 0, TcpClient.ReceiveBufferSize, cancellationToken);
                 sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
             } while (stream.DataAvailable);
 
@@ -339,6 +420,18 @@ namespace Halibut.Transport.Proxy
             while (!stream.DataAvailable)
             {
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
+                sleepTime += WAIT_FOR_DATA_INTERVAL;
+                if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
+                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), true);
+            }
+        }
+        
+        async Task WaitForDataAsync(NetworkStream stream, CancellationToken cancellationToken)
+        {
+            var sleepTime = 0;
+            while (!stream.DataAvailable)
+            {
+                await Task.Delay(WAIT_FOR_DATA_TIMEOUT, cancellationToken);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
                     throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), true);

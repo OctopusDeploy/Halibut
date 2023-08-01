@@ -5,6 +5,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
@@ -20,11 +21,6 @@ namespace Halibut.Transport
         public TcpConnectionFactory(X509Certificate2 clientCertificate)
         {
             this.clientCertificate = clientCertificate;
-        }
-
-        public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log)
-        {
-            return EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, CancellationToken.None);
         }
 
         public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
@@ -47,6 +43,27 @@ namespace Halibut.Transport
 
             return new SecureConnection(client, ssl, exchangeProtocolBuilder, log);
         }
+        
+        public async Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        {
+            log.Write(EventType.OpeningNewConnection, $"Opening a new connection to {serviceEndpoint.BaseUri}");
+
+            var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
+            var client = await CreateConnectedTcpClientAsync(serviceEndpoint, log, cancellationToken);
+            log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
+
+            var stream = client.GetStream();
+
+            log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
+            var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
+            await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+            await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
+            await ssl.FlushAsync(cancellationToken);
+
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
+
+            return new SecureConnection(client, ssl, exchangeProtocolBuilder, log);
+        }
 
         internal static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log, CancellationToken cancellationToken)
         {
@@ -64,6 +81,26 @@ namespace Halibut.Transport
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(CreateTcpClient)
                     .CreateConnection(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout, cancellationToken);
+            }
+            return client;
+        }
+        
+        internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, ILog log, CancellationToken cancellationToken)
+        {
+            TcpClient client;
+            if (endPoint.Proxy == null)
+            {
+                client = CreateTcpClient();
+                await client.ConnectWithTimeoutAsync(endPoint.BaseUri, endPoint.TcpClientConnectTimeout, cancellationToken);
+            }
+            else
+            {
+                log.Write(EventType.Diagnostic, "Creating a proxy client");
+                
+                client = await new ProxyClientFactory()
+                    .CreateProxyClient(log, endPoint.Proxy)
+                    .WithTcpClientFactory(CreateTcpClient)
+                    .CreateConnectionAsync(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout, cancellationToken);
             }
             return client;
         }
