@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
@@ -39,7 +42,8 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        public void SecureClientClearsPoolWhenAllConnectionsCorrupt()
+        [SyncAndAsync]
+        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
         {
             var connectionManager = new ConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
@@ -60,8 +64,13 @@ namespace Halibut.Tests.Transport
             };
 
             var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager);
-            ResponseMessage response = null;
-            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request));
+            ResponseMessage response = null!;
+
+#pragma warning disable CS0612
+            await syncOrAsync
+                .WhenSync(() => secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None))
+                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None));
+#pragma warning restore CS0612
 
             // The pool should be cleared after the second failure
             stream.Received(2).IdentifyAsClient();
