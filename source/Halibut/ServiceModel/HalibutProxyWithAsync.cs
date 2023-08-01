@@ -63,7 +63,7 @@ namespace Halibut.ServiceModel
             args = trimmedArgsAndHalibutProxyRequestOptions.args;
             var halibutProxyRequestOptions = trimmedArgsAndHalibutProxyRequestOptions.halibutProxyRequestOptions;
 
-            var request = CreateRequest(serviceMethod, args);
+            var request = CreateRequest(asyncMethod, serviceMethod, args);
 
             var response = await messageRouter(request, serviceMethod, ConnectingCancellationToken(halibutProxyRequestOptions));
 
@@ -72,13 +72,20 @@ namespace Halibut.ServiceModel
             return (serviceMethod, response.Result);
         }
 
-        RequestMessage CreateRequest(MethodInfo targetMethod, object[] args)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="asyncMethod">The async client method called, used in the call id.</param>
+        /// <param name="targetMethod">The method to actually invoke</param>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        RequestMessage CreateRequest(MethodInfo asyncMethod, MethodInfo targetMethod, object[] args)
         {
             var activityId = Guid.NewGuid();
 
             var request = new RequestMessage
             {
-                Id = contractType.Name + "::" + targetMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                Id = contractType.Name + "::" + asyncMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
                 ActivityId = activityId,
                 Destination = endPoint,
                 MethodName = targetMethod.Name,
