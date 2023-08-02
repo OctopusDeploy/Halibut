@@ -178,6 +178,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
+            var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndPreviousServiceVersionBuilder>();
             CancellationTokenSource cancellationTokenSource = new();
             if (version == null)
             {
@@ -232,18 +233,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
-                using var tcpPortConflictLock = await TcpPortHelper.WaitForLock(cancellationToken);
-                var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
-                var webSocketPath = Guid.NewGuid().ToString();
-                var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
-                var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
+                var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, octopus, cancellationToken);
 
-                octopus.ListenWebSocket(webSocketListeningUrl);
-                tcpPortConflictLock.Dispose();
-
+                var webSocketListeningPort = webSocketListeningInfo.WebSocketListeningPort;
                 portForwarder = portForwarderFactory?.Invoke(webSocketListeningPort);
 
-                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress).Build();
+                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketListeningInfo.WebSocketSslCertificateBindingAddress).Build();
                 disposableCollection.Add(webSocketSslCertificate);
 
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
@@ -255,7 +250,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                 if (hasService)
                 {
-                    var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
+                    var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
                     runningOldHalibutBinary = await new HalibutTestBinaryRunner(
                         serviceConnectionType,
                         webSocketServiceEndpointUri,
