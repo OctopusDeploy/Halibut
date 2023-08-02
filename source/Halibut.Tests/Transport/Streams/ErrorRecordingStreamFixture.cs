@@ -67,7 +67,7 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public void ReadErrorsFromUnderlyingStreamAreRecordedAsync()
+        public async Task ReadErrorsFromUnderlyingStreamAreRecordedAsync()
         {
             int counter = 0;
             var errorRecordingStream = new ErrorRecordingStream(
@@ -76,8 +76,8 @@ namespace Halibut.Tests.Transport.Streams
                 , true
             );
 
-            Assert.ThrowsAsync<Exception>(async () => await errorRecordingStream.ReadAsync(new byte[100], 0, 100));
-            Assert.ThrowsAsync<Exception>(async () => await errorRecordingStream.ReadAsync(new byte[100], 0, 100));
+            await AssertionExtensions.Should(() => errorRecordingStream.ReadAsync(new byte[100], 0, 100)).ThrowAsync<Exception>();
+            await AssertionExtensions.Should(() => errorRecordingStream.ReadAsync(new byte[100], 0, 100)).ThrowAsync<Exception>();
 
             errorRecordingStream.WasTheEndOfStreamEncountered.Should().Be(false);
             errorRecordingStream.ReadExceptions.Count.Should().Be(2);
@@ -133,7 +133,7 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public void WriteErrorsFromUnderlyingStreamAreRecordedAsync()
+        public async Task WriteErrorsFromUnderlyingStreamAreRecordedAsync()
         {
             int counter = 0;
             var errorRecordingStream = new ErrorRecordingStream(
@@ -142,8 +142,8 @@ namespace Halibut.Tests.Transport.Streams
                 , true
             );
 
-            Assert.ThrowsAsync<Exception>(async () => await errorRecordingStream.WriteAsync(new byte[100], 0, 100));
-            Assert.ThrowsAsync<Exception>(async () => await errorRecordingStream.WriteAsync(new byte[100], 0, 100));
+            await AssertionExtensions.Should(() => errorRecordingStream.WriteAsync(new byte[100], 0, 100)).ThrowAsync<Exception>();
+            await AssertionExtensions.Should(() => errorRecordingStream.WriteAsync(new byte[100], 0, 100)).ThrowAsync<Exception>();
 
             errorRecordingStream.WasTheEndOfStreamEncountered.Should().Be(false);
             errorRecordingStream.WriteExceptions.Count.Should().Be(2);

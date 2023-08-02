@@ -134,7 +134,7 @@ namespace Halibut.Tests
                 (await echo.AmbiguousAsync("a", "b")).Should().Be("Hello string");
                 (await echo.AmbiguousAsync("a", new Tuple<string, string>("a", "b"))).Should().Be("Hello tuple");
 
-                var ex = Assert.ThrowsAsync<AmbiguousMethodMatchHalibutClientException>(async () => await echo.AmbiguousAsync("a", (string)null));
+                var ex = (await AssertionExtensions.Should(() => echo.AmbiguousAsync("a", (string)null)).ThrowAsync<AmbiguousMethodMatchHalibutClientException>()).And;
                 ex.Message.Should().Contain("Ambiguous");
 
                 (await echo.GetLocationAsync(new MapLocation { Latitude = -27, Longitude = 153 })).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -55,10 +56,14 @@ namespace Halibut.Tests.Timeouts
                            .WithDataObserver(() =>
                            {
                                if(onClientToOrigin) return new BiDirectionalDataTransferObserver(dataTransferObserverPauser,dataTransferObserverDoNothing);
-                               else return new BiDirectionalDataTransferObserver(dataTransferObserverDoNothing, dataTransferObserverPauser);
+                               return new BiDirectionalDataTransferObserver(dataTransferObserverDoNothing, dataTransferObserverPauser);
                            })
                            .Build())
-                       .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueue(logFactory.ForEndpoint(uri), TimeSpan.FromSeconds(1))))
+                       .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
+                           .WithLog(logFactory.ForEndpoint(uri))
+                           .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
+                           .WithSyncOrAsync(clientAndServiceTestCase.SyncOrAsync)
+                           .Build()))
                        .WithEchoService()
                        .Build(CancellationToken))
             {

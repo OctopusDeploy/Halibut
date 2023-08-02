@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
@@ -29,7 +28,7 @@ namespace Halibut.Tests
                            // No Tentacle
                            .NoService()
                            // CancelWhenRequestQueuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
-                           .WithPendingRequestQueueFactory(logFactory => new CancelWhenRequestQueuedPendingRequestQueueFactory(logFactory, cancellationTokenSource))
+                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, cancellationTokenSource)))
                            .Build(CancellationToken))
                 {
                     var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>(cancellationTokenSource.Token);
@@ -74,7 +73,7 @@ namespace Halibut.Tests
                                Thread.Sleep(TimeSpan.FromSeconds(1));
                            })
                            // CancelWhenRequestDequeuedPendingRequestQueueFactory cancels the cancellation token source when a request is queued
-                           .WithPendingRequestQueueFactory(logFactory => new CancelWhenRequestDequeuedPendingRequestQueueFactory(logFactory, cancellationTokenSource))
+                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, cancellationTokenSource)))
                            .Build(CancellationToken))
                 {
                     clientAndService.CreateClient<IDoSomeActionService>(cancellationTokenSource.Token).Action();
@@ -87,12 +86,12 @@ namespace Halibut.Tests
         internal class CancelWhenRequestQueuedPendingRequestQueueFactory : IPendingRequestQueueFactory
         {
             readonly CancellationTokenSource cancellationTokenSource;
-            readonly DefaultPendingRequestQueueFactory inner;
+            readonly IPendingRequestQueueFactory inner;
 
-            public CancelWhenRequestQueuedPendingRequestQueueFactory(ILogFactory logFactory, CancellationTokenSource cancellationTokenSource)
+            public CancelWhenRequestQueuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource)
             {
                 this.cancellationTokenSource = cancellationTokenSource;
-                this.inner = new DefaultPendingRequestQueueFactory(logFactory);
+                this.inner = inner;
             }
 
             public IPendingRequestQueue CreateQueue(Uri endpoint)
@@ -112,8 +111,9 @@ namespace Halibut.Tests
                 }
 
                 public bool IsEmpty => inner.IsEmpty;
-                public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
-                public async Task<RequestMessage> DequeueAsync() => await inner.DequeueAsync();
+                public int Count => inner.Count;
+                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
+                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
 
                 public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
                 {
@@ -138,12 +138,12 @@ namespace Halibut.Tests
         internal class CancelWhenRequestDequeuedPendingRequestQueueFactory : IPendingRequestQueueFactory
         {
             readonly CancellationTokenSource cancellationTokenSource;
-            readonly DefaultPendingRequestQueueFactory inner;
+            readonly IPendingRequestQueueFactory inner;
 
-            public CancelWhenRequestDequeuedPendingRequestQueueFactory(ILogFactory logFactory, CancellationTokenSource cancellationTokenSource)
+            public CancelWhenRequestDequeuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource)
             {
                 this.cancellationTokenSource = cancellationTokenSource;
-                this.inner = new DefaultPendingRequestQueueFactory(logFactory);
+                this.inner = inner;
             }
 
             public IPendingRequestQueue CreateQueue(Uri endpoint)
@@ -163,11 +163,12 @@ namespace Halibut.Tests
                 }
 
                 public bool IsEmpty => inner.IsEmpty;
-                public void ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => inner.ApplyResponse(response, destination);
+                public int Count => inner.Count;
+                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
                 
-                public async Task<RequestMessage> DequeueAsync()
+                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
                 {
-                    var response = await inner.DequeueAsync();
+                    var response = await inner.DequeueAsync(cancellationToken);
                     cancellationTokenSource.Cancel();
                     return response;
                 }

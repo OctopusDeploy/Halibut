@@ -33,8 +33,8 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var echo = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
-                Assert.ThrowsAsync<HalibutClientException>(async () => await echo.IncrementAsync());
-                
+                await AssertionExtensions.Should(() => echo.IncrementAsync()).ThrowAsync<HalibutClientException>();
+
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
                 
                 serviceLoggers[serviceLoggers.Keys.First()].GetLogs().Should()
@@ -76,14 +76,14 @@ namespace Halibut.Tests
                     CancellationToken);
                 
                 cts.Cancel();
-
-                Assert.ThrowsAsync<OperationCanceledException>(async () => await incrementCount);
+                
+                await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
 
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
-        
-        
+
+
         [Test]
         [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenListeningServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
@@ -96,16 +96,16 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var echo = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
-                Assert.ThrowsAsync<HalibutClientException>(async () => await echo.IncrementAsync())
-                    .Message.Should().Contain("" +
-                                              "We expected the server to present a certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F'. " +
-                                              "Instead, it presented a certificate with a thumbprint of '36F35047CE8B000CF4C671819A2DD1AFCDE3403D'");
+                (await AssertionExtensions.Should(() => echo.IncrementAsync()).ThrowAsync<HalibutClientException>())
+                    .And.Message.Should().Contain("" +
+                                                  "We expected the server to present a certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F'. " +
+                                                  "Instead, it presented a certificate with a thumbprint of '36F35047CE8B000CF4C671819A2DD1AFCDE3403D'");
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
-        
-        
-        
+
+
+
         [Test]
         [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenPollingServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
@@ -136,13 +136,13 @@ namespace Halibut.Tests
 
                 cts.Cancel();
 
-                Assert.ThrowsAsync<OperationCanceledException>(async () => await incrementCount);
+                await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
 
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
 
-        private IEnumerable<LogEvent> AllLogs(ConcurrentDictionary<string, ILog> loggers)
+        IEnumerable<LogEvent> AllLogs(ConcurrentDictionary<string, ILog> loggers)
         {
             foreach (var key in loggers.Keys)
             {

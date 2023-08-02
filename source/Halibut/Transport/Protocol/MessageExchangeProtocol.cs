@@ -159,7 +159,7 @@ namespace Halibut.Transport.Protocol
         {
             while (true)
             {
-                var nextRequest = await pendingRequests.DequeueAsync();
+                var nextRequest = await pendingRequests.DequeueAsync(CancellationToken.None);
 
                 var success = await ProcessReceiverInternalSynchronouslyAsync(pendingRequests, nextRequest);
                 if (!success)
@@ -175,7 +175,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = stream.Receive<ResponseMessage>();
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
             }
             catch (Exception ex)
@@ -183,7 +183,7 @@ namespace Halibut.Transport.Protocol
                 if (nextRequest != null)
                 {
                     var response = ResponseMessage.FromException(nextRequest, ex);
-                    pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
                 return false;
             }

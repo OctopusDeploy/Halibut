@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Collections.Concurrent;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
@@ -9,7 +8,6 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
@@ -39,6 +37,7 @@ namespace Halibut.Tests.Support
         bool hasService = true;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
+        Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
         Func<HttpProxyService>? proxyFactory;
@@ -213,6 +212,12 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactoryBuilder(Action<PendingRequestQueueFactoryBuilder> pendingRequestQueueFactoryBuilder)
+        {
+            this.pendingRequestQueueFactoryBuilder = pendingRequestQueueFactoryBuilder;
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
@@ -277,17 +282,15 @@ namespace Halibut.Tests.Support
             CancellationTokenSource cancellationTokenSource = new();
             
             serviceFactory ??= new DelegateServiceFactory();
-            
             var octopusLogFactory = BuildClientLogger();
+
+            var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
+
             var octopusBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
-                .WithLogFactory(octopusLogFactory);
-
-            if (pendingRequestQueueFactory != null)
-            {
-                octopusBuilder = octopusBuilder.WithPendingRequestQueueFactory(pendingRequestQueueFactory(octopusLogFactory));
-            }
-
+                .WithLogFactory(octopusLogFactory)
+                .WithPendingRequestQueueFactory(factory);
+            
             var client = octopusBuilder.Build();
             client.Trust(clientTrustsThumbprint);
 
@@ -395,6 +398,25 @@ namespace Halibut.Tests.Support
             }
 
             return new ClientAndService(client, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, forceClientProxyType, cancellationTokenSource);
+        }
+
+        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(TestContextLogFactory octopusLogFactory)
+        {
+            if (pendingRequestQueueFactory != null)
+            {
+                return pendingRequestQueueFactory(octopusLogFactory);
+            }
+
+            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory)
+                .WithSyncOrAsync(forceClientProxyType.ToSyncOrAsync());
+
+            if (this.pendingRequestQueueFactoryBuilder != null)
+            {
+                this.pendingRequestQueueFactoryBuilder(pendingRequestQueueFactoryBuilder);
+            }
+
+            var factory = pendingRequestQueueFactoryBuilder.Build();
+            return factory;
         }
 
         TestContextLogFactory BuildClientLogger()
