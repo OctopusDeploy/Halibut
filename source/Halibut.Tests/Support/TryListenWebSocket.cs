@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
@@ -16,7 +17,7 @@ namespace Halibut.Tests.Support
                 {
                     return await WebSocketListeningPort(client, cancellationToken);
                 }
-                catch (Exception e)
+                catch (HttpListenerException e)
                 {
                     logger.Warning(e, "Failed to listen for websocket, trying again.");
                 }
