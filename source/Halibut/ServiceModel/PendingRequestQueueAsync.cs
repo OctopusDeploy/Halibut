@@ -182,6 +182,7 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
+                    // We cannot use cancellationToken here, because if we were cancelled, and the transfer has begun, we should attempt to wait for it.
                     responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestMaximumMessageProcessingTimeout, CancellationToken.None);
                     if (responseSet)
                     {
