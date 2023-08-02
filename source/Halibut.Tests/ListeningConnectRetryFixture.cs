@@ -7,6 +7,7 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -15,7 +16,7 @@ namespace Halibut.Tests
     public class ListeningConnectRetryFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false, testAsyncAndSyncClients: true)]
         public async Task ListeningRetriesAttemptsUpToTheConfiguredValue(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -35,21 +36,21 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService>(point =>
+                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.Zero;
                     point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
                     point.RetryCountLimit = 20;
                 });
                 
-                Assert.Throws<HalibutClientException>(() => echoService.SayHello("hello"));
+                Assert.ThrowsAsync<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
 
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(20);
             }
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
         public async Task ListeningRetriesAttemptsUpToTheConfiguredTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -69,7 +70,7 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService>(point =>
+                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.FromSeconds(1);
                     point.ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(15);
@@ -77,7 +78,7 @@ namespace Halibut.Tests
                 });
 
                 var sw = Stopwatch.StartNew();
-                Assert.Throws<HalibutClientException>(() => echoService.SayHello("hello"));
+                Assert.ThrowsAsync<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
                 sw.Stop();
 
                 
@@ -86,7 +87,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
         public async Task ListeningRetryListeningSleepIntervalWorks(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -106,7 +107,7 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService>(point =>
+                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.FromSeconds(10);
                     point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
@@ -114,7 +115,7 @@ namespace Halibut.Tests
                 });
 
                 var sw = Stopwatch.StartNew();
-                Assert.Throws<HalibutClientException>(() => echoService.SayHello("hello"));
+                Assert.ThrowsAsync<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
                 sw.Stop();
 
                 // Expected ~30s since we sleep 10s _between_ each attempt.
@@ -123,7 +124,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
         public async Task ListeningRetriesAttemptsCanEventuallyWork(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -143,14 +144,13 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService>(point =>
+                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.FromSeconds(1);
                     point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
                     point.RetryCountLimit = 999999;
                 });
 
-                var echoCallThatShouldEventuallySucced = Task.Run(() => echoService.SayHello("hello"));
                 while (tcpConnectionsCreatedCounter.ConnectionsCreatedCount < 5)
                 {
                     Logger.Information("TCP count is at: {Count}", tcpConnectionsCreatedCounter.ConnectionsCreatedCount);
@@ -158,7 +158,7 @@ namespace Halibut.Tests
                 }
                 clientAndService.PortForwarder.ReturnToNormalMode();
 
-                await echoCallThatShouldEventuallySucced;
+                await echoService.SayHelloAsync("hello");
             }
         }
     }
