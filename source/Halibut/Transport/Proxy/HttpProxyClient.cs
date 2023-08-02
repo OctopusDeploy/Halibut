@@ -335,6 +335,8 @@ namespace Halibut.Transport.Proxy
         
         async Task SendConnectionCommandAsync(string host, int port, CancellationToken cancellationToken)
         {
+            // TODO - ASYNC ME UP!
+            // This stream needs to be wrapped into a TimeoutStream
             var stream = TcpClient.GetStream();
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);

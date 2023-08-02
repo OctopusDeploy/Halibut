@@ -56,7 +56,11 @@ namespace Halibut.Transport
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
+            
+            // TODO - ASYNC ME UP!
+            // This should take a cancellation token.
             await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+            
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
             await ssl.FlushAsync(cancellationToken);
 
