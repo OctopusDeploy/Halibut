@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Util;
@@ -25,6 +27,26 @@ namespace Halibut.Tests.Transport.Protocol
                 var result = sut.ReadMessage<string>(stream);
                 Assert.AreEqual("Test", result);
             }
+        }
+
+        [Test]
+        public async Task SendReceiveMessageAsyncShouldRoundTrip()
+        {
+            var stopwatch = Stopwatch.StartNew();
+
+            var sut = new MessageSerializerBuilder().Build();
+            using (var stream = new MemoryStream())
+            {
+                var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
+                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\small-file.json");
+                await sut.WriteMessageAsync(stream, m);
+                stream.Position = 0;
+                var result = await sut.ReadMessageAsync<string>(stream);
+                Assert.AreEqual(m, result);
+            }
+
+            var time = stopwatch.Elapsed;
+            await Task.Delay(5000);
         }
 
         [Test]
@@ -174,6 +196,39 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
+        public async Task SendReceiveMessageAsyncRewindableShouldRoundTrip()
+        {
+            TimeSpan time;
+            using (var stream = new MemoryStream())
+            using (var rewindableStream = new RewindableBufferStream(stream, 1024 * 200))
+            {
+                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
+                //for (int i = 0; i < 10; i++)
+                //{
+                //    File.AppendAllText(@"C:\Users\Stephen Burman\Downloads\inflated-file.json", m);
+                //    }
+
+                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\large-file.json");
+                var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\inflated-file.json");
+                //var m = File.ReadAllText(@"C:\Users\Stephen Burman\Downloads\small-file.json");
+
+                await Task.Delay(5000);
+
+                var stopwatch = Stopwatch.StartNew();
+
+                var sut = new MessageSerializerBuilder().Build();
+                
+                await sut.WriteMessageAsync(stream, m);
+                stream.Position = 0;
+                var result = await sut.ReadMessageAsync<string>(rewindableStream);
+                Assert.AreEqual(m, result);
+
+                
+                time = stopwatch.Elapsed;
+                await Task.Delay(5000);
+            }
+        }
+
         public void ReadMessage_Rewindable_ObservesThatMessageIsRead()
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
@@ -215,6 +270,29 @@ namespace Halibut.Tests.Transport.Protocol
                 {
                     _ = sut.ReadMessage<string>(stream);
                     var trailingResult = reader.ReadToEnd();
+                    Assert.AreEqual(trailingData, trailingResult);
+                }
+            }
+        }
+
+        [Test]
+        public async Task ReadMessageAsyncRewindableShouldNotConsumeTrailingData()
+        {
+            const string trailingData = "SomeOtherData";
+
+            var sut = new MessageSerializerBuilder().Build();
+            using (var ms = new MemoryStream())
+            using (var stream = new RewindableBufferStream(ms))
+            {
+                await sut.WriteMessageAsync(stream, "Test");
+                var trailingBytes = Encoding.UTF8.GetBytes(trailingData);
+                stream.Write(trailingBytes, 0, trailingBytes.Length);
+                ms.Position = 0;
+
+                using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
+                {
+                    _ = await sut.ReadMessageAsync<string>(stream);
+                    var trailingResult = await reader.ReadToEndAsync();
                     Assert.AreEqual(trailingData, trailingResult);
                 }
             }
