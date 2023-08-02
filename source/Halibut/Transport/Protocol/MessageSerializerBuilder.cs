@@ -9,6 +9,7 @@ namespace Halibut.Transport.Protocol
         ITypeRegistry typeRegistry;
         Action<JsonSerializerSettings> configureSerializer;
         IMessageSerializerObserver messageSerializerObserver;
+        long readIntoMemoryLimitBytes = 1024L * 1024L * 16L;
 
         public MessageSerializerBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
         {
@@ -28,6 +29,12 @@ namespace Halibut.Transport.Protocol
             return this;
         }
 
+        public MessageSerializerBuilder WithReadIntoMemoryLimitBytes(long readIntoMemoryLimitBytes)
+        {
+            this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
+            return this;
+        }
+
         public MessageSerializer Build()
         {
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
@@ -43,7 +50,7 @@ namespace Halibut.Transport.Protocol
 
             var messageSerializerObserver = this.messageSerializerObserver ?? new NoMessageSerializerObserver();
 
-            var messageSerializer = new MessageSerializer(typeRegistry, Serializer, messageSerializerObserver);
+            var messageSerializer = new MessageSerializer(typeRegistry, Serializer, messageSerializerObserver, readIntoMemoryLimitBytes);
 
             return messageSerializer;
         }
