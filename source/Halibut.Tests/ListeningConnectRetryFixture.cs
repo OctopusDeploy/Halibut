@@ -151,6 +151,7 @@ namespace Halibut.Tests
                     point.RetryCountLimit = 999999;
                 });
 
+                var echoCallThatShouldEventuallySucceed = Task.Run(() => echoService.SayHelloAsync("hello"));
                 while (tcpConnectionsCreatedCounter.ConnectionsCreatedCount < 5)
                 {
                     Logger.Information("TCP count is at: {Count}", tcpConnectionsCreatedCounter.ConnectionsCreatedCount);
@@ -158,7 +159,7 @@ namespace Halibut.Tests
                 }
                 clientAndService.PortForwarder.ReturnToNormalMode();
 
-                await echoService.SayHelloAsync("hello");
+                await echoCallThatShouldEventuallySucceed;
             }
         }
     }
