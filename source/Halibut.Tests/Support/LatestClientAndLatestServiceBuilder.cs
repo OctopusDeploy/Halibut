@@ -279,6 +279,7 @@ namespace Halibut.Tests.Support
 
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
+            var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndLatestServiceBuilder>();
             CancellationTokenSource cancellationTokenSource = new();
             
             serviceFactory ??= new DelegateServiceFactory();
@@ -336,16 +337,11 @@ namespace Halibut.Tests.Support
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
-                using var tcpPortConflictLock = await TcpPortHelper.WaitForLock(cancellationToken);
-                var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
-                var webSocketPath = Guid.NewGuid().ToString();
-                var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
-                var webSocketSslCertificateBindingAddress = $"0.0.0.0:{webSocketListeningPort}";
+                ;
+                var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
+                var webSocketListeningPort = webSocketListeningInfo.WebSocketListeningPort;
 
-                client.ListenWebSocket(webSocketListeningUrl);
-                tcpPortConflictLock.Dispose();
-
-                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketSslCertificateBindingAddress)
+                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketListeningInfo.WebSocketSslCertificateBindingAddress)
                     .WithCertificate(clientCertAndThumbprint)
                     .Build();
                 disposableCollection.Add(webSocketSslCertificate);
@@ -353,14 +349,14 @@ namespace Halibut.Tests.Support
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
                 if (service != null)
                 {
-                    portForwarder = portForwarderFactory?.Invoke(webSocketListeningPort);
+                    portForwarder = portForwarderFactory?.Invoke(webSocketListeningInfo.WebSocketListeningPort);
 
                     if (portForwarder != null)
                     {
                         webSocketListeningPort = portForwarder.ListeningPort;
                     }
 
-                    var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
+                    var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
                     service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, serviceTrustsThumbprint, httpProxyDetails));
                 }
             }
