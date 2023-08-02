@@ -22,7 +22,7 @@ namespace Halibut.Tests.Transport
         {
             connection = new SecureConnection(Substitute.For<IDisposable>(), Stream.Null, GetProtocol, Substitute.For<ILog>());
             connectionFactory = Substitute.For<IConnectionFactory>();
-            connectionFactory.EstablishNewConnection(GetProtocol, Arg.Any<ServiceEndPoint>(), Arg.Any<ILog>()).Returns(connection);
+            connectionFactory.EstablishNewConnection(GetProtocol, Arg.Any<ServiceEndPoint>(), Arg.Any<ILog>(), Arg.Any<CancellationToken>()).Returns(connection);
         }
 
         [Test]

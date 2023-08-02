@@ -26,6 +26,7 @@
 using System;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport.Proxy
 {
@@ -90,6 +91,8 @@ namespace Halibut.Transport.Proxy
         /// port.  
         /// </remarks>
         TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken);
+        
+        Task<TcpClient> CreateConnectionAsync(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken);
     }
 }
     
