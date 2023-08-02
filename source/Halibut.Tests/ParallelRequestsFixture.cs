@@ -15,6 +15,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    [Parallelizable(ParallelScope.Children)]
     public class ParallelRequestsFixture : BaseTest
     {
         [Test]

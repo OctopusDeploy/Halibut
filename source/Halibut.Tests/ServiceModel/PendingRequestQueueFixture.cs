@@ -9,7 +9,6 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport.Protocol;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 using NUnit.Framework;
 
 namespace Halibut.Tests.ServiceModel
@@ -236,6 +235,7 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
+        [NonParallelizable]
         public async Task QueueAndWait_Can_Queue_Dequeue_Apply_VeryLargeNumberOfRequests()
         {
             // Arrange
