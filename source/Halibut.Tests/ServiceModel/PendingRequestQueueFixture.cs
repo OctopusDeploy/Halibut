@@ -236,6 +236,36 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
+        public async Task QueueAndWait_Can_Queue_Dequeue_Apply_VeryLargeNumberOfRequests()
+        {
+            // Arrange
+            const string endpoint = "poll://endpoint001";
+
+            var sut = new PendingRequestQueueBuilder().WithSyncOrAsync(SyncOrAsync.Async).WithEndpoint(endpoint).Build();
+
+            // Choose a number large enough that it will fail when doing the 'synchronous' version.
+            var requestsInOrder = Enumerable.Range(0, 5000)
+                .Select(_ => new RequestMessageBuilder(endpoint).Build())
+                .ToList();
+
+            // Act
+            var queueAndWaitTasksInOrder = requestsInOrder
+                .Select(request => StartQueueAndWait(sut, request, CancellationToken))
+                .ToList();
+
+            await WaitForQueueCountToBecome(sut, requestsInOrder.Count);
+
+            var dequeueTasks = requestsInOrder
+                .Select(_ => sut.DequeueAsync(CancellationToken))
+                .ToList();
+
+            await Task.WhenAll(dequeueTasks);
+            
+            // Assert
+            await ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
+        }
+
+        [Test]
         [SyncAndAsync]
         public async Task QueueAndWait_CancellingAPendingRequestBeforeItIsDequeued_ShouldThrowExceptionAndClearRequest(SyncOrAsync syncOrAsync)
         {
