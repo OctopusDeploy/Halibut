@@ -22,8 +22,11 @@ namespace Halibut.Tests.Transport.Protocol
             {
                 sut.WriteMessage(stream, "Test");
                 stream.Position = 0;
-                var result = sut.ReadMessage<string>(stream);
-                Assert.AreEqual("Test", result);
+                using(var rewindableBufferStream  = new RewindableBufferStream(stream))
+                {
+                    var result = sut.ReadMessage<string>(rewindableBufferStream);
+                    Assert.AreEqual("Test", result);
+                }
             }
         }
 
@@ -59,7 +62,10 @@ namespace Halibut.Tests.Transport.Protocol
                 writingSerializer.WriteMessage(stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
 
                 stream.Position = 0;
-                sut.ReadMessage<string>(stream);
+                using (var rewindableStream = new RewindableBufferStream(stream))
+                {
+                    sut.ReadMessage<string>(rewindableStream);
+                }
             }
 
             var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
@@ -76,7 +82,7 @@ namespace Halibut.Tests.Transport.Protocol
             // The test expects that the serializer will ignore the extra field. 
             // This is to show that as extra fields can be added to the ServerError and they will be ignored.
             var base64Bson = "nY6xTgNBDESHDTR8xRakQ1dRICSaRIfSBCHIDyxZk1tpsz6tfQE+mP/AgQVRU7gYe96Mn06A2ZpEwo7Qm3AX+j4SrgCsQk7Pk3abGoqMXLV7qKy85dw9ki2KUCMvffPCpYgzYyVKxIxq5YoP027fOk5NvDDDRdKQsuD2T1P/tqVRkyV3a9KB4z3rHU8lNsMyJyr667rxX0nt2B/LNsfnr/8fCbfIYfgZzC3JAC+8NziVnR++Mf+acvZ0oGqbAwHnlWTKav5P";
-            using (var stream = new MemoryStream(Convert.FromBase64String(base64Bson)))
+            using (var stream = new RewindableBufferStream(new MemoryStream(Convert.FromBase64String(base64Bson))))
             {
                 var result = sut.ReadMessage<ResponseMessage>(stream);
                 result.Error.Should().NotBeNull();
@@ -89,7 +95,7 @@ namespace Halibut.Tests.Transport.Protocol
         public void WhenTheStreamEndsBeforeAnyBytesAreRead_AnEndOfStreamExceptionIsThrown()
         {
             var sut = new MessageSerializerBuilder().Build();
-            using (var stream = new MemoryStream(new byte[0]))
+            using (var stream = new RewindableBufferStream(new MemoryStream(new byte[0])))
             {
                 Assert.Throws<EndOfStreamException>(() => sut.ReadMessage<ResponseMessage>(stream));
             }
@@ -101,7 +107,7 @@ namespace Halibut.Tests.Transport.Protocol
             var sut = new MessageSerializerBuilder().Build();
             var completeBytes = CreateBytesFromMessage("Hello this is the message");
             var someOfTheBytes = completeBytes.SubArray(0, completeBytes.Length - 5);
-            using (var stream = new MemoryStream(someOfTheBytes))
+            using (var stream = new RewindableBufferStream(new MemoryStream(someOfTheBytes)))
             {
                 Assert.Throws<EndOfStreamException>(() => sut.ReadMessage<ResponseMessage>(stream));
             }
@@ -115,7 +121,7 @@ namespace Halibut.Tests.Transport.Protocol
             var badZipStream = new byte[64000];
             Array.Copy(completeBytes, 0, badZipStream, 0, 30);
             
-            using (var stream = new MemoryStream(badZipStream))
+            using (var stream = new RewindableBufferStream(new MemoryStream(badZipStream)))
             {
                 Assert.Throws<InvalidDataException>(() => sut.ReadMessage<ResponseMessage>(stream));
             }
@@ -127,7 +133,7 @@ namespace Halibut.Tests.Transport.Protocol
             var sut = new MessageSerializerBuilder().Build();
             
             var deflatedString = DeflateString("Some invalid json/bson");
-            using (var stream = new MemoryStream(deflatedString))
+            using (var stream = new RewindableBufferStream(new MemoryStream(deflatedString)))
             {
                 Assert.Throws<Newtonsoft.Json.JsonSerializationException>(() => sut.ReadMessage<ResponseMessage>(stream));
             }
@@ -158,8 +164,7 @@ namespace Halibut.Tests.Transport.Protocol
                 return memoryStream.ToArray();
             }
         }
-
-#if !NETFRAMEWORK
+        
         [Test]
         public void SendReceiveMessageRewindableShouldRoundTrip()
         {
@@ -247,6 +252,5 @@ namespace Halibut.Tests.Transport.Protocol
             readMessage.CompressedBytesRead.Should().Be(55);
             readMessage.DecompressedBytesRead.Should().Be(120);
         }
-#endif
     }
 }

@@ -9,7 +9,7 @@ namespace Halibut.Transport
     /// Only supports rewinding the last read of the underlying stream. Which appears to be all
     /// that is required when rewinding from a Deflate stream over read.
     /// </summary>
-    class RewindableBufferStream : Stream, IRewindableBuffer
+    public class RewindableBufferStream : Stream, IRewindableBuffer
     {
         readonly Stream baseStream;
         readonly byte[] rewindBuffer;
