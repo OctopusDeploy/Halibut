@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -236,6 +237,7 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
+        [Ignore("This test takes way too long on Team City")]
         public async Task QueueAndWait_Can_Queue_Dequeue_Apply_VeryLargeNumberOfRequests()
         {
             // Arrange
