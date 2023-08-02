@@ -15,16 +15,16 @@ namespace Halibut.Tests.Support
             {
                 try
                 {
-                    return await WebSocketListeningPort(client, cancellationToken);
+                    return await WebSocketListeningPortAttemptOnce(client, cancellationToken);
                 }
                 catch (HttpListenerException e)
                 {
                     logger.Warning(e, "Failed to listen for websocket, trying again.");
                 }
             }
-            return await WebSocketListeningPort(client, cancellationToken);
+            return await WebSocketListeningPortAttemptOnce(client, cancellationToken);
         }
-        static async Task<ListeningWebSocket> WebSocketListeningPort(HalibutRuntime client, CancellationToken cancellationToken)
+        static async Task<ListeningWebSocket> WebSocketListeningPortAttemptOnce(HalibutRuntime client, CancellationToken cancellationToken)
         {
             using var tcpPortConflictLock = await TcpPortHelper.WaitForLock(cancellationToken);
             var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
