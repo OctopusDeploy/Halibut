@@ -67,7 +67,7 @@ namespace Halibut.Transport.Protocol
                 createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
 
-            observer.MessageWritten(compressedByteCountingStream.BytesWritten);
+            observer.MessageWritten(compressedByteCountingStream.BytesWritten, 0);
         }
 
         public async Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
@@ -86,7 +86,7 @@ namespace Halibut.Transport.Protocol
 
             await compressedInMemoryBuffer.WriteAnyUnwrittenDataToSinkStream(cancellationToken);
 
-            observer.MessageWritten(compressedByteCountingStream.BytesWritten);
+            observer.MessageWritten(compressedByteCountingStream.BytesWritten, compressedInMemoryBuffer.BytesWrittenIntoMemory);
         }
 
         public T ReadMessage<T>(RewindableBufferStream stream)
@@ -131,7 +131,7 @@ namespace Halibut.Transport.Protocol
                 Exception exceptionFromDeserialisation = null;
                 try
                 {
-                    return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream);
+                    return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -181,7 +181,7 @@ namespace Halibut.Transport.Protocol
                         rewindableBuffer.CancelBuffer();
                     }
 
-                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead);
+                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead, 0);
 
                     return messageEnvelope.Message;
                 }
@@ -193,17 +193,19 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task<T> ReadCompressedMessageAsync<T>(Stream stream, IRewindableBuffer rewindableBuffer)
+        async Task<T> ReadCompressedMessageAsync<T>(Stream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
         {
             rewindableBuffer.StartBuffer();
             try
             {
                 using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
-                using var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true);
-                using var decompressedObservableStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
 
-                using var deflatedInMemoryStream = new ReadAsyncIfPossibleStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
-                await deflatedInMemoryStream.BufferFromSourceStreamUntilLimitReached(cancellationToken);
+                
+                using var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true);
+                using var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
+
+                using var deflatedInMemoryStream = new ReadIntoMemoryBufferStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+                await deflatedInMemoryStream.BufferIntoMemoryFromSourceStreamUntilLimitReached(cancellationToken);
 
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
                 {
@@ -219,7 +221,7 @@ namespace Halibut.Transport.Protocol
                         rewindableBuffer.CancelBuffer();
                     }
 
-                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead);
+                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedByteCountingStream.BytesRead, deflatedInMemoryStream.BytesReadIntoMemory);
                     return messageEnvelope.Message;
                 }
             }

@@ -10,14 +10,16 @@ namespace Halibut.Transport.Streams
     {
         readonly MemoryStream memoryStream;
         readonly Stream sourceStream;
+        readonly long readIntoMemoryLimitBytes;
         readonly OnDispose onDispose;
 
         bool limitReached;
 
-        public ReadIntoMemoryBufferStream(Stream sourceStream, OnDispose onDispose)
+        public ReadIntoMemoryBufferStream(Stream sourceStream, long readIntoMemoryLimitBytes, OnDispose onDispose)
         {
             memoryStream = new MemoryStream();
             this.sourceStream = sourceStream;
+            this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.onDispose = onDispose;
         }
 
@@ -36,7 +38,9 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        bool ShouldReadFromMemoryStream => !limitReached || memoryStream.Position < memoryStream.Length;
+        bool ShouldReadFromMemoryStream => !limitReached || memoryStream.Position < BytesReadIntoMemory;
+
+        public long BytesReadIntoMemory => memoryStream.Length;
 
         public override bool CanRead => sourceStream.CanRead;
         public override bool CanWrite => false;
@@ -44,24 +48,11 @@ namespace Halibut.Transport.Streams
         public override bool CanTimeout => false;
 
         public override long Length => throw new NotSupportedException();
-        
+
         public override long Position
         {
-            get => memoryStream.Position + sourceStream.Position;
-            set
-            {
-                //TODO: verify this is correct.
-                if (value < memoryStream.Length)
-                {
-                    memoryStream.Position = value;
-                    sourceStream.Position = 0;
-                }
-                else
-                {
-                    memoryStream.Position = memoryStream.Length;
-                    sourceStream.Position = value - memoryStream.Length;
-                }
-            }
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
         }
 
         public override int ReadTimeout
@@ -103,12 +94,12 @@ namespace Halibut.Transport.Streams
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
-        public async Task BufferIntoMemoryFromSourceStreamUntilLimitReached(long readIntoMemoryLimitBytes, CancellationToken cancellationToken)
+        public async Task BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken cancellationToken)
         {
             var buffer = new byte[81920];
-            while (memoryStream.Length < readIntoMemoryLimitBytes)
+            while (BytesReadIntoMemory < readIntoMemoryLimitBytes)
             {
-                var bytesToCopy = (int)Math.Min(buffer.Length, readIntoMemoryLimitBytes - memoryStream.Length);
+                var bytesToCopy = (int)Math.Min(buffer.Length, readIntoMemoryLimitBytes - BytesReadIntoMemory);
                 var bytesRead = await sourceStream.ReadAsync(buffer, 0, bytesToCopy, cancellationToken).ConfigureAwait(false);
 
                 if (bytesRead == 0)
@@ -119,7 +110,8 @@ namespace Halibut.Transport.Streams
 
                 await memoryStream.WriteAsync(buffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
             }
-            
+
+            memoryStream.Position = 0;
             limitReached = true;
         }
     }

@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Util;
@@ -11,8 +13,11 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.Transport.Protocol
 {
-    public class MessageSerializerFixture
+    public class MessageSerializerFixture : BaseTest
     {
+        const long SmallLimit = 8L;
+        const long LargeLimit = 16L * 1024L * 1024L;
+
         [Test]
         public void SendReceiveMessageShouldRoundTrip()
         {
@@ -31,6 +36,27 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
+        [TestCase(SmallLimit)]
+        [TestCase(LargeLimit)]
+        public async Task SendReceiveMessageAsyncShouldRoundTrip(long memoryLimitBytes)
+        {
+            var sut = new MessageSerializerBuilder()
+                .WithAsyncMemoryLimits(memoryLimitBytes, memoryLimitBytes)
+                .Build();
+
+            using (var stream = new MemoryStream())
+            {
+                await sut.WriteMessageAsync(stream, "Some random test message", CancellationToken);
+                stream.Position = 0;
+                using (var rewindableBufferStream = new RewindableBufferStream(stream))
+                {
+                    var result = await sut.ReadMessageAsync<string>(rewindableBufferStream, CancellationToken);
+                    Assert.AreEqual("Some random test message", result);
+                }
+            }
+        }
+
+        [Test]
         public void WriteMessage_ObservesThatMessageIsWritten()
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
@@ -43,8 +69,31 @@ namespace Halibut.Tests.Transport.Protocol
                 sut.WriteMessage(stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
             }
 
-            var compressedBytesWritten = messageSerializerObserver.MessagesWritten.Should().ContainSingle().Subject;
-            compressedBytesWritten.Should().Be(55);
+            var writtenMessage = messageSerializerObserver.MessagesWritten.Should().ContainSingle().Subject;
+            writtenMessage.CompressedBytesWritten.Should().Be(55);
+            writtenMessage.CompressedBytesWrittenIntoMemory.Should().Be(0);
+            messageSerializerObserver.MessagesRead.Should().BeEmpty();
+        }
+
+        [Test]
+        [TestCase(SmallLimit, 0)]
+        [TestCase(LargeLimit, 55)]
+        public async Task WriteMessageAsync_ObservesThatMessageIsWritten(long writeIntoMemoryLimitBytes, long expectedCompressedBytesWrittenIntoMemory)
+        {
+            var messageSerializerObserver = new TestMessageSerializerObserver();
+            var sut = new MessageSerializerBuilder()
+                .WithAsyncMemoryLimits(0, writeIntoMemoryLimitBytes)
+                .WithMessageSerializerObserver(messageSerializerObserver)
+                .Build();
+
+            using (var stream = new MemoryStream())
+            {
+                await sut.WriteMessageAsync(stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.", CancellationToken);
+            }
+
+            var writtenMessage = messageSerializerObserver.MessagesWritten.Should().ContainSingle().Subject;
+            writtenMessage.CompressedBytesWritten.Should().Be(55);
+            writtenMessage.CompressedBytesWrittenIntoMemory.Should().Be(expectedCompressedBytesWrittenIntoMemory);
             messageSerializerObserver.MessagesRead.Should().BeEmpty();
         }
 
@@ -71,6 +120,37 @@ namespace Halibut.Tests.Transport.Protocol
             var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
             readMessage.CompressedBytesRead.Should().Be(55);
             readMessage.DecompressedBytesRead.Should().Be(120);
+            readMessage.DecompressedBytesReadIntoMemory.Should().Be(0);
+            messageSerializerObserver.MessagesWritten.Should().BeEmpty();
+        }
+
+        [Test]
+        [TestCase(SmallLimit, SmallLimit)]
+        [TestCase(LargeLimit, 120)]
+        public async Task ReadMessageAsync_ObservesThatMessageIsRead(long readIntoMemoryLimitBytes, long expectedDecompressedBytesReadIntoMemory)
+        {
+            var messageSerializerObserver = new TestMessageSerializerObserver();
+            var sut = new MessageSerializerBuilder()
+                .WithAsyncMemoryLimits(readIntoMemoryLimitBytes, 0)
+                .WithMessageSerializerObserver(messageSerializerObserver)
+                .Build();
+
+            using (var stream = new MemoryStream())
+            {
+                var writingSerializer = new MessageSerializerBuilder().Build();
+                writingSerializer.WriteMessage(stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
+
+                stream.Position = 0;
+                using (var rewindableStream = new RewindableBufferStream(stream))
+                {
+                    await sut.ReadMessageAsync<string>(rewindableStream, CancellationToken);
+                }
+            }
+
+            var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
+            readMessage.CompressedBytesRead.Should().Be(55);
+            readMessage.DecompressedBytesRead.Should().Be(120);
+            readMessage.DecompressedBytesReadIntoMemory.Should().Be(expectedDecompressedBytesReadIntoMemory);
             messageSerializerObserver.MessagesWritten.Should().BeEmpty();
         }
 
@@ -138,32 +218,6 @@ namespace Halibut.Tests.Transport.Protocol
                 Assert.Throws<Newtonsoft.Json.JsonSerializationException>(() => sut.ReadMessage<ResponseMessage>(stream));
             }
         }
-
-        private static byte[] CreateBytesFromMessage(object message)
-        {
-            var writingSerializer = new MessageSerializerBuilder().Build();
-
-            using (var stream = new MemoryStream())
-            {
-                writingSerializer.WriteMessage(stream, message);
-                stream.Position = 0;
-                return stream.ToArray();
-            }
-        }
-
-        private static byte[] DeflateString(string s)
-        {
-            using (var memoryStream = new MemoryStream())
-            {
-                using (var zip = new DeflateStream(memoryStream, CompressionMode.Compress, true))
-                {
-                    zip.WriteString(s);
-                    zip.Flush();
-                }
-                memoryStream.Position = 0;
-                return memoryStream.ToArray();
-            }
-        }
         
         [Test]
         public void SendReceiveMessageRewindableShouldRoundTrip()
@@ -199,6 +253,7 @@ namespace Halibut.Tests.Transport.Protocol
             var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
             readMessage.CompressedBytesRead.Should().Be(55);
             readMessage.DecompressedBytesRead.Should().Be(120);
+            readMessage.DecompressedBytesReadIntoMemory.Should().Be(0);
             messageSerializerObserver.MessagesWritten.Should().BeEmpty();
         }
 
@@ -251,6 +306,33 @@ namespace Halibut.Tests.Transport.Protocol
             var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
             readMessage.CompressedBytesRead.Should().Be(55);
             readMessage.DecompressedBytesRead.Should().Be(120);
+            readMessage.DecompressedBytesReadIntoMemory.Should().Be(0);
+        }
+        
+        static byte[] CreateBytesFromMessage(object message)
+        {
+            var writingSerializer = new MessageSerializerBuilder().Build();
+
+            using (var stream = new MemoryStream())
+            {
+                writingSerializer.WriteMessage(stream, message);
+                stream.Position = 0;
+                return stream.ToArray();
+            }
+        }
+
+        static byte[] DeflateString(string s)
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                using (var zip = new DeflateStream(memoryStream, CompressionMode.Compress, true))
+                {
+                    zip.WriteString(s);
+                    zip.Flush();
+                }
+                memoryStream.Position = 0;
+                return memoryStream.ToArray();
+            }
         }
     }
 }
