@@ -104,7 +104,20 @@ namespace Halibut.Transport.Protocol
                 }
                 finally
                 {
-                    ErrorStuff(errorRecordingStream);
+                    if (errorRecordingStream.ReadExceptions.Count == 1)
+                    {
+                        throw errorRecordingStream.ReadExceptions[0];
+                    }
+
+                    if (errorRecordingStream.WasTheEndOfStreamEncountered)
+                    {
+                        throw new EndOfStreamException();
+                    }
+
+                    if (errorRecordingStream.ReadExceptions.Count > 0)
+                    {
+                        throw new IOException("Error Reading from stream", new AggregateException(errorRecordingStream.ReadExceptions));
+                    }
                 }
                 
                 throw exceptionFromDeserialisation;
@@ -118,7 +131,7 @@ namespace Halibut.Transport.Protocol
                 Exception exceptionFromDeserialisation = null;
                 try
                 {
-                    return ReadCompressedMessage<T>(errorRecordingStream, stream);
+                    return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream);
                 }
                 catch (Exception e)
                 {
@@ -126,43 +139,60 @@ namespace Halibut.Transport.Protocol
                 }
                 finally
                 {
-                    ErrorStuff(errorRecordingStream);
+                    if (errorRecordingStream.ReadExceptions.Count == 1)
+                    {
+                        throw errorRecordingStream.ReadExceptions[0];
+                    }
+
+                    if (errorRecordingStream.WasTheEndOfStreamEncountered)
+                    {
+                        throw new EndOfStreamException();
+                    }
+
+                    if (errorRecordingStream.ReadExceptions.Count > 0)
+                    {
+                        throw new IOException("Error Reading from stream", new AggregateException(errorRecordingStream.ReadExceptions));
+                    }
                 }
 
                 throw exceptionFromDeserialisation;
             }
         }
-
-        static void ErrorStuff(ErrorRecordingStream errorRecordingStream)
-        {
-            if (errorRecordingStream.ReadExceptions.Count == 1)
-            {
-                throw errorRecordingStream.ReadExceptions[0];
-            }
-
-            if (errorRecordingStream.WasTheEndOfStreamEncountered)
-            {
-                throw new EndOfStreamException();
-            }
-
-            if (errorRecordingStream.ReadExceptions.Count > 0)
-            {
-                throw new IOException("Error Reading from stream", new AggregateException(errorRecordingStream.ReadExceptions));
-            }
-        }
-
-        Func<Stream, T> MessageReaderStrategyFromStream<T>(Stream stream)
-        {
-            if (stream is IRewindableBuffer rewindable)
-            {
-                return (s) => ReadCompressedMessageRewindable<T>(s, rewindable);
-            }
-
-            return (s) => ReadCompressedMessage<T>(s);
-        }
-
         
+        T ReadCompressedMessage<T>(Stream stream, IRewindableBuffer rewindableBuffer)
+        {
+            rewindableBuffer.StartBuffer();
+            try
+            {
+                using (var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen))
+                using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true))
+                using (var decompressedObservableStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen))
+                using (var bson = new BsonDataReader(decompressedObservableStream) { CloseInput = false })
+                {
+                    var messageEnvelope = DeserializeMessage<T>(bson);
 
+                    // Find the unused bytes in the DeflateStream input buffer
+                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
+                    {
+                        rewindableBuffer.FinishAndRewind(unusedBytesCount);
+                    }
+                    else
+                    {
+                        rewindableBuffer.CancelBuffer();
+                    }
+
+                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead);
+
+                    return messageEnvelope.Message;
+                }
+            }
+            catch
+            {
+                rewindableBuffer.CancelBuffer();
+                throw;
+            }
+        }
+        
         async Task<T> ReadCompressedMessageAsync<T>(Stream stream, IRewindableBuffer rewindableBuffer)
         {
             rewindableBuffer.StartBuffer();
@@ -190,56 +220,6 @@ namespace Halibut.Transport.Protocol
                     }
 
                     observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead);
-                    return messageEnvelope.Message;
-                }
-            }
-            catch
-            {
-                rewindableBuffer.CancelBuffer();
-                throw;
-            }
-
-
-
-
-
-            /////////////
-            
-            
-            
-
-            
-
-            using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
-            {
-                var messageEnvelope = DeserializeMessage<T>(bson);
-
-                observer.MessageRead(compressedByteCountingStream.BytesRead, decompressedByteCountingStream.BytesRead);
-
-                return messageEnvelope.Message;
-            }
-        }
-            try
-            {
-                using (var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen))
-                using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true))
-                using (var decompressedObservableStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen))
-                using (var bson = new BsonDataReader(decompressedObservableStream) { CloseInput = false })
-                {
-                    var messageEnvelope = DeserializeMessage<T>(bson);
-                    
-                    // Find the unused bytes in the DeflateStream input buffer
-                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
-                    {
-                        rewindableBuffer.FinishAndRewind(unusedBytesCount);
-                    }
-                    else
-                    {
-                        rewindableBuffer.CancelBuffer();
-                    }
-
-                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead);
-
                     return messageEnvelope.Message;
                 }
             }
