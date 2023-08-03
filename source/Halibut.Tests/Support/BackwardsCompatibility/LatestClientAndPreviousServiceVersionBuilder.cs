@@ -20,7 +20,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Version? version = null;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<HttpProxyService>? proxyFactory;
-        LogLevel halibutLogLevel;
+        LogLevel halibutLogLevel = LogLevel.Info;
         OldServiceAvailableServices availableServices = new(false, false);
         bool hasService = true;
         ForceClientProxyType? forceClientProxyType;

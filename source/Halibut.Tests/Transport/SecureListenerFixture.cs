@@ -25,7 +25,14 @@ namespace Halibut.Tests.Transport
                 {
                     using (var counter = new PerformanceCounter("Process", "ID Process", instance, true))
                     {
-                        return pid == counter.RawValue;
+                        try
+                        {
+                            return pid == counter.RawValue;
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            return false;
+                        }
                     }
                 });
 

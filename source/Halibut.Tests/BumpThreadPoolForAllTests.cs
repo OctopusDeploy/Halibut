@@ -12,8 +12,11 @@ namespace Halibut.Tests
             [OneTimeSetUp]
             public void GlobalSetup()
             {
-                ThreadPool.SetMaxThreads(Int32.MaxValue, Int32.MaxValue);
-                ThreadPool.SetMinThreads(4000, 4000);
+                var minWorkerPoolThreads = 5000;
+                var minCompletionPortThreads = 5000;
+                ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompletionPortThreads);
+                ThreadPool.SetMaxThreads(Math.Max(minWorkerPoolThreads, maxWorkerThreads), Math.Max(minCompletionPortThreads, maxCompletionPortThreads));
+                ThreadPool.SetMinThreads(minWorkerPoolThreads, minCompletionPortThreads);
             }
         }
     }

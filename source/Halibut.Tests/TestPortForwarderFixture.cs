@@ -19,7 +19,6 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -39,7 +38,6 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
@@ -59,7 +57,6 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .WithProxy()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();

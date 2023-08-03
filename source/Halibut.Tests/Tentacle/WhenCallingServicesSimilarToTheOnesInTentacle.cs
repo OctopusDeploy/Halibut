@@ -26,7 +26,6 @@ namespace Halibut.Tests.Tentacle
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var fileTransferService = clientAndService.CreateClient<IFileTransferService>();
@@ -60,7 +59,6 @@ namespace Halibut.Tests.Tentacle
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var fileTransferService = clientAndService.CreateClient<IFileTransferService>();
@@ -103,7 +101,6 @@ namespace Halibut.Tests.Tentacle
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var scriptService = clientAndService.CreateClient<IScriptService>();
@@ -145,7 +142,6 @@ namespace Halibut.Tests.Tentacle
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var scriptService = clientAndService.CreateClient<IScriptServiceV2>();
