@@ -33,42 +33,50 @@ namespace Halibut.Tests.Support.TestAttributes
 
     public static class SyncOrAsyncExtensions
     {
-        public static SyncOrAsync WhenSync(this SyncOrAsync syncOrAsync, Action action)
+        public static SyncOrAsyncWithoutResult WhenSync(this SyncOrAsync syncOrAsync, Action action)
         {
             if (syncOrAsync == SyncOrAsync.Sync)
             {
                 action();
             }
 
-            return syncOrAsync;
+            return new(syncOrAsync);
         }
 
-        public static async Task WhenAsync(this SyncOrAsync syncOrAsync, Func<Task> action)
+        public static async Task WhenAsync(this SyncOrAsyncWithoutResult syncOrAsyncWithoutResult, Func<Task> action)
         {
-            if (syncOrAsync == SyncOrAsync.Async)
+            if (syncOrAsyncWithoutResult.SyncOrAsync == SyncOrAsync.Async)
             {
                 await action();
             }
         }
 
-        public static SyncOrAsyncAndResult<T> WhenSync<T>(this SyncOrAsync syncOrAsync, Func<T> action)
+        public static void WhenAsync(this SyncOrAsyncWithoutResult syncOrAsyncWithoutResult, Action action)
+        {
+            if (syncOrAsyncWithoutResult.SyncOrAsync == SyncOrAsync.Async)
+            {
+                action();
+            }
+        }
+
+        public static SyncOrAsyncWithResult<T> WhenSync<T>(this SyncOrAsync syncOrAsync, Func<T> action)
         {
             if (syncOrAsync == SyncOrAsync.Sync)
             {
-                return new SyncOrAsyncAndResult<T>(syncOrAsync, action());
+                return new SyncOrAsyncWithResult<T>(syncOrAsync, action());
             }
 
-            return new SyncOrAsyncAndResult<T>(syncOrAsync, default);
+            return new SyncOrAsyncWithResult<T>(syncOrAsync, default);
         }
 
-        public static async Task<T> WhenAsync<T>(this SyncOrAsyncAndResult<T> syncOrAsyncAndResult, Func<Task<T>> action)
+        public static async Task<T> WhenAsync<T>(this SyncOrAsyncWithResult<T> syncOrAsyncWithResult, Func<Task<T>> action)
         {
-            if (syncOrAsyncAndResult.SyncOrAsync == SyncOrAsync.Async)
+            if (syncOrAsyncWithResult.SyncOrAsync == SyncOrAsync.Async)
             {
                 return await action();
             }
 
-            return syncOrAsyncAndResult.Result!;
+            return syncOrAsyncWithResult.Result!;
         }
 
         public static AsyncHalibutFeature ToAsyncHalibutFeature(this SyncOrAsync syncOrAsync)
@@ -82,12 +90,22 @@ namespace Halibut.Tests.Support.TestAttributes
         }
     }
 
-    public class SyncOrAsyncAndResult<T>
+    public class SyncOrAsyncWithoutResult
+    {
+        public SyncOrAsync SyncOrAsync { get; }
+
+        public SyncOrAsyncWithoutResult(SyncOrAsync syncOrAsync)
+        {
+            SyncOrAsync = syncOrAsync;
+        }
+    }
+
+    public class SyncOrAsyncWithResult<T>
     {
         public SyncOrAsync SyncOrAsync { get; }
         public T? Result{ get; }
 
-        public SyncOrAsyncAndResult(SyncOrAsync syncOrAsync, T? result)
+        public SyncOrAsyncWithResult(SyncOrAsync syncOrAsync, T? result)
         {
             SyncOrAsync = syncOrAsync;
             Result = result;

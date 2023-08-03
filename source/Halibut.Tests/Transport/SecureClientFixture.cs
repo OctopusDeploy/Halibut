@@ -6,6 +6,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
@@ -42,11 +43,16 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt()
+        [SyncAndAsync]
+        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
         {
             var connectionManager = new ConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
-            stream.When(x => x.IdentifyAsClient()).Do(x => throw new ConnectionInitializationFailedException(""));
+
+            syncOrAsync
+                .WhenSync(() => stream.When(x => x.IdentifyAsClient()).Do(x => throw new ConnectionInitializationFailedException("")))
+                .WhenAsync(() => stream.IdentifyAsClientAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException(new ConnectionInitializationFailedException(""))));
+            
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
@@ -62,15 +68,19 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient((stream, logger) => GetProtocol(stream, logger), endpoint, Certificates.Octopus, log, connectionManager);
+            var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null!;
 
 #pragma warning disable CS0612
-            secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None);
+            await syncOrAsync
+                .WhenSync(() => secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None))
+                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None));
 #pragma warning restore CS0612
 
             // The pool should be cleared after the second failure
-            stream.Received(2).IdentifyAsClient();
+            await syncOrAsync
+                .WhenSync(() => stream.Received(2).IdentifyAsClient())
+                .WhenAsync(async () => await stream.Received(2).IdentifyAsClientAsync(Arg.Any<CancellationToken>()));
             // And a new valid connection should then be made
             response.Result.Should().Be("Fred...");
         }

@@ -75,7 +75,7 @@ namespace Halibut.Transport.Protocol
 
         async Task SendControlMessageAsync(string message, CancellationToken cancellationToken)
         {
-            await stream.WriteLineAsync(message, cancellationToken);
+            await stream.WriteControlLineAsync(message, cancellationToken);
             await stream.FlushAsync(cancellationToken);
         }
 
@@ -89,8 +89,8 @@ namespace Halibut.Transport.Protocol
 
         async Task SendIdentityMessageAsync(string identityLine, CancellationToken cancellationToken)
         {
-            await stream.WriteLineAsync(identityLine, cancellationToken);
-            await stream.WriteLineAsync(cancellationToken);
+            await stream.WriteControlLineAsync(identityLine, cancellationToken);
+            await stream.WriteEmptyControlLineAsync(cancellationToken);
             await stream.FlushAsync(cancellationToken);
         }
 
@@ -227,7 +227,7 @@ namespace Halibut.Transport.Protocol
         public async Task IdentifyAsSubscriberAsync(string subscriptionId, CancellationToken cancellationToken)
         {
             await SendIdentityMessageAsync($"{MxSubscriber} {currentVersion} {subscriptionId}", cancellationToken);
-            await ExpectServerIdentityAsync(cancellationToken).ConfigureAwait(false);
+            await ExpectServerIdentityAsync(cancellationToken);
         }
 
         [Obsolete]

@@ -58,7 +58,7 @@ namespace Halibut.Transport.Protocol
             stream.SendEnd();
         }
 
-        public async Task EndCommunicationWithServer(CancellationToken cancellationToken)
+        public async Task EndCommunicationWithServerAsync(CancellationToken cancellationToken)
         {
             await stream.SendEndAsync(cancellationToken);
         }

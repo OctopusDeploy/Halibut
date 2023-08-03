@@ -11,15 +11,15 @@ namespace Halibut.Transport.Streams
         static readonly string NewLine = "\r\n";
         static readonly Encoding Encoding = new UTF8Encoding(false);
 
-        public static async Task WriteLineAsync(this Stream stream, string s, CancellationToken cancellationToken)
+        public static async Task WriteControlLineAsync(this Stream stream, string s, CancellationToken cancellationToken)
         {
             var bytes = Encoding.GetBytes(s + NewLine);
             await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
         }
 
-        public static async Task WriteLineAsync(this Stream stream, CancellationToken cancellationToken)
+        public static async Task WriteEmptyControlLineAsync(this Stream stream, CancellationToken cancellationToken)
         {
-            await stream.WriteLineAsync(string.Empty, cancellationToken);
+            await stream.WriteControlLineAsync(string.Empty, cancellationToken);
         }
     }
 }
