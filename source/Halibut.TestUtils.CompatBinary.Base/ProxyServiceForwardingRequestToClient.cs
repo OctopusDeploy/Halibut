@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Tests.Support;
@@ -60,11 +61,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     case ServiceConnectionType.PollingOverWebSocket:
                         using (await TcpPortHelper.WaitForLock(CancellationToken.None))
                         {
-                            var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
-                            var webSocketPath = SettingsHelper.GetSetting("websocketpath");
-                            var webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
-
-                            client.ListenWebSocket(webSocketListeningUrl);
+                            var webSocketListeningPort = WebSocketListeningPort(client, out var webSocketListeningUrl);
                             Console.WriteLine($"WebSocket Polling listener is listening on: {webSocketListeningUrl}");
                             // Do not change the log message as it is used by the HalibutTestBinaryRunners
                             Console.WriteLine("Polling listener is listening on port: " + webSocketListeningPort);
@@ -112,6 +109,33 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     await StayAliveUntilHelper.WaitUntilSignaledToDie();
                 }
             }
+        }
+
+        public static int WebSocketListeningPort(HalibutRuntime client, out string webSocketListeningUrl)
+        {
+            webSocketListeningUrl = null;
+            for (int i = 0; i < 9; i++)
+            {
+                try
+                {
+                    return WebSocketListeningPortAttemptOnce(client, out webSocketListeningUrl);
+                }
+                catch (HttpListenerException e)
+                {
+                    Console.WriteLine($"Failed to listen for websocket, trying again. {e}");
+                }
+            }
+            return WebSocketListeningPortAttemptOnce(client, out webSocketListeningUrl);
+        }
+        
+        static int WebSocketListeningPortAttemptOnce(HalibutRuntime client, out string webSocketListeningUrl)
+        {
+            var webSocketListeningPort = TcpPortHelper.FindFreeTcpPort();
+            var webSocketPath = SettingsHelper.GetSetting("websocketpath");
+            webSocketListeningUrl = $"https://+:{webSocketListeningPort}/{webSocketPath}";
+
+            client.ListenWebSocket(webSocketListeningUrl);
+            return webSocketListeningPort;
         }
     }
 }

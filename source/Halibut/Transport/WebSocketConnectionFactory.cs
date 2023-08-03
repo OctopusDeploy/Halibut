@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
@@ -20,11 +21,6 @@ namespace Halibut.Transport
             this.clientCertificate = clientCertificate;
         }
 
-        public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log)
-        {
-            return EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, CancellationToken.None);
-        }
-        
         public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
@@ -37,6 +33,24 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Performing handshake");
             stream.WriteTextMessage("MX").ConfigureAwait(false).GetAwaiter().GetResult();
+
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
+
+            return new SecureConnection(client, stream, exchangeProtocolBuilder, log);
+        }
+        
+        public async Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        {
+            log.Write(EventType.OpeningNewConnection, "Opening a new connection");
+            
+            var client = await CreateConnectedClientAsync(serviceEndpoint, cancellationToken);
+
+            log.Write(EventType.Diagnostic, "Connection established");
+
+            var stream = new WebSocketStream(client);
+
+            log.Write(EventType.Security, "Performing handshake");
+            await stream.WriteTextMessage("MX");
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
@@ -75,6 +89,50 @@ namespace Halibut.Transport
                     using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
                         client.CloseAsync(WebSocketCloseStatus.ProtocolError, "Certificate thumbprint not recognised", sendCancel.Token)
                             .ConfigureAwait(false).GetAwaiter().GetResult();
+                
+                client.Dispose();
+                throw;
+            }
+            finally
+            {
+                ServerCertificateInterceptor.Remove(connectionId);
+            }
+
+            return client;
+        }
+        
+        async Task<ClientWebSocket> CreateConnectedClientAsync(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
+        {
+            if (!serviceEndpoint.IsWebSocketEndpoint)
+                throw new Exception("Only wss:// endpoints are supported");
+
+            var connectionId = Guid.NewGuid().ToString();
+
+            var client = new ClientWebSocket();
+            client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
+            client.Options.AddSubProtocol("Octopus");
+            client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
+            if (serviceEndpoint.Proxy != null)
+                client.Options.Proxy = new WebSocketProxy(serviceEndpoint.Proxy);
+
+            try
+            {
+                ServerCertificateInterceptor.Expect(connectionId);
+                using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
+                {
+                    using (cancellationToken.Register(() => cts?.Cancel()))
+                    {
+                        await client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token);
+                    }
+                }
+                ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
+            }
+            catch
+            {
+                if (client.State == WebSocketState.Open)
+                    using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1))) {
+                        await client.CloseAsync(WebSocketCloseStatus.ProtocolError, "Certificate thumbprint not recognised", sendCancel.Token);
+                    }
                 
                 client.Dispose();
                 throw;

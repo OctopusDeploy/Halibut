@@ -18,7 +18,7 @@ namespace Halibut.Tests
         {
             Logger = new SerilogLoggerBuilder().Build().ForContext(GetType());
             Logger.Information("Test started");
-            cancellationTokenSource = new CancellationTokenSource(TestTimeoutAttribute.TestTimeout() - (int) TimeSpan.FromSeconds(5).TotalMilliseconds);
+            cancellationTokenSource = new CancellationTokenSource(TestTimeoutAttribute.TestTimeoutInMilliseconds() - (int) TimeSpan.FromSeconds(5).TotalMilliseconds);
             CancellationToken = cancellationTokenSource.Token;
             CancellationToken.Register(() =>
             {

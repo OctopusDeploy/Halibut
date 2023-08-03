@@ -1,9 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
-using Halibut.Transport.Observability;
-using System.Linq;
 using Halibut.Diagnostics;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
@@ -31,7 +30,7 @@ namespace Halibut.Transport.Protocol
                 settings.SerializationBinder = binder;
                 return JsonSerializer.Create(settings);
             };
-            deflateReflector = new DeflateStreamInputBufferReflector();
+            deflateReflector = new DeflateStreamInputBufferReflector(new InMemoryConnectionLog("poll://foo/"));
             observer = new NoMessageSerializerObserver();
         }
 
@@ -47,7 +46,7 @@ namespace Halibut.Transport.Protocol
             this.observer = observer;
             this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
-            deflateReflector = new DeflateStreamInputBufferReflector();
+            deflateReflector = new DeflateStreamInputBufferReflector(new InMemoryConnectionLog("poll://foo/"));
         }
 
         public void AddToMessageContract(params Type[] types) // kept for backwards compatibility
@@ -90,15 +89,14 @@ namespace Halibut.Transport.Protocol
             observer.MessageWritten(compressedByteCountingStream.BytesWritten);
         }
 
-        public T ReadMessage<T>(Stream stream)
+        public T ReadMessage<T>(RewindableBufferStream stream)
         {
-            var messageReader = MessageReaderStrategyFromStream<T>(stream);
             using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {
                 Exception exceptionFromDeserialisation = null;
                 try
                 {
-                    return messageReader(errorRecordingStream);
+                    return ReadCompressedMessage<T>(errorRecordingStream, stream);
                 }
                 catch (Exception e)
                 {
@@ -163,20 +161,7 @@ namespace Halibut.Transport.Protocol
             return (s) => ReadCompressedMessage<T>(s);
         }
 
-        T ReadCompressedMessage<T>(Stream stream)
-        {
-            using (var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen))
-            using (var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true))
-            using (var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen))
-            using (var bson = new BsonDataReader(decompressedByteCountingStream) { CloseInput = false })
-            {
-                var messageEnvelope = DeserializeMessage<T>(bson);
-
-                observer.MessageRead(compressedByteCountingStream.BytesRead, decompressedByteCountingStream.BytesRead);
-
-                return messageEnvelope.Message;
-            }
-        }
+        
 
         async Task<T> ReadCompressedMessageAsync<T>(Stream stream, IRewindableBuffer rewindableBuffer)
         {
@@ -234,10 +219,6 @@ namespace Halibut.Transport.Protocol
                 return messageEnvelope.Message;
             }
         }
-
-        T ReadCompressedMessageRewindable<T>(Stream stream, IRewindableBuffer rewindable)
-        {
-            rewindable.StartBuffer();
             try
             {
                 using (var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen))
@@ -250,11 +231,11 @@ namespace Halibut.Transport.Protocol
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
-                        rewindable.FinishAndRewind(unusedBytesCount);
+                        rewindableBuffer.FinishAndRewind(unusedBytesCount);
                     }
                     else
                     {
-                        rewindable.CancelBuffer();
+                        rewindableBuffer.CancelBuffer();
                     }
 
                     observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedObservableStream.BytesRead);
@@ -264,7 +245,7 @@ namespace Halibut.Transport.Protocol
             }
             catch
             {
-                rewindable.CancelBuffer();
+                rewindableBuffer.CancelBuffer();
                 throw;
             }
         }

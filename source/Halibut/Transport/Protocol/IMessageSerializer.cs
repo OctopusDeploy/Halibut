@@ -9,7 +9,7 @@ namespace Halibut.Transport.Protocol
         void WriteMessage<T>(Stream stream, T message);
         Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken);
 
-        T ReadMessage<T>(Stream stream);
+        T ReadMessage<T>(RewindableBufferStream stream);
         Task<T> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken);
     }
 }

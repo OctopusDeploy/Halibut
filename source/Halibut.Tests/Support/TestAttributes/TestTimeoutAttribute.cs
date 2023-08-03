@@ -6,11 +6,15 @@ namespace Halibut.Tests.Support.TestAttributes
 {
     public class TestTimeoutAttribute : TimeoutAttribute
     {
-        public TestTimeoutAttribute() : base(TestTimeout())
+        public TestTimeoutAttribute(int timeoutInSeconds) : base((int)TimeSpan.FromSeconds(timeoutInSeconds).TotalMilliseconds)
         {
         }
 
-        public static int TestTimeout()
+        public TestTimeoutAttribute() : base(TestTimeoutInMilliseconds())
+        {
+        }
+
+        public static int TestTimeoutInMilliseconds()
         {
             if (Debugger.IsAttached) return (int) TimeSpan.FromHours(1).TotalMilliseconds;
             return (int) TimeSpan.FromMinutes(6).TotalMilliseconds;

@@ -150,7 +150,7 @@ namespace Halibut.Tests.ServiceModel
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
             var request = new RequestMessageBuilder(endpoint)
-                .WithServiceEndpoint(seb => seb.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(200)))
+                .WithServiceEndpoint(seb => seb.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(1000)))
                 .Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
@@ -158,7 +158,7 @@ namespace Halibut.Tests.ServiceModel
             var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
             var dequeued = await sut.DequeueAsync(CancellationToken);
 
-            await Task.Delay(1000, CancellationToken);
+            await Task.Delay(2000, CancellationToken);
 
             await sut.ApplyResponse(expectedResponse, request.Destination);
 
