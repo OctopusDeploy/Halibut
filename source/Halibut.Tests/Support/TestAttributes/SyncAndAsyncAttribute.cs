@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Threading.Tasks;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestAttributes
@@ -48,6 +49,48 @@ namespace Halibut.Tests.Support.TestAttributes
             {
                 await action();
             }
+        }
+
+        public static SyncOrAsyncAndResult<T> WhenSync<T>(this SyncOrAsync syncOrAsync, Func<T> action)
+        {
+            if (syncOrAsync == SyncOrAsync.Sync)
+            {
+                return new SyncOrAsyncAndResult<T>(syncOrAsync, action());
+            }
+
+            return new SyncOrAsyncAndResult<T>(syncOrAsync, default);
+        }
+
+        public static async Task<T> WhenAsync<T>(this SyncOrAsyncAndResult<T> syncOrAsyncAndResult, Func<Task<T>> action)
+        {
+            if (syncOrAsyncAndResult.SyncOrAsync == SyncOrAsync.Async)
+            {
+                return await action();
+            }
+
+            return syncOrAsyncAndResult.Result!;
+        }
+
+        public static AsyncHalibutFeature ToAsyncHalibutFeature(this SyncOrAsync syncOrAsync)
+        {
+            return syncOrAsync switch
+            {
+                SyncOrAsync.Sync => AsyncHalibutFeature.Disabled,
+                SyncOrAsync.Async => AsyncHalibutFeature.Enabled,
+                _ => throw new ArgumentOutOfRangeException(nameof(syncOrAsync), syncOrAsync, null)
+            };
+        }
+    }
+
+    public class SyncOrAsyncAndResult<T>
+    {
+        public SyncOrAsync SyncOrAsync { get; }
+        public T? Result{ get; }
+
+        public SyncOrAsyncAndResult(SyncOrAsync syncOrAsync, T? result)
+        {
+            SyncOrAsync = syncOrAsync;
+            Result = result;
         }
     }
 }
