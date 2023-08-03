@@ -1,11 +1,11 @@
 ﻿namespace Halibut.Tests.Support
 {
-    public class WrittenMessage
+    public class MessageWriteObservation
     {
         public long CompressedBytesWritten { get; }
         public long CompressedBytesWrittenIntoMemory { get; }
 
-        public WrittenMessage(long compressedBytesWritten, long compressedBytesWrittenIntoMemory)
+        public MessageWriteObservation(long compressedBytesWritten, long compressedBytesWrittenIntoMemory)
         {
             CompressedBytesWritten = compressedBytesWritten;
             CompressedBytesWrittenIntoMemory = compressedBytesWrittenIntoMemory;

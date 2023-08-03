@@ -5,21 +5,21 @@ namespace Halibut.Tests.Support
 {
     public class TestMessageSerializerObserver : IMessageSerializerObserver
     {
-        readonly List<WrittenMessage> messagesWritten = new();
-        readonly List<ReadMessage> messagesRead = new();
+        readonly List<MessageWriteObservation> messagesWritten = new();
+        readonly List<MessageReadObservation> messagesRead = new();
 
-        public IReadOnlyList<WrittenMessage> MessagesWritten => messagesWritten;
-        public IReadOnlyList<ReadMessage> MessagesRead => messagesRead;
+        public IReadOnlyList<MessageWriteObservation> MessagesWritten => messagesWritten;
+        public IReadOnlyList<MessageReadObservation> MessagesRead => messagesRead;
 
         public void MessageWritten(long compressedBytesWritten, long compressedBytesWrittenIntoMemory)
         {
-            var writtenMessage = new WrittenMessage(compressedBytesWritten, compressedBytesWrittenIntoMemory);
+            var writtenMessage = new MessageWriteObservation(compressedBytesWritten, compressedBytesWrittenIntoMemory);
             messagesWritten.Add(writtenMessage);
         }
 
         public void MessageRead(long compressedBytesRead, long decompressedBytesRead, long decompressedBytesReadIntoMemory)
         {
-            var readMessage = new ReadMessage(compressedBytesRead, decompressedBytesRead, decompressedBytesReadIntoMemory);
+            var readMessage = new MessageReadObservation(compressedBytesRead, decompressedBytesRead, decompressedBytesReadIntoMemory);
             messagesRead.Add(readMessage);
         }
     }
