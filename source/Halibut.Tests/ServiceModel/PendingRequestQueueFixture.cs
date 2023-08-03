@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -123,8 +122,7 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var stopwatch = Stopwatch.StartNew();
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
-            await sut.DequeueAsync(CancellationToken);
+            var (queueAndWaitTask, _) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
             var response = await queueAndWaitTask;
 
             // Assert
@@ -155,8 +153,7 @@ namespace Halibut.Tests.ServiceModel
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
             // Act
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
-            var dequeued = await sut.DequeueAsync(CancellationToken);
+            var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
 
             await Task.Delay(2000, CancellationToken);
 
@@ -165,13 +162,13 @@ namespace Halibut.Tests.ServiceModel
             var response = await queueAndWaitTask;
 
             // Assert
-            dequeued.Should().NotBeNull().And.Be(request);
+            dequeued.Should().NotBeNull("We should have removed the item from the queue before it timed out.").And.Be(request);
             response.Should().Be(expectedResponse);
 
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
         }
-
+        
         [Test]
         [SyncAndAsync]
         public async Task QueueAndWait_AddingMultipleItemsToQueueInOrder_ShouldDequeueInOrder(SyncOrAsync syncOrAsync)
@@ -539,6 +536,31 @@ namespace Halibut.Tests.ServiceModel
                 async () => await pendingRequestQueue.QueueAndWaitAsync(request, queueAndWaitCancellationToken),
                 CancellationToken);
             return task;
+        }
+
+        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(IPendingRequestQueue sut, RequestMessage request, CancellationToken cancellationToken)
+        {
+            //For most tests, this is not a good method to use. It is a fix for some specific tests to cope with a race condition when Team City runs out of resources (and causes tests to become flaky)
+
+            while (true)
+            {
+                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationToken);
+                sut.Count.Should().Be(1, "Item should be queued");
+
+                var dequeued = await sut.DequeueAsync(cancellationToken);
+                sut.Count.Should().Be(0, "Item should be dequeued");
+
+                // There is a race condition where the task/thread that queues the request can actually progress far enough that it times out before DequeueAsync can take the request.
+                // This tends to happen in tests where PollingRequestQueueTimeout has been reduced.
+                // If this happens, then the item is 'completed', and DequeueAsync returns null (not the state we wish to be in)
+                // So if dequeued is null, then try again.
+                if (dequeued is not null)
+                {
+                    return (queueAndWaitTask, dequeued);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
 
         static async Task ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(
