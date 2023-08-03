@@ -10,6 +10,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport.Protocol;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 using NUnit.Framework;
 
 namespace Halibut.Tests.ServiceModel
@@ -123,8 +124,7 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var stopwatch = Stopwatch.StartNew();
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
-            await sut.DequeueAsync(CancellationToken);
+            var (queueAndWaitTask, _) = await QueueAndDequeueRequest(sut, request, CancellationToken);
             var response = await queueAndWaitTask;
 
             // Assert
@@ -155,8 +155,7 @@ namespace Halibut.Tests.ServiceModel
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
             // Act
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
-            var dequeued = await sut.DequeueAsync(CancellationToken);
+            var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest(sut, request, CancellationToken);
 
             await Task.Delay(2000, CancellationToken);
 
@@ -165,11 +164,34 @@ namespace Halibut.Tests.ServiceModel
             var response = await queueAndWaitTask;
 
             // Assert
-            dequeued.Should().NotBeNull().And.Be(request);
+            dequeued.Should().NotBeNull("We should have removed the item from the queue before it timed out.").And.Be(request);
             response.Should().Be(expectedResponse);
 
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
+        }
+
+        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest(IPendingRequestQueue sut, RequestMessage request, CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationToken);
+                sut.Count.Should().Be(1, "Item should be queued");
+
+                var dequeued = await sut.DequeueAsync(cancellationToken);
+                sut.Count.Should().Be(0, "Item should be dequeued");
+
+                // There is a race condition where the task/thread that queues the request can actually progress far enough that it times out before DequeueAsync can take the request.
+                // This tends to happen in tests where PollingRequestQueueTimeout has been reduced.
+                // If this happens, then the item is 'completed', and DequeueAsync returns null (not the state we wish to be in)
+                // So if dequeued is null, then try again.
+                if (dequeued is not null)
+                {
+                    return (queueAndWaitTask, dequeued);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
 
         [Test]
