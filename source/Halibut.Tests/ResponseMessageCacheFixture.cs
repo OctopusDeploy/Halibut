@@ -22,7 +22,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
@@ -41,7 +40,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService, IClientCachingService>();
@@ -60,7 +58,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
@@ -79,7 +76,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService, IClientCachingService>();
@@ -98,7 +94,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
@@ -118,7 +113,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
@@ -143,7 +137,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
@@ -162,14 +155,12 @@ namespace Halibut.Tests
         {
             using (var clientAndServiceOne = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var clientOne = clientAndServiceOne.CreateClient<ICachingService>();
 
                 using var clientAndServiceTwo = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithCachingService()
-                           .WithHalibutLoggingLevel(LogLevel.Info)
                            .Build(CancellationToken);
 
                     var clientTwo = clientAndServiceTwo.CreateClient<ICachingService>();
@@ -188,7 +179,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();
@@ -207,7 +197,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
@@ -232,7 +221,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var client = clientAndService.CreateClient<ICachingService>();

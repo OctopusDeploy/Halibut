@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Logging;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
@@ -29,6 +30,7 @@ namespace Halibut.Tests
                            return portForwarder;
                        })
                        .WithEchoService()
+                       .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
@@ -62,6 +64,7 @@ namespace Halibut.Tests
                            return portForwarder;
                        })
                        .WithEchoService()
+                       .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
@@ -98,6 +101,7 @@ namespace Halibut.Tests
                            return portForwarder;
                        })
                        .WithEchoService()
+                       .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
@@ -134,6 +138,7 @@ namespace Halibut.Tests
                            return portForwarder;
                        })
                        .WithEchoService()
+                       .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();

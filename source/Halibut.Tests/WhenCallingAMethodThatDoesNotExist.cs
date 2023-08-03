@@ -22,7 +22,6 @@ namespace Halibut.Tests
             var services = new SingleServiceFactory(new object(), typeof(EchoService));
 
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithServiceFactory(services)
                        .Build(CancellationToken))

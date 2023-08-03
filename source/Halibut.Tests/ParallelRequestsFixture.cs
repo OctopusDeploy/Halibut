@@ -22,7 +22,6 @@ namespace Halibut.Tests
         public async Task MultipleRequestsCanBeInFlightInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                .WithHalibutLoggingLevel(LogLevel.Info)
                 .WithStandardServices()
                 .Build(CancellationToken);
 
@@ -82,7 +81,6 @@ namespace Halibut.Tests
         public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                .WithHalibutLoggingLevel(LogLevel.Info)
                 .WithStandardServices()
                 .Build(CancellationToken);
             

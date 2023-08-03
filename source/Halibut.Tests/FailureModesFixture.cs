@@ -32,7 +32,6 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .NoService()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>(point =>
@@ -53,7 +52,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService>();
@@ -109,7 +107,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Trace)
+                       .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))
