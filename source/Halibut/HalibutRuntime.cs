@@ -35,7 +35,7 @@ namespace Halibut
         readonly IMessageSerializer messageSerializer;
         readonly ITypeRegistry typeRegistry;
         readonly Lazy<ResponseCache> responseCache = new();
-        Func<RetryPolicy> PollingReconnectRetryPolicy;
+        readonly Func<RetryPolicy> pollingReconnectRetryPolicy;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -58,7 +58,7 @@ namespace Halibut
             // if you change anything here, also change the below internal ctor
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
-            PollingReconnectRetryPolicy = RetryPolicy.Create;
+            pollingReconnectRetryPolicy = RetryPolicy.Create;
 
             // these two are the reason we can't just call our internal ctor.
             logs = new LogFactory();
@@ -79,7 +79,7 @@ namespace Halibut
             this.queueFactory = queueFactory;
             this.typeRegistry = typeRegistry;
             this.messageSerializer = messageSerializer;
-            PollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
+            this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             invoker = new ServiceInvoker(serviceFactory);
         }
 
@@ -162,7 +162,7 @@ namespace Halibut
             {
                 client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
             }
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, PollingReconnectRetryPolicy));
+            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy));
         }
 
         public ServiceEndPoint Discover(Uri uri)
@@ -419,6 +419,11 @@ namespace Halibut
                 {
                     listener?.Dispose();
                 }
+            }
+
+            if (responseCache.IsValueCreated)
+            {
+                responseCache.Value.Dispose();
             }
         }
 

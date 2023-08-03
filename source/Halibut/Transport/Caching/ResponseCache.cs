@@ -14,7 +14,7 @@ namespace Halibut.Transport.Caching
     /// <returns>True to allow the error response message to be cached, otherwise false.</returns>
     public delegate bool OverrideErrorResponseMessageCachingAction(ResponseMessage responseMessage);
 
-    class ResponseCache
+    class ResponseCache : IDisposable
     {
         readonly MemoryCache responseMessageCache = new("ResponseMessageCache");
 
@@ -87,6 +87,11 @@ namespace Halibut.Transport.Caching
         {
             public ServiceEndPoint EndPoint { get; set; }
             public ResponseMessage ResponseMessage { get; set; }
+        }
+
+        public void Dispose()
+        {
+            responseMessageCache?.Dispose();
         }
     }
 }
