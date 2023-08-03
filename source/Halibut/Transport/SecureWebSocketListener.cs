@@ -209,7 +209,7 @@ namespace Halibut.Transport
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
-            return exchangeAction(exchangeProtocolBuilder(stream, log));
+            return exchangeAction(exchangeProtocolBuilder(stream, log), cts.Token);
         }
 
         // ReSharper disable once UnusedParameter.Local

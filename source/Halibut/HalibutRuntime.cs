@@ -125,7 +125,8 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
+            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -136,7 +137,9 @@ namespace Halibut
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -145,13 +148,18 @@ namespace Halibut
             listener.Start();
         }
 
-        Task HandleMessage(MessageExchangeProtocol protocol)
+        Task HandleMessage(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
         {
 #pragma warning disable CS0612
             return protocol.ExchangeAsServerSynchronouslyAsync(
                 HandleIncomingRequest,
                 id => GetQueue(id.SubscriptionId));
 #pragma warning restore CS0612
+        }
+
+        Task HandleMessageAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
+        {
+            return protocol.ExchangeAsServerAsync(HandleIncomingRequest, id => GetQueue(id.SubscriptionId), cancellationToken);
         }
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)

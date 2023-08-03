@@ -11,6 +11,6 @@ namespace Halibut.Transport
 
         [Obsolete]
         void ExecuteTransaction(ExchangeAction protocolHandler, CancellationToken cancellationToken);
-        Task ExecuteTransactionAsync(ExchangeActionWithCancellationAsync protocolHandler, CancellationToken cancellationToken);
+        Task ExecuteTransactionAsync(ExchangeActionAsync protocolHandler, CancellationToken cancellationToken);
     }
 }
