@@ -8,7 +8,7 @@ namespace Halibut.Tests
     [SetUpFixture]
     public class LowerHalibutLimitsForAllTests
     {
-        public static readonly TimeSpan HalftheTcpRecieveTimeout = TimeSpan.FromSeconds(22.5);
+        public static readonly TimeSpan HalfTheTcpReceiveTimeout = TimeSpan.FromSeconds(22.5);
         
         [OneTimeSetUp]
         public static void LowerHalibutLimits()
@@ -23,8 +23,8 @@ namespace Halibut.Tests
             halibutLimitType.ReflectionSetFieldValue(nameof(HalibutLimits.ConnectionErrorRetryTimeout), TimeSpan.FromSeconds(66)); // Must always be greater than the heartbeat timeout.
             
             // Intentionally set higher than the heart beat, since some tests need to determine that the hart beat timeout applies.
-            halibutLimitType.ReflectionSetFieldValue(nameof(HalibutLimits.TcpClientSendTimeout), HalftheTcpRecieveTimeout + HalftheTcpRecieveTimeout);
-            halibutLimitType.ReflectionSetFieldValue(nameof(HalibutLimits.TcpClientReceiveTimeout), HalftheTcpRecieveTimeout + HalftheTcpRecieveTimeout);
+            halibutLimitType.ReflectionSetFieldValue(nameof(HalibutLimits.TcpClientSendTimeout), HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout);
+            halibutLimitType.ReflectionSetFieldValue(nameof(HalibutLimits.TcpClientReceiveTimeout), HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout);
             
             halibutLimitType.ReflectionSetFieldValue(nameof(HalibutLimits.TcpClientHeartbeatSendTimeout), TimeSpan.FromSeconds(15));
             halibutLimitType.ReflectionSetFieldValue(nameof(HalibutLimits.TcpClientHeartbeatReceiveTimeout), TimeSpan.FromSeconds(15));

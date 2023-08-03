@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using NUnit.Framework;
 using NUnit.Framework.Api;
 
@@ -28,7 +29,7 @@ namespace Halibut.Tests.Support.TestAttributes
                 return LevelOfParallelismInTeamCity();
             }
             
-            return LevelOfParallelismFromEnvVar()??NUnitTestAssemblyRunner.DefaultLevelOfParallelism * 2;
+            return LevelOfParallelismFromEnvVar() ?? NUnitTestAssemblyRunner.DefaultLevelOfParallelism * 2;
         }
 
         static int LevelOfParallelismInTeamCity()
@@ -36,15 +37,27 @@ namespace Halibut.Tests.Support.TestAttributes
             if (NUnitTestAssemblyRunner.DefaultLevelOfParallelism <= 8)
             {
                 // Its unlikely a host with 8 cores is running multiple tests so assume we have access to them all.
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && NUnitTestAssemblyRunner.DefaultLevelOfParallelism > 6)
+                {
+                    return NUnitTestAssemblyRunner.DefaultLevelOfParallelism - 2;
+                }
+
                 return NUnitTestAssemblyRunner.DefaultLevelOfParallelism;
             }
-                
+
             // Larger hosts are likely to be kubernetes hosts. In this case the host is shared between multiple tests runs
             // which means we can quickly overload the host OS resulting in test flakyness or failures. This is made worse
             // since we are told the CPU limit of the pod which is current set to the number of CPUs on host, meaning
             // on a 32 core host machine we will run 32 tests in parallel!
             // Lets reduce the level of parallel tests in that case.
             // This is probably not needed on linux, where we don't see test failures.
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return 6;
+            }
+
             return NUnitTestAssemblyRunner.DefaultLevelOfParallelism / 2;
         }
 
