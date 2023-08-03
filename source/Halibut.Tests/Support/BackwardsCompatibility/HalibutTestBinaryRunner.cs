@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using CliWrap;
 using Halibut.Logging;
 using Octopus.Shellfish;
 using Serilog;
@@ -104,12 +105,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             hasTentacleStarted.Reset();
 
             int? serviceListenPort = null;
-            var runningTentacle = Task.Run(() =>
+            var runningTentacle = Task.Run(async () =>
             {
                 try
                 {
-                    void ProcessLogs(string s)
+                    async Task ProcessLogs(string s, CancellationToken ct)
                     {
+                        await Task.CompletedTask;
                         logger.Information(s);
                         if (s.StartsWith("Listening on port: "))
                         {
@@ -118,16 +120,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                     }
-
-                    ShellExecutor.ExecuteCommand(new HalibutTestBinaryPath().BinPath(version),
-                        "",
-                        tmp.FullPath,
-                        ProcessLogs,
-                        ProcessLogs,
-                        ProcessLogs,
-                        customEnvironmentVariables: settings,
-                        cancel: cancellationToken
-                    );
+                    
+                    await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version))
+                        .WithArguments(new string[0])
+                        .WithWorkingDirectory(tmp.FullPath)
+                        .WithStandardOutputPipe(PipeTarget.ToDelegate(ProcessLogs))
+                        .WithStandardErrorPipe(PipeTarget.ToDelegate(ProcessLogs))
+                        .WithEnvironmentVariables(settings)
+                        .ExecuteAsync(cancellationToken);
                 }
                 catch (Exception e)
                 {
