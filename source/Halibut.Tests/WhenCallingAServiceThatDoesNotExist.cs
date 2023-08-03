@@ -18,7 +18,6 @@ namespace Halibut.Tests
         public async Task AServiceNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();

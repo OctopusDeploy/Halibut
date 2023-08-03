@@ -23,7 +23,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
@@ -42,7 +41,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var random = new Random();
@@ -65,7 +63,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var svc = clientAndService.CreateClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
@@ -85,7 +82,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 
@@ -108,7 +104,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
@@ -147,7 +142,6 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var progressReported = new List<int>();
@@ -172,7 +166,6 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase
                        .CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
@@ -224,7 +217,6 @@ namespace Halibut.Tests
             using (var clientAndService = await clientAndServiceTestCase
                        .CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))
             {
                 var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
