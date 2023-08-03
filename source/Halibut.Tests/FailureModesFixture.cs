@@ -109,7 +109,7 @@ namespace Halibut.Tests
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithHalibutLoggingLevel(LogLevel.Trace)
+                       .WithHalibutLoggingLevel(LogLevel.Info)
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))

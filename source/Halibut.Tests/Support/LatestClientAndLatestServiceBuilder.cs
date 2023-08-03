@@ -41,7 +41,7 @@ namespace Halibut.Tests.Support
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
         Func<HttpProxyService>? proxyFactory;
-        LogLevel halibutLogLevel = LogLevel.Trace;
+        LogLevel halibutLogLevel = LogLevel.Info;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
         

@@ -11,7 +11,7 @@ namespace Halibut.Tests.Support
         public static async Task<ListeningWebSocket> WebSocketListeningPort(ILogger logger, HalibutRuntime client, CancellationToken cancellationToken)
         {
             logger = logger.ForContext<TryListenWebSocket>();
-            for (int i = 0; i < 9; i++)
+            for (var i = 0; i < 9; i++)
             {
                 try
                 {
@@ -20,8 +20,10 @@ namespace Halibut.Tests.Support
                 catch (HttpListenerException e)
                 {
                     logger.Warning(e, "Failed to listen for websocket, trying again.");
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
                 }
             }
+
             return await WebSocketListeningPortAttemptOnce(client, cancellationToken);
         }
         static async Task<ListeningWebSocket> WebSocketListeningPortAttemptOnce(HalibutRuntime client, CancellationToken cancellationToken)
