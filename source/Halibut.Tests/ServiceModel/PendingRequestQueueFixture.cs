@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +9,6 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport.Protocol;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 using NUnit.Framework;
 
 namespace Halibut.Tests.ServiceModel
@@ -170,30 +168,7 @@ namespace Halibut.Tests.ServiceModel
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
         }
-
-        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest(IPendingRequestQueue sut, RequestMessage request, CancellationToken cancellationToken)
-        {
-            while (true)
-            {
-                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationToken);
-                sut.Count.Should().Be(1, "Item should be queued");
-
-                var dequeued = await sut.DequeueAsync(cancellationToken);
-                sut.Count.Should().Be(0, "Item should be dequeued");
-
-                // There is a race condition where the task/thread that queues the request can actually progress far enough that it times out before DequeueAsync can take the request.
-                // This tends to happen in tests where PollingRequestQueueTimeout has been reduced.
-                // If this happens, then the item is 'completed', and DequeueAsync returns null (not the state we wish to be in)
-                // So if dequeued is null, then try again.
-                if (dequeued is not null)
-                {
-                    return (queueAndWaitTask, dequeued);
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-        }
-
+        
         [Test]
         [SyncAndAsync]
         public async Task QueueAndWait_AddingMultipleItemsToQueueInOrder_ShouldDequeueInOrder(SyncOrAsync syncOrAsync)
@@ -561,6 +536,29 @@ namespace Halibut.Tests.ServiceModel
                 async () => await pendingRequestQueue.QueueAndWaitAsync(request, queueAndWaitCancellationToken),
                 CancellationToken);
             return task;
+        }
+
+        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest(IPendingRequestQueue sut, RequestMessage request, CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationToken);
+                sut.Count.Should().Be(1, "Item should be queued");
+
+                var dequeued = await sut.DequeueAsync(cancellationToken);
+                sut.Count.Should().Be(0, "Item should be dequeued");
+
+                // There is a race condition where the task/thread that queues the request can actually progress far enough that it times out before DequeueAsync can take the request.
+                // This tends to happen in tests where PollingRequestQueueTimeout has been reduced.
+                // If this happens, then the item is 'completed', and DequeueAsync returns null (not the state we wish to be in)
+                // So if dequeued is null, then try again.
+                if (dequeued is not null)
+                {
+                    return (queueAndWaitTask, dequeued);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
         }
 
         static async Task ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(
