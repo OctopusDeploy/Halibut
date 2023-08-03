@@ -122,7 +122,7 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var stopwatch = Stopwatch.StartNew();
-            var (queueAndWaitTask, _) = await QueueAndDequeueRequest(sut, request, CancellationToken);
+            var (queueAndWaitTask, _) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
             var response = await queueAndWaitTask;
 
             // Assert
@@ -153,7 +153,7 @@ namespace Halibut.Tests.ServiceModel
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
             // Act
-            var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest(sut, request, CancellationToken);
+            var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
 
             await Task.Delay(2000, CancellationToken);
 
@@ -538,8 +538,10 @@ namespace Halibut.Tests.ServiceModel
             return task;
         }
 
-        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest(IPendingRequestQueue sut, RequestMessage request, CancellationToken cancellationToken)
+        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(IPendingRequestQueue sut, RequestMessage request, CancellationToken cancellationToken)
         {
+            //For most tests, this is not a good method to use. It is a fix for some specific tests to cope with a race condition when Team City runs out of resources (and causes tests to become flaky)
+
             while (true)
             {
                 var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationToken);
