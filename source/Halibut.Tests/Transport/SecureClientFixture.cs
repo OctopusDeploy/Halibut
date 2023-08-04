@@ -10,7 +10,6 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
-using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -68,7 +67,7 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager);
+            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null!;
 
 #pragma warning disable CS0612
@@ -85,9 +84,9 @@ namespace Halibut.Tests.Transport
             response.Result.Should().Be("Fred...");
         }
 
-        public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
+        public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger, SyncOrAsync syncOrAsync)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), AsyncHalibutFeature.Disabled, logger), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), syncOrAsync.ToAsyncHalibutFeature(), logger), logger);
         }
     }
 }
