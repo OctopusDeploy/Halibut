@@ -85,7 +85,7 @@ namespace Halibut.Transport
                         else
                         {
                             log.Write(EventType.Error, $"Rejected connection from {context.Request.RemoteEndPoint} as it is not Web Socket request");
-                            SendFriendlyHtmlPage(context.Response);
+                            await SendFriendlyHtmlPage(context.Response);
                             context.Response.Close();
                         }
                     }
@@ -163,7 +163,7 @@ namespace Halibut.Transport
         }
 
       
-        void SendFriendlyHtmlPage(HttpListenerResponse response)
+        async Task SendFriendlyHtmlPage(HttpListenerResponse response)
         {
             var message = getFriendlyHtmlPageContent();
             var headers = getFriendlyHtmlPageHeaders();
@@ -175,8 +175,8 @@ namespace Halibut.Transport
             // Disposing the StreamWriter will close the stream - it owns the stream
             using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)){ NewLine = "\r\n" })
             {
-                writer.WriteLine(message);
-                writer.Flush();
+                await writer.WriteLineAsync(message);
+                await writer.FlushAsync();
             }
         }
 
