@@ -28,7 +28,6 @@ namespace Halibut.Transport
             var connection = await TryGetExistingConnectionAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
             if (connection != null) return connection;
             
-            // 
             return await GetConnectionByCreatingItAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
         }
 
