@@ -16,5 +16,14 @@ namespace Halibut.Transport.Streams
             var bytes = Encoding.GetBytes(s + ControlMessageNewLine);
             await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
         }
+
+        public static async Task<int> ReadByteAsync(this Stream stream, CancellationToken cancellationToken)
+        {
+            byte[] b = new byte[1];
+            int count = await stream.ReadAsync(b, 0, 1, cancellationToken);
+            // Keep the same behaviour as ReadByte, which returns -1 if at the end of the stream
+            if (count == 0) return -1;
+            return b[0];
+        }
     }
 }
