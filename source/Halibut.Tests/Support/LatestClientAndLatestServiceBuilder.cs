@@ -513,12 +513,21 @@ namespace Halibut.Tests.Support
 
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
+                var serviceEndpoint = ServiceEndpoint();
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TClientService>(forceClientProxyType, Client, serviceEndpoint);
             }
+
+            public ServiceEndPoint ServiceEndpoint()
+            {
+                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
+            }
             
-            
+            public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>()
+            {
+                return CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(_ => { });
+            }
+
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
