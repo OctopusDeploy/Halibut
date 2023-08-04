@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,15 +30,27 @@ namespace Halibut.Tests.Util.AsyncEx
         public async Task When_TaskDoesNotCompleteWithinTimeout_ThrowsTimeoutException()
         {
             var triggered = false;
+            using var cts = new CancellationTokenSource();
             var task = Task.Run(async () =>
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(200));
+                try
+                {
+                    await Task.Delay(TimeSpan.FromDays(1), cts.Token);
+                }
+                catch (Exception)
+                {
+                }
+
                 triggered = true;
             });
-            Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(100), CancellationToken.None);
+            var timeWaiting = Stopwatch.StartNew();
+            Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(1), CancellationToken.None);
             await act.Should().ThrowAsync<TimeoutException>();
-            triggered.Should().Be(false, "we should have stopped waiting on the task when timeout happened");
-            await Task.Delay(200);
+            timeWaiting.Stop();
+            timeWaiting.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10), "we should have stopped waiting on the task when timeout happened");
+            
+            cts.Cancel();
+            await task;
             triggered.Should().Be(true, "task should have continued executing in the background");
         }
         
