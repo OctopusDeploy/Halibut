@@ -93,8 +93,7 @@ namespace Halibut.Tests.Transport.Streams
             readBuffer.Should().BeEquivalentTo(bytesToWrite);
             sut.BytesReadIntoMemory.Should().Be(bytesToWrite.Length - 1);
         }
-
-
+        
         [Test]
         public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_ReadingOneByteAtATime([Values] StreamMethod streamMethod)
         {
@@ -138,14 +137,17 @@ namespace Halibut.Tests.Transport.Streams
                 case StreamMethod.Sync:
                     return sut.Read(readBuffer, offset, count);
                 case StreamMethod.BeginEnd:
-                    int bytesRead = 0;
-                    var beginReadResult = sut.BeginRead(readBuffer, offset, count, AsyncCallback, sut);
+                    int bytesRead = -1;
+                    sut.BeginRead(readBuffer, offset, count, AsyncCallback, sut);
                     void AsyncCallback(IAsyncResult result)
                     {
                         bytesRead = sut.EndRead(result);
                     }
 
-                    beginReadResult.AsyncWaitHandle.WaitOne().Should().BeTrue();
+                    while (bytesRead < 0 && !CancellationToken.IsCancellationRequested)
+                    {
+                        await Task.Delay(10);
+                    }
                     return bytesRead;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(streamMethod), streamMethod, null);

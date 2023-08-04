@@ -127,13 +127,18 @@ namespace Halibut.Tests.Transport.Streams
                     sut.Write(buffer, offset, count);
                     return;
                 case StreamMethod.BeginEnd:
-                    var beginWriteResult = sut.BeginWrite(buffer, offset, count, AsyncCallback, sut);
+                    var written = false;
+                    sut.BeginWrite(buffer, offset, count, AsyncCallback, sut);
                     void AsyncCallback(IAsyncResult result)
                     {
                         sut.EndWrite(result);
+                        written = true;
                     }
 
-                    beginWriteResult.AsyncWaitHandle.WaitOne().Should().BeTrue();
+                    while (!written && !CancellationToken.IsCancellationRequested)
+                    {
+                        await Task.Delay(10);
+                    }
                     return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(streamMethod), streamMethod, null);
