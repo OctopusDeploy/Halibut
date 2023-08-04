@@ -107,7 +107,7 @@ namespace Halibut.Transport
         /// <param name="count"><inheritdoc/></param>
         /// <param name="cancellationToken"><inheritdoc/></param>
         /// <returns><inheritdoc/></returns>
-        public async override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             count = ReduceReadCountToBufferSize(count);
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);

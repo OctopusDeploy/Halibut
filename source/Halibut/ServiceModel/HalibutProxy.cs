@@ -11,6 +11,8 @@ namespace Halibut.ServiceModel
 #if HAS_REAL_PROXY
     using System.Runtime.Remoting.Messaging;
     using System.Runtime.Remoting.Proxies;
+
+    [Obsolete]
     class HalibutProxy : RealProxy
     {
         readonly Func<RequestMessage, MethodInfo, CancellationToken, ResponseMessage> messageRouter;
@@ -82,6 +84,7 @@ namespace Halibut.ServiceModel
             return request;
         }
 #else
+    [Obsolete]
     public class HalibutProxy : DispatchProxy
     {
         Func<RequestMessage, MethodInfo, CancellationToken, ResponseMessage> messageRouter;

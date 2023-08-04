@@ -21,6 +21,7 @@ namespace Halibut.Transport
             this.clientCertificate = clientCertificate;
         }
 
+        [Obsolete]
         public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             log.Write(EventType.OpeningNewConnection, "Opening a new connection");
@@ -57,7 +58,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, stream, exchangeProtocolBuilder, log);
         }
 
-        
+        [Obsolete]
         ClientWebSocket CreateConnectedClient(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
         {
             if (!serviceEndpoint.IsWebSocketEndpoint)

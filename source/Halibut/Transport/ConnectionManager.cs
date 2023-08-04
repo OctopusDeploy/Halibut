@@ -33,6 +33,7 @@ namespace Halibut.Transport
 
         // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
         // For existing open connections, the openConnection method does nothing
+        [Obsolete]
         Tuple<IConnection, Action> GetConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             lock (activeConnections)
@@ -70,6 +71,7 @@ namespace Halibut.Transport
             return connection;
         }
 
+        [Obsolete]
         Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken));

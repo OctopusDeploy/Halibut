@@ -8,6 +8,7 @@ using Halibut.Util.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
+    [Obsolete]
     public class PendingRequestQueue : IPendingRequestQueue
     {
         readonly List<PendingRequest> queue = new();

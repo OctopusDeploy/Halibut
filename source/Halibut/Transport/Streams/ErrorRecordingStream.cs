@@ -8,8 +8,8 @@ namespace Halibut.Transport.Streams
 {
     public class ErrorRecordingStream : Stream
     {
-        Stream innerStream;
-        bool closeInner;
+        readonly Stream innerStream;
+        readonly bool closeInner;
 
         public ErrorRecordingStream(Stream innerStream, bool closeInner) : base()
         {
@@ -17,8 +17,8 @@ namespace Halibut.Transport.Streams
             this.closeInner = closeInner;
         }
 
-        public List<Exception> ReadExceptions { get; } = new List<Exception>();
-        public List<Exception> WriteExceptions { get; } = new List<Exception>();
+        public List<Exception> ReadExceptions { get; } = new();
+        public List<Exception> WriteExceptions { get; } = new();
 
         public bool WasTheEndOfStreamEncountered { get; private set; } = false;
 
@@ -43,7 +43,7 @@ namespace Halibut.Transport.Streams
             
         }
 
-        public async override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             try
             {
@@ -82,7 +82,7 @@ namespace Halibut.Transport.Streams
             }
         }
         
-        public async override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             try
             {

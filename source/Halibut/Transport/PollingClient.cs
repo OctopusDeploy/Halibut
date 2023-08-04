@@ -16,7 +16,7 @@ namespace Halibut.Transport
         readonly Thread thread;
         readonly CancellationToken cancellationToken;
         bool working;
-        Func<RetryPolicy> CreateRetryPolicy;
+        readonly Func<RetryPolicy> createRetryPolicy;
 
         [Obsolete("Use the overload that provides a logger. This remains for backwards compatibility.")]
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, Func<RetryPolicy> createRetryPolicy)
@@ -36,7 +36,7 @@ namespace Halibut.Transport
             this.handleIncomingRequest = handleIncomingRequest;
             this.log = log;
             this.cancellationToken = cancellationToken;
-            CreateRetryPolicy = createRetryPolicy;
+            this.createRetryPolicy = createRetryPolicy;
             thread = new Thread(ExecutePollingLoop);
             thread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
             thread.IsBackground = true;
@@ -53,9 +53,10 @@ namespace Halibut.Transport
             working = false;
         }
 
+        // TODO: ASYNC ME UP!
         void ExecutePollingLoop(object ignored)
         {
-            var retry = CreateRetryPolicy();
+            var retry = createRetryPolicy();
             var sleepFor = TimeSpan.Zero;
             while (working)
             {

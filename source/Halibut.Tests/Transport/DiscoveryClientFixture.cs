@@ -1,11 +1,8 @@
-using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
-using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using NUnit.Framework;
 
@@ -13,57 +10,52 @@ namespace Halibut.Tests.Transport
 {
     public class DiscoveryClientFixture : BaseTest
     {
-        ServiceEndPoint endpoint;
-        HalibutRuntime tentacle;
-
-        [SetUp]
-        public void SetUp()
-        {
-            var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
-            tentacle = new HalibutRuntime(services, Certificates.TentacleListening);
-            var tentaclePort = tentacle.Listen();
-            tentacle.Trust(Certificates.OctopusPublicThumbprint);
-            endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint)
-            {
-                ConnectionErrorRetryTimeout = TimeSpan.MaxValue
-            };
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            tentacle.Dispose();
-        }
-
         [Test]
-        public void DiscoverMethodReturnsEndpointDetails()
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
+        public async Task DiscoverMethodReturnsEndpointDetails(ClientAndServiceTestCase clientAndServiceTestCase)
         {
+            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .AsLatestClientAndLatestServiceBuilder()
+                .Build(CancellationToken);
+
             var client = new DiscoveryClient();
-            var discovered = client.Discover(new ServiceEndPoint(endpoint.BaseUri, ""));
 
-            discovered.RemoteThumbprint.Should().BeEquivalentTo(endpoint.RemoteThumbprint);
-            discovered.BaseUri.Should().BeEquivalentTo(endpoint.BaseUri);
+#pragma warning disable CS0612
+            var discovered = await clientAndServiceTestCase.SyncOrAsync
+                .WhenSync(() => client.Discover(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken))
+                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken));
+#pragma warning restore CS0612
+
+            discovered.RemoteThumbprint.Should().BeEquivalentTo(clientAndService.GetServiceEndPoint().RemoteThumbprint);
+            discovered.BaseUri.Should().BeEquivalentTo(clientAndService.GetServiceEndPoint().BaseUri);
         }
 
         [Test]
-        public void DiscoveringNonExistantEndpointThrows()
+        [SyncAndAsync]
+        public async Task DiscoveringNonExistantEndpointThrows(SyncOrAsync syncOrAsync)
         {
             var client = new DiscoveryClient();
             var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "");
 
-            Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint), "No such host is known");
+#pragma warning disable CS0612
+            await syncOrAsync
+                .WhenSync(() => Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint), "No such host is known")).IgnoreResult()
+                .WhenAsync(async () => await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, CancellationToken), "No such host is known"));
+#pragma warning restore CS0612
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false, testAsyncAndSyncClients: true)]
         public async Task OctopusCanDiscoverTentacle(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .As<LatestClientAndLatestServiceBuilder>()
+                       .AsLatestClientAndLatestServiceBuilder()
                        .Build(CancellationToken))
             {
-                var info = clientAndService.Client.Discover(clientAndService.ServiceUri);
+                var info = await clientAndServiceTestCase.SyncOrAsync
+                    .WhenSync(() => clientAndService.Client.Discover(clientAndService.ServiceUri))
+                    .WhenAsync(async () => await clientAndService.Client.DiscoverAsync(clientAndService.ServiceUri, CancellationToken));
+                    
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
         }

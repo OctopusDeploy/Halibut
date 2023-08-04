@@ -3,6 +3,7 @@ using Halibut.Diagnostics;
 
 namespace Halibut.ServiceModel
 {
+    [Obsolete]
     class DefaultPendingRequestQueueFactory : IPendingRequestQueueFactory
     {
         readonly ILogFactory logFactory;
