@@ -5,7 +5,9 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using FluentAssertions;
+using Halibut.Logging;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support.Logging;
 using JetBrains.dotMemoryUnit;
 using JetBrains.dotMemoryUnit.Kernel;
 using NUnit.Framework;
@@ -109,7 +111,11 @@ namespace Halibut.Tests.DotMemory
             var services = new DelegateServiceFactory();
             services.Register<ICalculatorService>(() => new CalculatorService());
 
-            var server = new HalibutRuntime(services, serverCertificate);
+            var server = new HalibutRuntimeBuilder()
+                .WithServerCertificate(serverCertificate)
+                .WithServiceFactory(services)
+                .WithLogFactory(new TestContextLogFactory("client", LogLevel.Info))
+                .Build();
 
             //set up listening  
             server.Trust(Certificates.TentacleListeningPublicThumbprint);
@@ -132,7 +138,10 @@ namespace Halibut.Tests.DotMemory
 
         static void RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
         {
-            using (var runtime = new HalibutRuntime(clientCertificate))
+            using (var runtime = new HalibutRuntimeBuilder()
+                       .WithServerCertificate(clientCertificate)
+                       .WithLogFactory(new TestContextLogFactory("PollingService", LogLevel.Info))
+                       .Build())
             {
                 runtime.Listen(new IPEndPoint(IPAddress.IPv6Any, 8433));
                 runtime.Trust(Certificates.OctopusPublicThumbprint);
@@ -156,7 +165,10 @@ namespace Halibut.Tests.DotMemory
 
         static void RunWebSocketPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, string trustedCertificate, bool expectSuccess = true)
         {
-            using (var runtime = new HalibutRuntime(clientCertificate))
+            using (var runtime = new HalibutRuntimeBuilder()
+                       .WithServerCertificate(clientCertificate)
+                       .WithLogFactory(new TestContextLogFactory("PollingWebSocketService", LogLevel.Info))
+                       .Build())
             {
                 runtime.ListenWebSocket("https://+:8434/Halibut");
                 runtime.Trust(trustedCertificate);
