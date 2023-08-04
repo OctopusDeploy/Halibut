@@ -450,6 +450,16 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 throw new Exception("Modifying the service endpoint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
             }
 
+            public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>()
+            {
+                return CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(_ => { });
+            }
+            
+            public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
+            {
+                throw new NotSupportedException("Not supported since the options can not be passed to the external binary.");
+            }
+
             public void Dispose()
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();

@@ -7,6 +7,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
@@ -17,8 +18,8 @@ namespace Halibut.Tests
     public class CancellationViaClientProxyFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task CancellationCanBeDoneViaClientProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -31,7 +32,7 @@ namespace Halibut.Tests
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
-                var echo = clientAndService.CreateClient<ICountingService, ISyncClientCountingServiceWithOptions>(point =>
+                var echo = clientAndService.CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
                     {
                         point.RetryCountLimit = 1000000;
                         point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
@@ -39,21 +40,22 @@ namespace Halibut.Tests
 
                 var cts = new CancellationTokenSource();
                 cts.CancelAfter(TimeSpan.FromMilliseconds(100));
-
-                Assert.That(() => echo.Increment(new HalibutProxyRequestOptions(cts.Token)), Throws.Exception
-                    .With.Message.Contains("The operation was canceled"));
                 
+                (await AssertAsync.Throws<Exception>(() => echo.IncrementAsync(new HalibutProxyRequestOptions(cts.Token))))
+                    .And
+                    .Message.Contains("The operation was canceled");
+
                 clientAndService.PortForwarder.ReturnToNormalMode();
                 
-                echo.Increment(new HalibutProxyRequestOptions(CancellationToken));
+                await echo.IncrementAsync(new HalibutProxyRequestOptions(CancellationToken));
 
-                echo.GetCurrentValue(new HalibutProxyRequestOptions(CancellationToken))
+                (await echo.GetCurrentValueAsync(new HalibutProxyRequestOptions(CancellationToken)))
                     .Should().Be(1, "Since we cancelled the first call");
             }
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false, testAsyncAndSyncClients: true)]
         public async Task CannotHaveServiceWithHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -62,22 +64,32 @@ namespace Halibut.Tests
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
                        .Build(CancellationToken))
             {
-                Assert.Throws<TypeNotAllowedException>(() => clientAndService.CreateClient<IAmNotAllowed>());
+                if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Async)
+                {
+                    Assert.Throws<TypeNotAllowedException>(() =>
+                    {
+                        clientAndService.Client.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.ServiceEndpoint());
+                    });
+                }
+                if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync)
+                {
+                    Assert.Throws<TypeNotAllowedException>(() => clientAndService.Client.CreateClient<IAmNotAllowed>(clientAndService.ServiceEndpoint()));
+                }
             }
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task HalibutProxyRequestOptionsCanBeSentToLatestAndOldServicesThatPreDateHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, ISyncClientEchoServiceWithOptions>();
+                var echo = clientAndService.CreateClientWithOptions<IEchoService, ISyncClientEchoServiceWithOptions, IAsyncClientEchoServiceWithOptions>();
 
-                echo.SayHello("Hello!!", new HalibutProxyRequestOptions(new CancellationToken()))
+                (await echo.SayHelloAsync("Hello!!", new HalibutProxyRequestOptions(new CancellationToken())))
                     .Should()
                     .Be("Hello!!...");
             }
@@ -85,22 +97,22 @@ namespace Halibut.Tests
         
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task HalibutProxyRequestOptions_CanNotCancel_InFlightRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var lockService = clientAndService.CreateClient<ILockService, ISyncClientLockServiceWithOptions>();
+                var lockService = clientAndService.CreateClientWithOptions<ILockService, ISyncClientLockServiceWithOptions, IAsyncClientLockServiceWithOptions>();
 
                 var cts = new CancellationTokenSource();
                 using var tmpDir = new TemporaryDirectory();
                 var fileThatOnceDeletedEndsTheCall = tmpDir.CreateRandomFile();
                 var callStartedFile = tmpDir.RandomFileName();
 
-                var inFlightRequest = Task.Run(() => lockService.WaitForFileToBeDeleted(fileThatOnceDeletedEndsTheCall, callStartedFile, new HalibutProxyRequestOptions(CancellationToken.None)));
+                var inFlightRequest = Task.Run(async () => await lockService.WaitForFileToBeDeletedAsync(fileThatOnceDeletedEndsTheCall, callStartedFile, new HalibutProxyRequestOptions(CancellationToken.None)));
 
                 Logger.Information("Waiting for the RPC call to be inflight");
                 while (!File.Exists(callStartedFile))
@@ -117,7 +129,7 @@ namespace Halibut.Tests
                 
                 if (inFlightRequest.Status == TaskStatus.Faulted) await inFlightRequest;
                 
-                inFlightRequest.Status.Should().Be(TaskStatus.Running, "The cancellation token can not cancel in flight requests.");
+                inFlightRequest.IsCompleted.Should().Be(false, $"The cancellation token can not cancel in flight requests. Current state: {inFlightRequest.Status}");
                 
                 File.Delete(fileThatOnceDeletedEndsTheCall);
 
@@ -130,6 +142,11 @@ namespace Halibut.Tests
     public interface IAmNotAllowed
     {
         public void Foo(HalibutProxyRequestOptions opts);
+    }
+    
+    public interface IAsyncClientAmNotAllowed
+    {
+        public Task FooAsync(HalibutProxyRequestOptions opts);
     }
 
     public class AmNotAllowed : IAmNotAllowed
