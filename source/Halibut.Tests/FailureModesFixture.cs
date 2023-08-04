@@ -9,6 +9,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
@@ -25,8 +26,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -34,28 +35,28 @@ namespace Halibut.Tests
                        .NoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>(point =>
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.TcpClientConnectTimeout = TimeSpan.FromSeconds(1);
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
                 });
 
-                var error = Assert.Throws<HalibutClientException>(() => echo.SayHello("Paul"));
+                var error = Assert.ThrowsAsync<HalibutClientException>(() => echo.SayHelloAsync("Paul"));
                 error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
             }
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenServerThrowsAnException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                var ex = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var ex = Assert.ThrowsAsync<ServiceInvocationHalibutClientException>(() => echo.CrashAsync());
                 ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
             }
         }
@@ -102,7 +103,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenServerThrowsDuringADataStream(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -112,16 +113,16 @@ namespace Halibut.Tests
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))
             {
-                var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
+                var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService, IAsyncReadDataStreamService>();
 
                 // Previously tentacle would eventually stop responding only after many failed calls.
                 // This loop ensures (at the time) the test shows the problem.
                 for (var i = 0; i < 128; i++)
                 {
-                    Assert.Throws<HalibutClientException>(() => readDataSteamService.SendData(new DataStream(10000, stream => throw new Exception("Oh noes"))));
+                    Assert.ThrowsAsync<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(new DataStream(10000, stream => throw new Exception("Oh noes"))));
                 }
 
-                var received = readDataSteamService.SendData(DataStream.FromString("hello"));
+                var received = await readDataSteamService.SendDataAsync(DataStream.FromString("hello"));
                 received.Should().Be(5);
             }
         }

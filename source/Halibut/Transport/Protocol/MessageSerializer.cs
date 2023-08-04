@@ -1,13 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
-using System.Threading.Tasks;
-using System.Threading;
 
 namespace Halibut.Transport.Protocol
 {
@@ -88,7 +88,7 @@ namespace Halibut.Transport.Protocol
 
             observer.MessageWritten(compressedByteCountingStream.BytesWritten, compressedInMemoryBuffer.BytesWrittenIntoMemory);
         }
-
+        
         public T ReadMessage<T>(RewindableBufferStream stream)
         {
             using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))

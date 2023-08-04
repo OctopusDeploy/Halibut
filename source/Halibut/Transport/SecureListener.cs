@@ -359,7 +359,7 @@ namespace Halibut.Transport
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
-            return exchangeAction(exchangeProtocolBuilder(stream, log));
+            return exchangeAction(exchangeProtocolBuilder(stream, log), cts.Token);
         }
 
         bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)

@@ -32,7 +32,7 @@ namespace Halibut.Transport
         {
             return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.SafeTcpClientPooledConnectionTimeout);
         }
-
+        
         public void Dispose()
         {
             try
@@ -40,7 +40,10 @@ namespace Halibut.Transport
                 protocol.StopAcceptingClientRequests();
                 try
                 {
+                    // TODO - ASYNC ME UP!
+#pragma warning disable CS0612
                     protocol.EndCommunicationWithServer();
+#pragma warning restore CS0612
                 }
                 catch (Exception)
                 {

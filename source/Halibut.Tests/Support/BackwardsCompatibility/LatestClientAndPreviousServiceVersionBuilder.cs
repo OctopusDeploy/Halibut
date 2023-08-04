@@ -185,12 +185,17 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 throw new Exception("The version of the service must be set.");
             }
 
-            var octopus = new HalibutRuntimeBuilder()
+            var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
-                .WithLogFactory(new TestContextLogFactory("Client", halibutLogLevel))
-                .Build();
-            
-            octopus.Trust(serviceCertAndThumbprint.Thumbprint);
+                .WithLogFactory(new TestContextLogFactory("Client", halibutLogLevel));
+
+            if (forceClientProxyType == ForceClientProxyType.AsyncClient)
+            {
+                clientBuilder = clientBuilder.WithAsyncHalibutFeatureEnabled();
+            }
+
+            var client = clientBuilder.Build();
+            client.Trust(serviceCertAndThumbprint.Thumbprint);
 
             HalibutTestBinaryRunner.RunningOldHalibutBinary? runningOldHalibutBinary = null;
             var disposableCollection = new DisposableCollection();
@@ -209,7 +214,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
-                var listenPort = octopus.Listen();
+                var listenPort = client.Listen();
                 portForwarder = portForwarderFactory?.Invoke(listenPort);
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
 
@@ -233,7 +238,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
-                var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, octopus, cancellationToken);
+                var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
 
                 var webSocketListeningPort = webSocketListeningInfo.WebSocketListeningPort;
                 portForwarder = portForwarderFactory?.Invoke(webSocketListeningPort);
@@ -291,7 +296,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 throw new NotSupportedException();
             }
 
-            return new ClientAndService(octopus, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxy, proxyDetails, forceClientProxyType, cancellationTokenSource);
+            return new ClientAndService(client, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxy, proxyDetails, forceClientProxyType, cancellationTokenSource);
         }
 
         public class ClientAndService : IClientAndService

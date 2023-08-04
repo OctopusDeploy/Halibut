@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport.Protocol;
 using NSubstitute;
 using NUnit.Framework;
@@ -15,8 +16,8 @@ namespace Halibut.Tests.Transport.Protocol
 {
     public class ProtocolFixture
     {
-        MessageExchangeProtocol protocol;
-        DumpStream stream;
+        MessageExchangeProtocol protocol = null!;
+        DumpStream stream = null!;
 
         [SetUp]
         public void SetUp()
@@ -27,9 +28,14 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ShouldExchangeAsClient()
+        [SyncAndAsync]
+        public async Task ShouldExchangeAsClient(SyncOrAsync syncOrAsync)
         {
-            protocol.ExchangeAsClient(new RequestMessage());
+#pragma warning disable CS0612
+            await syncOrAsync
+                .WhenSync(() => protocol.ExchangeAsClient(new RequestMessage()))
+                .WhenAsync(async () => await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None));
+#pragma warning restore CS0612
 
             AssertOutput(@"
 --> MX-CLIENT
@@ -37,6 +43,8 @@ namespace Halibut.Tests.Transport.Protocol
 --> RequestMessage
 <-- ResponseMessage");
         }
+
+        // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation
 
         [Test]
         public async Task ShouldExchangeAsServerOfClientAsync()
@@ -56,13 +64,26 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ShouldExchangeAsClientWithPooling()
+        [SyncAndAsync]
+        public async Task ShouldExchangeAsClientWithPooling(SyncOrAsync syncOrAsync)
         {
             // When connections are pooled (kept alive), we send HELLO and expect a PROCEED before each request, that way we can know whether
             // the connection was torn down first or not without attempting to transmit our request
-            protocol.ExchangeAsClient(new RequestMessage());
-            protocol.ExchangeAsClient(new RequestMessage());
-            protocol.ExchangeAsClient(new RequestMessage());
+            if (syncOrAsync == SyncOrAsync.Async)
+            {
+#pragma warning disable CS0612
+                // ReSharper disable once MethodHasAsyncOverload
+                protocol.ExchangeAsClient(new RequestMessage());
+                protocol.ExchangeAsClient(new RequestMessage());
+                protocol.ExchangeAsClient(new RequestMessage());
+#pragma warning restore CS0612
+            }
+            else
+            {
+                await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
+                await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
+                await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
+            }
 
             AssertOutput(@"
 --> MX-CLIENT
@@ -257,15 +278,10 @@ namespace Halibut.Tests.Transport.Protocol
 
         class DumpStream : IMessageExchangeStream
         {
-            readonly StringBuilder output = new StringBuilder();
-            readonly Queue<object> nextReadQueue = new Queue<object>();
+            readonly StringBuilder output = new();
+            readonly Queue<object> nextReadQueue = new();
             RemoteIdentity remoteIdentity;
             int numberOfReads = 3;
-
-            public DumpStream()
-            {
-                Sent = new List<object>();
-            }
 
             public void NextReadReturns(object o)
             {
@@ -282,31 +298,73 @@ namespace Halibut.Tests.Transport.Protocol
                 numberOfReads = reads;
             }
 
-            public List<object> Sent { get; }
-
             public void IdentifyAsClient()
             {
                 output.AppendLine("--> MX-CLIENT");
                 output.AppendLine("<-- MX-SERVER");
             }
 
+            public async Task IdentifyAsClientAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+                IdentifyAsClient();
+            }
+
+            [Obsolete]
             public void SendNext()
             {
                 output.AppendLine("--> NEXT");
             }
 
+            public async Task SendNextAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                SendNext();
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public void SendProceed()
             {
                 output.AppendLine("--> PROCEED");
             }
 
-            public Task SendProceedAsync() => Task.Run(() => SendProceed());
+            [Obsolete]
+            public async Task SendProceedAsync()
+            {
+                await Task.CompletedTask;
 
+                SendProceed();
+            }
+
+            public async Task SendProceedAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                SendProceed();
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public void SendEnd()
             {
                 output.AppendLine("--> END");
             }
 
+            public async Task SendEndAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                SendEnd();
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public bool ExpectNextOrEnd()
             {
                 if (--numberOfReads == 0)
@@ -318,40 +376,114 @@ namespace Halibut.Tests.Transport.Protocol
                 return true;
             }
 
-            public Task<bool> ExpectNextOrEndAsync() => Task.Run(() => ExpectNextOrEnd());
+            [Obsolete]
+            public async Task<bool> ExpectNextOrEndAsync()
+            {
+                await Task.CompletedTask;
 
+                return ExpectNextOrEnd();
+            }
+
+            public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                return ExpectNextOrEnd();
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public void ExpectProceeed()
             {
                 output.AppendLine("<-- PROCEED");
             }
 
+            public async Task ExpectProceedAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                ExpectProceeed();
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public void IdentifyAsSubscriber(string subscriptionId)
             {
                 output.AppendLine("--> MX-SUBSCRIBE subscriptionId");
                 output.AppendLine("<-- MX-SERVER");
             }
 
+            public async Task IdentifyAsSubscriberAsync(string subscriptionId, CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                IdentifyAsSubscriber(subscriptionId);
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public void IdentifyAsServer()
             {
                 output.AppendLine("--> MX-SERVER");
             }
 
+            public async Task IdentifyAsServerAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                IdentifyAsServer();
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public RemoteIdentity ReadRemoteIdentity()
             {
                 output.AppendLine("<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId");
                 return remoteIdentity;
             }
 
+            public async Task<RemoteIdentity> ReadRemoteIdentityAsync(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                return ReadRemoteIdentity();
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public void Send<T>(T message)
             {
                 output.AppendLine("--> " + typeof(T).Name);
-                Sent.Add(message);
             }
 
+            public async Task SendAsync<T>(T message, CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                Send(message);
+#pragma warning restore CS0612
+            }
+
+            [Obsolete]
             public T Receive<T>()
             {
                 output.AppendLine("<-- " + typeof(T).Name);
                 return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+            }
+
+            public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
+            {
+                await Task.CompletedTask;
+
+#pragma warning disable CS0612
+                return Receive<T>();
+#pragma warning restore CS0612
             }
 
             public override string ToString()

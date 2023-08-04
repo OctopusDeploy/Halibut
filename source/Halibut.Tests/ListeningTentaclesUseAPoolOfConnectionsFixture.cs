@@ -8,6 +8,7 @@ using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -16,7 +17,7 @@ namespace Halibut.Tests
     public class ListeningTentaclesUseAPoolOfConnectionsFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task TestOnlyHealthConnectionsAreKeptInThePool(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -30,25 +31,25 @@ namespace Halibut.Tests
                        .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {
-                var echoService = clientAndService.CreateClient<IEchoService>(point =>
+                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     // This test should never need to make use of this since no bad connections should be in the pool
                     point.RetryListeningSleepInterval = TimeSpan.FromMinutes(10);
                 });
-                var pauseCurrentTcpConnections = clientAndService.CreateClient<IDoSomeActionService>();
+                var pauseCurrentTcpConnections = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
-                echoService.SayHello("This should make one connection");
+                await echoService.SayHelloAsync("This should make one connection");
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1);
                 
-                echoService.SayHello("Should re-use the same connection");
+                await echoService.SayHelloAsync("Should re-use the same connection");
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1, "We should use the same connection since the last was healthy");
 
-                Assert.Throws<HalibutClientException>(() => pauseCurrentTcpConnections.Action());
+                Assert.ThrowsAsync<HalibutClientException>(() => pauseCurrentTcpConnections.ActionAsync());
                 // Connection should not be put back into the pool
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1, "This should still be using the same connection since it is on this call we break the connection.");
 
                 var sw = Stopwatch.StartNew();
-                echoService.SayHello("This should immediately create a new connection");
+                await echoService.SayHelloAsync("This should immediately create a new connection");
                 sw.Stop();
                 
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(2, "Since the last connection should not have been put back into the pool.");

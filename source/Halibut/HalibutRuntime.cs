@@ -71,8 +71,18 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
         }
 
-        internal HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider, IPendingRequestQueueFactory queueFactory, ILogFactory logFactory, ITypeRegistry typeRegistry, IMessageSerializer messageSerializer, Func<RetryPolicy> pollingReconnectRetryPolicy)
+        internal HalibutRuntime(
+            IServiceFactory serviceFactory, 
+            X509Certificate2 serverCertificate, 
+            ITrustProvider trustProvider, 
+            IPendingRequestQueueFactory queueFactory, 
+            ILogFactory logFactory, 
+            ITypeRegistry typeRegistry, 
+            IMessageSerializer messageSerializer, 
+            Func<RetryPolicy> pollingReconnectRetryPolicy,
+            AsyncHalibutFeature asyncHalibutFeature)
         {
+            AsyncHalibutFeature = asyncHalibutFeature;
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
             logs = logFactory;
@@ -87,6 +97,7 @@ namespace Halibut
 
         public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
         public OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }
+        public AsyncHalibutFeature AsyncHalibutFeature { get; }
 
         IPendingRequestQueue GetQueue(Uri target)
         {
@@ -109,12 +120,13 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, log), log);
         }
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
+            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -125,7 +137,9 @@ namespace Halibut
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), HandleMessage, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -134,11 +148,18 @@ namespace Halibut
             listener.Start();
         }
 
-        Task HandleMessage(MessageExchangeProtocol protocol)
+        Task HandleMessage(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
         {
+#pragma warning disable CS0612
             return protocol.ExchangeAsServerSynchronouslyAsync(
                 HandleIncomingRequest,
                 id => GetQueue(id.SubscriptionId));
+#pragma warning restore CS0612
+        }
+
+        Task HandleMessageAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
+        {
+            return protocol.ExchangeAsServerAsync(HandleIncomingRequest, id => GetQueue(id.SubscriptionId), cancellationToken);
         }
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
@@ -230,11 +251,16 @@ namespace Halibut
         
         public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint endpoint)
         {
+            if (AsyncHalibutFeature.IsDisabled())
+            {
+                throw new InvalidOperationException("Async client creation is not enabled. Please set AsyncHalibutFeature to Enabled to use async clients.");
+            }
+
             typeRegistry.AddToMessageContract(typeof(TService));
             var logger = logs.ForEndpoint(endpoint.BaseUri);
 
             var proxy = DispatchProxyAsync.Create<TAsyncClientService, HalibutProxyWithAsync>();
-            (proxy as HalibutProxyWithAsync).Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger, CancellationToken.None);
+            (proxy as HalibutProxyWithAsync)!.Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger, CancellationToken.None);
             return proxy;
         }
 
@@ -413,6 +439,12 @@ namespace Halibut
         {
             pollingClients.Dispose();
             connectionManager.Dispose();
+            
+            if (responseCache.IsValueCreated)
+            {
+                responseCache.Value?.Dispose();
+            }
+
             lock (listeners)
             {
                 foreach (var listener in listeners)
