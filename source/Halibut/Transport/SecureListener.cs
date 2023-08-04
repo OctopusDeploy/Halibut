@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -42,21 +43,23 @@ namespace Halibut.Transport
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         readonly TcpClientManager tcpClientManager = new TcpClientManager();
         readonly ExchangeActionAsync exchangeAction;
+        readonly AsyncHalibutFeature asyncHalibutFeature;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, AsyncHalibutFeature asyncHalibutFeature)
+            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>(), asyncHalibutFeature)
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) :
-            this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, AsyncHalibutFeature asyncHalibutFeature) :
+            this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection, asyncHalibutFeature)
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
+            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, AsyncHalibutFeature asyncHalibutFeature)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -67,6 +70,7 @@ namespace Halibut.Transport
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
+            this.asyncHalibutFeature = asyncHalibutFeature;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -311,16 +315,32 @@ namespace Halibut.Transport
             // Disposing the StreamWriter will close the stream - it owns the stream
             using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
             {
-                await writer.WriteLineAsync("HTTP/1.0 200 OK");
-                await writer.WriteLineAsync("Content-Type: text/html; charset=utf-8");
-                await writer.WriteLineAsync("Content-Length: " + message.Length);
-                foreach (var header in headers)
-                    await writer.WriteLineAsync($"{header.Key}: {header.Value}");
-                await writer.WriteLineAsync();
-                await writer.WriteLineAsync(message);
-                await writer.WriteLineAsync();
-                await writer.FlushAsync();
-                await stream.FlushAsync();
+                if (asyncHalibutFeature.IsEnabled())
+                {
+                    await writer.WriteLineAsync("HTTP/1.0 200 OK");
+                    await writer.WriteLineAsync("Content-Type: text/html; charset=utf-8");
+                    await writer.WriteLineAsync("Content-Length: " + message.Length);
+                    foreach (var header in headers)
+                        await writer.WriteLineAsync($"{header.Key}: {header.Value}");
+                    await writer.WriteLineAsync();
+                    await writer.WriteLineAsync(message);
+                    await writer.WriteLineAsync();
+                    await writer.FlushAsync();
+                    await stream.FlushAsync();
+                }
+                else
+                {
+                    writer.WriteLine("HTTP/1.0 200 OK");
+                    writer.WriteLine("Content-Type: text/html; charset=utf-8");
+                    writer.WriteLine("Content-Length: " + message.Length);
+                    foreach (var header in headers)
+                        writer.WriteLine($"{header.Key}: {header.Value}");
+                    writer.WriteLine();
+                    writer.WriteLine(message);
+                    writer.WriteLine();
+                    writer.Flush();
+                    stream.Flush();
+                }
             }
         }
 
@@ -385,7 +405,10 @@ namespace Halibut.Transport
             var lastWasNewline = false;
             while (builder.Length < 20000)
             {
-                var b = await stream.ReadByteAsync(cts.Token);
+                var b = asyncHalibutFeature.IsEnabled()
+                    ? await stream.ReadByteAsync(cts.Token)
+                    : stream.ReadByte();
+
                 if (b == -1) return builder.ToString();
 
                 var c = (char)b;

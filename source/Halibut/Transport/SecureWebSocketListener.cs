@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -22,20 +23,21 @@ namespace Halibut.Transport
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
         readonly CancellationTokenSource cts = new();
         readonly ExchangeActionAsync exchangeAction;
+        readonly AsyncHalibutFeature asyncHalibutFeature;
         ILog log;
         HttpListener listener;
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, AsyncHalibutFeature asyncHalibutFeature)
+            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>(), asyncHalibutFeature)
         {
         }
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders)
-            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection)
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, AsyncHalibutFeature asyncHalibutFeature)
+            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection, asyncHalibutFeature)
         {
         }
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, AsyncHalibutFeature asyncHalibutFeature)
         {
             if (!endPoint.EndsWith("/"))
                 endPoint += "/";
@@ -48,6 +50,7 @@ namespace Halibut.Transport
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
+            this.asyncHalibutFeature = asyncHalibutFeature;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -175,8 +178,16 @@ namespace Halibut.Transport
             // Disposing the StreamWriter will close the stream - it owns the stream
             using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)){ NewLine = "\r\n" })
             {
-                await writer.WriteLineAsync(message);
-                await writer.FlushAsync();
+                if (asyncHalibutFeature.IsEnabled())
+                {
+                    await writer.WriteLineAsync(message);
+                    await writer.FlushAsync();
+                }
+                else
+                {
+                    writer.WriteLine(message);
+                    writer.Flush();
+                }
             }
         }
 

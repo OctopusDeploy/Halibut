@@ -8,6 +8,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Transport;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
@@ -60,7 +61,8 @@ namespace Halibut.Tests.Transport
                     null,
                     thumbprint => true,
                     new LogFactory(),
-                    () => ""
+                    () => "",
+                    AsyncHalibutFeature.Disabled
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)
