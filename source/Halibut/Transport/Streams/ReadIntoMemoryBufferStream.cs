@@ -38,7 +38,15 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        bool ShouldReadFromMemoryStream => !limitReached || memoryStream.Position < BytesReadIntoMemory;
+        bool ShouldReadFromMemoryStream
+        {
+            get
+            {
+                if (BytesReadIntoMemory == 0) return false;
+
+                return !limitReached || memoryStream.Position < BytesReadIntoMemory;
+            }
+        }
 
         public long BytesReadIntoMemory => memoryStream.Length;
 

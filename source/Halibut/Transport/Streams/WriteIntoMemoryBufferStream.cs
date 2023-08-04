@@ -12,7 +12,8 @@ namespace Halibut.Transport.Streams
         readonly Stream sinkStream;
         readonly long writeIntoMemoryLimitBytes;
         readonly OnDispose onDispose;
-        
+        bool usingSinkStream;
+
         public WriteIntoMemoryBufferStream(Stream sinkStream, long writeIntoMemoryLimitBytes, OnDispose onDispose)
         {
             memoryStream = new MemoryStream();
@@ -20,7 +21,7 @@ namespace Halibut.Transport.Streams
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
             this.onDispose = onDispose;
         }
-
+        
         public long BytesWrittenIntoMemory => memoryStream.Length;
 
         public override bool CanRead => false;
@@ -44,7 +45,7 @@ namespace Halibut.Transport.Streams
                 }
             }
         }
-
+        
         public override long Position
         {
             get => throw new NotSupportedException();
@@ -70,16 +71,31 @@ namespace Halibut.Transport.Streams
 
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            // No need to go via in memory here, as this is already async.
+            if (!usingSinkStream)
+            {
+                var remainingSpace = writeIntoMemoryLimitBytes - BytesWrittenIntoMemory;
+                if (count <= remainingSpace)
+                {
+                    // We fit completely in memory
+                    await memoryStream.WriteAsync(buffer, offset, count, cancellationToken);
+                    return;
+                }
+
+                // We tried our best, but will no longer fit in memory. Transition over to use the sinkStream.
+                memoryStream.Position = 0;
+                await memoryStream.CopyToAsync(sinkStream, 81920, cancellationToken);
+                usingSinkStream = true;
+            }
+
             await sinkStream.WriteAsync(buffer, offset, count, cancellationToken);
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (BytesWrittenIntoMemory < writeIntoMemoryLimitBytes)
+            if (!usingSinkStream)
             {
                 var remainingSpace = writeIntoMemoryLimitBytes - BytesWrittenIntoMemory;
-                if (count < remainingSpace)
+                if (count <= remainingSpace)
                 {
                     // We fit completely in memory
                     memoryStream.Write(buffer, offset, count);
@@ -89,6 +105,7 @@ namespace Halibut.Transport.Streams
                 // We tried our best, but will no longer fit in memory. Transition over to use the sinkStream.
                 memoryStream.Position = 0;
                 memoryStream.CopyTo(sinkStream);
+                usingSinkStream = true;
             }
 
             sinkStream.Write(buffer, offset, count);
@@ -96,7 +113,7 @@ namespace Halibut.Transport.Streams
 
         public async Task WriteAnyUnwrittenDataToSinkStream(CancellationToken cancellationToken)
         {
-            if (BytesWrittenIntoMemory < writeIntoMemoryLimitBytes)
+            if (!usingSinkStream)
             {
                 memoryStream.Position = 0;
                 await memoryStream.CopyToAsync(sinkStream, 81920, cancellationToken);

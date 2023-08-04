@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -16,9 +15,6 @@ namespace Halibut.Tests.Transport.Protocol
 {
     public class MessageSerializerFixture : BaseTest
     {
-        const long SmallMemoryLimit = 8L;
-        const long LargeMemoryLimit = 16L * 1024L * 1024L;
-        
         [Test]
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task SendReceiveMessageShouldRoundTrip(MessageSerializerTestCase testCase)
@@ -306,49 +302,25 @@ namespace Halibut.Tests.Transport.Protocol
             }
         }
         
-        async Task<T> ReadMessage<T>(MessageSerializerTestCase testCase, MessageSerializer sut, RewindableBufferStream rewindableBufferStream)
+        async Task<T> ReadMessage<T>(MessageSerializerTestCase testCase, MessageSerializer messageSerializer, RewindableBufferStream rewindableBufferStream)
         {
             if (testCase.SyncOrAsync == SyncOrAsync.Async)
             {
-                return await sut.ReadMessageAsync<T>(rewindableBufferStream, CancellationToken);
+                return await messageSerializer.ReadMessageAsync<T>(rewindableBufferStream, CancellationToken);
             }
 
-            return sut.ReadMessage<T>(rewindableBufferStream);
+            return messageSerializer.ReadMessage<T>(rewindableBufferStream);
         }
 
-        async Task WriteMessage(MessageSerializerTestCase testCase, MessageSerializer sut, Stream stream, string message)
+        async Task WriteMessage(MessageSerializerTestCase testCase, MessageSerializer messageSerializer, Stream stream, string message)
         {
             if (testCase.SyncOrAsync == SyncOrAsync.Async)
             {
-                await sut.WriteMessageAsync(stream, message, CancellationToken);
+                await messageSerializer.WriteMessageAsync(stream, message, CancellationToken);
                 return;
             }
 
-            sut.WriteMessage(stream, message);
-        }
-
-        public class MessageSerializerTestCase
-        {
-            public SyncOrAsync SyncOrAsync { get; }
-            public long AsyncMemoryLimit { get; }
-
-            public MessageSerializerTestCase(SyncOrAsync syncOrAsync, long asyncMemoryLimit)
-            {
-                SyncOrAsync = syncOrAsync;
-                AsyncMemoryLimit = asyncMemoryLimit;
-            }
-
-            public override string ToString() => $"{SyncOrAsync}, Memory Limit {AsyncMemoryLimit}";
-        }
-
-        public class MessageSerializerTestCaseSource : IEnumerable
-        {
-            public IEnumerator GetEnumerator()
-            {
-                yield return new MessageSerializerTestCase(SyncOrAsync.Sync, 0);
-                yield return new MessageSerializerTestCase(SyncOrAsync.Async, SmallMemoryLimit);
-                yield return new MessageSerializerTestCase(SyncOrAsync.Async, LargeMemoryLimit);
-            }
+            messageSerializer.WriteMessage(stream, message);
         }
     }
 }
