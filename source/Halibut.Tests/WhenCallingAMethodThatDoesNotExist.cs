@@ -8,6 +8,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -16,7 +17,7 @@ namespace Halibut.Tests
     public class WhenCallingAMethodThatDoesNotExist : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var services = new SingleServiceFactory(new object(), typeof(EchoService));
@@ -26,11 +27,9 @@ namespace Halibut.Tests
                        .WithServiceFactory(services)
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-
-                Func<string> readAsyncCall = () => echo.SayHello("Say hello to a service that does not exist.");
-
-                readAsyncCall.Should().Throw<MethodNotFoundHalibutClientException>();
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                
+                await AssertAsync.Throws<MethodNotFoundHalibutClientException>(() => echo.SayHelloAsync("Say hello to a service that does not exist."));
             }
         }
 

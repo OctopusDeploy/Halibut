@@ -16,5 +16,7 @@ namespace Halibut.Tests.Support
         TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken);
         TClientAndService CreateClient<TService, TClientAndService>();
         TClientAndService CreateClient<TService, TClientAndService>(Action<ServiceEndPoint> modifyServiceEndpoint);
+        TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>();
+        TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint);
     }
 }
