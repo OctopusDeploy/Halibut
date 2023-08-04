@@ -27,6 +27,8 @@ namespace Halibut.Tests.Transport.Protocol
             protocol = new MessageExchangeProtocol(stream, Substitute.For<ILog>());
         }
 
+        // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation
+
         [Test]
         [SyncAndAsync]
         public async Task ShouldExchangeAsClient(SyncOrAsync syncOrAsync)
@@ -44,7 +46,23 @@ namespace Halibut.Tests.Transport.Protocol
 <-- ResponseMessage");
         }
 
-        // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation
+        [Test]
+        [Obsolete]
+        public async Task ShouldExchangeAsServerOfClientSynchronouslyAsync()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
+            stream.NextReadReturns(new RequestMessage());
+            stream.SetNumberOfReads(1);
+            
+            await protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+<-- RequestMessage
+--> ResponseMessage
+<-- END");
+        }
 
         [Test]
         public async Task ShouldExchangeAsServerOfClientAsync()
@@ -53,7 +71,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(new RequestMessage());
             stream.SetNumberOfReads(1);
 
-            await protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")));
+            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")), CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -69,21 +87,24 @@ namespace Halibut.Tests.Transport.Protocol
         {
             // When connections are pooled (kept alive), we send HELLO and expect a PROCEED before each request, that way we can know whether
             // the connection was torn down first or not without attempting to transmit our request
-            if (syncOrAsync == SyncOrAsync.Async)
-            {
+            
+            await syncOrAsync
+                .WhenSync(() =>
+                {
 #pragma warning disable CS0612
-                // ReSharper disable once MethodHasAsyncOverload
-                protocol.ExchangeAsClient(new RequestMessage());
-                protocol.ExchangeAsClient(new RequestMessage());
-                protocol.ExchangeAsClient(new RequestMessage());
+                    // ReSharper disable once MethodHasAsyncOverload
+                    protocol.ExchangeAsClient(new RequestMessage());
+                    protocol.ExchangeAsClient(new RequestMessage());
+                    protocol.ExchangeAsClient(new RequestMessage());
 #pragma warning restore CS0612
-            }
-            else
-            {
-                await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
-                await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
-                await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
-            }
+                })
+                .WhenAsync(async () =>
+                {
+                    await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
+                    await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
+                    await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
+                });
+
 
             AssertOutput(@"
 --> MX-CLIENT
@@ -101,7 +122,8 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public async Task ShouldExchangeAsServerOfClientWithPoolingAsync()
+        [Obsolete]
+        public async Task ShouldExchangeAsServerOfClientWithPoolingSynchronouslyAsync()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
             stream.NextReadReturns(new RequestMessage());
@@ -127,14 +149,45 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ShouldExchangeAsSubscriber()
+        public async Task ShouldExchangeAsServerOfClientWithPoolingAsync()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
+            stream.NextReadReturns(new RequestMessage());
+            stream.NextReadReturns(new RequestMessage());
+            stream.NextReadReturns(new RequestMessage());
+
+            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => new PendingRequestQueue(new InMemoryConnectionLog("x")), CancellationToken.None);
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+<-- RequestMessage
+--> ResponseMessage
+<-- NEXT
+--> PROCEED
+<-- RequestMessage
+--> ResponseMessage
+<-- NEXT
+--> PROCEED
+<-- RequestMessage
+--> ResponseMessage
+<-- END");
+        }
+
+        [Test]
+        [SyncAndAsync]
+        public async Task ShouldExchangeAsSubscriber(SyncOrAsync syncOrAsync)
         {
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
-
+#pragma warning disable CS0612
+            await syncOrAsync
+                .WhenSync(() => protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5))
+                .WhenAsync(async () => await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5, CancellationToken.None));
+#pragma warning restore CS0612
+            
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
@@ -159,7 +212,8 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public async Task ShouldExchangeAsServerOfSubscriberAsync()
+        [Obsolete]
+        public async Task ShouldExchangeAsServerOfSubscriberSynchronouslyAsync()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
@@ -184,16 +238,52 @@ namespace Halibut.Tests.Transport.Protocol
         }
 
         [Test]
-        public void ShouldExchangeAsSubscriberWithPooling()
+        public async Task ShouldExchangeAsServerOfSubscriberAsync()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
+            var requestQueue = Substitute.For<IPendingRequestQueue>();
+            var queue = new Queue<RequestMessage>();
+            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new RequestMessage());
+            requestQueue.DequeueAsync(CancellationToken.None).Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+            stream.SetNumberOfReads(2);
+
+            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue, CancellationToken.None);
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+--> RequestMessage
+<-- ResponseMessage
+<-- NEXT
+--> PROCEED
+--> RequestMessage
+<-- ResponseMessage
+<-- END");
+        }
+
+        [Test]
+        [SyncAndAsync]
+        public async Task ShouldExchangeAsSubscriberWithPooling(SyncOrAsync syncOrAsync)
         {
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
-
-            stream.NextReadReturns(new RequestMessage());
-
-            protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+            await syncOrAsync
+                .WhenSync(() =>
+                {
+#pragma warning disable CS0612
+                    protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+                    stream.NextReadReturns(new RequestMessage());
+                    protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5);
+#pragma warning restore CS0612
+                })
+                .WhenAsync(async () =>
+                {
+                    await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5, CancellationToken.None);
+                    stream.NextReadReturns(new RequestMessage());
+                    await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5, CancellationToken.None);
+                });
 
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
@@ -234,7 +324,8 @@ namespace Halibut.Tests.Transport.Protocol
         }
         
         [Test]
-        public void ShouldExchangeAsServerOfSubscriberWithPoolingAsync()
+        [Obsolete]
+        public async Task ShouldExchangeAsServerOfSubscriberWithPoolingSynchronouslyAsync()
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
@@ -245,13 +336,50 @@ namespace Halibut.Tests.Transport.Protocol
             queue.Enqueue(new RequestMessage());
             stream.SetNumberOfReads(2);
 
-            protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+            await protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
 
             queue.Enqueue(new RequestMessage());
 
             stream.SetNumberOfReads(1);
 
-            protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue).Wait();
+            await protocol.ExchangeAsServerSynchronouslyAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue);
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+--> RequestMessage
+<-- ResponseMessage
+<-- NEXT
+--> PROCEED
+--> RequestMessage
+<-- ResponseMessage
+<-- END
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+--> RequestMessage
+<-- ResponseMessage
+<-- END");
+        }
+
+        [Test]
+        public async Task ShouldExchangeAsServerOfSubscriberWithPoolingAsync()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
+            var requestQueue = Substitute.For<IPendingRequestQueue>();
+            var queue = new Queue<RequestMessage>();
+            requestQueue.DequeueAsync(CancellationToken.None).Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+
+            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new RequestMessage());
+            stream.SetNumberOfReads(2);
+
+            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue, CancellationToken.None);
+
+            queue.Enqueue(new RequestMessage());
+
+            stream.SetNumberOfReads(1);
+
+            await protocol.ExchangeAsServerAsync(req => ResponseMessage.FromException(req, new Exception("Divide by zero")), ri => requestQueue, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
