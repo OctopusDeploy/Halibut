@@ -131,7 +131,7 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
-        public async Task ExecuteTransactionAsync(ExchangeActionWithCancellationAsync protocolHandler, CancellationToken cancellationToken)
+        public async Task ExecuteTransactionAsync(ExchangeActionAsync protocolHandler, CancellationToken cancellationToken)
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
 

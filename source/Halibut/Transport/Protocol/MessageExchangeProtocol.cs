@@ -11,8 +11,7 @@ namespace Halibut.Transport.Protocol
 
     [Obsolete]
     public delegate void ExchangeAction(MessageExchangeProtocol protocol);
-    public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol);
-    public delegate Task ExchangeActionWithCancellationAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken);
+    public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken);
 
     /// <summary>
     /// Implements the core message exchange protocol for both the client and server.
