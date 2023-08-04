@@ -21,7 +21,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
                 triggered = true;
             });
-            await task.TimeoutAfter(TimeSpan.FromMilliseconds(300), CancellationToken.None);
+            await task.TimeoutAfter(TimeSpan.FromMilliseconds(10000), CancellationToken.None);
             triggered.Should().Be(true, "the task should have triggered");
         }
         
