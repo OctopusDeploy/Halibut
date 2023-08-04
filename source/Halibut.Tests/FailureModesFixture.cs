@@ -41,7 +41,8 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
                 });
 
-                var error = Assert.ThrowsAsync<HalibutClientException>(() => echo.SayHelloAsync("Paul"));
+                
+                var error = (await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Paul"))).And;
                 error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
             }
         }
@@ -56,7 +57,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-                var ex = Assert.ThrowsAsync<ServiceInvocationHalibutClientException>(() => echo.CrashAsync());
+                var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
             }
         }
@@ -119,7 +120,7 @@ namespace Halibut.Tests
                 // This loop ensures (at the time) the test shows the problem.
                 for (var i = 0; i < 128; i++)
                 {
-                    Assert.ThrowsAsync<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(new DataStream(10000, stream => throw new Exception("Oh noes"))));
+                    await AssertAsync.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(new DataStream(10000, stream => throw new Exception("Oh noes"))));
                 }
 
                 var received = await readDataSteamService.SendDataAsync(DataStream.FromString("hello"));

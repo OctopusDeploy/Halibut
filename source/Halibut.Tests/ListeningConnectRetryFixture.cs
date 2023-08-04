@@ -43,7 +43,7 @@ namespace Halibut.Tests
                     point.RetryCountLimit = 20;
                 });
                 
-                Assert.ThrowsAsync<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
+                await AssertAsync.Throws<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
 
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(20);
             }
@@ -78,7 +78,7 @@ namespace Halibut.Tests
                 });
 
                 var sw = Stopwatch.StartNew();
-                Assert.ThrowsAsync<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
+                await AssertAsync.Throws<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
                 sw.Stop();
 
                 
@@ -115,7 +115,7 @@ namespace Halibut.Tests
                 });
 
                 var sw = Stopwatch.StartNew();
-                Assert.ThrowsAsync<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
+                await AssertAsync.Throws<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
                 sw.Stop();
 
                 // Expected ~30s since we sleep 10s _between_ each attempt.
