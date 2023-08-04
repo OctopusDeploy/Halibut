@@ -9,6 +9,7 @@ namespace Halibut.Transport.Protocol
 {
     internal class ControlMessageReader
     {
+        [Obsolete]
         internal string ReadUntilNonEmptyControlMessage(Stream stream)
         {
             while (true)
@@ -18,9 +19,10 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         internal string ReadControlMessage(Stream stream)
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             while (true)
             {
                 var nextByte = stream.ReadByte();
@@ -48,6 +50,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         internal async Task<string> ReadUntilNonEmptyControlMessageAsync(Stream stream)
         {
             while (true)
@@ -57,10 +60,24 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        internal async Task<string> ReadUntilNonEmptyControlMessageAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            while (true)
+            {
+                var line = await ReadControlMessageAsync(stream, cancellationToken);
+                
+                if (line.Length > 0)
+                {
+                    return line;
+                }
+            }
+        }
+
+        [Obsolete]
         internal async Task<string> ReadControlMessageAsync(Stream stream)
         {
             using var cts = GetCancellationTokenSourceFromStreamReadTimeout(stream);
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             while (true)
             {
                 var nextByte = new byte[1];
@@ -87,6 +104,44 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        internal async Task<string> ReadControlMessageAsync(Stream stream, CancellationToken cancellationToken)
+        {
+            using var timeoutCts = GetCancellationTokenSourceFromStreamReadTimeout(stream);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
+            var sb = new StringBuilder();
+
+            while (true)
+            {
+                var nextByte = new byte[1];
+                var read = await stream.ReadAsync(nextByte, 0, nextByte.Length, linkedCts.Token);
+                if (read == 0)
+                {
+                    throw new EndOfStreamException();
+                }
+
+                // Control messages must end with \r\n and must not contain \r or \n
+                if (nextByte[0] == '\r')
+                {
+                    read = await stream.ReadAsync(nextByte, 0, nextByte.Length, linkedCts.Token);
+                    if (read == 0)
+                    {
+                        throw new EndOfStreamException();
+                    }
+
+                    if (nextByte[0] != '\n')
+                    {
+                        var byteAsHex = nextByte[0].ToString("X");
+                        throw new Exception($"Unexpected byte after '\r' in control message: 0x{byteAsHex}");
+                    }
+
+                    // We have found the end of control message
+                    return sb.ToString();
+                }
+
+                sb.Append((char)nextByte[0]);
+            }
+        }
+        
         static CancellationTokenSource GetCancellationTokenSourceFromStreamReadTimeout(Stream stream)
         {
             if (stream.CanTimeout)

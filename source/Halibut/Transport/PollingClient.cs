@@ -70,10 +70,9 @@ namespace Halibut.Transport
                             // We have successfully connected at this point so reset the retry policy
                             // Subsequent connection issues will try and reconnect quickly and then back-off
                             retry.Success();
-
                             protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
                         }, cancellationToken);
-#pragma warning restore CS0612 // Type or member is obsolete
+#pragma warning restore CS0612
                         retry.Success();
                     }
                     finally

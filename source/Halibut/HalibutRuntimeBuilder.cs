@@ -18,6 +18,7 @@ namespace Halibut
         Action<MessageSerializerBuilder> configureMessageSerializerBuilder;
         ITypeRegistry typeRegistry;
         Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
+        AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -61,6 +62,12 @@ namespace Halibut
             return this;
         }
 
+        public HalibutRuntimeBuilder WithAsyncHalibutFeatureEnabled()
+        {
+            this.asyncHalibutFeature = AsyncHalibutFeature.Enabled;
+            return this;
+        }
+
         internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
@@ -83,7 +90,7 @@ namespace Halibut
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
 
-            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer, pollingReconnectRetryPolicy);
+            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer, pollingReconnectRetryPolicy, asyncHalibutFeature);
         }
     }
 }

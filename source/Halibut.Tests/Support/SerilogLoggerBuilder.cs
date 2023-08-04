@@ -52,7 +52,7 @@ namespace Halibut.Tests.Support
                 // This is the change, call this instead of: TestContext.Progress
 
                 var logLine = output.ToString();
-                if (TeamCityDetection.IsRunningInTeamCity())
+                if (TeamCityDetection.IsRunningInTeamCity() || !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("Force_Test_Context_Write")))
                 {
                     // Writing to TestContext doesn't seem to result in the output showing up under the test in TeamCity.
                     TestContext.Write(logLine);

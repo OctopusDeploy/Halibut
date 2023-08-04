@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
@@ -18,8 +17,8 @@ using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
-using ILog = Halibut.Diagnostics.ILog;
 using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
+using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support
 {
@@ -287,12 +286,17 @@ namespace Halibut.Tests.Support
 
             var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
 
-            var octopusBuilder = new HalibutRuntimeBuilder()
+            var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory)
                 .WithPendingRequestQueueFactory(factory);
-            
-            var client = octopusBuilder.Build();
+
+            if (forceClientProxyType == ForceClientProxyType.AsyncClient)
+            {
+                clientBuilder = clientBuilder.WithAsyncHalibutFeatureEnabled();
+            }
+
+            var client = clientBuilder.Build();
             client.Trust(clientTrustsThumbprint);
 
             HalibutRuntime? service = null;

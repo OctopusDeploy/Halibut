@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport.Streams;
+using Halibut.Util;
 
 namespace Halibut.Transport.Protocol
 {
@@ -21,22 +23,28 @@ namespace Halibut.Transport.Protocol
 
         readonly RewindableBufferStream stream;
         readonly ILog log;
-        readonly StreamWriter streamWriter;
+        [Obsolete]
+        readonly StreamWriter streamWriter = null;
         readonly IMessageSerializer serializer;
-        readonly Version currentVersion = new Version(1, 0);
-        readonly ControlMessageReader controlMessageReader = new ControlMessageReader();
+        readonly Version currentVersion = new(1, 0);
+        readonly ControlMessageReader controlMessageReader = new();
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, ILog log)
+        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, AsyncHalibutFeature asyncHalibutFeature, ILog log)
         {
-            this.stream = new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+            this.stream = asyncHalibutFeature.IsEnabled() ? new RewindableBufferStream(new TimeoutStream(stream), HalibutLimits.RewindableBufferStreamSize) : new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             this.log = log;
-            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
             this.serializer = serializer;
+
+#pragma warning disable CS0612 // Type or member is obsolete
+            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
+#pragma warning restore CS0612 // Type or member is obsolete
+            
             SetNormalTimeouts();
         }
 
         static int streamCount;
 
+        [Obsolete]
         public void IdentifyAsClient()
         {
             log.Write(EventType.Diagnostic, "Identifying as a client");
@@ -44,18 +52,34 @@ namespace Halibut.Transport.Protocol
             ExpectServerIdentity();
         }
 
+        public async Task IdentifyAsClientAsync(CancellationToken cancellationToken)
+        {
+            log.Write(EventType.Diagnostic, "Identifying as a client");
+            await SendIdentityMessageAsync($"{MxClient} {currentVersion}", cancellationToken);
+            await ExpectServerIdentityAsync(cancellationToken);
+        }
+
+        [Obsolete]
         void SendControlMessage(string message)
         {
             streamWriter.WriteLine(message);
             streamWriter.Flush();
         }
 
+        [Obsolete]
         async Task SendControlMessageAsync(string message)
         {
             await streamWriter.WriteLineAsync(message).ConfigureAwait(false);
             await streamWriter.FlushAsync().ConfigureAwait(false);
         }
 
+        async Task SendControlMessageAsync(string message, CancellationToken cancellationToken)
+        {
+            await stream.WriteControlLineAsync(message, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+        }
+
+        [Obsolete]
         void SendIdentityMessage(string identityLine)
         {
             streamWriter.WriteLine(identityLine);
@@ -63,6 +87,14 @@ namespace Halibut.Transport.Protocol
             streamWriter.Flush();
         }
 
+        async Task SendIdentityMessageAsync(string identityLine, CancellationToken cancellationToken)
+        {
+            await stream.WriteControlLineAsync(identityLine, cancellationToken);
+            await stream.WriteEmptyControlLineAsync(cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+        }
+
+        [Obsolete]
         public void SendNext()
         {
             SetShortTimeouts();
@@ -70,16 +102,31 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
+        public async Task SendNextAsync(CancellationToken cancellationToken)
+        {
+            SetShortTimeouts();
+            await SendControlMessageAsync(Next, cancellationToken);
+            SetNormalTimeouts();
+        }
+
+        [Obsolete]
         public void SendProceed()
         {
             SendControlMessage(Proceed);
         }
 
+        [Obsolete]
         public async Task SendProceedAsync()
         {
             await SendControlMessageAsync(Proceed).ConfigureAwait(false);
         }
 
+        public async Task SendProceedAsync(CancellationToken cancellationToken)
+        {
+            await SendControlMessageAsync(Proceed, cancellationToken);
+        }
+
+        [Obsolete]
         public void SendEnd()
         {
             SetShortTimeouts();
@@ -87,6 +134,14 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
+        public async Task SendEndAsync(CancellationToken cancellationToken)
+        {
+            SetShortTimeouts(); 
+            await SendControlMessageAsync(End, cancellationToken);
+            SetNormalTimeouts();
+        }
+
+        [Obsolete]
         public bool ExpectNextOrEnd()
         {
             var line = controlMessageReader.ReadUntilNonEmptyControlMessage(stream);
@@ -102,6 +157,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         public async Task<bool> ExpectNextOrEndAsync()
         {
             var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream).ConfigureAwait(false);
@@ -117,6 +173,20 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
+        {
+            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
+            
+            return line switch
+            {
+                Next => true,
+                null => false,
+                End => false,
+                _ => throw new ProtocolException($"Expected {Next} or {End}, got: " + line)
+            };
+        }
+
+        [Obsolete]
         public void ExpectProceeed()
         {
             SetShortTimeouts();
@@ -128,19 +198,50 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeouts();
         }
 
-        
+        public async Task ExpectProceedAsync(CancellationToken cancellationToken)
+        {
+            SetShortTimeouts();
 
+            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
+
+            if (line == null)
+            {
+                throw new AuthenticationException($"Expected {Proceed}, got no data");
+            }
+
+            if (line != Proceed)
+            {
+                throw new ProtocolException($"Expected {Proceed}, got: " + line);
+            }
+
+            SetNormalTimeouts();
+        }
+
+        [Obsolete]
         public void IdentifyAsSubscriber(string subscriptionId)
         {
             SendIdentityMessage($"{MxSubscriber} {currentVersion} {subscriptionId}");
             ExpectServerIdentity();
         }
 
+        public async Task IdentifyAsSubscriberAsync(string subscriptionId, CancellationToken cancellationToken)
+        {
+            await SendIdentityMessageAsync($"{MxSubscriber} {currentVersion} {subscriptionId}", cancellationToken);
+            await ExpectServerIdentityAsync(cancellationToken);
+        }
+
+        [Obsolete]
         public void IdentifyAsServer()
         {
             SendIdentityMessage($"{MxServer} {currentVersion}");
         }
 
+        public async Task IdentifyAsServerAsync(CancellationToken cancellationToken)
+        {
+            await SendIdentityMessageAsync($"{MxServer} {currentVersion}", cancellationToken);
+        }
+
+        [Obsolete]
         public RemoteIdentity ReadRemoteIdentity()
         {
             var line = controlMessageReader.ReadControlMessage(stream);
@@ -176,6 +277,51 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        public async Task<RemoteIdentity> ReadRemoteIdentityAsync(CancellationToken cancellationToken)
+        {
+            var line = await controlMessageReader.ReadControlMessageAsync(stream, cancellationToken);
+            if (string.IsNullOrEmpty(line))
+            {
+                throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
+            }
+
+            var emptyLine = await controlMessageReader.ReadControlMessageAsync(stream, cancellationToken);
+            if (emptyLine.Length != 0)
+            {
+                throw new ProtocolException("Unable to receive the remote identity; the following line was not empty.");
+            }
+
+            var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            try
+            {
+                var identityType = ParseIdentityType(parts[0]);
+                if (identityType == RemoteIdentityType.Subscriber)
+                {
+                    if (parts.Length < 3)
+                    {
+                        throw new ProtocolException("Unable to receive the remote identity; the client identified as a subscriber, but did not supply a subscription ID.");
+                    }
+
+                    var subscriptionId = new Uri(parts[2]);
+
+                    return new RemoteIdentity(identityType, subscriptionId);
+                }
+                
+                return new RemoteIdentity(identityType);
+            }
+            catch (ProtocolException)
+            {
+                log.Write(EventType.Error, "Response:");
+                log.Write(EventType.Error, line);
+
+                var remainingStreamData = await new StreamReader(stream, new UTF8Encoding(false)).ReadToEndAsync();
+                log.Write(EventType.Error, remainingStreamData);
+
+                throw;
+            }
+        }
+
+        [Obsolete]
         public void Send<T>(T message)
         {
             using (var capture = StreamCapture.New())
@@ -187,6 +333,18 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
+        public async Task SendAsync<T>(T message, CancellationToken cancellationToken)
+        {
+            using (var capture = StreamCapture.New())
+            {
+                await serializer.WriteMessageAsync(stream, message, cancellationToken);
+                await WriteEachStreamAsync(capture.SerializedStreams, cancellationToken);
+            }
+
+            log.Write(EventType.Diagnostic, "Sent: {0}", message);
+        }
+
+        [Obsolete]
         public T Receive<T>()
         {
             using (var capture = StreamCapture.New())
@@ -196,6 +354,16 @@ namespace Halibut.Transport.Protocol
                 log.Write(EventType.Diagnostic, "Received: {0}", result);
                 return result;
             }
+        }
+
+        public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
+        {
+            using var capture = StreamCapture.New();
+
+            var result = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
+            await ReadStreamsAsync(capture, cancellationToken);
+            log.Write(EventType.Diagnostic, "Received: {0}", result);
+            return result;
         }
 
         static RemoteIdentityType ParseIdentityType(string identityType)
@@ -213,6 +381,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         void ExpectServerIdentity()
         {
             var identity = ReadRemoteIdentity();
@@ -220,6 +389,17 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
         }
 
+        async Task ExpectServerIdentityAsync(CancellationToken cancellationToken)
+        {
+            var identity = await ReadRemoteIdentityAsync(cancellationToken);
+
+            if (identity.IdentityType != RemoteIdentityType.Server)
+            {
+                throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
+            }
+        }
+
+        [Obsolete]
         void ReadStreams(StreamCapture capture)
         {
             var expected = capture.DeserializedStreams.Count;
@@ -230,6 +410,17 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        async Task ReadStreamsAsync(StreamCapture capture, CancellationToken cancellationToken)
+        {
+            var expected = capture.DeserializedStreams.Count;
+
+            for (var i = 0; i < expected; i++)
+            {
+                await ReadStreamAsync(capture, cancellationToken);
+            }
+        }
+
+        [Obsolete]
         void ReadStream(StreamCapture capture)
         {
             var reader = new BinaryReader(stream);
@@ -244,6 +435,16 @@ namespace Halibut.Transport.Protocol
             }
 
             ((IDataStreamInternal)dataStream).Received(tempFile);
+        }
+
+        async Task ReadStreamAsync(StreamCapture capture, CancellationToken cancellationToken)
+        {
+            // TODO - ASYNC ME UP!
+            await Task.CompletedTask;
+
+#pragma warning disable CS0612
+            ReadStream(capture);
+#pragma warning restore CS0612
         }
 
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
@@ -271,6 +472,7 @@ namespace Halibut.Transport.Protocol
             return dataStream;
         }
 
+        [Obsolete]
         void WriteEachStream(IEnumerable<DataStream> streams)
         {
             foreach (var dataStream in streams)
@@ -286,6 +488,15 @@ namespace Halibut.Transport.Protocol
                 writer.Write(dataStream.Length);
                 writer.Flush();
             }
+        }
+
+        async Task WriteEachStreamAsync(IEnumerable<DataStream> streams, CancellationToken cancellationToken)
+        {
+            // TODO - ASYNC ME UP!
+            await Task.CompletedTask;
+#pragma warning disable CS0612
+            WriteEachStream(streams);
+#pragma warning restore CS0612
         }
 
         void SetNormalTimeouts()
