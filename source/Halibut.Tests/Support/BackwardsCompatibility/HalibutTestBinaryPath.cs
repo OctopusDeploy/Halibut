@@ -14,6 +14,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var projectName = $"Halibut.TestUtils.CompatBinary.v{onDiskVersion}";
             var executable = Path.Combine(upAt.FullName, projectName, assemblyDir.Parent.Parent.Name, assemblyDir.Parent.Name, assemblyDir.Name, projectName);
             executable = AddExeForWindows(executable);
+
             if (!File.Exists(executable))
             {
                 throw new Exception("Could not executable at path:\n" +

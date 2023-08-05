@@ -28,6 +28,7 @@
     <ProjectReference Include="..\Halibut\Halibut.csproj" />
     <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v5_0_236\Halibut.TestUtils.CompatBinary.v5_0_236.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v6_0_658\Halibut.TestUtils.CompatBinary.v6_0_658.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.v4_4_8\Halibut.TestUtils.CompatBinary.v4_4_8.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>

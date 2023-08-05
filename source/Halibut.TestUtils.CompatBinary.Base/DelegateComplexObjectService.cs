@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.SampleProgram.Base.Utils;
 
