@@ -44,7 +44,7 @@ namespace Halibut.Tests
                 await echoService.SayHelloAsync("Should re-use the same connection");
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1, "We should use the same connection since the last was healthy");
 
-                Assert.ThrowsAsync<HalibutClientException>(() => pauseCurrentTcpConnections.ActionAsync());
+                await AssertAsync.Throws<HalibutClientException>(() => pauseCurrentTcpConnections.ActionAsync());
                 // Connection should not be put back into the pool
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1, "This should still be using the same connection since it is on this call we break the connection.");
 

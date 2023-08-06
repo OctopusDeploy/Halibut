@@ -36,7 +36,6 @@ namespace Halibut.Tests.Util
 
         [Test]
         [TestCase(0)]
-        [TestCase(1.0001)]
         public void InvalidMultipliersShouldThrow(double multiplier)
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new RetryPolicy(multiplier, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1)));

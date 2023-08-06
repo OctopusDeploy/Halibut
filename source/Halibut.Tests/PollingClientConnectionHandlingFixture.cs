@@ -9,6 +9,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -39,7 +40,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task PollingClientShouldReConnectQuickly(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task PollingClientShouldReConnectQuickly_WhenTheLastConnectionAttemptWasASuccess(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
@@ -86,9 +87,11 @@ namespace Halibut.Tests
             var firstReconnect = calls.ElementAt(1);
             var secondReconnect = calls.ElementAt(2);
 
-            firstCall.Should().BeOnOrAfter(started).And.BeCloseTo(started, TimeSpan.FromSeconds(clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Polling ? 5 : 30));
-            firstReconnect.Should().BeOnOrAfter(firstCall).And.BeCloseTo(firstCall, TimeSpan.FromSeconds(clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
-            secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, TimeSpan.FromSeconds(clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Polling ? 8 : 30));
+            // It should take way less than this to reconnect, however we measure the time to close the socket which can take a long time.
+            // The retry policy is setup such that if the last attempt is not recorded as a success, it will return a very high sleep causing this test to fail.
+            var expectedMaxDuration = TimeSpan.FromSeconds(30);
+            firstReconnect.Should().BeOnOrAfter(firstCall).And.BeCloseTo(firstCall, expectedMaxDuration);
+            secondReconnect.Should().BeOnOrAfter(firstReconnect).And.BeCloseTo(firstReconnect, expectedMaxDuration);
         }
 
         async Task<(LatestClientAndLatestServiceBuilder.ClientAndService,
@@ -101,6 +104,7 @@ namespace Halibut.Tests
                 .WithPortForwarding()
                 .WithDoSomeActionService(doSomeActionServiceAction)
                 .WithEchoService()
+                .WithPollingReconnectRetryPolicy(() => new RetryPolicy(99999999, TimeSpan.Zero, TimeSpan.FromMinutes(1)))
                 .Build(CancellationToken);
 
             var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>();

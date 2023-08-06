@@ -25,12 +25,10 @@ namespace Halibut.Transport
 
         public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            // TODO - ASYNC ME UP!
-            await Task.CompletedTask;
-
-#pragma warning disable CS0612
-            return AcquireConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-#pragma warning restore CS0612
+            var connection = await TryGetExistingConnectionAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+            if (connection != null) return connection;
+            
+            return await GetConnectionByCreatingItAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
         }
 
         // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
@@ -47,6 +45,30 @@ namespace Halibut.Transport
                 return openableConnection;
             }
         }
+        
+        async Task<IConnection> TryGetExistingConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            lock (activeConnections)
+            {
+                var existingConnectionFromPool = pool.Take(serviceEndpoint);
+                if (existingConnectionFromPool != null)
+                {
+                    AddConnectionToActiveConnections(serviceEndpoint, existingConnectionFromPool);
+                }
+                return existingConnectionFromPool;
+            }
+        }
+        
+        async Task<IConnection> GetConnectionByCreatingItAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        {
+            var connection = await CreateNewConnectionWithIOAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+            lock (activeConnections)
+            {
+                AddConnectionToActiveConnections(serviceEndpoint, connection);
+            }
+            return connection;
+        }
 
         Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
@@ -57,6 +79,12 @@ namespace Halibut.Transport
                 // ReSharper disable once UnusedVariable
                 var c = lazyConnection.Value;
             });
+        }
+        
+        async Task<IConnection> CreateNewConnectionWithIOAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        {
+            var connection = await connectionFactory.EstablishNewConnectionAsync(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken);
+            return new DisposableNotifierConnection(new Lazy<IConnection>(() => connection), OnConnectionDisposed);
         }
 
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
