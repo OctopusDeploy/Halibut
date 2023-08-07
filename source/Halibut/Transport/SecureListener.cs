@@ -311,24 +311,23 @@ namespace Halibut.Transport
             var message = getFriendlyHtmlPageContent();
             var headers = getFriendlyHtmlPageHeaders();
 
-            // This could fail if the client terminates the connection and we attempt to write to it
-            // Disposing the StreamWriter will close the stream - it owns the stream
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
+            if (asyncHalibutFeature.IsEnabled())
             {
-                if (asyncHalibutFeature.IsEnabled())
-                {
-                    await writer.WriteLineAsync("HTTP/1.0 200 OK");
-                    await writer.WriteLineAsync("Content-Type: text/html; charset=utf-8");
-                    await writer.WriteLineAsync("Content-Length: " + message.Length);
-                    foreach (var header in headers)
-                        await writer.WriteLineAsync($"{header.Key}: {header.Value}");
-                    await writer.WriteLineAsync();
-                    await writer.WriteLineAsync(message);
-                    await writer.WriteLineAsync();
-                    await writer.FlushAsync();
-                    await stream.FlushAsync();
-                }
-                else
+                await stream.WriteControlLineAsync("HTTP/1.0 200 OK", cts.Token);
+                await stream.WriteControlLineAsync("Content-Type: text/html; charset=utf-8", cts.Token);
+                await stream.WriteControlLineAsync("Content-Length: " + message.Length, cts.Token);
+                foreach (var header in headers)
+                    await stream.WriteControlLineAsync($"{header.Key}: {header.Value}", cts.Token);
+                await stream.WriteControlLineAsync(string.Empty, cts.Token);
+                await stream.WriteControlLineAsync(message, cts.Token);
+                await stream.WriteControlLineAsync(String.Empty, cts.Token);
+                await stream.FlushAsync();
+            }
+            else
+            {
+                // This could fail if the client terminates the connection and we attempt to write to it
+                // Disposing the StreamWriter will close the stream - it owns the stream
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
                 {
                     writer.WriteLine("HTTP/1.0 200 OK");
                     writer.WriteLine("Content-Type: text/html; charset=utf-8");

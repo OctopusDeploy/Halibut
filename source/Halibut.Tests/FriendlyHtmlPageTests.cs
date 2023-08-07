@@ -34,7 +34,7 @@ namespace Halibut.Tests
         public async Task SupportsHttpsGet(string uriFormat)
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(services).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
             {
                 var listenPort = octopus.Listen();
                 var uri = uriFormat.Replace("{machine}", Dns.GetHostName()).Replace("{port}", listenPort.ToString());
@@ -54,7 +54,7 @@ namespace Halibut.Tests
             var services = GetDelegateServiceFactory();
             expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
 
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(services).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
             {
                 octopus.SetFriendlyHtmlPageContent(html);
                 var listenPort = octopus.Listen();
@@ -69,7 +69,7 @@ namespace Halibut.Tests
         public async Task CanSetCustomFriendlyHtmlPageHeaders()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(services).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
             {
                 octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> {{"X-Content-Type-Options", "nosniff"}, {"X-Frame-Options", "DENY"}});
                 var listenPort = octopus.Listen();
@@ -86,7 +86,7 @@ namespace Halibut.Tests
         public async Task ConnectingOverHttpShouldFailQuickly()
         {
             var logger = new SerilogLoggerBuilder().Build();
-            using (var octopus = new HalibutRuntime(GetDelegateServiceFactory(), Certificates.Octopus))
+            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(GetDelegateServiceFactory()).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
             {
                 logger.Information("Halibut runtime created.");
                 var listenPort = octopus.Listen();
