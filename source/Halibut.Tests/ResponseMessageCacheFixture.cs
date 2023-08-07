@@ -226,9 +226,6 @@ namespace Halibut.Tests
             {
                 var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
 
-
-                ;
-                    
                 var exception1 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;
                 var exception2 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;
 
