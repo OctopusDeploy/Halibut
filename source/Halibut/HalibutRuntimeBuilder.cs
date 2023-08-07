@@ -79,7 +79,9 @@ namespace Halibut
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
             var logFactory = this.logFactory ?? new LogFactory();
-            var queueFactory = this.queueFactory ?? new DefaultPendingRequestQueueFactory(logFactory);
+#pragma warning disable CS0612
+            var queueFactory = this.queueFactory ?? (asyncHalibutFeature.IsEnabled() ? new PendingRequestQueueFactoryAsync(logFactory) : new DefaultPendingRequestQueueFactory(logFactory));
+#pragma warning restore CS0612
             var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
 

@@ -9,11 +9,13 @@ namespace Halibut.Transport
 {
     public static class TcpClientExtensions
     {
+        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout)
         {
             ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, CancellationToken.None);
         }
 
+        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, Uri remoteUri, TimeSpan timeout, CancellationToken cancellationToken)
         {
             ConnectWithTimeout(client, remoteUri.Host, remoteUri.Port, timeout, cancellationToken);
@@ -24,11 +26,13 @@ namespace Halibut.Transport
             await ConnectWithTimeoutAsync(client, remoteUri.Host, remoteUri.Port, timeout, cancellationToken);
         }
 
+        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout)
         {
             ConnectWithTimeout(client, host, port, timeout, CancellationToken.None);
         }
 
+        [Obsolete]
         public static void ConnectWithTimeout(this TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
             Connect(client, host, port, timeout, cancellationToken).GetAwaiter().GetResult();
@@ -38,7 +42,7 @@ namespace Halibut.Transport
         {
             await Connect(client, host, port, timeout, cancellationToken);
         }
-
+        
         static async Task Connect(TcpClient client, string host, int port, TimeSpan timeout, CancellationToken cancellationToken)
         {
             try

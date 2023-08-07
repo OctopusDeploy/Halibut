@@ -23,6 +23,7 @@ namespace Halibut.Transport
             this.clientCertificate = clientCertificate;
         }
 
+        [Obsolete]
         public IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             log.Write(EventType.OpeningNewConnection, $"Opening a new connection to {serviceEndpoint.BaseUri}");
@@ -69,6 +70,7 @@ namespace Halibut.Transport
             return new SecureConnection(client, ssl, exchangeProtocolBuilder, log);
         }
 
+        [Obsolete]
         internal static TcpClient CreateConnectedTcpClient(ServiceEndPoint endPoint, ILog log, CancellationToken cancellationToken)
         {
             TcpClient client;

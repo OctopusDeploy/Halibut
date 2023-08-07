@@ -486,6 +486,11 @@ namespace Halibut.Tests.Support
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
 
+            public ServiceEndPoint GetServiceEndPoint()
+            {
+                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
+            }
+
             public TService CreateClient<TService>(CancellationToken? cancellationToken = null)
             {
                 return CreateClient<TService>(_ => { }, cancellationToken ?? CancellationToken.None);
@@ -498,13 +503,11 @@ namespace Halibut.Tests.Support
 
             public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
             {
-                var serviceEndpoint = new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
+                var serviceEndpoint = GetServiceEndPoint();
                 modifyServiceEndpoint(serviceEndpoint);
 
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService>(forceClientProxyType, Client, serviceEndpoint, cancellationToken);
             }
-
-            
 
             public TClientService CreateClient<TService, TClientService>()
             {
@@ -513,14 +516,9 @@ namespace Halibut.Tests.Support
 
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = ServiceEndpoint();
+                var serviceEndpoint = GetServiceEndPoint();
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TClientService>(forceClientProxyType, Client, serviceEndpoint);
-            }
-
-            public ServiceEndPoint ServiceEndpoint()
-            {
-                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
             }
             
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>()
@@ -530,7 +528,7 @@ namespace Halibut.Tests.Support
 
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
+                var serviceEndpoint = GetServiceEndPoint();
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(forceClientProxyType, Client, serviceEndpoint);
             }
@@ -550,7 +548,5 @@ namespace Halibut.Tests.Support
                 Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
             }
         }
-
-        
     }
 }
