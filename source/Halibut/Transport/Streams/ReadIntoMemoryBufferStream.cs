@@ -79,7 +79,7 @@ namespace Halibut.Transport.Streams
         {
             if (ShouldReadFromMemoryStream)
             {
-                return this.memoryBuffer.Read(buffer, offset, count);
+                return memoryBuffer.Read(buffer, offset, count);
             }
 
             return sourceStream.Read(buffer, offset, count);
@@ -89,7 +89,7 @@ namespace Halibut.Transport.Streams
         {
             if (ShouldReadFromMemoryStream)
             {
-                return await this.memoryBuffer.ReadAsync(buffer, offset, count, cancellationToken);
+                return await memoryBuffer.ReadAsync(buffer, offset, count, cancellationToken);
             }
 
             return await sourceStream.ReadAsync(buffer, offset, count, cancellationToken);
@@ -102,18 +102,18 @@ namespace Halibut.Transport.Streams
 
         public async Task BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken cancellationToken)
         {
-            var readBuffer = new byte[81920];
+            var buffer = new byte[81920];
             while (BytesReadIntoMemory < readIntoMemoryLimitBytes)
             {
-                var bytesToCopy = (int)Math.Min(readBuffer.Length, readIntoMemoryLimitBytes - BytesReadIntoMemory);
-                var bytesRead = await sourceStream.ReadAsync(readBuffer, 0, bytesToCopy, cancellationToken).ConfigureAwait(false);
+                var bytesToCopy = (int)Math.Min(buffer.Length, readIntoMemoryLimitBytes - BytesReadIntoMemory);
+                var bytesRead = await sourceStream.ReadAsync(buffer, 0, bytesToCopy, cancellationToken).ConfigureAwait(false);
 
                 if (bytesRead == 0)
                 {
                     break;
                 }
 
-                await memoryBuffer.WriteAsync(readBuffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
+                await memoryBuffer.WriteAsync(buffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
             }
 
             memoryBuffer.Position = 0;
