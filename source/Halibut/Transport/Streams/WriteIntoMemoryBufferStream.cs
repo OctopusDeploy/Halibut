@@ -92,7 +92,7 @@ namespace Halibut.Transport.Streams
 
                 // We tried our best, but will no longer fit in memory. Transition over to use the sinkStream.
                 memoryBuffer.Position = 0;
-                await memoryBuffer.CopyToAsync(innerStream, 81920, cancellationToken);
+                await memoryBuffer.CopyToAsync(innerStream, 8192, cancellationToken);
                 usingMemoryBuffer = false;
             }
 
@@ -125,7 +125,7 @@ namespace Halibut.Transport.Streams
             if (usingMemoryBuffer)
             {
                 memoryBuffer.Position = 0;
-                await memoryBuffer.CopyToAsync(innerStream, 81920, cancellationToken);
+                await memoryBuffer.CopyToAsync(innerStream, 8192, cancellationToken);
 
                 usingMemoryBuffer = false;
             }

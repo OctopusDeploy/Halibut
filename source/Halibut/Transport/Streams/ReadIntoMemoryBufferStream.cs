@@ -102,7 +102,7 @@ namespace Halibut.Transport.Streams
 
         public async Task BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken cancellationToken)
         {
-            var buffer = new byte[81920];
+            var buffer = new byte[8192];
             while (BytesReadIntoMemory < readIntoMemoryLimitBytes)
             {
                 var bytesToCopy = (int)Math.Min(buffer.Length, readIntoMemoryLimitBytes - BytesReadIntoMemory);
