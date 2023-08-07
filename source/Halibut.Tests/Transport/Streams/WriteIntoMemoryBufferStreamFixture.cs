@@ -164,7 +164,7 @@ namespace Halibut.Tests.Transport.Streams
                     sut.Write(buffer, offset, count);
                     return;
                 case StreamMethod.LegacyAsync:
-                    // This is the way async reading was done in earlier version of .NET
+                    // This is the way async writing was done in earlier version of .NET
                     var written = false;
                     sut.BeginWrite(buffer, offset, count, AsyncCallback, sut);
                     void AsyncCallback(IAsyncResult result)
