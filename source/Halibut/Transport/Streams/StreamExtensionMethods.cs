@@ -8,18 +8,13 @@ namespace Halibut.Transport.Streams
     public static class StreamExtensionMethods
     {
         // The NewLine and Encoding must not be changed as it will break backward compatibility.
-        static readonly string NewLine = "\r\n";
+        public static readonly string ControlMessageNewLine = "\r\n";
         static readonly Encoding Encoding = new UTF8Encoding(false);
 
         public static async Task WriteControlLineAsync(this Stream stream, string s, CancellationToken cancellationToken)
         {
-            var bytes = Encoding.GetBytes(s + NewLine);
+            var bytes = Encoding.GetBytes(s + ControlMessageNewLine);
             await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
-        }
-
-        public static async Task WriteEmptyControlLineAsync(this Stream stream, CancellationToken cancellationToken)
-        {
-            await stream.WriteControlLineAsync(string.Empty, cancellationToken);
         }
     }
 }

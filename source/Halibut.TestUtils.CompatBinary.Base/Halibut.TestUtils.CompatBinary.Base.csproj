@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <LangVersion>9.0</LangVersion>
@@ -16,11 +16,12 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!-- Earlier versions contain bugs that can cause Halibut to hang
+        <!-- Earlier versions < 5.0.205 contain bugs that can cause Halibut to hang
             See https://github.com/OctopusDeploy/Halibut/commit/cf9cb8a4478b59f95b35c2606d4352c364d3dcb2
             It is probably best to never test versions earlier than this, since those tests will be unreliable.
+            4.4.8 is the earliest version with HalibutRuntimeBuilder and without a critical RCE vulnerability.
         -->
-        <PackageReference Include="Halibut" Version="5.0.205" />
+        <PackageReference Include="Halibut" Version="4.4.8" />
     </ItemGroup>
 
     <ItemGroup>
