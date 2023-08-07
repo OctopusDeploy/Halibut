@@ -6,11 +6,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Logging;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using NUnit.Framework;
 using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
@@ -20,30 +20,28 @@ namespace Halibut.Tests.Tentacle
 {
     public class WhenCallingServicesSimilarToTheOnesInTentacle : BaseTest
     {
-        // TODO - ASYNC ME UP!
-        const bool TentacleTestAsyncAndSyncClients = false;
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: TentacleTestAsyncAndSyncClients)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FilesCanBeDownloaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var fileTransferService = clientAndService.CreateClient<IFileTransferService>();
+                var fileTransferService = clientAndService.CreateClient<IFileTransferService, IAsyncClientFileTransferService>();
 
-                DownloadFile(fileTransferService);
-                DownloadFile(fileTransferService);
-                DownloadFile(fileTransferService);
-                DownloadFile(fileTransferService);
+                await DownloadFile(fileTransferService);
+                await DownloadFile(fileTransferService);
+                await DownloadFile(fileTransferService);
+                await DownloadFile(fileTransferService);
             }
 
-            static void DownloadFile(IFileTransferService fileTransferService)
+            static async Task DownloadFile(IAsyncClientFileTransferService fileTransferService)
             {
                 using (var fileToDownload = new RandomTemporaryFileBuilder().WithSizeInMb(new Random().Next(4, 12)).Build())
                 using (var temporaryFolder = new TemporaryDirectory())
                 {
-                    var response = fileTransferService.DownloadFile(fileToDownload.File.FullName);
+                    var response = await fileTransferService.DownloadFileAsync(fileToDownload.File.FullName);
                     var downloadedFilePath = Path.Combine(temporaryFolder.DirectoryPath, fileToDownload.File.Name);
                     response.Receiver().SaveTo(downloadedFilePath);
 
@@ -56,22 +54,22 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: TentacleTestAsyncAndSyncClients)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FilesCanBeUploaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var fileTransferService = clientAndService.CreateClient<IFileTransferService>();
+                var fileTransferService = clientAndService.CreateClient<IFileTransferService, IAsyncClientFileTransferService>();
 
-                UploadFile(fileTransferService);
-                UploadFile(fileTransferService);
-                UploadFile(fileTransferService);
-                UploadFile(fileTransferService);
+                await UploadFile(fileTransferService);
+                await UploadFile(fileTransferService);
+                await UploadFile(fileTransferService);
+                await UploadFile(fileTransferService);
             }
 
-            static void UploadFile(IFileTransferService fileTransferService)
+            static async Task UploadFile(IAsyncClientFileTransferService fileTransferService)
             {
                 using (var fileToUpload = new RandomTemporaryFileBuilder().WithSizeInMb(new Random().Next(4, 12)).Build())
                 using (var temporaryFolder = new TemporaryDirectory())
@@ -87,7 +85,7 @@ namespace Halibut.Tests.Tentacle
                         }
                     });
 
-                    fileTransferService.UploadFile(uploadedFilePath, dataStream);
+                    await fileTransferService.UploadFileAsync(uploadedFilePath, dataStream);
 
                     var fileToUploadMd5 = CalculateMd5(fileToUpload.File.FullName);
                     var uploadedFileMd5 = CalculateMd5(uploadedFilePath);
@@ -98,22 +96,22 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: TentacleTestAsyncAndSyncClients)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task ScriptCanBeExecutedWithScriptServiceV1(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var scriptService = clientAndService.CreateClient<IScriptService>();
-                var capabilitiesService = clientAndService.CreateClient<ICapabilitiesServiceV2>();
+                var scriptService = clientAndService.CreateClient<IScriptService, IAsyncClientScriptService>();
+                var capabilitiesService = clientAndService.CreateClient<ICapabilitiesServiceV2, IAsyncClientCapabilitiesServiceV2>();
 
                 var scriptBody = GetRandomMultiLineString();
                 var startScriptCommand = new StartScriptCommand(scriptBody, ScriptIsolationLevel.NoIsolation, TimeSpan.MaxValue, null, null, taskId: Guid.NewGuid().ToString());
 
-                capabilitiesService.GetCapabilities();
+                await capabilitiesService.GetCapabilitiesAsync();
 
-                var scriptTicket = scriptService.StartScript(startScriptCommand);
+                var scriptTicket = await scriptService.StartScriptAsync(startScriptCommand);
 
                 var complete = false;
                 var logs = new List<ProcessOutput>();
@@ -121,7 +119,7 @@ namespace Halibut.Tests.Tentacle
 
                 while (!complete)
                 {
-                    var response = scriptService.GetStatus(new ScriptStatusRequest(scriptTicket, nextLogSequence));
+                    var response = await scriptService.GetStatusAsync(new ScriptStatusRequest(scriptTicket, nextLogSequence));
 
                     logs.AddRange(response.Logs);
                     nextLogSequence = response.NextLogSequence;
@@ -129,7 +127,7 @@ namespace Halibut.Tests.Tentacle
                     complete = response.State == ProcessState.Complete;
                 }
 
-                var completeScriptResponse = scriptService.CompleteScript(new CompleteScriptCommand(scriptTicket, nextLogSequence));
+                var completeScriptResponse = await scriptService.CompleteScriptAsync(new CompleteScriptCommand(scriptTicket, nextLogSequence));
                 logs.AddRange(completeScriptResponse.Logs);
 
                 var scriptOutput = string.Join(Environment.NewLine, logs.Select(x => x.Text).ToList());
@@ -139,15 +137,15 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: TentacleTestAsyncAndSyncClients)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task ScriptCanBeExecutedWithScriptServiceV2(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var scriptService = clientAndService.CreateClient<IScriptServiceV2>();
-                var capabilitiesService = clientAndService.CreateClient<ICapabilitiesServiceV2>();
+                var scriptService = clientAndService.CreateClient<IScriptServiceV2, IAsyncClientScriptServiceV2>();
+                var capabilitiesService = clientAndService.CreateClient<ICapabilitiesServiceV2, IAsyncClientCapabilitiesServiceV2>();
 
                 var scriptBody = GetRandomMultiLineString();
                 var scriptTicket = new ScriptTicket(Guid.NewGuid().ToString());
@@ -157,22 +155,22 @@ namespace Halibut.Tests.Tentacle
                 var logs = new List<ProcessOutput>();
                 long nextLogSequence = 0;
 
-                capabilitiesService.GetCapabilities();
+                await capabilitiesService.GetCapabilitiesAsync();
 
-                var startScriptResponse = scriptService.StartScript(startScriptCommand);
+                var startScriptResponse = await scriptService.StartScriptAsync(startScriptCommand);
                 logs.AddRange(startScriptResponse.Logs);
                 nextLogSequence = startScriptResponse.NextLogSequence;
 
                 while (!complete)
                 {
-                    var response = scriptService.GetStatus(new ScriptStatusRequestV2(scriptTicket, nextLogSequence));
+                    var response = await scriptService.GetStatusAsync(new ScriptStatusRequestV2(scriptTicket, nextLogSequence));
                     logs.AddRange(response.Logs);
                     nextLogSequence = response.NextLogSequence;
 
                     complete = response.State == ProcessState.Complete;
                 }
 
-                scriptService.CompleteScript(new CompleteScriptCommandV2(scriptTicket));
+                await scriptService.CompleteScriptAsync(new CompleteScriptCommandV2(scriptTicket));
      
                 var scriptOutput = string.Join(Environment.NewLine, logs.Select(x => x.Text).ToList());
 
