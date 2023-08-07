@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
@@ -18,7 +18,7 @@ namespace Halibut.Tests
     public class PollingClientConnectionHandlingFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
         public async Task PollingClientShouldConnectQuickly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var started = DateTime.UtcNow;
@@ -31,7 +31,7 @@ namespace Halibut.Tests
 
             using (clientAndService)
             {
-                doSomeActionService.Action();
+                await doSomeActionService.ActionAsync();
             }
 
             calls.Should().HaveCount(1);
@@ -39,7 +39,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
         public async Task PollingClientShouldReConnectQuickly_WhenTheLastConnectionAttemptWasASuccess(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var started = DateTime.UtcNow;
@@ -52,19 +52,19 @@ namespace Halibut.Tests
 
             using (clientAndService)
             {
-                doSomeActionService.Action();
+                await doSomeActionService.ActionAsync();
 
                 clientAndService.PortForwarder!.CloseExistingConnections();
 
                 // First Reconnect
                 try
                 {
-                    doSomeActionService.Action();
+                    await doSomeActionService.ActionAsync();
                 }
                 catch (HalibutClientException ex)
                 {
                     // Work around the known dequeue to a broken tcp connection issue
-                    doSomeActionService.Action();
+                    await doSomeActionService.ActionAsync();
                 }
 
                 clientAndService.PortForwarder!.CloseExistingConnections();
@@ -72,12 +72,12 @@ namespace Halibut.Tests
                 // Second Reconnect
                 try
                 {
-                    doSomeActionService.Action();
+                    await doSomeActionService.ActionAsync();
                 }
                 catch (HalibutClientException ex)
                 {
                     // Work around the known dequeue to a broken tcp connection issue
-                    doSomeActionService.Action();
+                    await doSomeActionService.ActionAsync();
                 }
             }
 
@@ -95,8 +95,8 @@ namespace Halibut.Tests
         }
 
         async Task<(LatestClientAndLatestServiceBuilder.ClientAndService,
-                IEchoService echoService,
-                IDoSomeActionService doSomeActionService)>
+                IAsyncClientEchoService echoService,
+                IAsyncClientDoSomeActionService doSomeActionService)>
             SetupPollingServerAndTentacle(ClientAndServiceTestCase clientAndServiceTestCase, Action doSomeActionServiceAction)
         {
             var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -107,20 +107,20 @@ namespace Halibut.Tests
                 .WithPollingReconnectRetryPolicy(() => new RetryPolicy(99999999, TimeSpan.Zero, TimeSpan.FromMinutes(1)))
                 .Build(CancellationToken);
 
-            var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService>();
-            var echoService = clientAndService.CreateClient<IEchoService>();
+            var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
+            var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-            EnsureTentacleIsConnected(echoService);
+            await EnsureTentacleIsConnected(echoService);
 
             return (clientAndService, echoService, doSomeActionService);
         }
 
-        static void EnsureTentacleIsConnected(IEchoService echoService)
+        static async Task EnsureTentacleIsConnected(IAsyncClientEchoService echoService)
         {
             // Ensure the tentacle is connected
-            echoService.SayHello("Hello");
+            await echoService.SayHelloAsync("Hello");
             // Ensure the tentacle is waiting for the next request
-            Thread.Sleep(2);
+            await Task.Delay(2);
         }
     }
 }
