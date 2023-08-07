@@ -68,12 +68,12 @@ namespace Halibut.Tests
                 {
                     Assert.Throws<TypeNotAllowedException>(() =>
                     {
-                        clientAndService.Client.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.ServiceEndpoint());
+                        clientAndService.Client.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.GetServiceEndPoint());
                     });
                 }
                 if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync)
                 {
-                    Assert.Throws<TypeNotAllowedException>(() => clientAndService.Client.CreateClient<IAmNotAllowed>(clientAndService.ServiceEndpoint()));
+                    Assert.Throws<TypeNotAllowedException>(() => clientAndService.Client.CreateClient<IAmNotAllowed>(clientAndService.GetServiceEndPoint()));
                 }
             }
         }

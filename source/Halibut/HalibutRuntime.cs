@@ -186,25 +186,40 @@ namespace Halibut
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy));
         }
 
+        [Obsolete]
         public ServiceEndPoint Discover(Uri uri)
         {
             return Discover(uri, CancellationToken.None);
         }
 
+        [Obsolete]
         public ServiceEndPoint Discover(Uri uri, CancellationToken cancellationToken)
         {
             return Discover(new ServiceEndPoint(uri, null), cancellationToken);
         }
 
+        public async Task<ServiceEndPoint> DiscoverAsync(Uri uri, CancellationToken cancellationToken)
+        {
+            return await DiscoverAsync(new ServiceEndPoint(uri, null), cancellationToken);
+        }
+
+        [Obsolete]
         public ServiceEndPoint Discover(ServiceEndPoint endpoint)
         {
             return Discover(endpoint, CancellationToken.None);
         }
 
+        [Obsolete]
         public ServiceEndPoint Discover(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
             var client = new DiscoveryClient();
             return client.Discover(endpoint, cancellationToken);
+        }
+
+        public async Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
+            var client = new DiscoveryClient();
+            return await client.DiscoverAsync(endpoint, cancellationToken);
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
@@ -236,6 +251,7 @@ namespace Halibut
         {
             typeRegistry.AddToMessageContract(typeof(TService));
             var logger = logs.ForEndpoint(endpoint.BaseUri);
+#pragma warning disable CS0612
 #if HAS_REAL_PROXY
 #pragma warning disable 618
             return (TClientService)new HalibutProxy(SendOutgoingRequest, typeof(TService), typeof(TClientService), endpoint, logger, cancellationToken).GetTransparentProxy();
@@ -247,8 +263,9 @@ namespace Halibut
 #pragma warning restore 618
             return proxy;
 #endif
+#pragma warning restore CS0612
         }
-        
+
         public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint endpoint)
         {
             if (AsyncHalibutFeature.IsDisabled())

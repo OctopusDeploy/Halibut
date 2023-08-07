@@ -42,7 +42,7 @@ namespace Halibut.Tests.Support.TestAttributes
 
             return new(syncOrAsync);
         }
-
+        
         public static async Task WhenAsync(this SyncOrAsyncWithoutResult syncOrAsyncWithoutResult, Func<Task> action)
         {
             if (syncOrAsyncWithoutResult.SyncOrAsync == SyncOrAsync.Async)
@@ -67,6 +67,11 @@ namespace Halibut.Tests.Support.TestAttributes
             }
 
             return new SyncOrAsyncWithResult<T>(syncOrAsync, default);
+        }
+
+        public static SyncOrAsyncWithoutResult IgnoreResult<T>(this SyncOrAsyncWithResult<T> syncOrAsyncWithResult)
+        {
+            return new SyncOrAsyncWithoutResult(syncOrAsyncWithResult.SyncOrAsync);
         }
 
         public static async Task<T> WhenAsync<T>(this SyncOrAsyncWithResult<T> syncOrAsyncWithResult, Func<Task<T>> action)

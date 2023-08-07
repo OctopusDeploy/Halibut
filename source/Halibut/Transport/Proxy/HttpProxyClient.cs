@@ -185,6 +185,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
+        [Obsolete]
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
         {
             return CreateConnection(destinationHost, destinationPort, timeout, CancellationToken.None);
@@ -206,6 +207,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
+        [Obsolete]
         public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken)
         {
             try
@@ -296,7 +298,7 @@ namespace Halibut.Transport.Proxy
             }
         }
 
-
+        [Obsolete]
         void SendConnectionCommand(string host, int port)
         {
             var stream = TcpClient.GetStream();
@@ -416,6 +418,7 @@ namespace Halibut.Transport.Proxy
             throw new ProxyException(msg, false);
         }
 
+        [Obsolete]
         void WaitForData(NetworkStream stream)
         {
             var sleepTime = 0;

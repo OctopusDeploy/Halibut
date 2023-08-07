@@ -7,9 +7,9 @@ namespace Halibut.Tests.Support
 {
     public static class AssertAsync
     {
-        public static async Task<ExceptionAssertions<T>> Throws<T>(this Func<Task> task) where T : Exception
+        public static async Task<ExceptionAssertions<T>> Throws<T>(this Func<Task> task, string because = "") where T : Exception
         {
-            return await task.Should().ThrowAsync<T>();
+            return await task.Should().ThrowAsync<T>(because);
         }
     }
 }

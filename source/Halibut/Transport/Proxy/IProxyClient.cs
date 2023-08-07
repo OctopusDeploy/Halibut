@@ -72,8 +72,9 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
+        [Obsolete]
         TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout);
-        
+
         /// <summary>
         /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
         /// </summary>
@@ -90,6 +91,7 @@ namespace Halibut.Transport.Proxy
         /// to make a pass through connection to the specified destination host on the specified
         /// port.  
         /// </remarks>
+        [Obsolete]
         TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken);
         
         Task<TcpClient> CreateConnectionAsync(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken);
