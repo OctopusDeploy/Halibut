@@ -10,6 +10,7 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
 using NUnit.Framework;
@@ -57,10 +58,10 @@ namespace Halibut.Tests.Diagnostics
                            .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
                            .Build(CancellationToken))
                 {
-                    var svc = clientAndService.CreateClient<IDoSomeActionService>();
+                    var svc = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                     // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
-                    var exception = Assert.Throws<HalibutClientException>(() => svc.Action());
+                    var exception = (await AssertAsync.Throws<HalibutClientException>(async () => await svc.ActionAsync())).And;
                     new SerilogLoggerBuilder().Build().Information(exception, "Got an exception, we were expecting one");
                     exception.IsNetworkError()
                         .Should()
@@ -87,10 +88,10 @@ namespace Halibut.Tests.Diagnostics
                            .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
                            .Build(CancellationToken))
                 {
-                    var svc = clientAndService.CreateClient<IDoSomeActionService>();
+                    var svc = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                     // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
-                    var exception = Assert.Throws<HalibutClientException>(() => svc.Action());
+                    var exception = (await AssertAsync.Throws<HalibutClientException>(() => svc.ActionAsync())).And;
                     new SerilogLoggerBuilder().Build().Information(exception, "Got an exception, we were expecting one");
                     exception.IsNetworkError()
                         .Should()
@@ -116,9 +117,9 @@ namespace Halibut.Tests.Diagnostics
                            .NoService()
                            .Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateClient<IEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
+                    var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
 
-                    Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
+                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.UnknownError);
@@ -133,9 +134,9 @@ namespace Halibut.Tests.Diagnostics
                            .NoService()
                            .Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateClient<IEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
+                    var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
 
-                    Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
+                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
@@ -143,7 +144,7 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            public void BecauseTheProxyIsNotResponding_TheExceptionShouldBeANetworkError()
+            public async Task BecauseTheProxyIsNotResponding_TheExceptionShouldBeANetworkError()
             {
                 using (var tcpKiller = new TCPListenerWhichKillsNewConnections())
                 using (var octopus = new HalibutRuntime(Certificates.Octopus))
@@ -155,9 +156,10 @@ namespace Halibut.Tests.Diagnostics
 
                     serviceEndPoint.RetryCountLimit = 1;
 
-                    var echo = octopus.CreateClient<IEchoService>(serviceEndPoint);
+                    var echo = octopus.CreateClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint);
 
-                    Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
+                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello")))
+                        .And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
@@ -174,9 +176,10 @@ namespace Halibut.Tests.Diagnostics
                            .WithEchoService()
                            .Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateClient<IEchoService>();
+                    var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-                    Assert.Throws<HalibutClientException>(() => echo.SayHello("Hello"))
+                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello")))
+                        .And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
@@ -191,11 +194,12 @@ namespace Halibut.Tests.Diagnostics
                            .WithStandardServices()
                            .Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateClient<IEchoService>();
+                    var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
                     var dataStream = new DataStream(10, _ => new FileStream("DoesNotExist2497546", FileMode.Open).Dispose());
 
-                    Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
+                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.CountBytesAsync(dataStream)))
+                        .And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
@@ -210,11 +214,12 @@ namespace Halibut.Tests.Diagnostics
                            .WithStandardServices()
                            .Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateClient<IEchoService>();
+                    var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
                     var dataStream = new DataStream(10, _ => throw new FileNotFoundException());
 
-                    Assert.Throws<HalibutClientException>(() => echo.CountBytes(dataStream))
+                    (await AssertAsync.Throws<HalibutClientException>(() => echo.CountBytesAsync(dataStream)))
+                        .And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.NotANetworkError);
@@ -229,9 +234,9 @@ namespace Halibut.Tests.Diagnostics
                            .WithStandardServices()
                            .Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateClient<IEchoService>();
+                    var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-                    var exception = Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
+                    var exception = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                     exception.IsNetworkError().Should().Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }

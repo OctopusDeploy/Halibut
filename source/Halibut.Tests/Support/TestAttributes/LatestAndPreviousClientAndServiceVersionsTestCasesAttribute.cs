@@ -15,7 +15,7 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testNetworkConditions = true,
             bool testListening = true,
             bool testPolling = true,
-            bool testAsyncAndSyncClients = false // False while this area of the test infra is being built out.
+            bool testAsyncAndSyncClients = true
             ) :
             base(
                 typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
