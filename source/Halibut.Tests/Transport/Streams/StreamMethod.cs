@@ -6,6 +6,6 @@ namespace Halibut.Tests.Transport.Streams
     {
         Async,
         Sync,
-        BeginEnd
+        LegacyAsync
     }
 }

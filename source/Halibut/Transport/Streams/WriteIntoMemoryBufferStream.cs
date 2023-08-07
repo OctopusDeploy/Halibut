@@ -8,24 +8,24 @@ namespace Halibut.Transport.Streams
 {
     public class WriteIntoMemoryBufferStream : Stream
     {
-        readonly MemoryStream memoryStream;
-        readonly Stream sinkStream;
+        readonly MemoryStream memoryBuffer;
+        readonly Stream innerStream;
         readonly long writeIntoMemoryLimitBytes;
         readonly OnDispose onDispose;
-        bool usingSinkStream;
+        bool usingMemoryBuffer = true;
 
-        public WriteIntoMemoryBufferStream(Stream sinkStream, long writeIntoMemoryLimitBytes, OnDispose onDispose)
+        public WriteIntoMemoryBufferStream(Stream innerStream, long writeIntoMemoryLimitBytes, OnDispose onDispose)
         {
-            memoryStream = new MemoryStream();
-            this.sinkStream = sinkStream;
+            memoryBuffer = new MemoryStream();
+            this.innerStream = innerStream;
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
             this.onDispose = onDispose;
         }
         
-        public long BytesWrittenIntoMemory => memoryStream.Length;
+        public long BytesWrittenIntoMemory => memoryBuffer.Length;
 
         public override bool CanRead => false;
-        public override bool CanWrite => sinkStream.CanWrite;
+        public override bool CanWrite => innerStream.CanWrite;
         public override bool CanSeek => false;
         public override bool CanTimeout => false;
 
@@ -33,15 +33,24 @@ namespace Halibut.Transport.Streams
 
         protected override void Dispose(bool disposing)
         {
+            if (disposing)
+            {
+                if (usingMemoryBuffer)
+                {
+                    memoryBuffer.Position = 0;
+                    memoryBuffer.CopyTo(innerStream);
+                }
+            }
+
             base.Dispose(disposing);
 
             if (disposing)
             {
-                memoryStream.Dispose();
+                memoryBuffer.Dispose();
 
                 if (onDispose == OnDispose.DisposeInputStream)
                 {
-                    sinkStream.Dispose();
+                    innerStream.Dispose();
                 }
             }
         }
@@ -71,52 +80,54 @@ namespace Halibut.Transport.Streams
 
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (!usingSinkStream)
+            if (usingMemoryBuffer)
             {
                 var remainingSpace = writeIntoMemoryLimitBytes - BytesWrittenIntoMemory;
                 if (count <= remainingSpace)
                 {
                     // We fit completely in memory
-                    await memoryStream.WriteAsync(buffer, offset, count, cancellationToken);
+                    await memoryBuffer.WriteAsync(buffer, offset, count, cancellationToken);
                     return;
                 }
 
                 // We tried our best, but will no longer fit in memory. Transition over to use the sinkStream.
-                memoryStream.Position = 0;
-                await memoryStream.CopyToAsync(sinkStream, 81920, cancellationToken);
-                usingSinkStream = true;
+                memoryBuffer.Position = 0;
+                await memoryBuffer.CopyToAsync(innerStream, 81920, cancellationToken);
+                usingMemoryBuffer = false;
             }
 
-            await sinkStream.WriteAsync(buffer, offset, count, cancellationToken);
+            await innerStream.WriteAsync(buffer, offset, count, cancellationToken);
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (!usingSinkStream)
+            if (usingMemoryBuffer)
             {
                 var remainingSpace = writeIntoMemoryLimitBytes - BytesWrittenIntoMemory;
                 if (count <= remainingSpace)
                 {
                     // We fit completely in memory
-                    memoryStream.Write(buffer, offset, count);
+                    memoryBuffer.Write(buffer, offset, count);
                     return;
                 }
 
                 // We tried our best, but will no longer fit in memory. Transition over to use the sinkStream.
-                memoryStream.Position = 0;
-                memoryStream.CopyTo(sinkStream);
-                usingSinkStream = true;
+                memoryBuffer.Position = 0;
+                memoryBuffer.CopyTo(innerStream);
+                usingMemoryBuffer = false;
             }
 
-            sinkStream.Write(buffer, offset, count);
+            innerStream.Write(buffer, offset, count);
         }
 
-        public async Task WriteAnyUnwrittenDataToSinkStream(CancellationToken cancellationToken)
+        public async Task WriteBufferToUnderlyingStream(CancellationToken cancellationToken)
         {
-            if (!usingSinkStream)
+            if (usingMemoryBuffer)
             {
-                memoryStream.Position = 0;
-                await memoryStream.CopyToAsync(sinkStream, 81920, cancellationToken);
+                memoryBuffer.Position = 0;
+                await memoryBuffer.CopyToAsync(innerStream, 81920, cancellationToken);
+
+                usingMemoryBuffer = false;
             }
         }
     }

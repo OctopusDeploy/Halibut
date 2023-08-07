@@ -136,7 +136,8 @@ namespace Halibut.Tests.Transport.Streams
                     return await sut.ReadAsync(readBuffer, offset, count, CancellationToken);
                 case StreamMethod.Sync:
                     return sut.Read(readBuffer, offset, count);
-                case StreamMethod.BeginEnd:
+                case StreamMethod.LegacyAsync:
+                    // This is the way async reading was done in earlier version of .NET
                     int bytesRead = -1;
                     sut.BeginRead(readBuffer, offset, count, AsyncCallback, sut);
                     void AsyncCallback(IAsyncResult result)

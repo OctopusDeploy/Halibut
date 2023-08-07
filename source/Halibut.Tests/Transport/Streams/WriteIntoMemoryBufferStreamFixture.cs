@@ -28,6 +28,43 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
+        public async Task WriteToSink_IfBufferingWasNotApplied_WithLimitGreaterThanDataSize_WhenDisposed([Values] StreamMethod streamMethod)
+        {
+            // Arrange
+            var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
+            using var memoryStream = new MemoryStream();
+            using (var sut = new WriteIntoMemoryBufferStream(memoryStream, bytesToWrite.Length + 1, OnDispose.LeaveInputStreamOpen))
+            {
+                // Act
+                await WriteToStream(streamMethod, sut, bytesToWrite, 0, bytesToWrite.Length);
+
+                // Assert
+                sut.BytesWrittenIntoMemory.Should().Be(bytesToWrite.Length);
+            }
+            
+            memoryStream.Length.Should().Be(bytesToWrite.Length);
+        }
+
+        [Test]
+        public async Task WriteToSink_OnlyOne_IfBufferingWasApplied_WithLimitGreaterThanDataSize_AndThenDisposed([Values] StreamMethod streamMethod)
+        {
+            // Arrange
+            var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
+            using var memoryStream = new MemoryStream();
+            using (var sut = new WriteIntoMemoryBufferStream(memoryStream, bytesToWrite.Length + 1, OnDispose.LeaveInputStreamOpen))
+            {
+                // Act
+                await WriteToStream(streamMethod, sut, bytesToWrite, 0, bytesToWrite.Length);
+                await sut.WriteBufferToUnderlyingStream(CancellationToken);
+
+                // Assert
+                sut.BytesWrittenIntoMemory.Should().Be(bytesToWrite.Length);
+            }
+            
+            memoryStream.Length.Should().Be(bytesToWrite.Length);
+        }
+
+        [Test]
         public async Task WriteToSink_IfBufferingWasNotApplied_WithLimitLessThanDataSize([Values] StreamMethod streamMethod)
         {
             // Arrange
@@ -53,7 +90,7 @@ namespace Halibut.Tests.Transport.Streams
 
             // Act
             await WriteToStream(streamMethod, sut, bytesToWrite, 0, bytesToWrite.Length);
-            await sut.WriteAnyUnwrittenDataToSinkStream(CancellationToken);
+            await sut.WriteBufferToUnderlyingStream(CancellationToken);
 
             // Assert
             memoryStream.Length.Should().Be(bytesToWrite.Length);
@@ -70,7 +107,7 @@ namespace Halibut.Tests.Transport.Streams
 
             // Act
             await WriteToStream(streamMethod, sut, bytesToWrite, 0, bytesToWrite.Length);
-            await sut.WriteAnyUnwrittenDataToSinkStream(CancellationToken);
+            await sut.WriteBufferToUnderlyingStream(CancellationToken);
 
             // Assert
             memoryStream.Length.Should().Be(bytesToWrite.Length);
@@ -87,7 +124,7 @@ namespace Halibut.Tests.Transport.Streams
 
             // Act
             await WriteToStream(streamMethod, sut, bytesToWrite, 0, bytesToWrite.Length);
-            await sut.WriteAnyUnwrittenDataToSinkStream(CancellationToken);
+            await sut.WriteBufferToUnderlyingStream(CancellationToken);
 
             // Assert
             memoryStream.Length.Should().Be(bytesToWrite.Length);
@@ -109,7 +146,7 @@ namespace Halibut.Tests.Transport.Streams
                 await WriteToStream(streamMethod, sut, bytesToWrite, i, 1);
             }
             
-            await sut.WriteAnyUnwrittenDataToSinkStream(CancellationToken);
+            await sut.WriteBufferToUnderlyingStream(CancellationToken);
 
             // Assert
             memoryStream.Length.Should().Be(bytesToWrite.Length);
@@ -126,7 +163,8 @@ namespace Halibut.Tests.Transport.Streams
                 case StreamMethod.Sync:
                     sut.Write(buffer, offset, count);
                     return;
-                case StreamMethod.BeginEnd:
+                case StreamMethod.LegacyAsync:
+                    // This is the way async reading was done in earlier version of .NET
                     var written = false;
                     sut.BeginWrite(buffer, offset, count, AsyncCallback, sut);
                     void AsyncCallback(IAsyncResult result)

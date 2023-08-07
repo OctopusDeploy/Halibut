@@ -8,16 +8,14 @@ namespace Halibut.Transport.Streams
 {
     public class ReadIntoMemoryBufferStream : Stream
     {
-        readonly MemoryStream memoryStream;
+        readonly MemoryStream memoryBuffer;
         readonly Stream sourceStream;
         readonly long readIntoMemoryLimitBytes;
         readonly OnDispose onDispose;
-
-        bool limitReached;
-
+        
         public ReadIntoMemoryBufferStream(Stream sourceStream, long readIntoMemoryLimitBytes, OnDispose onDispose)
         {
-            memoryStream = new MemoryStream();
+            memoryBuffer = new MemoryStream();
             this.sourceStream = sourceStream;
             this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.onDispose = onDispose;
@@ -29,7 +27,7 @@ namespace Halibut.Transport.Streams
 
             if (disposing)
             {
-                memoryStream.Dispose();
+                memoryBuffer.Dispose();
 
                 if (onDispose == OnDispose.DisposeInputStream)
                 {
@@ -44,11 +42,11 @@ namespace Halibut.Transport.Streams
             {
                 if (BytesReadIntoMemory == 0) return false;
 
-                return !limitReached || memoryStream.Position < BytesReadIntoMemory;
+                return memoryBuffer.Position < BytesReadIntoMemory;
             }
         }
 
-        public long BytesReadIntoMemory => memoryStream.Length;
+        public long BytesReadIntoMemory => memoryBuffer.Length;
 
         public override bool CanRead => sourceStream.CanRead;
         public override bool CanWrite => false;
@@ -81,7 +79,7 @@ namespace Halibut.Transport.Streams
         {
             if (ShouldReadFromMemoryStream)
             {
-                return memoryStream.Read(buffer, offset, count);
+                return this.memoryBuffer.Read(buffer, offset, count);
             }
 
             return sourceStream.Read(buffer, offset, count);
@@ -91,7 +89,7 @@ namespace Halibut.Transport.Streams
         {
             if (ShouldReadFromMemoryStream)
             {
-                return await memoryStream.ReadAsync(buffer, offset, count, cancellationToken);
+                return await this.memoryBuffer.ReadAsync(buffer, offset, count, cancellationToken);
             }
 
             return await sourceStream.ReadAsync(buffer, offset, count, cancellationToken);
@@ -104,23 +102,21 @@ namespace Halibut.Transport.Streams
 
         public async Task BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken cancellationToken)
         {
-            var buffer = new byte[81920];
+            var readBuffer = new byte[81920];
             while (BytesReadIntoMemory < readIntoMemoryLimitBytes)
             {
-                var bytesToCopy = (int)Math.Min(buffer.Length, readIntoMemoryLimitBytes - BytesReadIntoMemory);
-                var bytesRead = await sourceStream.ReadAsync(buffer, 0, bytesToCopy, cancellationToken).ConfigureAwait(false);
+                var bytesToCopy = (int)Math.Min(readBuffer.Length, readIntoMemoryLimitBytes - BytesReadIntoMemory);
+                var bytesRead = await sourceStream.ReadAsync(readBuffer, 0, bytesToCopy, cancellationToken).ConfigureAwait(false);
 
                 if (bytesRead == 0)
                 {
-                    memoryStream.Position = 0;
-                    return;
+                    break;
                 }
 
-                await memoryStream.WriteAsync(buffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
+                await memoryBuffer.WriteAsync(readBuffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
             }
 
-            memoryStream.Position = 0;
-            limitReached = true;
+            memoryBuffer.Position = 0;
         }
     }
 }

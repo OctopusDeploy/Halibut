@@ -84,7 +84,7 @@ namespace Halibut.Transport.Protocol
                 createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
             }
 
-            await compressedInMemoryBuffer.WriteAnyUnwrittenDataToSinkStream(cancellationToken);
+            await compressedInMemoryBuffer.WriteBufferToUnderlyingStream(cancellationToken);
 
             observer.MessageWritten(compressedByteCountingStream.BytesWritten, compressedInMemoryBuffer.BytesWrittenIntoMemory);
         }
