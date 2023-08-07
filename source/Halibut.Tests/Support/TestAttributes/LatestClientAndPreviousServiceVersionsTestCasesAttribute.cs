@@ -13,7 +13,7 @@ namespace Halibut.Tests.Support.TestAttributes
         public LatestClientAndPreviousServiceVersionsTestCasesAttribute(bool testWebSocket = true, 
             bool testNetworkConditions = true,
             bool testListening = true,
-            bool testAsyncAndSyncClients = false // False while this area of the test infra is being built out.
+            bool testAsyncAndSyncClients = true
             ) :
             base(
                 typeof(LatestClientAndPreviousServiceVersionsTestCases),

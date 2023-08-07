@@ -9,6 +9,7 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
@@ -43,9 +44,9 @@ namespace Halibut.Tests.Timeouts
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
                 
-                echo.SayHello(Some.RandomAsciiStringOfLength(2000));
+                await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000));
                 // --> NEXT sent
                 // --> Proceed sent
                 await Task.Delay(TimeSpan.FromSeconds(3)); // Allow enough time for the polling queue to unnecessarily send a null message down the queue because of a race condition in the queue. 
@@ -53,13 +54,13 @@ namespace Halibut.Tests.Timeouts
                 pauseStreamWhenServiceSendsMessageOfSize = nextMessageSize; // Lets hope they are all the same size
                 Logger.Information("Will pause the pump next time the polling service sends a message of size {Size}", pauseStreamWhenServiceSendsMessageOfSize);
 
-                echo.SayHello(Some.RandomAsciiStringOfLength(2000)); // Second last message
+                await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000)); // Second last message
                 // --> NEXT sent and pump paused here.
                 
                 var sw = Stopwatch.StartNew();
                 // Service must detect that it can't get a PROCEED back in time and so must decide to abandon and then try again within
                 // its retry policy.
-                echo.SayHello(Some.RandomAsciiStringOfLength(2000));
+                await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000));
                 sw.Stop();
                 Logger.Information("It took: " + sw.Elapsed);
                 sw.Elapsed.Should().BeGreaterThanOrEqualTo(HalibutLimits.TcpClientHeartbeatReceiveTimeout - TimeSpan.FromSeconds(2)) // -2s since tentacle will begin its countdown on the read which may start just after

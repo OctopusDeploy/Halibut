@@ -3,11 +3,11 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
@@ -47,8 +47,8 @@ namespace Halibut.Tests.Timeouts
                        .WithEchoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
                 timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
 
