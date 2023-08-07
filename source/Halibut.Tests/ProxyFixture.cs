@@ -49,9 +49,6 @@ namespace Halibut.Tests
             {
                 await clientAndService.HttpProxy!.StopAsync(CancellationToken.None);
 
-                // var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-                // await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Deploy package A"));
-                
                 var echo = clientAndService.CreateClient<IEchoService>();
                 Func<string> action = () => echo.SayHello("Deploy package A");
                 action.Should().Throw<HalibutClientException>();
