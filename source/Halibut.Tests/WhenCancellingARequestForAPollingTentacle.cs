@@ -18,7 +18,7 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued : BaseTest
         {
             [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: false)]
             public async Task TheRequestShouldBeCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -53,7 +53,7 @@ namespace Halibut.Tests
         public class AndTheRequestHasBeenDequeuedButNoResponseReceived : BaseTest
         {
             [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: false)]
             public async Task TheRequestShouldNotBeCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var calls = new List<DateTime>();

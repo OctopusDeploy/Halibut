@@ -6,6 +6,7 @@ using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -14,7 +15,7 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionStopsSendingData : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket:false, testPolling:false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket:false, testPolling:false, testAsyncAndSyncClients: true)]
         public async Task HalibutCanRecoverFromIdleTcpDisconnect(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -26,14 +27,14 @@ namespace Halibut.Tests
                 var data = new byte[1024];
                 new Random().NextBytes(data);
 
-                var echo = clientAndService.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-                echo.SayHello("Bob");
-
+                await echo.SayHelloAsync("Bob");
+                
                 clientAndService.PortForwarder!.PauseExistingConnections();
 
                 var sw = Stopwatch.StartNew();
-                echo.SayHello("Bob");
+                await echo.SayHelloAsync("Bob");
                 sw.Stop();
 
                 sw.Elapsed.Should().BeGreaterThanOrEqualTo(HalibutLimits.TcpClientHeartbeatReceiveTimeout - TimeSpan.FromSeconds(1), // Allow for some slack, don't care if it actually waited just under.  
