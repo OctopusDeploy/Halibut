@@ -71,7 +71,14 @@ namespace Halibut.Transport.Observability
 
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state) => countBytesFromStream.BeginRead(buffer, offset, count, callback, state);
         
-        public override int EndRead(IAsyncResult asyncResult) => countBytesFromStream.EndRead(asyncResult);
+        public override int EndRead(IAsyncResult asyncResult)
+        {
+            var bytesRead = countBytesFromStream.EndRead(asyncResult);
+
+            BytesRead += bytesRead;
+
+            return bytesRead;
+        }
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
@@ -81,7 +88,7 @@ namespace Halibut.Transport.Observability
 
             return bytesRead;
         }
-
+        
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state) => countBytesFromStream.BeginWrite(buffer, offset, count, callback, state);
 
         public override void EndWrite(IAsyncResult asyncResult) => countBytesFromStream.EndWrite(asyncResult);

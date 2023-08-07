@@ -9,6 +9,11 @@ namespace Halibut.Transport.Protocol
         ITypeRegistry typeRegistry;
         Action<JsonSerializerSettings> configureSerializer;
         IMessageSerializerObserver messageSerializerObserver;
+        // Initial prod telemetry showed quite large read values (> 17M). But a decent number were below 64K.
+        // This number is also below what .NET uses to put objects on the LOH (threshold is 85K)
+        long readIntoMemoryLimitBytes = 1024L * 64L;
+        // Initial prod telemetry indicated values < 7K would be fine. But to be safe, 64K to future proof, and stay below the LOH threshold of 85K.
+        long writeIntoMemoryLimitBytes = 1024L * 64L;
 
         public MessageSerializerBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
         {
@@ -28,6 +33,13 @@ namespace Halibut.Transport.Protocol
             return this;
         }
 
+        public MessageSerializerBuilder WithAsyncMemoryLimits(long readIntoMemoryLimitBytes, long writeIntoMemoryLimitBytes)
+        {
+            this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
+            this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
+            return this;
+        }
+
         public MessageSerializer Build()
         {
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
@@ -43,7 +55,12 @@ namespace Halibut.Transport.Protocol
 
             var messageSerializerObserver = this.messageSerializerObserver ?? new NoMessageSerializerObserver();
 
-            var messageSerializer = new MessageSerializer(typeRegistry, Serializer, messageSerializerObserver);
+            var messageSerializer = new MessageSerializer(
+                typeRegistry, 
+                Serializer, 
+                messageSerializerObserver,
+                readIntoMemoryLimitBytes,
+                writeIntoMemoryLimitBytes);
 
             return messageSerializer;
         }
