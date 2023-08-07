@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <OutputType>Exe</OutputType>
         <LangVersion>9.0</LangVersion>
-        <RootNamespace>Halibut.TestUtils.Contracts</RootNamespace>
+        <RootNamespace>Halibut.TestUtils.SampleProgram.v4_4_8</RootNamespace>
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
@@ -13,10 +14,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Halibut" Version="4.4.8">
-            <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+        <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.Base\Halibut.TestUtils.CompatBinary.Base.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Halibut" Version="4.4.8" />
     </ItemGroup>
 
 </Project>

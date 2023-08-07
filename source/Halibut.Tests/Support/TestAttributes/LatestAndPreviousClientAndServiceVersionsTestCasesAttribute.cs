@@ -15,7 +15,7 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testNetworkConditions = true,
             bool testListening = true,
             bool testPolling = true,
-            bool testAsyncAndSyncClients = false // False while this area of the test infra is being built out.
+            bool testAsyncAndSyncClients = true
             ) :
             base(
                 typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
@@ -56,6 +56,7 @@ namespace Halibut.Tests.Support.TestAttributes
                         ClientAndServiceTestVersion.Latest(),
                         ClientAndServiceTestVersion.ClientOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ClientVersion),
                         ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
+                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
                     },
                     serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },

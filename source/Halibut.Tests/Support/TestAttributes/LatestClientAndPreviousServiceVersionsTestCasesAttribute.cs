@@ -13,7 +13,7 @@ namespace Halibut.Tests.Support.TestAttributes
         public LatestClientAndPreviousServiceVersionsTestCasesAttribute(bool testWebSocket = true, 
             bool testNetworkConditions = true,
             bool testListening = true,
-            bool testAsyncAndSyncClients = false // False while this area of the test infra is being built out.
+            bool testAsyncAndSyncClients = true
             ) :
             base(
                 typeof(LatestClientAndPreviousServiceVersionsTestCases),
@@ -47,6 +47,7 @@ namespace Halibut.Tests.Support.TestAttributes
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] {
                         ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
+                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
                     },
                     serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },

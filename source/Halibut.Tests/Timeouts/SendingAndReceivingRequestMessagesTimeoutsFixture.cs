@@ -11,6 +11,7 @@ using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 using System.Runtime.InteropServices;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 
 namespace Halibut.Tests.Timeouts
 {
@@ -27,13 +28,13 @@ namespace Halibut.Tests.Timeouts
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var pauseConnections = clientAndService.CreateClient<IDoSomeActionService>(IncreasePollingQueueTimeout());
+                var pauseConnections = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = Assert.Throws<HalibutClientException>(() => pauseConnections.Action());
+                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -41,7 +42,7 @@ namespace Halibut.Tests.Timeouts
                     .And
                     .BeLessThan(HalibutLimits.TcpClientReceiveTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
                 
-                echo.SayHello("A new request can be made on a new unpaused TCP connection");
+                await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
         }
 
@@ -59,13 +60,13 @@ namespace Halibut.Tests.Timeouts
                            thenSend: "All done"))
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var pauseConnections = clientAndService.CreateClient<IReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
+                var pauseConnections = clientAndService.CreateClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = Assert.Throws<HalibutClientException>(() => pauseConnections.SomeDataStream());
+                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -73,7 +74,7 @@ namespace Halibut.Tests.Timeouts
                     .And
                     .BeLessThan(HalibutLimits.TcpClientReceiveTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
 
-                echo.SayHello("A new request can be made on a new unpaused TCP connection");
+                await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
         }
 
@@ -91,14 +92,14 @@ namespace Halibut.Tests.Timeouts
                        .WithEchoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService>(IncreasePollingQueueTimeout());
+                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
 
                 var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 100);
                 var sw = Stopwatch.StartNew();
-                var e = Assert.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.SayHello(stringToSend));
+                var e = (await AssertAsync.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend))).And;
                 AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
@@ -124,7 +125,7 @@ namespace Halibut.Tests.Timeouts
                         "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
                             "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
 
-                echo.SayHello("A new request can be made on a new unpaused TCP connection");
+                await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
         }
         
@@ -138,17 +139,18 @@ namespace Halibut.Tests.Timeouts
                        .WithEchoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService>(IncreasePollingQueueTimeout());
+                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
-                var e = Assert.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.CountBytes(DataStreamUtil.From(
+                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
                     firstSend: "hello",
                     andThenRun: portForwarderRef.Value!.PauseExistingConnections,
                     thenSend: "All done" + Some.RandomAsciiStringOfLength(10*1024*1024)
-                )));
+                ))))
+                    .And;
                 AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
@@ -169,7 +171,7 @@ namespace Halibut.Tests.Timeouts
                     .And
                     .BeLessThan(expectedTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
 
-                echo.SayHello("A new request can be made on a new unpaused TCP connection");
+                await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
         }
 

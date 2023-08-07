@@ -8,6 +8,7 @@ using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
@@ -17,7 +18,7 @@ namespace Halibut.Tests
     public class PollingTentacleDequeuesRequestsInOrderFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             IPendingRequestQueue pendingRequestQueue = null;
@@ -39,17 +40,17 @@ namespace Halibut.Tests
                        })
                        .Build(CancellationToken))
             {
-                var echoService = clientAndService.CreateClient<IEchoService>();
-                echoService.SayHello("Make sure the pending request queue exists");
+                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                await echoService.SayHelloAsync("Make sure the pending request queue exists");
                 pendingRequestQueue.Should().NotBeNull();
 
                 using var tmpDir = new TemporaryDirectory();
                 var fileStoppingNewRequests = tmpDir.CreateRandomFile();
 
                 // Send a request to polling tentacle that wont complete, until we let it complete.
-                var lockService = clientAndService.CreateClient<ILockService>();
+                var lockService = clientAndService.CreateClient<ILockService, IAsyncClientLockService>();
                 var fileThatLetsUsKnowThePollingTentacleIsBusy = tmpDir.RandomFileName();
-                var pollingTentacleKeptBusyRequest = Task.Run(() => lockService.WaitForFileToBeDeleted(fileStoppingNewRequests, fileThatLetsUsKnowThePollingTentacleIsBusy));
+                var pollingTentacleKeptBusyRequest = Task.Run(async () => await lockService.WaitForFileToBeDeletedAsync(fileStoppingNewRequests, fileThatLetsUsKnowThePollingTentacleIsBusy));
                 await Wait.For(async () =>
                 {
                     await pollingTentacleKeptBusyRequest.AwaitIfFaulted();
@@ -57,12 +58,12 @@ namespace Halibut.Tests
                 }, CancellationToken);
 
 
-                var countingService = clientAndService.CreateClient<ICountingService>();
+                var countingService = clientAndService.CreateClient<ICountingService, IAsyncClientCountingService>();
 
                 var tasks = new List<Task<int>>();
                 for (int i = 0; i < 10; i++)
                 {
-                    var task = Task.Run(() => countingService.Increment());
+                    var task = Task.Run(async () => await countingService.IncrementAsync());
                     tasks.Add(task);
                     // Wait for the RPC call to get on to the queue before proceeding
                     await Wait.For(async () =>

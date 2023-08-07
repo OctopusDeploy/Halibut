@@ -3,6 +3,7 @@ using FluentAssertions;
 using Halibut.Logging;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -11,7 +12,7 @@ namespace Halibut.Tests
     public class SerializerFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task HalibutSerializerIsKeptUpToDateWithPollingTentacle(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -20,13 +21,13 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 // This is here to exercise the path where the Listener's (web socket) handle loop has the protocol (with type serializer) built before the type is registered
-                var echo = clientAndService.CreateClient<IEchoService>();
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
                 // This must come before CreateClient<ISupportedServices> for the situation to occur
-                echo.SayHello("Deploy package A").Should().Be("Deploy package A" + "...");
+                (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A" + "...");
 
-                var svc = clientAndService.CreateClient<IMultipleParametersTestService>();
+                var svc = clientAndService.CreateClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
                 // This must happen before the message loop in MessageExchangeProtocol restarts (timeout, exception, or end) for the error to occur
-                svc.GetLocation(new MapLocation { Latitude = -27, Longitude = 153 }).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
+                (await svc.GetLocationAsync(new MapLocation { Latitude = -27, Longitude = 153 })).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
             }
         }
     }

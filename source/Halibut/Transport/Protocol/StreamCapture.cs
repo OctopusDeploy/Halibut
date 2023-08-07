@@ -2,42 +2,24 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-#if !HAS_ASYNC_LOCAL
-using System.Runtime.Remoting.Messaging;
-#endif
-
 namespace Halibut.Transport.Protocol
 {
     public class StreamCapture : IDisposable
     {
-        readonly HashSet<DataStream> serializedStreams = new HashSet<DataStream>();
-        readonly HashSet<DataStream> deserializedStreams = new HashSet<DataStream>();
+        readonly HashSet<DataStream> serializedStreams = new();
+        readonly HashSet<DataStream> deserializedStreams = new();
 
-#if HAS_ASYNC_LOCAL
-        static AsyncLocal<StreamCapture> current = new AsyncLocal<StreamCapture>();
+        static AsyncLocal<StreamCapture> current = new();
 
         public static StreamCapture Current
         {
-            get { return current.Value; }
-            private set { current.Value = value; }
-        }
-#else
-        public static StreamCapture Current
-        {
-            get { return (StreamCapture) CallContext.GetData("HalibutStreamCapture"); }
-            private set { CallContext.SetData("HalibutStreamCapture", value); }
-        }
-#endif
-
-        public ICollection<DataStream> SerializedStreams
-        {
-            get { return serializedStreams; }
+            get => current.Value;
+            private set => current.Value = value;
         }
 
-        public ICollection<DataStream> DeserializedStreams
-        {
-            get { return deserializedStreams; }
-        }
+        public ICollection<DataStream> SerializedStreams => serializedStreams;
+
+        public ICollection<DataStream> DeserializedStreams => deserializedStreams;
 
         public static StreamCapture New()
         {

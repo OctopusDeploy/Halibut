@@ -3,8 +3,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -22,18 +24,21 @@ namespace Halibut.Tests
                        .WithProxy()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>();
-                echo.SayHello("Deploy package A").Should().Be("Deploy package A...");
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
 
                 for (var i = 0; i < 5; i++)
                 {
-                    echo.SayHello($"Deploy package A {i}").Should().Be($"Deploy package A {i}...");
+                    (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
                 }
             }
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testWebSocket: false, 
+            testAsyncAndSyncClients: false // TODO - ASYNC ME UP!
+            // This doesn't work in async.
+            )]
         // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
         public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {

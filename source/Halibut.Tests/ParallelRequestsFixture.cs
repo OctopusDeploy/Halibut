@@ -19,7 +19,9 @@ namespace Halibut.Tests
     public class ParallelRequestsFixture : BaseTest
     {
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false,
+            testAsyncAndSyncClients: false // TODO - ASYNC ME UP!
+            )]
         public async Task MultipleRequestsCanBeInFlightInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -78,7 +80,9 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling:false, testWebSocket: false, testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling:false, testWebSocket: false, testNetworkConditions: false, 
+            testAsyncAndSyncClients: false // TODO - ASYNC ME UP!
+            )]
         public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

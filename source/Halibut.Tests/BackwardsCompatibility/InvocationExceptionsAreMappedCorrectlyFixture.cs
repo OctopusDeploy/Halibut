@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
 using Halibut.Exceptions;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -18,13 +20,13 @@ namespace Halibut.Tests.BackwardsCompatibility
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService>(se =>
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(se =>
                 {
                     se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
                     se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
                 });
 
-                Assert.Throws<ServiceInvocationHalibutClientException>(() => echo.Crash());
+                await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await echo.CrashAsync());
             }
         }
     }
