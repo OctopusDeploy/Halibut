@@ -43,7 +43,12 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient() ? 
+                                clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>() : 
+                                clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint =>
+                                {
+                                    serviceEndPoint.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
+                                });
 
                 await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Deploy package A"));
             }
