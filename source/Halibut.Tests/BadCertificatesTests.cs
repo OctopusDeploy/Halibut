@@ -85,6 +85,40 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        public async Task SucceedWhenUsingSameConnection_EvenThoughClientCertificateHasHadTrustRemoved(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var countingService = new CountingService();
+            var trustProvider = new DefaultTrustProvider();
+
+            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .WithCountingService(countingService)
+                       .WithServiceTrustProvider(trustProvider)
+                       .Build(CancellationToken))
+            {
+                var echo = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+
+                // Works When Trusted
+                trustProvider.IsTrusted(CertAndThumbprint.Octopus.Thumbprint).Should().BeTrue();
+                await echo.IncrementAsync();
+                countingService.GetCurrentValue().Should().Be(1);
+
+                // Remove Trust
+                trustProvider.Remove(CertAndThumbprint.Octopus.Thumbprint);
+                trustProvider.IsTrusted(CertAndThumbprint.Octopus.Thumbprint).Should().BeFalse();
+
+                // Assert Keeps Working
+                for (int i = 0; i < 10; i++)
+                {
+                    await echo.IncrementAsync();
+                    countingService.GetCurrentValue().Should().Be(2 + i);
+                    await Task.Delay(100, CancellationToken);
+                }
+            }
+        }
+        
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenClientPresentsWrongCertificateToListeningService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
