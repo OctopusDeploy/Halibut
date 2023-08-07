@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -24,20 +26,19 @@ namespace Halibut.Tests
             services.Register<IEchoService>(() => new EchoService());
             return services;
         }
-        
-        [TestCase("https://127.0.0.1:{port}")]
-        [TestCase("https://127.0.0.1:{port}/")]
-        [TestCase("https://localhost:{port}")]
-        [TestCase("https://localhost:{port}/")]
-        [TestCase("https://{machine}:{port}")]
-        [TestCase("https://{machine}:{port}/")]
-        public async Task SupportsHttpsGet(string uriFormat)
+
+        [SyncAndAsyncTestCases("https://127.0.0.1:{port}")]
+        [SyncAndAsyncTestCases("https://127.0.0.1:{port}/")]
+        [SyncAndAsyncTestCases("https://localhost:{port}")]
+        [SyncAndAsyncTestCases("https://localhost:{port}/")]
+        [SyncAndAsyncTestCases("https://{machine}:{port}")]
+        [SyncAndAsyncTestCases("https://{machine}:{port}/")]
+        public async Task SupportsHttpsGet(SyncAndAsyncTestCase testCase)
         {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(services).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
+            using (var octopus = GetHalibutRuntime(GetDelegateServiceFactory(), testCase.SyncOrAsync))
             {
                 var listenPort = octopus.Listen();
-                var uri = uriFormat.Replace("{machine}", Dns.GetHostName()).Replace("{port}", listenPort.ToString());
+                var uri = testCase.Value.Replace("{machine}", Dns.GetHostName()).Replace("{port}", listenPort.ToString());
 
                 var result = await DownloadStringIgnoringCertificateValidation(uri);
 
@@ -45,18 +46,17 @@ namespace Halibut.Tests
             }
         }
 
-        [TestCase("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
-        [TestCase("Simple text works too!", null)]
-        [TestCase("", null)]
-        [TestCase(null, "<html><body><p>Hello!</p></body></html>")]
-        public async Task CanSetCustomFriendlyHtmlPage(string html, string expectedResult = null)
+        [FriendlyHtmlSyncAndAsyncTestCases("<html><body><h1>Welcome to Octopus Server!</h1><p>It looks like everything is running just like you expected, well done.</p></body></html>", null)]
+        [FriendlyHtmlSyncAndAsyncTestCases("Simple text works too!", null)]
+        [FriendlyHtmlSyncAndAsyncTestCases("", null)]
+        [FriendlyHtmlSyncAndAsyncTestCases(null, "<html><body><p>Hello!</p></body></html>")]
+        public async Task CanSetCustomFriendlyHtmlPage(FriendlyHtmlSyncAndAsyncTestCase testCase)
         {
-            var services = GetDelegateServiceFactory();
-            expectedResult = expectedResult ?? html; // Handle the null case which reverts to default html
+            var expectedResult = testCase.Expected ?? testCase.Html; // Handle the null case which reverts to default html
 
-            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(services).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
+            using (var octopus = GetHalibutRuntime(GetDelegateServiceFactory(), testCase.SyncOrAsync))
             {
-                octopus.SetFriendlyHtmlPageContent(html);
+                octopus.SetFriendlyHtmlPageContent(testCase.Html);
                 var listenPort = octopus.Listen();
 
                 var result = await DownloadStringIgnoringCertificateValidation("https://localhost:" + listenPort);
@@ -66,12 +66,12 @@ namespace Halibut.Tests
         }
 
         [Test]
-        public async Task CanSetCustomFriendlyHtmlPageHeaders()
+        [SyncAndAsync]
+        public async Task CanSetCustomFriendlyHtmlPageHeaders(SyncOrAsync syncOrAsync)
         {
-            var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(services).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
+            using (var octopus = GetHalibutRuntime(GetDelegateServiceFactory(), syncOrAsync))
             {
-                octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> {{"X-Content-Type-Options", "nosniff"}, {"X-Frame-Options", "DENY"}});
+                octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> { { "X-Content-Type-Options", "nosniff" }, { "X-Frame-Options", "DENY" } });
                 var listenPort = octopus.Listen();
 
                 var result = await GetHeadersIgnoringCertificateValidation("https://localhost:" + listenPort);
@@ -82,11 +82,12 @@ namespace Halibut.Tests
         }
 
         [Test]
+        [SyncAndAsync]
         [System.ComponentModel.Description("Connecting over a non-secure connection should cause the socket to be closed by the server. The socket used to be held open indefinitely for any failure to establish an SslStream.")]
-        public async Task ConnectingOverHttpShouldFailQuickly()
+        public async Task ConnectingOverHttpShouldFailQuickly(SyncOrAsync syncOrAsync)
         {
             var logger = new SerilogLoggerBuilder().Build();
-            using (var octopus = new HalibutRuntimeBuilder().WithServiceFactory(GetDelegateServiceFactory()).WithServerCertificate(Certificates.Octopus).WithAsyncHalibutFeatureEnabled().Build())
+            using (var octopus = GetHalibutRuntime(GetDelegateServiceFactory(), syncOrAsync))
             {
                 logger.Information("Halibut runtime created.");
                 var listenPort = octopus.Listen();
@@ -105,7 +106,6 @@ namespace Halibut.Tests
                         sw.Stop();
                     }
                 });
-
 
                 sw.Elapsed.Should().BeLessOrEqualTo(TimeSpan.FromSeconds(5));
             }
@@ -151,6 +151,17 @@ namespace Halibut.Tests
                     return headers;
                 }
             }
+        }
+
+        HalibutRuntime GetHalibutRuntime(IServiceFactory serviceFactory, SyncOrAsync syncOrAsync)
+        {
+            var builder = new HalibutRuntimeBuilder().WithServiceFactory(serviceFactory).WithServerCertificate(Certificates.Octopus);
+            if (syncOrAsync == SyncOrAsync.Async)
+            {
+                builder = builder.WithAsyncHalibutFeatureEnabled();
+            }
+
+            return builder.Build();
         }
     }
 }
