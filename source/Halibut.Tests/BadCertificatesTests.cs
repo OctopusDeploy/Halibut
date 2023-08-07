@@ -19,6 +19,69 @@ namespace Halibut.Tests
 {
     public class BadCertificatesTests : BaseTest
     {
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        public async Task SucceedsWhenClientPresentsWrongCertificateToListeningService_ButServiceIsConfiguredToTrustAndAllowConnection(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var countingService = new CountingService();
+            var trustProvider = new DefaultTrustProvider();
+
+            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .WithServiceTrustingTheWrongCertificate()
+                       .WithCountingService(countingService)
+                       .WithServiceTrustProvider(trustProvider)
+                       .WithServiceOnUnauthorizedClientConnect((_, clientThumbprint) =>
+                       {
+                           clientThumbprint.Should().Be(CertAndThumbprint.Octopus.Thumbprint);
+                           return UnauthorizedClientConnectResponse.TrustAndAllowConnection;
+                       })
+                       .Build(CancellationToken))
+            {
+                trustProvider.IsTrusted(CertAndThumbprint.Octopus.Thumbprint).Should().BeFalse();
+
+                var echo = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+                await echo.IncrementAsync();
+
+                countingService.GetCurrentValue().Should().Be(1);
+
+                trustProvider.IsTrusted(CertAndThumbprint.Octopus.Thumbprint).Should().BeTrue();
+            }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        public async Task FailWhenClientPresentsWrongCertificateToListeningService_AndServiceIsConfiguredToBlockConnection(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var countingService = new CountingService();
+            var trustProvider = new DefaultTrustProvider();
+
+            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .WithServiceTrustingTheWrongCertificate()
+                       .WithCountingService(countingService)
+                       .RecordingServiceLogs(out var serviceLoggers)
+                       .WithServiceTrustProvider(trustProvider)
+                       .WithServiceOnUnauthorizedClientConnect((_, clientThumbprint) =>
+                       {
+                           clientThumbprint.Should().Be(CertAndThumbprint.Octopus.Thumbprint);
+                           return UnauthorizedClientConnectResponse.BlockConnection;
+                       })
+                       .Build(CancellationToken))
+            {
+                trustProvider.IsTrusted(CertAndThumbprint.Octopus.Thumbprint).Should().BeFalse();
+
+                var echo = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+                await AssertionExtensions.Should(() => echo.IncrementAsync()).ThrowAsync<HalibutClientException>();
+
+                countingService.GetCurrentValue().Should().Be(0, "With a bad certificate, that is then blocked, the request never should have been made");
+
+                serviceLoggers[serviceLoggers.Keys.First()].GetLogs().Should()
+                    .Contain(log => log.FormattedMessage
+                        .Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint " +
+                                  "'76225C0717A16C1D0BA4A7FFA76519D286D8A248' which is not in the list of thumbprints that we trust"));
+            }
+        }
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
@@ -28,7 +91,7 @@ namespace Halibut.Tests
             using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithServiceTrustingTheWrongCertificate()
-                       .WithCountingService()
+                       .WithCountingService(countingService)
                        .RecordingServiceLogs(out var serviceLoggers)
                        .Build(CancellationToken))
             {
@@ -52,7 +115,7 @@ namespace Halibut.Tests
             using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithServiceTrustingTheWrongCertificate()
-                       .WithCountingService()
+                       .WithCountingService(countingService)
                        .RecordingServiceLogs(out var serviceLoggers)
                        .Build(CancellationToken))
             {
@@ -142,19 +205,6 @@ namespace Halibut.Tests
             }
         }
 
-        IEnumerable<LogEvent> AllLogs(ConcurrentDictionary<string, ILog> loggers)
-        {
-            foreach (var key in loggers.Keys)
-            {
-                foreach (var logEvent in loggers[key].GetLogs())
-                {
-                    yield return logEvent;
-                }
-            }
-        }
-
-
-
         /// <summary>
         /// Test is redundant but kept around since we really want the security part to work. 
         /// </summary>
@@ -203,6 +253,17 @@ namespace Halibut.Tests
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             return services;
+        }
+
+        IEnumerable<LogEvent> AllLogs(ConcurrentDictionary<string, ILog> loggers)
+        {
+            foreach (var key in loggers.Keys)
+            {
+                foreach (var logEvent in loggers[key].GetLogs())
+                {
+                    yield return logEvent;
+                }
+            }
         }
     }
 }

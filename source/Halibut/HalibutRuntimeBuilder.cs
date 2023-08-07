@@ -19,6 +19,7 @@ namespace Halibut
         ITypeRegistry typeRegistry;
         Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
         AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
+        Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -64,13 +65,19 @@ namespace Halibut
 
         public HalibutRuntimeBuilder WithAsyncHalibutFeatureEnabled()
         {
-            this.asyncHalibutFeature = AsyncHalibutFeature.Enabled;
+            asyncHalibutFeature = AsyncHalibutFeature.Enabled;
             return this;
         }
 
         internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
+            return this;
+        }
+
+        public HalibutRuntimeBuilder WithOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
+        {
+            this.onUnauthorizedClientConnect = onUnauthorizedClientConnect;
             return this;
         }
 
@@ -92,7 +99,23 @@ namespace Halibut
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
 
-            return new HalibutRuntime(serviceFactory, serverCertificate, trustProvider, queueFactory, logFactory, typeRegistry, messageSerializer, pollingReconnectRetryPolicy, asyncHalibutFeature);
+            var halibutRuntime = new HalibutRuntime(
+                serviceFactory, 
+                serverCertificate,
+                trustProvider, 
+                queueFactory, 
+                logFactory, 
+                typeRegistry,
+                messageSerializer, 
+                pollingReconnectRetryPolicy,
+                asyncHalibutFeature);
+
+            if (onUnauthorizedClientConnect is not null)
+            {
+                halibutRuntime.OnUnauthorizedClientConnect = onUnauthorizedClientConnect;
+            }
+
+            return halibutRuntime;
         }
     }
 }

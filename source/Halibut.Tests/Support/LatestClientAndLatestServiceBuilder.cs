@@ -43,7 +43,9 @@ namespace Halibut.Tests.Support
         LogLevel halibutLogLevel = LogLevel.Info;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
-        
+        ITrustProvider serviceTrustProvider;
+        Func<string, string, UnauthorizedClientConnectResponse> serviceOnUnauthorizedClientConnect;
+
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
@@ -247,7 +249,19 @@ namespace Halibut.Tests.Support
             this.serviceInMemoryLoggers = inMemoryLoggers;
             return this;
         }
+
+        public LatestClientAndLatestServiceBuilder WithServiceOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
+        {
+            serviceOnUnauthorizedClientConnect = onUnauthorizedClientConnect;
+            return this;
+        }
         
+        public LatestClientAndLatestServiceBuilder WithServiceTrustProvider(ITrustProvider trustProvider)
+        {
+            serviceTrustProvider = trustProvider;
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithClientTrustingTheWrongCertificate()
         {
             clientTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
@@ -305,7 +319,9 @@ namespace Halibut.Tests.Support
                 var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                    .WithLogFactory(BuildServiceLogger());
+                    .WithLogFactory(BuildServiceLogger())
+                    .WithTrustProvider(serviceTrustProvider)
+                    .WithOnUnauthorizedClientConnect(serviceOnUnauthorizedClientConnect);
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
                 service = serviceBuilder.Build();
