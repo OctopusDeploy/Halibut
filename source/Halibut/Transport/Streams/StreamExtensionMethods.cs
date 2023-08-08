@@ -20,7 +20,7 @@ namespace Halibut.Transport.Streams
         
         public static async Task WriteLineAsync(this Stream stream, string s, CancellationToken cancellationToken)
         {
-            var bytes = Encoding.GetBytes(s + ControlMessageNewLine);
+            var bytes = Encoding.GetBytes(s + "\r\n");
             await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
         }
 
