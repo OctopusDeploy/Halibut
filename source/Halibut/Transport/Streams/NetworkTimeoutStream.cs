@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.Remoting;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,11 +9,11 @@ using Halibut.Util;
 
 namespace Halibut.Transport.Streams
 {
-    class TimeoutStream : Stream
+    class NetworkTimeoutStream : Stream
     {
         readonly Stream inner;
 
-        public TimeoutStream(Stream inner)
+        public NetworkTimeoutStream(Stream inner)
         {
             this.inner = inner;
         }
@@ -114,7 +115,8 @@ namespace Halibut.Transport.Streams
             {
                 if (timeoutCancellationTokenSource.IsCancellationRequested)
                 {
-                    throw new OperationCanceledException($"The {methodName} operation timed out after {TimeSpan.FromMilliseconds(timeout)}.", innerException);
+                    var socketException = new SocketException(10060);
+                    throw new IOException($"Unable to read data from the transport connection: {socketException.Message}.", socketException);
                 }
 
                 if (cancellationToken.IsCancellationRequested)

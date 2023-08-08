@@ -31,7 +31,7 @@ namespace Halibut.Transport.Protocol
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, AsyncHalibutFeature asyncHalibutFeature, ILog log)
         {
-            this.stream = asyncHalibutFeature.IsEnabled() ? new RewindableBufferStream(new TimeoutStream(stream), HalibutLimits.RewindableBufferStreamSize) : new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+            this.stream = asyncHalibutFeature.IsEnabled() ? new RewindableBufferStream(new NetworkTimeoutStream(stream), HalibutLimits.RewindableBufferStreamSize) : new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
             this.log = log;
             this.serializer = serializer;
 
