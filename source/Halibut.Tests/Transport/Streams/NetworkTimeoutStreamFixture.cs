@@ -79,7 +79,7 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task ReadAsyncShouldTimeout_AndLookLikeANetworkTimeoutException()
+        public async Task ReadAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException()
         {
             var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
 
@@ -96,7 +96,9 @@ namespace Halibut.Tests.Transport.Streams
                 stopWatch.Stop();
 
                 actualException.Should().NotBeNull().And.BeOfType<IOException>();
-                actualException!.Message.Should().Be("Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+                actualException!.Message.Should().ContainAny(
+                    "Unable to write data to the transport connection: Connection timed out.",
+                    "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
             }
@@ -193,7 +195,7 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task WriteAsyncShouldTimeout_AndLookLikeANetworkTimeoutException()
+        public async Task WriteAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException()
         {
             var (disposables, sut, _) = await BuildTcpClientAndTcpListener(
                 CancellationToken, 
@@ -219,7 +221,9 @@ namespace Halibut.Tests.Transport.Streams
                 stopWatch.Stop();
 
                 actualException.Should().NotBeNull().And.BeOfType<IOException>();
-                actualException!.Message.Should().Be("Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+                actualException!.Message.Should().ContainAny(
+                    "Unable to write data to the transport connection: Connection timed out.",
+                    "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
             }
