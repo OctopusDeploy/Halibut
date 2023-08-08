@@ -73,7 +73,7 @@ namespace Halibut.Tests
             }
 
             [Test]
-            [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
+            [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: false)]
             public async Task SendMessagesToTentacleInParallelAsync(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var builder = clientAndServiceTestCase.CreateTestCaseBuilder();
