@@ -101,7 +101,7 @@ namespace Halibut.Transport
             }
             else
             {
-                log.Write(EventType.Diagnostic, "Creating a proxy client");
+                log.Write(EventType.Diagnostic, "Creating a proxy client (async)");
                 
                 client = await new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)

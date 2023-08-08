@@ -49,8 +49,10 @@ namespace Halibut.TestProxy
 
             try
             {
+                
                 while (!stoppingToken.IsCancellationRequested)
                 {
+                    logger.LogInformation("Proxy not stopped, start listening");
                     try
                     {
                         TcpClient? client;
@@ -75,18 +77,22 @@ namespace Halibut.TestProxy
                             client = await (await Task.WhenAny(actionTask, cancelTask).ConfigureAwait(false)).ConfigureAwait(false);
                         }
 #else
+                        logger.LogInformation("await AcceptTcpClientAsync");
                     client = await listener.AcceptTcpClientAsync(stoppingToken);
 #endif
+                        logger.LogInformation("Task.Run for HandleProxyRequest");
                         _ = Task.Run(async () => await HandleProxyRequest(client!, stoppingToken), stoppingToken);
                     }
                     catch (OperationCanceledException)
                     {
+                        logger.LogInformation("Shut it down");
                         // Ignore, we are being shutdown
                     }
                 }
             }
             finally
             {
+                logger.LogInformation("Proxy stop");
                 listener.Stop();
             }
         }
@@ -95,7 +101,9 @@ namespace Halibut.TestProxy
 
         async Task HandleProxyRequest(TcpClient client, CancellationToken cancellationToken)
         {
+            logger.LogInformation("HandleProxyRequest called");
         if (cancellationToken.IsCancellationRequested) return;
+            logger.LogInformation("HandleProxyRequest running");
 
         var stream = client.GetStream();
         if (client.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)

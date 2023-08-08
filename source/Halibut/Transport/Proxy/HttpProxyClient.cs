@@ -26,6 +26,7 @@
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -33,6 +34,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Proxy
 {
@@ -339,7 +341,7 @@ namespace Halibut.Transport.Proxy
         {
             // TODO - ASYNC ME UP!
             // This stream needs to be wrapped into a TimeoutStream
-            var stream = TcpClient.GetStream();
+            var stream = new NetworkTimeoutStream(TcpClient.GetStream());
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 
@@ -431,7 +433,7 @@ namespace Halibut.Transport.Proxy
             }
         }
         
-        async Task WaitForDataAsync(NetworkStream stream, CancellationToken cancellationToken)
+        async Task WaitForDataAsync(NetworkTimeoutStream stream, CancellationToken cancellationToken)
         {
             var sleepTime = 0;
             while (!stream.DataAvailable)

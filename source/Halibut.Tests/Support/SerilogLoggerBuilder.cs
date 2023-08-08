@@ -59,7 +59,7 @@ namespace Halibut.Tests.Support
                 }
                 else
                 {
-                    TestContext.Progress.Write(logLine);
+                    TestContext.Write(logLine);
                 }
             }
         }

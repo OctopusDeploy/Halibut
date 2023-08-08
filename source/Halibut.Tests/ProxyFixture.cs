@@ -35,23 +35,41 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testWebSocket: false, 
-            testAsyncAndSyncClients: false // TODO - ASYNC ME UP!
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testWebSocket: false,
+            testAsyncAndSyncClients: true // TODO - ASYNC ME UP!
             // This doesn't work in async.
-            )]
+        )]
+        [Timeout(60000)]
         // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
         public async Task OctopusCanNotSendMessagesToTentacle_WithEchoService_AndABrokenProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
                        .WithProxy()
                        .Build(CancellationToken))
             {
                 await clientAndService.HttpProxy!.StopAsync(CancellationToken.None);
 
-                var echo = clientAndService.CreateClient<IEchoService>();
-                Func<string> action = () => echo.SayHello("Deploy package A");
-                action.Should().Throw<HalibutClientException>();
+                IAsyncClientEchoService echo;
+                // Only set if latest version
+                if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient())
+                {
+                    echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                }
+                else
+                {
+                    echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                    {
+                        point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
+                        point.TcpClientConnectTimeout = TimeSpan.FromSeconds(5);
+                        point.RetryCountLimit = 2;
+                    });
+                }
+
+                Func<Task<string>> action = () => echo.SayHelloAsync("Deploy package A");
+                await action.Should().ThrowAsync<HalibutClientException>();
+                //AssertAsync.Throws<>()
             }
         }
     }

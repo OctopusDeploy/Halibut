@@ -23,10 +23,10 @@ namespace Halibut.Util.AsyncEx
         {
             var timeoutTask = Task.Delay(timeout, cancellationToken);
             var wrappedTask = AwaitAndSwallowExceptionsWhenTimedOut(task, timeoutTask);
-            await Task.WhenAny(wrappedTask, timeoutTask);
+            var completedTask = await Task.WhenAny(wrappedTask, timeoutTask);
             
             cancellationToken.ThrowIfCancellationRequested();
-            if (timeoutTask.IsCompleted)
+            if (completedTask == timeoutTask)
                 throw new TimeoutException();
 
             await wrappedTask;
