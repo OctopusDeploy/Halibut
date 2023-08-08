@@ -200,5 +200,24 @@ namespace Halibut.Transport.Streams
             get => inner.Position;
             set => inner.Position = value;
         }
+
+        public async Task<bool> DataAvailable(CancellationToken cancellationToken)
+        {
+            if (inner is NetworkStream networkStream)
+            {
+                return await WrapWithCancellationAndTimeout(
+                    async ct =>
+                    {
+                        await Task.CompletedTask;
+                        return networkStream.DataAvailable;
+                    },
+                    CanTimeout ? WriteTimeout : int.MaxValue,
+                    false,
+                    nameof(WriteAsync),
+                    cancellationToken);
+            }
+
+            throw new NotSupportedException($"{nameof(DataAvailable)} is only available when wrapping a {nameof(NetworkStream)}");
+        }
     }
 }

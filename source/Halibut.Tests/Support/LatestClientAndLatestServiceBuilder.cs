@@ -318,7 +318,7 @@ namespace Halibut.Tests.Support
 
             if (httpProxy != null)
             {
-                await httpProxy.StartAsync(cancellationTokenSource.Token);
+                await httpProxy.StartAsync();
                 httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint.Port, ProxyType.HTTP);
             }
 
@@ -543,7 +543,12 @@ namespace Halibut.Tests.Support
             public void Dispose()
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
-                logger.Information("Dispose called");
+
+                logger.Information("****** ****** ****** ****** ****** ****** ******");
+                logger.Information("****** CLIENT AND SERVICE DISPOSE CALLED  ******");
+                logger.Information("*     Subsequent errors should be ignored      *");
+                logger.Information("****** ****** ****** ****** ****** ****** ******");
+
                 Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
 
                 Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);

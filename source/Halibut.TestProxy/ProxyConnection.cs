@@ -19,7 +19,6 @@ namespace Halibut.TestProxy
         readonly ProxyEndpoint destinationEndpoint;
         readonly ILogger<ProxyConnection> logger;
         List<TcpTunnel>? tunnels = new();
-        readonly SemaphoreSlim sync = new(1);
 
         public ProxyConnection(ProxyEndpoint destinationEndpoint, ILogger<ProxyConnection> logger)
         {
@@ -29,44 +28,36 @@ namespace Halibut.TestProxy
 
         public async Task Connect(TcpClient source, CancellationToken cancellationToken)
         {
-            await sync.WaitAsync(cancellationToken);
-
-            try
+            if (source.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)
             {
-                if (source.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)
+                throw new InvalidOperationException($"{source.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
+            }
+
+            var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
+            var destination = new TcpClient(destinationEndpoint.Hostname, destinationEndpoint.Port);
+            var tunnel = new TcpTunnel(source, destination);
+            tunnels!.Add(tunnel);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            // We kick the tunneling to a background task so that we can await for it close and cleanup
+            _ = Task.Run<Task>(async () =>
+            {
+                try
                 {
-                    throw new InvalidOperationException($"{source.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
+                    logger.LogInformation("Proxy connection opened - {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, destinationEndpoint);
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await tunnel.Tunnel(cancellationToken);
+
+                    logger.LogInformation("Proxy connection closed - {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, destinationEndpoint);
                 }
-
-                var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
-                var destination = new TcpClient(destinationEndpoint.Hostname, destinationEndpoint.Port);
-                var tunnel = new TcpTunnel(source, destination);
-
-                tunnels!.Add(tunnel);
-
-                // We kick the tunneling to a background task so that we can await for it close and cleanup
-                _ = Task.Run<Task>(async () =>
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        logger.LogInformation("Proxy connection opened - {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, destinationEndpoint);
-
-                        await tunnel.Tunnel(cancellationToken);
-
-                        logger.LogInformation("Proxy connection closed - {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, destinationEndpoint);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "An error has occurred in proxy connection - {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, destinationEndpoint);
-                        tunnels.Remove(tunnel);
-                        tunnel.Dispose();
-                    }
-                }, cancellationToken);
-            }
-            finally
-            {
-                sync.Release();
-            }
+                    logger.LogWarning(ex, "An error has occurred in proxy connection - {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, destinationEndpoint);
+                    tunnels.Remove(tunnel);
+                    tunnel.Dispose();
+                }
+            }, cancellationToken);
         }
 
         public void Dispose()
@@ -78,8 +69,6 @@ namespace Halibut.TestProxy
             }
 
             tunnels = null;
-
-            sync.Dispose();
         }
     }
 }

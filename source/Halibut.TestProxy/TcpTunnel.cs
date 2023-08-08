@@ -31,7 +31,7 @@ namespace Halibut.TestProxy
                 var fromStreamTask = fromStream.CopyToAsync(toWriter, cancellationToken);
                 var toStreamTask = toStream.CopyToAsync(fromWriter, cancellationToken);
 
-                await Task.WhenAny(fromStreamTask, toStreamTask);
+                await Task.WhenAny(fromStreamTask, toStreamTask, cancellationToken.AsTask());
             }
             catch (Exception)
             {
@@ -40,6 +40,10 @@ namespace Halibut.TestProxy
             {
                 await fromWriter.CompleteAsync();
                 await toWriter.CompleteAsync();
+                fromStream.Close();
+                toStream.Close();
+                fromClient.Close();
+                toClient.Close();
             }
         }
 
