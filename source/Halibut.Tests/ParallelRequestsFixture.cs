@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Logging;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -33,7 +32,7 @@ namespace Halibut.Tests
 
                 var lockService = clientAndService.CreateAsyncClient<ILockService, IAsyncClientLockService>();
 
-                int threadCount = 64;
+                var threadCount = NumberOfParallelRequests(clientAndServiceTestCase);
                 long threadCompletionCount = 0;
                 var threads = new List<Task>();
 
@@ -93,7 +92,7 @@ namespace Halibut.Tests
 
                 var messagesAreSentTheSameTimeSemaphore = new SemaphoreSlim(0, dataStreams.Length);
 
-                int threadCount = 64;
+                var threadCount = NumberOfParallelRequests(clientAndServiceTestCase);
                 int threadCompletionCount = 0;
                 var threads = new List<Task>();
                 for (var i = 0; i < threadCount; i++)
@@ -118,8 +117,7 @@ namespace Halibut.Tests
                 threadCompletionCount.Should().Be(threadCount);
             }
         }
-        
-        
+
         [Parallelizable(ParallelScope.Children)]
         public class SyncParallelRequestsFixture : BaseTest
         {
@@ -135,7 +133,7 @@ namespace Halibut.Tests
 
                 var lockService = clientAndService.CreateClient<ILockService>();
 
-                int threadCount = 64;
+                var threadCount = NumberOfParallelRequests(clientAndServiceTestCase);
                 long threadCompletionCount = 0;
                 var threads = new List<Thread>();
                 var exceptions = new ConcurrentBag<Exception>();
@@ -200,7 +198,7 @@ namespace Halibut.Tests
 
                 var messagesAreSentTheSameTimeSemaphore = new SemaphoreSlim(0, dataStreams.Length);
 
-                int threadCount = 64;
+                var threadCount = NumberOfParallelRequests(clientAndServiceTestCase);
                 int threadCompletionCount = 0;
                 var threads = new List<Thread>();
                 var exceptions = new ConcurrentBag<Exception>();
@@ -253,6 +251,21 @@ namespace Halibut.Tests
                     thread.Join();
                 }
             }
+        }
+        
+        static int NumberOfParallelRequests(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            int threadCount = 64;
+            if (!clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient())
+            {
+                // Reduce this down to reduce thread pool exhaustion.
+                // We already test latest => latest with 64 concurrent task
+                // So it is likely that an external old client will have no problems running
+                // 64 concurrent task on a latest service.
+                threadCount = 8;
+            }
+
+            return threadCount;
         }
     }
 }
