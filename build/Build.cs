@@ -112,8 +112,9 @@ class Build : NukeBuild
                     .EnableNoBuild()
                     .EnableNoRestore()
                     .EnableBlameCrash()
+                    .SetBlameCrashDumpType("full")
                     .SetBlameHangTimeout(TimeSpan.FromMinutes(30).TotalMilliseconds.ToString())
-                    .SetBlameCrashDumpType("full"));
+                    .SetBlameHangDumpType("full"));
 
             });
     }
