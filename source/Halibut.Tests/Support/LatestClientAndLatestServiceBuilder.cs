@@ -43,8 +43,8 @@ namespace Halibut.Tests.Support
         LogLevel halibutLogLevel = LogLevel.Info;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
-        ITrustProvider serviceTrustProvider;
-        Func<string, string, UnauthorizedClientConnectResponse> serviceOnUnauthorizedClientConnect;
+        ITrustProvider clientTrustProvider;
+        Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
 
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
@@ -250,15 +250,15 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public LatestClientAndLatestServiceBuilder WithServiceOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
+        public LatestClientAndLatestServiceBuilder WithClientOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
         {
-            serviceOnUnauthorizedClientConnect = onUnauthorizedClientConnect;
+            clientOnUnauthorizedClientConnect = onUnauthorizedClientConnect;
             return this;
         }
         
-        public LatestClientAndLatestServiceBuilder WithServiceTrustProvider(ITrustProvider trustProvider)
+        public LatestClientAndLatestServiceBuilder WithClientTrustProvider(ITrustProvider trustProvider)
         {
-            serviceTrustProvider = trustProvider;
+            clientTrustProvider = trustProvider;
             return this;
         }
 
@@ -303,7 +303,9 @@ namespace Halibut.Tests.Support
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory)
-                .WithPendingRequestQueueFactory(factory);
+                .WithPendingRequestQueueFactory(factory)
+                .WithTrustProvider(clientTrustProvider)
+                .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
             if (forceClientProxyType == ForceClientProxyType.AsyncClient)
             {
@@ -319,9 +321,7 @@ namespace Halibut.Tests.Support
                 var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                    .WithLogFactory(BuildServiceLogger())
-                    .WithTrustProvider(serviceTrustProvider)
-                    .WithOnUnauthorizedClientConnect(serviceOnUnauthorizedClientConnect);
+                    .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
                 service = serviceBuilder.Build();
