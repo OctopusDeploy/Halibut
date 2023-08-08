@@ -4,6 +4,7 @@ using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
+using FileTransferService = Halibut.TestUtils.SampleProgram.Base.Services.FileTransferService;
 
 namespace Halibut.TestUtils.SampleProgram.Base
 {

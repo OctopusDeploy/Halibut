@@ -192,7 +192,14 @@ namespace Halibut.Tests.Diagnostics
                 {
                     var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-                    var dataStream = new DataStream(10, _ => new FileStream("DoesNotExist2497546", FileMode.Open).Dispose());
+                    var dataStream = new DataStream(10, 
+                        _ => new FileStream("DoesNotExist2497546", FileMode.Open).Dispose(), 
+                        async (_, _) =>
+                            {
+                                await Task.CompletedTask;
+                                new FileStream("DoesNotExist2497546", FileMode.Open).Dispose();
+                                
+                            });
 
                     (await AssertAsync.Throws<HalibutClientException>(async () => await echo.CountBytesAsync(dataStream)))
                         .And
@@ -212,7 +219,13 @@ namespace Halibut.Tests.Diagnostics
                 {
                     var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-                    var dataStream = new DataStream(10, _ => throw new FileNotFoundException());
+                    var dataStream = new DataStream(10, 
+                        _ => throw new FileNotFoundException(), 
+                        async (_, _) =>
+                        {
+                            await Task.CompletedTask.ConfigureAwait(false);
+                            throw new FileNotFoundException();
+                        });
 
                     (await AssertAsync.Throws<HalibutClientException>(() => echo.CountBytesAsync(dataStream)))
                         .And

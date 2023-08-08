@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Builders;
@@ -30,20 +31,22 @@ namespace Halibut.Tests.Tentacle
             {
                 var fileTransferService = clientAndService.CreateClient<IFileTransferService, IAsyncClientFileTransferService>();
 
-                await DownloadFile(fileTransferService);
-                await DownloadFile(fileTransferService);
-                await DownloadFile(fileTransferService);
-                await DownloadFile(fileTransferService);
+                await DownloadFile(fileTransferService, clientAndServiceTestCase, CancellationToken);
+                await DownloadFile(fileTransferService, clientAndServiceTestCase, CancellationToken);
+                await DownloadFile(fileTransferService, clientAndServiceTestCase, CancellationToken);
+                await DownloadFile(fileTransferService, clientAndServiceTestCase, CancellationToken);
             }
 
-            static async Task DownloadFile(IAsyncClientFileTransferService fileTransferService)
+            static async Task DownloadFile(IAsyncClientFileTransferService fileTransferService, ClientAndServiceTestCase clientAndServiceTestCase, CancellationToken cancellationToken)
             {
                 using (var fileToDownload = new RandomTemporaryFileBuilder().WithSizeInMb(new Random().Next(4, 12)).Build())
                 using (var temporaryFolder = new TemporaryDirectory())
                 {
                     var response = await fileTransferService.DownloadFileAsync(fileToDownload.File.FullName);
                     var downloadedFilePath = Path.Combine(temporaryFolder.DirectoryPath, fileToDownload.File.Name);
-                    response.Receiver().SaveTo(downloadedFilePath);
+                    await clientAndServiceTestCase.SyncOrAsync
+                        .WhenSync(() => response.Receiver().SaveTo(downloadedFilePath))
+                        .WhenAsync(() => response.Receiver().SaveToAsync(downloadedFilePath, cancellationToken));
 
                     var fileToDownloadMd5 = CalculateMd5(fileToDownload.File.FullName);
                     var downloadedFileMd5 = CalculateMd5(downloadedFilePath);
@@ -76,14 +79,22 @@ namespace Halibut.Tests.Tentacle
                 {
                     var uploadedFilePath = Path.Combine(temporaryFolder.DirectoryPath, Guid.NewGuid().ToString());
 
-                    var dataStream = new DataStream(fileToUpload.File.Length, writer =>
-                    {
-                        using (var stream = new FileStream(fileToUpload.File.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    var dataStream = new DataStream(fileToUpload.File.Length, 
+                        writer =>
+                            {
+                                using (var stream = new FileStream(fileToUpload.File.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                                {
+                                    stream.CopyTo(writer);
+                                    writer.Flush();
+                                }
+                            }, async (outputStream, ct) =>
                         {
-                            stream.CopyTo(writer);
-                            writer.Flush();
-                        }
-                    });
+                            using (var stream = new FileStream(fileToUpload.File.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            {
+                                await stream.CopyToAsync(outputStream);
+                                await outputStream.FlushAsync(ct);
+                            }
+                        });
 
                     await fileTransferService.UploadFileAsync(uploadedFilePath, dataStream);
 

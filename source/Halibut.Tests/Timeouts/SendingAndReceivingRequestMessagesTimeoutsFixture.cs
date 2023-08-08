@@ -157,7 +157,7 @@ namespace Halibut.Tests.Timeouts
                 
                 // It is not clear why listening doesn't seem to wait to send a control message here.
                 var addControlMessageTimeout = TimeSpan.Zero;
-                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening)
+                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening && clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync)
                 {
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 
 namespace Halibut.Transport.Protocol
@@ -32,6 +33,14 @@ namespace Halibut.Transport.Protocol
 
             moved = true;
             GC.SuppressFinalize(this);
+        }
+
+        public Task SaveToAsync(string filePath, CancellationToken cancellationToken)
+        {
+            // TODO - ASYNC ME UP!
+            // Can this meaningfully become async? I did not see a async move operation.
+            SaveTo(filePath);
+            return Task.CompletedTask;
         }
 
         void SetFilePermissionsToInheritFromParent(string filePath)
@@ -67,6 +76,19 @@ namespace Halibut.Transport.Protocol
             GC.SuppressFinalize(this);
         }
 
+        public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
+        {
+            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+
+            using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+                await readerAsync(file, cancellationToken);
+            }
+            await AttemptToDeleteAsync(path);
+            moved = true;
+            GC.SuppressFinalize(this);
+        }
+
         static void AttemptToDelete(string fileToDelete)
         {
             for (var i = 1; i <= 3; i++)
@@ -83,6 +105,28 @@ namespace Halibut.Transport.Protocol
                     if (i == 3)
                         throw;
                     Thread.Sleep(1000);
+                }
+            }
+        }
+        
+        static async Task AttemptToDeleteAsync(string fileToDelete)
+        {
+            for (var i = 1; i <= 3; i++)
+            {
+                try
+                {
+                    // TODO - ASYNC ME UP!
+                    // I didn't see any async versions of these operations. 
+                    if (File.Exists(fileToDelete))
+                    {
+                        File.Delete(fileToDelete);
+                    }
+                }
+                catch (Exception)
+                {
+                    if (i == 3)
+                        throw;
+                    await Task.Delay(TimeSpan.FromSeconds(1));
                 }
             }
         }
