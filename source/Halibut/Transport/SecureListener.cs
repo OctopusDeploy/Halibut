@@ -313,14 +313,14 @@ namespace Halibut.Transport
 
             if (asyncHalibutFeature.IsEnabled())
             {
-                await stream.WriteControlLineAsync("HTTP/1.0 200 OK", cts.Token);
-                await stream.WriteControlLineAsync("Content-Type: text/html; charset=utf-8", cts.Token);
-                await stream.WriteControlLineAsync("Content-Length: " + message.Length, cts.Token);
+                await stream.WriteLineAsync("HTTP/1.0 200 OK", cts.Token);
+                await stream.WriteLineAsync("Content-Type: text/html; charset=utf-8", cts.Token);
+                await stream.WriteLineAsync("Content-Length: " + message.Length, cts.Token);
                 foreach (var header in headers)
-                    await stream.WriteControlLineAsync($"{header.Key}: {header.Value}", cts.Token);
-                await stream.WriteControlLineAsync(string.Empty, cts.Token);
-                await stream.WriteControlLineAsync(message, cts.Token);
-                await stream.WriteControlLineAsync(String.Empty, cts.Token);
+                    await stream.WriteLineAsync($"{header.Key}: {header.Value}", cts.Token);
+                await stream.WriteLineAsync(string.Empty, cts.Token);
+                await stream.WriteLineAsync(message, cts.Token);
+                await stream.WriteLineAsync(string.Empty, cts.Token);
                 await stream.FlushAsync();
             }
             else

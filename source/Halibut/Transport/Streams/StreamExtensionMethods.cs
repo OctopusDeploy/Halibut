@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,12 @@ namespace Halibut.Transport.Streams
         static readonly Encoding Encoding = new UTF8Encoding(false);
 
         public static async Task WriteControlLineAsync(this Stream stream, string s, CancellationToken cancellationToken)
+        {
+            var bytes = Encoding.GetBytes(s + ControlMessageNewLine);
+            await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
+        }
+        
+        public static async Task WriteLineAsync(this Stream stream, string s, CancellationToken cancellationToken)
         {
             var bytes = Encoding.GetBytes(s + ControlMessageNewLine);
             await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
