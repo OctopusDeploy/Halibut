@@ -13,18 +13,19 @@ namespace Halibut.Tests.Support.TestAttributes
         public LatestClientAndPreviousServiceVersionsTestCasesAttribute(bool testWebSocket = true, 
             bool testNetworkConditions = true,
             bool testListening = true,
+            bool testPolling = true,
             bool testAsyncAndSyncClients = true
             ) :
             base(
                 typeof(LatestClientAndPreviousServiceVersionsTestCases),
                 nameof(LatestClientAndPreviousServiceVersionsTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testAsyncAndSyncClients })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testAsyncAndSyncClients })
         {
         }
         
         static class LatestClientAndPreviousServiceVersionsTestCases
         {
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testAsyncAndSyncClients)
+            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling,  bool testAsyncAndSyncClients)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -36,6 +37,11 @@ namespace Halibut.Tests.Support.TestAttributes
                 if (!testListening)
                 {
                     serviceConnectionTypes.Remove(ServiceConnectionType.Listening);
+                }
+                
+                if (!testPolling)
+                {
+                    serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
                 
                 ForceClientProxyType[] clientProxyTypesToTest = new ForceClientProxyType[0];

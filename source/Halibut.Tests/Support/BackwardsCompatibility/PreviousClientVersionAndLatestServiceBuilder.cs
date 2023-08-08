@@ -389,6 +389,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             /// This is the ProxyClient
             /// </summary>
             public HalibutRuntime Client { get; }
+
+            public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+
             public HalibutRuntime ProxyClient => Client;
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
@@ -406,7 +409,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     throw new Exception("Setting the connect cancellation token to anything other than none is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
                 }
 
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                var serviceEndpoint = ServiceEndPoint;
                 return ProxyClient.CreateClient<TService>(serviceEndpoint, cancellationToken??CancellationToken.None);
             }
 
@@ -458,6 +461,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 throw new NotSupportedException("Not supported since the options can not be passed to the external binary.");
+            }
+            
+            public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
+            {
+                return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
             }
 
             public void Dispose()

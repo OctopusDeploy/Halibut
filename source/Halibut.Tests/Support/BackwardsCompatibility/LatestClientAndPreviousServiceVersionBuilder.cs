@@ -333,6 +333,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
 
             public HalibutRuntime Client { get; }
+            public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
+
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
 
@@ -348,7 +350,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
+                var serviceEndpoint = ServiceEndPoint;
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService>(forceClientProxyType, Client, serviceEndpoint, cancellationToken);
             }
@@ -375,6 +377,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(forceClientProxyType, Client, serviceEndpoint);
+            }
+
+            public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
+            {
+                return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
             }
 
             public void Dispose()
