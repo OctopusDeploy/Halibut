@@ -27,7 +27,7 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
-                "flush",
+                false,
                 nameof(FlushAsync),
                 cancellationToken);
         }
@@ -37,7 +37,7 @@ namespace Halibut.Transport.Streams
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, offset, count, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
-                "read",
+                true,
                 nameof(ReadAsync),
                 cancellationToken);
         }
@@ -51,7 +51,7 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
-                "write",
+                false,
                 nameof(WriteAsync),
                 cancellationToken);
         }
@@ -62,7 +62,7 @@ namespace Halibut.Transport.Streams
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
-                "read",
+                true,
                 nameof(ReadAsync),
                 cancellationToken);
         }
@@ -76,7 +76,7 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
-                "write",
+                false,
                 nameof(WriteAsync),
                 cancellationToken);
         }
@@ -85,7 +85,7 @@ namespace Halibut.Transport.Streams
         async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
             int timeout, 
-            string actionName,
+            bool isRead,
             string methodName, 
             CancellationToken cancellationToken)
         {
@@ -109,24 +109,24 @@ namespace Halibut.Transport.Streams
                     }
                     catch { }
 
-                    ThrowMeaningfulException(actionName);
+                    ThrowMeaningfulException();
                 }
 
                 return await actionTask;
             }
             catch (Exception e)
             {
-                ThrowMeaningfulException(actionName, e);
+                ThrowMeaningfulException(e);
 
                 throw;
             }
 
-            void ThrowMeaningfulException(string actionName, Exception? innerException = null)
+            void ThrowMeaningfulException(Exception? innerException = null)
             {
                 if (timeoutCancellationTokenSource.IsCancellationRequested)
                 {
                     var socketException = new SocketException(10060);
-                    throw new IOException($"Unable to {actionName} data from the transport connection: {socketException.Message}.", socketException);
+                    throw new IOException($"Unable to {(isRead ? "read data from" : "write data to")} the transport connection: {socketException.Message}.", socketException);
                 }
 
                 if (cancellationToken.IsCancellationRequested)
