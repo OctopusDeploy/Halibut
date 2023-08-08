@@ -97,7 +97,7 @@ namespace Halibut.Tests.Transport.Streams
 
                 actualException.Should().NotBeNull().And.BeOfType<IOException>();
                 actualException!.Message.Should().ContainAny(
-                    "Unable to write data to the transport connection: Connection timed out.",
+                    "Unable to read data to the transport connection: Connection timed out.",
                     "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
@@ -223,7 +223,7 @@ namespace Halibut.Tests.Transport.Streams
                 actualException.Should().NotBeNull().And.BeOfType<IOException>();
                 actualException!.Message.Should().ContainAny(
                     "Unable to write data to the transport connection: Connection timed out.",
-                    "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+                    "Unable to write data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
             }

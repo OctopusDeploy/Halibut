@@ -27,6 +27,7 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
+                "flush",
                 nameof(FlushAsync),
                 cancellationToken);
         }
@@ -36,6 +37,7 @@ namespace Halibut.Transport.Streams
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, offset, count, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
+                "read",
                 nameof(ReadAsync),
                 cancellationToken);
         }
@@ -49,6 +51,7 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
+                "write",
                 nameof(WriteAsync),
                 cancellationToken);
         }
@@ -59,6 +62,7 @@ namespace Halibut.Transport.Streams
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
+                "read",
                 nameof(ReadAsync),
                 cancellationToken);
         }
@@ -72,12 +76,18 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
+                "write",
                 nameof(WriteAsync),
                 cancellationToken);
         }
 #endif
 
-        async Task<T> WrapWithCancellationAndTimeout<T>(Func<CancellationToken, Task<T>> action, int timeout, string methodName, CancellationToken cancellationToken)
+        async Task<T> WrapWithCancellationAndTimeout<T>(
+            Func<CancellationToken, Task<T>> action,
+            int timeout, 
+            string actionName,
+            string methodName, 
+            CancellationToken cancellationToken)
         {
             using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellationTokenSource.Token);
@@ -99,24 +109,24 @@ namespace Halibut.Transport.Streams
                     }
                     catch { }
 
-                    ThrowMeaningfulException();
+                    ThrowMeaningfulException(actionName);
                 }
 
                 return await actionTask;
             }
             catch (Exception e)
             {
-                ThrowMeaningfulException(e);
+                ThrowMeaningfulException(actionName, e);
 
                 throw;
             }
 
-            void ThrowMeaningfulException(Exception? innerException = null)
+            void ThrowMeaningfulException(string actionName, Exception? innerException = null)
             {
                 if (timeoutCancellationTokenSource.IsCancellationRequested)
                 {
                     var socketException = new SocketException(10060);
-                    throw new IOException($"Unable to read data from the transport connection: {socketException.Message}.", socketException);
+                    throw new IOException($"Unable to {actionName} data from the transport connection: {socketException.Message}.", socketException);
                 }
 
                 if (cancellationToken.IsCancellationRequested)
