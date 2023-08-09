@@ -498,6 +498,8 @@ namespace Halibut.Tests.Support
             }
 
             public HalibutRuntime Client { get; }
+            public ServiceEndPoint ServiceEndPoint => GetServiceEndPoint();
+
             public HalibutRuntime? Service { get; }
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
@@ -547,6 +549,11 @@ namespace Halibut.Tests.Support
                 var serviceEndpoint = GetServiceEndPoint();
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(forceClientProxyType, Client, serviceEndpoint);
+            }
+            
+            public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
+            {
+                return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
             }
 
             public void Dispose()

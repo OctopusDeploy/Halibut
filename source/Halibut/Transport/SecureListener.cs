@@ -12,6 +12,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Halibut.Transport.Streams;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -41,21 +43,23 @@ namespace Halibut.Transport
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         readonly TcpClientManager tcpClientManager = new TcpClientManager();
         readonly ExchangeActionAsync exchangeAction;
+        readonly AsyncHalibutFeature asyncHalibutFeature;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent)
-            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>())
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, AsyncHalibutFeature asyncHalibutFeature)
+            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>(), asyncHalibutFeature)
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders) :
-            this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, AsyncHalibutFeature asyncHalibutFeature) :
+            this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection, asyncHalibutFeature)
         {
         }
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect)
+        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
+            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, AsyncHalibutFeature asyncHalibutFeature)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -66,6 +70,7 @@ namespace Halibut.Transport
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
+            this.asyncHalibutFeature = asyncHalibutFeature;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -199,7 +204,7 @@ namespace Halibut.Transport
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
-                    var req = ReadInitialRequest(ssl);
+                    var req = await ReadInitialRequest(ssl);
                     if (string.IsNullOrEmpty(req))
                     {
                         log.Write(EventType.Diagnostic, "Ignoring empty request");
@@ -209,7 +214,7 @@ namespace Halibut.Transport
                     if (req.Substring(0, 2) != "MX")
                     {
                         log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
-                        SendFriendlyHtmlPage(ssl);
+                        await SendFriendlyHtmlPage(ssl);
                         return;
                     }
 
@@ -301,25 +306,40 @@ namespace Halibut.Transport
             }
         }
 
-        void SendFriendlyHtmlPage(Stream stream)
+        async Task SendFriendlyHtmlPage(Stream stream)
         {
             var message = getFriendlyHtmlPageContent();
             var headers = getFriendlyHtmlPageHeaders();
 
-            // This could fail if the client terminates the connection and we attempt to write to it
-            // Disposing the StreamWriter will close the stream - it owns the stream
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
+            if (asyncHalibutFeature.IsEnabled())
             {
-                writer.WriteLine("HTTP/1.0 200 OK");
-                writer.WriteLine("Content-Type: text/html; charset=utf-8");
-                writer.WriteLine("Content-Length: " + message.Length);
+                await stream.WriteLineAsync("HTTP/1.0 200 OK", cts.Token);
+                await stream.WriteLineAsync("Content-Type: text/html; charset=utf-8", cts.Token);
+                await stream.WriteLineAsync("Content-Length: " + message.Length, cts.Token);
                 foreach (var header in headers)
-                    writer.WriteLine($"{header.Key}: {header.Value}");
-                writer.WriteLine();
-                writer.WriteLine(message);
-                writer.WriteLine();
-                writer.Flush();
-                stream.Flush();
+                    await stream.WriteLineAsync($"{header.Key}: {header.Value}", cts.Token);
+                await stream.WriteLineAsync(string.Empty, cts.Token);
+                await stream.WriteLineAsync(message, cts.Token);
+                await stream.WriteLineAsync(string.Empty, cts.Token);
+                await stream.FlushAsync();
+            }
+            else
+            {
+                // This could fail if the client terminates the connection and we attempt to write to it
+                // Disposing the StreamWriter will close the stream - it owns the stream
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
+                {
+                    writer.WriteLine("HTTP/1.0 200 OK");
+                    writer.WriteLine("Content-Type: text/html; charset=utf-8");
+                    writer.WriteLine("Content-Length: " + message.Length);
+                    foreach (var header in headers)
+                        writer.WriteLine($"{header.Key}: {header.Value}");
+                    writer.WriteLine();
+                    writer.WriteLine(message);
+                    writer.WriteLine();
+                    writer.Flush();
+                    stream.Flush();
+                }
             }
         }
 
@@ -378,13 +398,16 @@ namespace Halibut.Transport
             }
         }
 
-        string ReadInitialRequest(Stream stream)
+        async Task<string> ReadInitialRequest(Stream stream)
         {
             var builder = new StringBuilder();
             var lastWasNewline = false;
             while (builder.Length < 20000)
             {
-                var b = stream.ReadByte();
+                var b = asyncHalibutFeature.IsEnabled()
+                    ? await stream.ReadByteAsync(cts.Token)
+                    : stream.ReadByte();
+
                 if (b == -1) return builder.ToString();
 
                 var c = (char)b;

@@ -21,11 +21,11 @@ namespace Halibut.Tests.Support.TestCases
 
         public static NetworkConditionTestCase NetworkCondition20MsLatency = 
             new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build(), 
-                "20ms send delay");
+                "20ms SendDelay");
 
         public static NetworkConditionTestCase NetworkCondition20MsLatencyWithLastByteArrivingLate =
             new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).WithNumberOfBytesToDelaySending(1).Build(),
-                "20ms send delay with last byte arriving late");
+                "20ms SendDelay last byte arrives late");
 
         //public static NetworkConditionTestCase NetworkCondition20MsLatencyWithLast2BytesArrivingLate =
         //    new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).WithNumberOfBytesToDelaySending(2).Build(),
@@ -48,7 +48,7 @@ namespace Halibut.Tests.Support.TestCases
 
         public override string ToString()
         {
-            return $"Network Condition: '{NetworkConditionDescription}'";
+            return $"Network: '{NetworkConditionDescription}'";
         }
     }
 }

@@ -7,7 +7,9 @@ using System.Threading;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
@@ -46,7 +48,8 @@ namespace Halibut.Tests.Transport
 
         [Test]
         [WindowsTest]
-        public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows()
+        [SyncAndAsync]
+        public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows(SyncOrAsync syncOrAsync)
         {
             var logger = new SerilogLoggerBuilder().Build();
             const int secondsToSample = 5;
@@ -60,7 +63,8 @@ namespace Halibut.Tests.Transport
                     null,
                     thumbprint => true,
                     new LogFactory(),
-                    () => ""
+                    () => "",
+                    syncOrAsync.ToAsyncHalibutFeature()
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)

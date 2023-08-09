@@ -177,12 +177,11 @@ namespace Halibut.Tests.Timeouts
 
         static void AssertExceptionLooksLikeAWriteTimeout(HalibutClientException? e)
         {
-            
             e.Message.Should().ContainAny(
-        "Unable to write data to the transport connection: Connection timed out.",
-                    " Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
+                "Unable to write data to the transport connection: Connection timed out.",
+                " Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
         }
-        
+
         static void AssertExceptionMessageLooksLikeAReadTimeout(HalibutClientException? e)
         {
             e.Message.Should().ContainAny(

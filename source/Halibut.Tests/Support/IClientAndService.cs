@@ -9,6 +9,7 @@ namespace Halibut.Tests.Support
     public interface IClientAndService : IDisposable
     {
         HalibutRuntime Client { get; }
+        ServiceEndPoint ServiceEndPoint { get; }
         PortForwarder? PortForwarder { get; }
         HttpProxyService? HttpProxy { get; }
         TService CreateClient<TService>(CancellationToken? cancellationToken = null);
@@ -18,5 +19,6 @@ namespace Halibut.Tests.Support
         TClientAndService CreateClient<TService, TClientAndService>(Action<ServiceEndPoint> modifyServiceEndpoint);
         TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>();
         TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint);
+        TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>();
     }
 }
