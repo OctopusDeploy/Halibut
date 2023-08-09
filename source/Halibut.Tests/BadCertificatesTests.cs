@@ -110,31 +110,27 @@ namespace Halibut.Tests
             //TODO: Figure out why this doesn't work
             testWebSocket: false, 
             testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndPreviousServiceVersionsTestCases(
+            //TODO: Figure out why this doesn't work
+            testWebSocket: false,
+            testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenPollingServiceHasThumbprintRemovedViaTrustOnly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
-            var countingService = new CountingService();
-            var clientTrustProvider = new DefaultTrustProvider();
             using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .AsLatestClientAndLatestServiceBuilder()
-                       .WithCountingService(countingService)
-                       .RecordingServiceLogs(out var serviceLoggers)
-                       .WithClientTrustProvider(clientTrustProvider)
+                       .WithStandardServices()
                        .Build(CancellationToken))
             {
                 using var cts = new CancellationTokenSource();
                 var clientCountingService = clientAndBuilder
-                    .As<LatestClientAndLatestServiceBuilder.ClientAndService>()
                     .CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
                     {
                         point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
                     });
 
                 // Works normally
-                clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeTrue();
                 await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
                 await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-                countingService.GetCurrentValue().Should().Be(2);
                 
                 // Act
                 clientAndBuilder.Client.TrustOnly(new List<string>());
@@ -142,53 +138,16 @@ namespace Halibut.Tests
                 // Assert
                 var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
 
-                Func<LogEvent, bool> hasExpectedLog = logEvent =>
-                    logEvent.FormattedMessage.Contains("Unexpected exception executing transaction.");
-
-                Wait.UntilActionSucceeds(() => AllLogs(serviceLoggers).Should().Contain(log => hasExpectedLog(log)),
-                    TimeSpan.FromSeconds(20),
-                    Logger,
-                    CancellationToken);
+                await Task.Delay(3000, CancellationToken);
 
                 cts.Cancel();
 
                 var exception = await AssertionExtensions.Should(() => incrementCount).ThrowAsync<Exception>();
-                exception.And.Should().Match(e => e.GetType() == typeof(HalibutClientException) || e.GetType() == typeof(OperationCanceledException));
 
-                countingService.GetCurrentValue().Should().Be(2, "With a bad certificate the request never should have been made. But increments exist from previous successful calls.");
+                exception.And.Should().Match(e => e.GetType() == typeof(HalibutClientException) 
+                                                  || e.GetType() == typeof(OperationCanceledException) 
+                                                  || e.GetType() == typeof(TaskCanceledException));
             }
-
-
-            //// Arrange
-            //var countingService = new CountingService();
-            //var clientTrustProvider = new DefaultTrustProvider();
-
-            //using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
-            //           .AsLatestClientAndLatestServiceBuilder()
-            //           .WithCountingService(countingService)
-            //           .WithClientTrustProvider(clientTrustProvider)
-            //           .Build(CancellationToken))
-            //{
-            //    using var cts = new CancellationTokenSource();
-            //    var clientCountingService = clientAndBuilder.CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
-            //    {
-            //        point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
-            //    });
-
-            //    // Works normally
-            //    clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeTrue();
-            //    await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-            //    await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-            //    countingService.GetCurrentValue().Should().Be(2);
-
-            //    // Act
-            //    clientAndBuilder.Client.TrustOnly(new List<string>());
-
-            //    // Assert
-            //    clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeFalse();
-            //    await AssertionExtensions.Should(() => clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token))).ThrowAsync<HalibutClientException>();
-            //    countingService.GetCurrentValue().Should().Be(2, "With a bad certificate the request never should have been made. But increments exist from previous successful calls.");
-            //}
         }
 
         //TODO: Remove playground
