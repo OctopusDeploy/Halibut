@@ -13,7 +13,7 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionIsKilledWhileWaitingForTheResponse : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task AResponseShouldBeQuicklyReturned(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

@@ -20,7 +20,7 @@ namespace Halibut.Tests
     public class BadCertificatesTests : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false)]
         public async Task SucceedsWhenPollingServicePresentsWrongCertificate_ButServiceIsConfiguredToTrustAndAllowConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -55,7 +55,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task FailWhenPollingServicePresentsWrongCertificate_ButServiceIsConfiguredToBlockConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -109,11 +109,11 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(
             //Web sockets do not disconnect when calling TrustOnly. This issue has been raised.
             testWebSocket: false, 
-            testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+            testNetworkConditions: false, testListening: false)]
         [LatestClientAndPreviousServiceVersionsTestCases(
             //Web sockets do not disconnect when calling TrustOnly. This issue has been raised.
             testWebSocket: false,
-            testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+            testNetworkConditions: false, testListening: false)]
         public async Task FailWhenPollingServiceHasThumbprintRemovedViaTrustOnly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -151,7 +151,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false)]
         public async Task FailWhenClientPresentsWrongCertificateToListeningService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -175,7 +175,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
         public async Task FailWhenClientPresentsWrongCertificateToPollingService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -214,7 +214,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
         public async Task FailWhenListeningServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -234,7 +234,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
         public async Task FailWhenPollingServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
