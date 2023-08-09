@@ -48,6 +48,7 @@ namespace Halibut.Transport
                 pollingClientLoopThread = new Thread(ExecutePollingLoop!);
                 pollingClientLoopThread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
                 pollingClientLoopThread.IsBackground = true;
+                pollingClientLoopThread.Start();
             }
             else
             {

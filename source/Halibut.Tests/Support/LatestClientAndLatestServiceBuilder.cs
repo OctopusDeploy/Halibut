@@ -323,6 +323,11 @@ namespace Halibut.Tests.Support
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                     .WithLogFactory(BuildServiceLogger());
+                
+                if (forceClientProxyType == ForceClientProxyType.AsyncClient)
+                {
+                    serviceBuilder = serviceBuilder.WithAsyncHalibutFeatureEnabled();
+                }
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
                 service = serviceBuilder.Build();
