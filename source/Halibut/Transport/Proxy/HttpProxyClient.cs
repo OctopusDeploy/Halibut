@@ -365,7 +365,7 @@ namespace Halibut.Transport.Proxy
             {
                 var bytes = await stream.ReadAsync(response, 0, TcpClient.ReceiveBufferSize, cancellationToken);
                 sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
-            } while (await stream.DataAvailable(cancellationToken));
+            } while (stream.DataAvailable);
 
             ParseResponse(sbuilder.ToString());
             
@@ -435,7 +435,7 @@ namespace Halibut.Transport.Proxy
         async Task WaitForDataAsync(NetworkTimeoutStream stream, CancellationToken cancellationToken)
         {
             var sleepTime = 0;
-            while (!await stream.DataAvailable(cancellationToken))
+            while (!stream.DataAvailable)
             {
                 await Task.Delay(WAIT_FOR_DATA_INTERVAL, cancellationToken);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;

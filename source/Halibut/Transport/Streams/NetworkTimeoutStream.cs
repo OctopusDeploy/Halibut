@@ -84,9 +84,7 @@ namespace Halibut.Transport.Streams
 
         async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
-            int timeout, 
             bool isRead,
-            string methodName, 
             CancellationToken cancellationToken)
         {
             using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
@@ -107,7 +105,6 @@ namespace Halibut.Transport.Streams
                     {
                         inner.Close();
                     }
-                    catch { }
 
                     ThrowMeaningfulException();
                 }
@@ -201,23 +198,17 @@ namespace Halibut.Transport.Streams
             set => inner.Position = value;
         }
 
-        public async Task<bool> DataAvailable(CancellationToken cancellationToken)
+        public bool DataAvailable
         {
-            if (inner is NetworkStream networkStream)
+            get
             {
-                return await WrapWithCancellationAndTimeout(
-                    async ct =>
-                    {
-                        await Task.CompletedTask;
-                        return networkStream.DataAvailable;
-                    },
-                    CanTimeout ? WriteTimeout : int.MaxValue,
-                    false,
-                    nameof(WriteAsync),
-                    cancellationToken);
-            }
+                if (inner is NetworkStream networkStream)
+                {
+                    return networkStream.DataAvailable;
+                }
 
-            throw new NotSupportedException($"{nameof(DataAvailable)} is only available when wrapping a {nameof(NetworkStream)}");
+                throw new NotSupportedException($"{nameof(DataAvailable)} is only available when wrapping a {nameof(NetworkStream)}");
+            }
         }
     }
 }

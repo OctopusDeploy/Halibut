@@ -43,6 +43,8 @@ namespace Halibut.TestProxy
 
         public async Task StartAsync()
         {
+            Exception? startUpException = null;
+            
             _ = Task.Run(async () =>
             {
                 try
@@ -51,18 +53,20 @@ namespace Halibut.TestProxy
                 }
                 catch (Exception ex)
                 {
+                    startUpException = ex;
                     logger.LogError(ex, "An error has occurred running the HTTP proxy service");
-                }
-                finally
-                {
-                    // Ensure that StartAsync can complete,
-                    // regardless of whether there was an error or not
-                    started = true;
                 }
             });
 
             while (!started)
             {
+                cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                if (startUpException != null)
+                {
+                    throw startUpException;
+                }
+                
                 await Task.Delay(TimeSpan.FromMilliseconds(10), cancellationTokenSource.Token);
             }
         }
