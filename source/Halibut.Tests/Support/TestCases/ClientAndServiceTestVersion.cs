@@ -6,13 +6,13 @@ namespace Halibut.Tests.Support.TestCases
     /// <summary>
     /// Defines what version of the Client and the Service that will be used in a test.
     /// </summary>
-    public class ClientAndServiceTestVersion
+    public class ClientAndServiceTestVersion : IEquatable<ClientAndServiceTestVersion>
     {
         
         // null means latest.
-        public HalibutVersion? ClientVersion;
+        public HalibutVersion? ClientVersion { get; }
         // null means latest.
-        public HalibutVersion? ServiceVersion;
+        public HalibutVersion? ServiceVersion { get; }
 
         ClientAndServiceTestVersion(HalibutVersion? clientVersion, HalibutVersion? serviceVersion)
         {
@@ -88,6 +88,28 @@ namespace Halibut.Tests.Support.TestCases
             }
 
             throw new Exception("Invalid client and service version.");
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as ClientAndServiceTestVersion);
+        }
+
+        public bool Equals(ClientAndServiceTestVersion? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(ClientVersion, other.ClientVersion) && Equals(ServiceVersion, other.ServiceVersion);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = (ClientVersion != null ? ClientVersion.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ServiceVersion != null ? ServiceVersion.GetHashCode() : 0);
+                return hashCode;
+            }
         }
     }
 

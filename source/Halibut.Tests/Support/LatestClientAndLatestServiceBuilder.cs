@@ -44,7 +44,9 @@ namespace Halibut.Tests.Support
         LogLevel halibutLogLevel = LogLevel.Info;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
-        
+        ITrustProvider clientTrustProvider;
+        Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
+
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
@@ -248,7 +250,19 @@ namespace Halibut.Tests.Support
             this.serviceInMemoryLoggers = inMemoryLoggers;
             return this;
         }
+
+        public LatestClientAndLatestServiceBuilder WithClientOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
+        {
+            clientOnUnauthorizedClientConnect = onUnauthorizedClientConnect;
+            return this;
+        }
         
+        public LatestClientAndLatestServiceBuilder WithClientTrustProvider(ITrustProvider trustProvider)
+        {
+            clientTrustProvider = trustProvider;
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithClientTrustingTheWrongCertificate()
         {
             clientTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
@@ -290,7 +304,9 @@ namespace Halibut.Tests.Support
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory)
-                .WithPendingRequestQueueFactory(factory);
+                .WithPendingRequestQueueFactory(factory)
+                .WithTrustProvider(clientTrustProvider)
+                .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
             if (forceClientProxyType == ForceClientProxyType.AsyncClient)
             {

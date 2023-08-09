@@ -12,15 +12,15 @@ namespace Halibut.Tests.Support.TestCases
         readonly ForceClientProxyType[] forceClientProxyTypes;
 
         public ClientAndServiceTestCasesBuilder(
-            ClientAndServiceTestVersion[] clientServiceTestVersions,
-            ServiceConnectionType[] ServiceConnectionTypes,
-            NetworkConditionTestCase[] networkConditionTestCases,
-            ForceClientProxyType[] forceClientProxyTypes)
+            IEnumerable<ClientAndServiceTestVersion> clientServiceTestVersions,
+            IEnumerable<ServiceConnectionType> serviceConnectionTypes,
+            IEnumerable<NetworkConditionTestCase> networkConditionTestCases,
+            IEnumerable<ForceClientProxyType> forceClientProxyTypes)
         {
-            this.clientServiceTestVersions = clientServiceTestVersions;
-            serviceConnectionTypes = ServiceConnectionTypes;
-            this.networkConditionTestCases = networkConditionTestCases;
-            this.forceClientProxyTypes = forceClientProxyTypes;
+            this.clientServiceTestVersions = clientServiceTestVersions.Distinct().ToArray();
+            this.serviceConnectionTypes = serviceConnectionTypes.Distinct().ToArray();
+            this.networkConditionTestCases = networkConditionTestCases.Distinct().ToArray();
+            this.forceClientProxyTypes = forceClientProxyTypes.Distinct().ToArray();
         }
 
         public IEnumerable<ClientAndServiceTestCase> Build()
