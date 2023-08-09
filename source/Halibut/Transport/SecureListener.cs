@@ -178,8 +178,7 @@ namespace Halibut.Transport
             {
                 client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
                 client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
-
-                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
+                
                 await ExecuteRequest(client).ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
@@ -193,8 +192,9 @@ namespace Halibut.Transport
 
         async Task ExecuteRequest(TcpClient client)
         {
-            var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
+            var clientName = client.Client.RemoteEndPoint;
+            log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", clientName);
             using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 try

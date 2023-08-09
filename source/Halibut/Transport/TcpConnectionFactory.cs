@@ -30,9 +30,9 @@ namespace Halibut.Transport
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken);
-            log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             var stream = client.GetStream();
+            log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
@@ -51,9 +51,9 @@ namespace Halibut.Transport
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = await CreateConnectedTcpClientAsync(serviceEndpoint, log, cancellationToken);
-            log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             var stream = client.GetStream();
+            log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
