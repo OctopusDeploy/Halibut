@@ -114,6 +114,7 @@ namespace Halibut.Tests
             //TODO: Figure out why this doesn't work
             testWebSocket: false,
             testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+        //We can't run previous clients, because they do not support passing in the cancellation token.
         public async Task FailWhenPollingServiceHasThumbprintRemovedViaTrustOnly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
