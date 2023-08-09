@@ -105,6 +105,7 @@ namespace Halibut.Transport.Streams
                     {
                         inner.Close();
                     }
+                    catch { }
 
                     ThrowMeaningfulException();
                 }
