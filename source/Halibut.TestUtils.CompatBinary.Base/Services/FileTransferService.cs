@@ -2,7 +2,7 @@
 using System.IO;
 using Octopus.Tentacle.Contracts;
 
-namespace Halibut.TestUtils.Contracts.Tentacle.Services
+namespace Halibut.TestUtils.SampleProgram.Base.Services
 {
     public class FileTransferService : IFileTransferService
     {

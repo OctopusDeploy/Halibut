@@ -7,6 +7,7 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
@@ -43,7 +44,9 @@ namespace Halibut.Tests.Support
         LogLevel halibutLogLevel = LogLevel.Info;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
-        
+        ITrustProvider clientTrustProvider;
+        Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
+
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
@@ -247,7 +250,19 @@ namespace Halibut.Tests.Support
             this.serviceInMemoryLoggers = inMemoryLoggers;
             return this;
         }
+
+        public LatestClientAndLatestServiceBuilder WithClientOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
+        {
+            clientOnUnauthorizedClientConnect = onUnauthorizedClientConnect;
+            return this;
+        }
         
+        public LatestClientAndLatestServiceBuilder WithClientTrustProvider(ITrustProvider trustProvider)
+        {
+            clientTrustProvider = trustProvider;
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithClientTrustingTheWrongCertificate()
         {
             clientTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
@@ -289,7 +304,9 @@ namespace Halibut.Tests.Support
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory)
-                .WithPendingRequestQueueFactory(factory);
+                .WithPendingRequestQueueFactory(factory)
+                .WithTrustProvider(clientTrustProvider)
+                .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
             if (forceClientProxyType == ForceClientProxyType.AsyncClient)
             {
@@ -318,7 +335,7 @@ namespace Halibut.Tests.Support
 
             if (httpProxy != null)
             {
-                await httpProxy.StartAsync(cancellationTokenSource.Token);
+                await httpProxy.StartAsync();
                 httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint.Port, ProxyType.HTTP);
             }
 
@@ -543,7 +560,12 @@ namespace Halibut.Tests.Support
             public void Dispose()
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
-                logger.Information("Dispose called");
+
+                logger.Information("****** ****** ****** ****** ****** ****** ******");
+                logger.Information("****** CLIENT AND SERVICE DISPOSE CALLED  ******");
+                logger.Information("*     Subsequent errors should be ignored      *");
+                logger.Information("****** ****** ****** ****** ****** ****** ******");
+
                 Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
 
                 Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);

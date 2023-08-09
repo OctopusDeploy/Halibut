@@ -6,7 +6,7 @@ namespace Halibut.ServiceModel
 {
     class DefaultTrustProvider : ITrustProvider
     {
-        readonly HashSet<string> trustedThumbprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        readonly HashSet<string> trustedThumbprints = new(StringComparer.OrdinalIgnoreCase);
         public void Add(string clientThumbprint)
         {
             lock (trustedThumbprints)

@@ -6,6 +6,7 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
@@ -15,6 +16,7 @@ using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
+using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -268,7 +270,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             if (httpProxy != null)
             {
-                await httpProxy.StartAsync(cancellationTokenSource.Token);
+                await httpProxy.StartAsync();
                 httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint!.Port, ProxyType.HTTP);
             }
 
@@ -471,7 +473,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public void Dispose()
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
-                logger.Information("Dispose called");
+                
+                logger.Information("****** ****** ****** ****** ****** ****** ******");
+                logger.Information("****** CLIENT AND SERVICE DISPOSE CALLED  ******");
+                logger.Information("*     Subsequent errors should be ignored      *");
+                logger.Information("****** ****** ****** ****** ****** ****** ******");
+
                 Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
                 
                 Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);
