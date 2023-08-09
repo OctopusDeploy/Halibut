@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Util;
@@ -42,6 +43,7 @@ namespace Halibut.Tests.Support.TestCases
                         if (!forceClientProxyTypes.Any())
                         {
                             yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null);
+                            Environment.Exit(-1);
                             yield break;
                         }
                         else
