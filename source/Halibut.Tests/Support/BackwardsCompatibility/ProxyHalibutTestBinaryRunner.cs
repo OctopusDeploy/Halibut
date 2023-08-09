@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Logging;
+using Nito.AsyncEx;
 using Octopus.Shellfish;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
@@ -96,7 +97,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         async Task<(Task, int?, int?)> StartHalibutTestBinary(string version, Dictionary<string, string> settings, TmpDirectory tmp, CancellationToken cancellationToken)
         {
-            var hasTentacleStarted = new ManualResetEventSlim();
+            var hasTentacleStarted = new AsyncManualResetEvent();
             hasTentacleStarted.Reset();
 
             var logger = new SerilogLoggerBuilder().Build().ForContext<ProxyHalibutTestBinaryRunner>();
@@ -140,7 +141,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 }
             }, cancellationToken);
 
-            await Task.WhenAny(runningTentacle, Task.Run(() => { hasTentacleStarted.WaitHandle.WaitOne(TimeSpan.FromMinutes(1)); }));
+            await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(cancellationToken), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
 
             // Will throw.
             if (runningTentacle.IsCompleted) await runningTentacle;
