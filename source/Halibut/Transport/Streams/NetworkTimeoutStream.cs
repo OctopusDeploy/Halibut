@@ -200,5 +200,18 @@ namespace Halibut.Transport.Streams
             get => inner.Position;
             set => inner.Position = value;
         }
+
+        public bool DataAvailable
+        {
+            get
+            {
+                if (inner is NetworkStream networkStream)
+                {
+                    return networkStream.DataAvailable;
+                }
+
+                throw new NotSupportedException($"{nameof(DataAvailable)} is only available when wrapping a {nameof(NetworkStream)}");
+            }
+        }
     }
 }

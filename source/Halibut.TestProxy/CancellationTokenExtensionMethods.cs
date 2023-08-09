@@ -19,5 +19,21 @@ namespace Halibut.TestProxy
 
             return tcs.Task;
         }
+
+        public static Task AsTask(this CancellationToken cancellationToken)
+        {
+            var tcs = new TaskCompletionSource<VoidResult>();
+
+            IDisposable registration = null;
+            registration = cancellationToken.Register(() =>
+            {
+                tcs.TrySetCanceled();
+                registration?.Dispose();
+            }, useSynchronizationContext: false);
+
+            return tcs.Task;
+        }
+
+        private struct VoidResult { }
     }
 }

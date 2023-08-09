@@ -3,6 +3,7 @@ using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Halibut.TestProxy
 {
@@ -10,12 +11,14 @@ namespace Halibut.TestProxy
     {
         readonly TcpClient fromClient;
         readonly TcpClient toClient;
+        readonly ILogger _logger;
         bool disposedValue;
 
-        public TcpTunnel(TcpClient fromClient, TcpClient toClient)
+        public TcpTunnel(TcpClient fromClient, TcpClient toClient, ILogger logger)
         {
             this.fromClient = fromClient;
             this.toClient = toClient;
+            _logger = logger;
         }
 
         public async Task Tunnel(CancellationToken cancellationToken)
@@ -31,15 +34,21 @@ namespace Halibut.TestProxy
                 var fromStreamTask = fromStream.CopyToAsync(toWriter, cancellationToken);
                 var toStreamTask = toStream.CopyToAsync(fromWriter, cancellationToken);
 
-                await Task.WhenAny(fromStreamTask, toStreamTask);
+                await Task.WhenAny(fromStreamTask, toStreamTask, cancellationToken.AsTask());
             }
             catch (Exception)
             {
             }
             finally
             {
-                await fromWriter.CompleteAsync();
-                await toWriter.CompleteAsync();
+                await Task.WhenAll(
+                    fromWriter.CompleteAsync().AsTask(),
+                    toWriter.CompleteAsync().AsTask());
+                
+                Try.CatchingError(() => fromStream.Close(), e => { _logger.LogWarning("Error closing fromStream"); });
+                Try.CatchingError(() => toStream.Close(), e => { _logger.LogWarning("Error closing toStream"); });
+                Try.CatchingError(() => fromClient.Close(), e => { _logger.LogWarning("Error closing fromClient"); });
+                Try.CatchingError(() => toClient.Close(), e => { _logger.LogWarning("Error closing toClient");});
             }
         }
 

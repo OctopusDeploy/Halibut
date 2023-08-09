@@ -33,6 +33,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Proxy
 {
@@ -231,6 +232,7 @@ namespace Halibut.Transport.Proxy
                     // attempt to open the connection
                     log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
                     TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout, cancellationToken);
+                    log.Write(EventType.Diagnostic, "Connected to proxy at {0}:{1}", ProxyHost, ProxyPort);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port
@@ -276,6 +278,7 @@ namespace Halibut.Transport.Proxy
                     // attempt to open the connection
                     log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
                     await TcpClient.ConnectWithTimeoutAsync(ProxyHost, ProxyPort, timeout, cancellationToken);
+                    log.Write(EventType.Diagnostic, "Connected to proxy at {0}:{1}", ProxyHost, ProxyPort);
                 }
 
                 //  send connection command to proxy host for the specified destination host and port
@@ -337,9 +340,7 @@ namespace Halibut.Transport.Proxy
         
         async Task SendConnectionCommandAsync(string host, int port, CancellationToken cancellationToken)
         {
-            // TODO - ASYNC ME UP!
-            // This stream needs to be wrapped into a TimeoutStream
-            var stream = TcpClient.GetStream();
+            var stream = new NetworkTimeoutStream(TcpClient.GetStream());
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 
@@ -431,12 +432,12 @@ namespace Halibut.Transport.Proxy
             }
         }
         
-        async Task WaitForDataAsync(NetworkStream stream, CancellationToken cancellationToken)
+        async Task WaitForDataAsync(NetworkTimeoutStream stream, CancellationToken cancellationToken)
         {
             var sleepTime = 0;
             while (!stream.DataAvailable)
             {
-                await Task.Delay(WAIT_FOR_DATA_TIMEOUT, cancellationToken);
+                await Task.Delay(WAIT_FOR_DATA_INTERVAL, cancellationToken);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
                     throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), true);

@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 #if !NET5_0_OR_GREATER
@@ -26,11 +25,14 @@ namespace Halibut.TestProxy
 
     record HttpProxyConnectionRequest(ProxyEndpoint Endpoint, string HttpVersion);
 
-    public class HttpProxyService : BackgroundService
+    public class HttpProxyService : IDisposable
     {
         readonly HttpProxyOptions options;
         readonly ILogger<HttpProxyService> logger;
         readonly IProxyConnectionService proxyConnectionService;
+        readonly CancellationTokenSource cancellationTokenSource = new();
+        bool pauseNewConnections = false;
+        bool started = false;
 
         public HttpProxyService(HttpProxyOptions options, ILoggerFactory loggerFactory)
         {
@@ -39,17 +41,49 @@ namespace Halibut.TestProxy
             this.logger = loggerFactory.CreateLogger<HttpProxyService>();
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public async Task StartAsync()
         {
+            Exception? startUpException = null;
+            
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await StartInternalAsync();
+                }
+                catch (Exception ex)
+                {
+                    startUpException = ex;
+                    logger.LogError(ex, "An error has occurred running the HTTP proxy service");
+                }
+            });
+
+            while (!started)
+            {
+                cancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                if (startUpException != null)
+                {
+                    throw startUpException;
+                }
+                
+                await Task.Delay(TimeSpan.FromMilliseconds(10), cancellationTokenSource.Token);
+            }
+        }
+
+        public async Task StartInternalAsync()
+        {
+            var cancellationToken = cancellationTokenSource.Token;
+
             var listener = await TcpListenerHelpers.GetTcpListener(options.Listen);
             listener.Start();
             Endpoint = (IPEndPoint)listener.LocalEndpoint;
-
+            started = true;
             logger.LogInformation("Listening for HTTP proxy requests on {Listen}", listener.Server.LocalEndPoint);
 
             try
             {
-                while (!stoppingToken.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
@@ -57,27 +91,38 @@ namespace Halibut.TestProxy
 
 #if DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS
                         using var socketCancellationTokenSource = new CancellationTokenSource();
-                        using (stoppingToken.Register(() =>
-                               {
-                                   try
-                                   {
-                                       socketCancellationTokenSource.Cancel();
-                                   }
-                                   catch
-                                   {
-                                   }
-
-                               }))
+                        using (cancellationToken.Register(() => Try.CatchingError(() => socketCancellationTokenSource.Cancel(), _ => { })))
                         {
                             var cancelTask = socketCancellationTokenSource.Token.AsTask<TcpClient?>();
-                            var actionTask = Task.Run(() => listener.AcceptTcpClientAsync(), stoppingToken);
+                            var actionTask = Task.Run(async () =>
+                            {
+                                using var _ = cancellationToken.Register(() => Try.CatchingError(() =>
+                                {
+                                    listener.Stop();
+                                    logger.LogInformation($"Stopped listening for HTTP proxy requests");
+                                }, _ => { }));
+                                return await listener.AcceptTcpClientAsync();
+                            }, cancellationToken);
 
                             client = await (await Task.WhenAny(actionTask, cancelTask).ConfigureAwait(false)).ConfigureAwait(false);
                         }
 #else
-                    client = await listener.AcceptTcpClientAsync(stoppingToken);
+                        client = await listener.AcceptTcpClientAsync(cancellationToken);
 #endif
-                        _ = Task.Run(async () => await HandleProxyRequest(client!, stoppingToken), stoppingToken);
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        logger.LogInformation($"Accepted HTTP proxy request from {client.Client.RemoteEndPoint}");
+
+                        _ = Task.Run(async () =>
+                        {
+                            if (pauseNewConnections)
+                            {
+                                logger.LogInformation($"Pausing HTTP proxy request from {client.Client.RemoteEndPoint}");
+                                await Task.Delay(-1, cancellationToken);
+                            }
+
+                            await HandleProxyRequest(client!, cancellationToken);
+                        }, cancellationToken);
                     }
                     catch (OperationCanceledException)
                     {
@@ -88,6 +133,8 @@ namespace Halibut.TestProxy
             finally
             {
                 listener.Stop();
+                listener = null;
+                logger.LogInformation($"Stopped listening for HTTP proxy requests");
             }
         }
 
@@ -95,63 +142,70 @@ namespace Halibut.TestProxy
 
         async Task HandleProxyRequest(TcpClient client, CancellationToken cancellationToken)
         {
-        if (cancellationToken.IsCancellationRequested) return;
+            if (cancellationToken.IsCancellationRequested) return;
 
-        var stream = client.GetStream();
-        if (client.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)
-        {
-            throw new InvalidOperationException($"{client.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
-        }
-
-        var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
-
-        // Set up some pipes to handle reading and replying to the connect request
-        var reader = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
-        var writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
-
-        try
-        {
-            HttpProxyConnectionRequest? connectionRequest = null;
-            try
+            var stream = client.GetStream();
+            if (client.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)
             {
-                connectionRequest = await ParseConnectionRequest(sourceEndpoint, reader, cancellationToken);
+                throw new InvalidOperationException($"{client.Client.RemoteEndPoint} is not an {nameof(IPEndPoint)}");
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "An error has occurred parsing CONNECT request from {SourceEndpoint}", sourceEndpoint);
-                await SendConnectResponse(sourceEndpoint, "1.0", 400, "Bad request", writer, cancellationToken);
-                return;
-            }
+
+            var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
+
+            // Set up some pipes to handle reading and replying to the connect request
+            var reader = PipeReader.Create(stream, new StreamPipeReaderOptions(leaveOpen: true));
+            var writer = PipeWriter.Create(stream, new StreamPipeWriterOptions(leaveOpen: true));
 
             try
             {
-                await CreateProxyConnectionAndForward(client, connectionRequest, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError("An error has occurred establishing proxy connection: {SourceEndpoint} <-> {DestinationEndpoint}. Error: {ErrorMessage}", sourceEndpoint, connectionRequest!.Endpoint, ex.Message);
-                await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 502, "Bad gateway", writer, cancellationToken);
-                return;
-            }
+                HttpProxyConnectionRequest? connectionRequest = null;
 
-            try
-            {
-                await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 200, "Connection established", writer, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "An error has occurred responding to CONNECT request: {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, connectionRequest!.Endpoint);
-                return;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    logger.LogInformation("Parsing Connection Request");
+                    connectionRequest = await ParseConnectionRequest(sourceEndpoint, reader, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error has occurred parsing CONNECT request from {SourceEndpoint}", sourceEndpoint);
+                    await SendConnectResponse(sourceEndpoint, "1.0", 400, "Bad request", writer, cancellationToken);
+                    return;
+                }
 
-            logger.LogInformation("CONNECT request successful: {SourceEndpoint} -> {DestinationEndpoint}", sourceEndpoint, connectionRequest.Endpoint);
-        }
-        finally
-        {
-            await reader.CompleteAsync();
-            await writer.CompleteAsync();
-        }
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    logger.LogInformation("Creating Proxy Connection Forwarder");
+                    await CreateProxyConnectionAndForward(client, connectionRequest, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("An error has occurred establishing proxy connection: {SourceEndpoint} <-> {DestinationEndpoint}. Error: {ErrorMessage}", sourceEndpoint, connectionRequest!.Endpoint, ex.Message);
+                    await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 502, "Bad gateway", writer, cancellationToken);
+                    return;
+                }
 
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    logger.LogInformation("Sending Connect Response");
+                    await SendConnectResponse(sourceEndpoint, connectionRequest.HttpVersion, 200, "Connection established", writer, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error has occurred responding to CONNECT request: {SourceEndpoint} <-> {DestinationEndpoint}", sourceEndpoint, connectionRequest!.Endpoint);
+                    return;
+                }
+
+                logger.LogInformation("CONNECT request successful: {SourceEndpoint} -> {DestinationEndpoint}", sourceEndpoint, connectionRequest.Endpoint);
+            }
+            finally
+            {
+                await Task.WhenAll(
+                    reader.CompleteAsync().AsTask(),
+                    writer.CompleteAsync().AsTask());
+            }
         }
 
         async Task CreateProxyConnectionAndForward(TcpClient client, HttpProxyConnectionRequest connectionRequest, CancellationToken cancellationToken)
@@ -236,12 +290,20 @@ namespace Halibut.TestProxy
             message = outputMessage.ToString();
             return message.Length != 0;
         }
-
-        public override void Dispose()
+        
+        public void PauseNewConnections()
         {
-            proxyConnectionService.Dispose();
+            pauseNewConnections = true;
+            logger.LogInformation("Pausing new HTTP Proxy connections");
+        }
 
-            base.Dispose();
+        public void Dispose()
+        {
+            logger.LogInformation("Starting Disposal");
+            Try.CatchingError(() => cancellationTokenSource.Cancel(), e => logger.LogWarning(e, "Error cancelling cancellationTokenSource"));
+            Try.CatchingError(() => cancellationTokenSource.Dispose(), e => logger.LogWarning(e, "Error disposing of cancellationTokenSource"));
+            Try.CatchingError(() => proxyConnectionService.Dispose(), e => logger.LogWarning(e, "Error disposing of proxyConnectionService"));
+            logger.LogInformation("Finished Disposal");
         }
     }
 }
