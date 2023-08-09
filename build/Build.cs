@@ -5,6 +5,7 @@ using Nuke.Common;
 using Nuke.Common.CI;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
+using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities;
@@ -116,7 +117,8 @@ class Build : NukeBuild
                     .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
                     .SetBlameHangTimeout(TimeSpan.FromMinutes(20).TotalMilliseconds.ToString())
-                    .SetBlameHangDumpType("full"));
+                    .SetBlameHangDumpType("full")
+                    .AddProcessEnvironmentVariable("PROCDUMP_PATH", Environment.CurrentDirectory));
 
             });
     }
