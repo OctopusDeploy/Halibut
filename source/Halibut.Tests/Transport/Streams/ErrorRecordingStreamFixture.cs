@@ -114,6 +114,22 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
+        public async Task ReadingIntoAZeroLengthArrayIsNotAEndOfStream()
+        {
+            int counter = 0;
+            var errorRecordingStream = new ErrorRecordingStream(new MemoryStream("hello".GetBytesUtf8()), true);
+
+            await errorRecordingStream.ReadAsync(new byte[0], 0, 0);
+            await errorRecordingStream.ReadAsync(new byte[100], 1, 0);
+            errorRecordingStream.Read(new byte[0], 0, 0);
+            errorRecordingStream.Read(new byte[100], 1, 0);
+
+
+            errorRecordingStream.WasTheEndOfStreamEncountered.Should().Be(false);
+            errorRecordingStream.ReadExceptions.Count.Should().Be(0);
+        }
+        
+        [Test]
         public void WriteErrorsFromUnderlyingStreamAreRecorded()
         {
             int counter = 0;

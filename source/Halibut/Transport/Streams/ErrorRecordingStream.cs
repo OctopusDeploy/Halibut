@@ -32,7 +32,7 @@ namespace Halibut.Transport.Streams
             try
             {
                 int read = innerStream.Read(buffer, offset, count);
-                if (read == 0) WasTheEndOfStreamEncountered = true;
+                if (read == 0 && count != 0) WasTheEndOfStreamEncountered = true;
                 return read;
             }
             catch (Exception e)
@@ -48,7 +48,7 @@ namespace Halibut.Transport.Streams
             try
             {
                 int read = await innerStream.ReadAsync(buffer, offset, count, cancellationToken);
-                if (read == 0) WasTheEndOfStreamEncountered = true;
+                if (read == 0 && count != 0) WasTheEndOfStreamEncountered = true;
                 return read;
             }
             catch (Exception e)
