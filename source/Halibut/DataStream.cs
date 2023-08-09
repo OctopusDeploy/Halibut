@@ -128,8 +128,7 @@ namespace Halibut
                     await writer.FlushAsync();
                 });
         }
-
-        // TODO test
+        
         public static DataStream FromStreamAsync(Stream source, Func<int, CancellationToken, Task> updateProgress)
         {
             updateProgress ??= (_, _) => Task.CompletedTask;

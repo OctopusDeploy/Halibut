@@ -302,14 +302,14 @@ namespace Halibut.Tests.Transport.Protocol
             }
         }
         
-        async Task<T> ReadMessage<T>(MessageSerializerTestCase testCase, MessageSerializer messageSerializer, RewindableBufferStream RewindableBufferStream)
+        async Task<T> ReadMessage<T>(MessageSerializerTestCase testCase, MessageSerializer messageSerializer, RewindableBufferStream rewindableBufferStream)
         {
             if (testCase.SyncOrAsync == SyncOrAsync.Async)
             {
-                return await messageSerializer.ReadMessageAsync<T>(RewindableBufferStream, CancellationToken);
+                return await messageSerializer.ReadMessageAsync<T>(rewindableBufferStream, CancellationToken);
             }
 
-            return messageSerializer.ReadMessage<T>(RewindableBufferStream);
+            return messageSerializer.ReadMessage<T>(rewindableBufferStream);
         }
 
         async Task WriteMessage(MessageSerializerTestCase testCase, MessageSerializer messageSerializer, Stream stream, string message)

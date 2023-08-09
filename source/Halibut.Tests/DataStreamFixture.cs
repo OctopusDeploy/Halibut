@@ -18,7 +18,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         [Obsolete]
-        public async Task ASyncDataStreamWriterCanStillBeUsed(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task SyncDataStreamWriterCanStillBeUsed(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
