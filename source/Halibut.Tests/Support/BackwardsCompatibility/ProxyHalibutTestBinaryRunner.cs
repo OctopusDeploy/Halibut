@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using CliWrap;
 using Halibut.Logging;
 using Nito.AsyncEx;
-using Octopus.Shellfish;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
