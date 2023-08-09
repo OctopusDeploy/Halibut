@@ -126,7 +126,7 @@ namespace Halibut
         public int Listen(IPEndPoint endpoint)
         {
             ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature);
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -138,7 +138,7 @@ namespace Halibut
         public void ListenWebSocket(string endpoint)
         {
             ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect);
+            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature);
             
             lock (listeners)
             {
