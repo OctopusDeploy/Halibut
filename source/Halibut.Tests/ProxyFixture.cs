@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
@@ -51,11 +52,11 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
 
-                Func<Task<string>> action = async () => await echo.SayHelloAsync("Hello");
-                (await action.Should().ThrowAsync<HalibutClientException>()).And.Message.Should().ContainAny(
-                    "No connection could be made because the target machine actively refused it",
-                    "the polling endpoint did not collect the request within the allowed time",
-                    "Connection refused");
+                (await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Hello")))
+                    .And.Message.Should().ContainAny(
+                        "No connection could be made because the target machine actively refused it",
+                        "the polling endpoint did not collect the request within the allowed time",
+                        "Connection refused");
             }
         }
 
@@ -77,13 +78,13 @@ namespace Halibut.Tests
                     point.RetryCountLimit = 2;
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
-                
 
-                Func<Task<string>> action = async () => await echo.SayHelloAsync("Hello");
-                (await action.Should().ThrowAsync<HalibutClientException>()).And.Message.Should().ContainAny(
-                    "No connection could be made because the target machine actively refused it",
-                    "the polling endpoint did not collect the request within the allowed time",
-                    "A timeout while waiting for the proxy server at"); ;
+                (await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Hello")))
+                    .And.Message.Should().ContainAny(
+                        "No connection could be made because the target machine actively refused it",
+                        "the polling endpoint did not collect the request within the allowed time",
+                        "A timeout while waiting for the proxy server at");
+                ;
             }
         }
     }

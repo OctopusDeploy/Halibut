@@ -35,7 +35,7 @@ namespace Halibut.TestProxy
 
             var sourceEndpoint = new ProxyEndpoint(sourceRemoteEndpoint.Address.ToString(), sourceRemoteEndpoint.Port);
             var destination = new TcpClient(destinationEndpoint.Hostname, destinationEndpoint.Port);
-            var tunnel = new TcpTunnel(source, destination);
+            var tunnel = new TcpTunnel(source, destination, logger);
             tunnels!.Add(tunnel);
 
             cancellationToken.ThrowIfCancellationRequested();

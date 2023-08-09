@@ -43,7 +43,7 @@ namespace Halibut.TestProxy
 
         public async Task StartAsync()
         {
-            var _ = Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 try
                 {
@@ -52,6 +52,12 @@ namespace Halibut.TestProxy
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "An error has occurred running the HTTP proxy service");
+                }
+                finally
+                {
+                    // Ensure that StartAsync can complete,
+                    // regardless of whether there was an error or not
+                    started = true;
                 }
             });
 
@@ -192,8 +198,9 @@ namespace Halibut.TestProxy
             }
             finally
             {
-                await reader.CompleteAsync();
-                await writer.CompleteAsync();
+                await Task.WhenAll(
+                    reader.CompleteAsync().AsTask(),
+                    writer.CompleteAsync().AsTask());
             }
         }
 
