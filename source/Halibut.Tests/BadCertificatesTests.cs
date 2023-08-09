@@ -20,7 +20,7 @@ namespace Halibut.Tests
     public class BadCertificatesTests : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testWebSocket: true, testNetworkConditions: false, testListening:false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testAsyncAndSyncClients: true)]
         public async Task SucceedsWhenPollingServicePresentsWrongCertificate_ButServiceIsConfiguredToTrustAndAllowConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -55,7 +55,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testWebSocket: true, testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenPollingServicePresentsWrongCertificate_ButServiceIsConfiguredToBlockConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -175,7 +175,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testWebSocket: true, testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenClientPresentsWrongCertificateToPollingService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
@@ -234,7 +234,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testWebSocket: true, testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenPollingServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
