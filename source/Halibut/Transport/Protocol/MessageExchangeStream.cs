@@ -440,12 +440,18 @@ namespace Halibut.Transport.Protocol
 
         async Task ReadStreamAsync(StreamCapture capture, CancellationToken cancellationToken)
         {
-            // TODO - ASYNC ME UP!
-            await Task.CompletedTask;
+            
+            var id = new Guid(await stream.ReadBytesAsync(16, cancellationToken));
+            var length = await stream.ReadInt64Async(cancellationToken);
+            var dataStream = FindStreamById(capture, id);
+            var tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
+            var lengthAgain = await stream.ReadInt64Async(cancellationToken);
+            if (lengthAgain != length)
+            {
+                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
+            }
 
-#pragma warning disable CS0612
-            ReadStream(capture);
-#pragma warning restore CS0612
+            ((IDataStreamInternal)dataStream).Received(tempFile);
         }
 
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
@@ -461,6 +467,24 @@ namespace Halibut.Transport.Protocol
                     if (read == 0) throw new ProtocolException($"Stream with length {length} was closed after only reading {length - bytesLeftToRead} bytes.");
                     bytesLeftToRead -= read;
                     fileStream.Write(buffer, 0, read);
+                }
+            }
+            return new TemporaryFileStream(path, log);
+        }
+        
+        async Task<TemporaryFileStream> CopyStreamToFileAsync(Guid id, long length, Stream stream, CancellationToken cancellationToken)
+        {
+            var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
+            long bytesLeftToRead = length;
+            using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
+            {
+                var buffer = new byte[65*1024];
+                while (bytesLeftToRead > 0)
+                {
+                    var read = await stream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, bytesLeftToRead), cancellationToken);
+                    if (read == 0) throw new ProtocolException($"Stream with length {length} was closed after only reading {length - bytesLeftToRead} bytes.");
+                    bytesLeftToRead -= read;
+                    await fileStream.WriteAsync(buffer, 0, read, cancellationToken);
                 }
             }
             return new TemporaryFileStream(path, log);
@@ -493,11 +517,18 @@ namespace Halibut.Transport.Protocol
 
         async Task WriteEachStreamAsync(IEnumerable<DataStream> streams, CancellationToken cancellationToken)
         {
-            // TODO - ASYNC ME UP!
-            await Task.CompletedTask;
-#pragma warning disable CS0612
-            WriteEachStream(streams);
-#pragma warning restore CS0612
+            foreach (var dataStream in streams)
+            {
+                await stream.WriteByteArrayAsync(dataStream.Id.ToByteArray(), cancellationToken);
+                await stream.WriteLongAsync(dataStream.Length, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+
+                await ((IDataStreamInternal)dataStream).TransmitAsync(stream, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+
+                await stream.WriteLongAsync(dataStream.Length, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
         }
 
         void SetNormalTimeouts()

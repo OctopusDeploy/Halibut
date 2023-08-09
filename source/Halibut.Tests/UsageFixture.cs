@@ -151,7 +151,16 @@ namespace Halibut.Tests
 
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
-                var count = await echo.CountBytesAsync(DataStream.FromStream(stream, progressReported.Add));
+
+                var dataStream = await clientAndServiceTestCase.SyncOrAsync
+                    .WhenSync(() => DataStream.FromStream(stream, progressReported.Add))
+                    .WhenAsync(() => Task.FromResult(DataStream.FromStreamAsync(stream, 
+                        async (i, token) => { 
+                            await Task.CompletedTask;
+                            progressReported.Add(i);
+                        })
+                    ));
+                var count = await echo.CountBytesAsync(dataStream);
                 count.Should().Be(1024 * 1024 * 16 + 15);
 
                 progressReported.Should().ContainInOrder(Enumerable.Range(1, 100));

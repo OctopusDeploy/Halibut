@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -120,7 +121,14 @@ namespace Halibut.Tests
                 // This loop ensures (at the time) the test shows the problem.
                 for (var i = 0; i < 128; i++)
                 {
-                    await AssertAsync.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(new DataStream(10000, stream => throw new Exception("Oh noes"))));
+                    await AssertAsync.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(
+                        new DataStream(10000, 
+                            stream => throw new Exception("Oh noes"), 
+                            async (_, _) =>
+                                {
+                                    await Task.CompletedTask;
+                                    throw new Exception("Oh noes");
+                                })));
                 }
 
                 var received = await readDataSteamService.SendDataAsync(DataStream.FromString("hello"));
