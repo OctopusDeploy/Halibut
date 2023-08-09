@@ -84,7 +84,9 @@ namespace Halibut.Transport.Streams
 
         async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
+            int timeout, 
             bool isRead,
+            string methodName, 
             CancellationToken cancellationToken)
         {
             using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
