@@ -51,7 +51,7 @@ namespace Halibut.Transport
             }
             else
             {
-                pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsync());
+                pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions());
             }
         }
 
@@ -116,7 +116,18 @@ namespace Halibut.Transport
                 }
             }
         }
-        
+
+        async Task ExecutePollingLoopAsyncCatchingExceptions()
+        {
+            try
+            {
+                await ExecutePollingLoopAsync();
+            }
+            catch (Exception)
+            {
+                // We may get errors about the workingCancellationTokenSource being used when it is disposed, we don't care about that.
+            }
+        }
         async Task ExecutePollingLoopAsync()
         {
             var retry = createRetryPolicy();
