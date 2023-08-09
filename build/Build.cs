@@ -116,7 +116,7 @@ class Build : NukeBuild
                     .EnableBlameCrashCollectAlways() // Lets make sure we can collect them.
                     .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
-                    .SetBlameHangTimeout(20)
+                    .SetBlameHangTimeout("2000")
                     .SetBlameHangDumpType("full"));
 
             });
