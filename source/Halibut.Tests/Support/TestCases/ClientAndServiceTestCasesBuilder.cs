@@ -42,18 +42,21 @@ namespace Halibut.Tests.Support.TestCases
                         if (!forceClientProxyTypes.Any())
                         {
                             yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null);
+                            yield break;
                         }
                         else
                         {
                             if (clientServiceTestVersion.IsPreviousClient())
                             {
                                 yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null);
+                                yield break;
                             }
                             else
                             {
                                 foreach (var forceClientProxyType in forceClientProxyTypes)
                                 {
                                     yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType);
+                                    yield break;
                                 }
                             }
                         }
