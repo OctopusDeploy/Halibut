@@ -195,12 +195,16 @@ namespace Halibut.Transport
         {
             var clientName = client.Client.RemoteEndPoint;
             var stream = client.GetStream();
+            // Current thoughts - accepting any ssl certificate (from 2015 you guys!!) is what is allowing the open_ssl connection. 
+            // Maybe should also update the enabled SslProtocols? But at a glance it looks like that only matters if it's the server
             using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 try
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+                    // There we have it folks
+                    // https://learn.microsoft.com/en-us/dotnet/framework/network-programming/tls#for-tcp-sockets-networking
+                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, false).ConfigureAwait(false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -384,6 +388,11 @@ namespace Halibut.Transport
 
         bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
         {
+            if (ServicePointManager.SecurityProtocol == SecurityProtocolType.SystemDefault)
+            {
+                // what do i actually want to do with this? no one knows. def not me. 
+            }
+            // this is just the certificate, nothing about the protocol (I think?)
             return true;
         }
 
