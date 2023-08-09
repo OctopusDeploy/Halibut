@@ -22,7 +22,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 #endif
     }
 
-    public class HalibutVersion
+    public class HalibutVersion : IEquatable<HalibutVersion>
     {
         readonly Version pollingVersion;
         readonly Version listeningVersion;
@@ -53,6 +53,29 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         public override string ToString()
         {
             return $"polling;{pollingVersion};listening;{listeningVersion};pollingOverWebSockets;{pollingOverWebSocketVersion};";
+        }
+        
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as HalibutVersion);
+        }
+
+        public bool Equals(HalibutVersion? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return pollingVersion.Equals(other.pollingVersion) && listeningVersion.Equals(other.listeningVersion) && pollingOverWebSocketVersion.Equals(other.pollingOverWebSocketVersion);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = pollingVersion.GetHashCode();
+                hashCode = (hashCode * 397) ^ listeningVersion.GetHashCode();
+                hashCode = (hashCode * 397) ^ pollingOverWebSocketVersion.GetHashCode();
+                return hashCode;
+            }
         }
     }
 
