@@ -139,16 +139,23 @@ namespace Halibut.Transport.Streams
         public override void Close() => inner.Close();
 
         public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => await inner.CopyToAsync(destination, bufferSize, cancellationToken);
-
-        public override int EndRead(IAsyncResult asyncResult) => inner.EndRead(asyncResult);
-
-        public override void EndWrite(IAsyncResult asyncResult) => inner.EndWrite(asyncResult);
-
+        
         public override int ReadByte() => inner.ReadByte();
 
-        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state) => inner.BeginRead(buffer, offset, count, callback, state);
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        {
+            // BeginRead does not respect timeouts. So force it to use ReadAsync which does.
+            return ReadAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
+        }
+
+        public override int EndRead(IAsyncResult asyncResult)
+        {
+            return ((Task<int>)asyncResult).Result;
+        }
 
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state) => inner.BeginWrite(buffer, offset, count, callback, state);
+
+        public override void EndWrite(IAsyncResult asyncResult) => inner.EndWrite(asyncResult);
 
         public override void Flush() => inner.Flush();
 

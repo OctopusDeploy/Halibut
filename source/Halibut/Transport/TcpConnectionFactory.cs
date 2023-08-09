@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport
 {
@@ -52,16 +54,35 @@ namespace Halibut.Transport
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = await CreateConnectedTcpClientAsync(serviceEndpoint, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
-
-            var stream = client.GetStream();
+            
+            var networkStream = client.GetStream();
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
-            var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
+
+#if NETFRAMEWORK
+            //AuthenticateAsClientAsync in .NET 4.8 does not listen to timeouts, and does not have an override that supports a cancellation token.
+            var networkTimeoutStream = new NetworkTimeoutStream(networkStream);
             
-            // TODO - ASYNC ME UP!
-            // This should take a cancellation token.
+            var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
+            
             await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+#else
+            using var timeoutCts = new CancellationTokenSource(networkStream.ReadTimeout);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
             
+            var ssl = new SslStream(networkStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
+
+            var options = new SslClientAuthenticationOptions
+            {
+                TargetHost = serviceEndpoint.BaseUri.Host,
+                ClientCertificates = new X509Certificate2Collection(clientCertificate),
+                EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            };
+
+            await ssl.AuthenticateAsClientAsync(options, linkedCts.Token);
+#endif
+
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
             await ssl.FlushAsync(cancellationToken);
 
