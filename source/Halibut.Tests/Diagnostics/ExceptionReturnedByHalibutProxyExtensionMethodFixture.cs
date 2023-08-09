@@ -96,12 +96,9 @@ namespace Halibut.Tests.Diagnostics
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
                     
-                    exception.Message.Should().ContainAny(new[]
-                    {
-                        "Unable to read data from the transport connection: Connection timed out.",
-                        "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond."
-                        
-                    });
+                    exception.Message.Should().ContainAny(
+                        "Unable to read data from the transport connection: Connection timed out.", 
+                        "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
                 }
             }
 

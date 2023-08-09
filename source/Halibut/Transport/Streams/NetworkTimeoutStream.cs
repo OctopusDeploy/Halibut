@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Runtime.Remoting;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,11 +9,11 @@ using Halibut.Util;
 
 namespace Halibut.Transport.Streams
 {
-    class TimeoutStream : Stream
+    class NetworkTimeoutStream : Stream
     {
         readonly Stream inner;
 
-        public TimeoutStream(Stream inner)
+        public NetworkTimeoutStream(Stream inner)
         {
             this.inner = inner;
         }
@@ -26,6 +27,7 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
+                false,
                 nameof(FlushAsync),
                 cancellationToken);
         }
@@ -35,6 +37,7 @@ namespace Halibut.Transport.Streams
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, offset, count, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
+                true,
                 nameof(ReadAsync),
                 cancellationToken);
         }
@@ -48,6 +51,7 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
+                false,
                 nameof(WriteAsync),
                 cancellationToken);
         }
@@ -58,6 +62,7 @@ namespace Halibut.Transport.Streams
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
+                true,
                 nameof(ReadAsync),
                 cancellationToken);
         }
@@ -71,12 +76,18 @@ namespace Halibut.Transport.Streams
                     return 0;
                 },
                 CanTimeout ? WriteTimeout : int.MaxValue,
+                false,
                 nameof(WriteAsync),
                 cancellationToken);
         }
 #endif
 
-        async Task<T> WrapWithCancellationAndTimeout<T>(Func<CancellationToken, Task<T>> action, int timeout, string methodName, CancellationToken cancellationToken)
+        async Task<T> WrapWithCancellationAndTimeout<T>(
+            Func<CancellationToken, Task<T>> action,
+            int timeout, 
+            bool isRead,
+            string methodName, 
+            CancellationToken cancellationToken)
         {
             using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellationTokenSource.Token);
@@ -114,7 +125,8 @@ namespace Halibut.Transport.Streams
             {
                 if (timeoutCancellationTokenSource.IsCancellationRequested)
                 {
-                    throw new OperationCanceledException($"The {methodName} operation timed out after {TimeSpan.FromMilliseconds(timeout)}.", innerException);
+                    var socketException = new SocketException(10060);
+                    throw new IOException($"Unable to {(isRead ? "read data from" : "write data to")} the transport connection: {socketException.Message}.", socketException);
                 }
 
                 if (cancellationToken.IsCancellationRequested)
