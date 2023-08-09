@@ -306,12 +306,8 @@ namespace Halibut.Tests.Support
                 .WithLogFactory(octopusLogFactory)
                 .WithPendingRequestQueueFactory(factory)
                 .WithTrustProvider(clientTrustProvider)
+                .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
-
-            if (forceClientProxyType == ForceClientProxyType.AsyncClient)
-            {
-                clientBuilder = clientBuilder.WithAsyncHalibutFeatureEnabled();
-            }
 
             var client = clientBuilder.Build();
             client.Trust(clientTrustsThumbprint);
@@ -322,12 +318,8 @@ namespace Halibut.Tests.Support
                 var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
+                    .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
                     .WithLogFactory(BuildServiceLogger());
-                
-                if (forceClientProxyType == ForceClientProxyType.AsyncClient)
-                {
-                    serviceBuilder = serviceBuilder.WithAsyncHalibutFeatureEnabled();
-                }
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
                 service = serviceBuilder.Build();
