@@ -117,8 +117,7 @@ class Build : NukeBuild
                     .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
                     .SetBlameHangTimeout(TimeSpan.FromMinutes(20).TotalMilliseconds.ToString())
-                    .SetBlameHangDumpType("full")
-                    .AddProcessEnvironmentVariable("PROCDUMP_PATH", Environment.CurrentDirectory));
+                    .SetBlameHangDumpType("full"));
 
             });
     }
