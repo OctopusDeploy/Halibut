@@ -4,6 +4,7 @@ using System.Net;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Transport.Caching;
+using Halibut.Util;
 
 namespace Halibut
 {
@@ -73,5 +74,6 @@ namespace Halibut
         Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
 
         OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }
+        AsyncHalibutFeature AsyncHalibutFeature { get; }
     }
 }
