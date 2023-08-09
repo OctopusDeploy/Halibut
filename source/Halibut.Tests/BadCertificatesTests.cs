@@ -107,14 +107,13 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(
-            //TODO: Figure out why this doesn't work
+            //Web sockets do not disconnect when calling TrustOnly. This issue has been raised.
             testWebSocket: false, 
             testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
         [LatestClientAndPreviousServiceVersionsTestCases(
-            //TODO: Figure out why this doesn't work
+            //Web sockets do not disconnect when calling TrustOnly. This issue has been raised.
             testWebSocket: false,
             testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
-        //We can't run previous clients, because they do not support passing in the cancellation token.
         public async Task FailWhenPollingServiceHasThumbprintRemovedViaTrustOnly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -150,112 +149,7 @@ namespace Halibut.Tests
                                                   || e.GetType() == typeof(TaskCanceledException));
             }
         }
-
-        //TODO: Remove playground
-        //[Test]
-        //[LatestClientAndLatestServiceTestCases(testWebSocket: true, testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
-        //public async Task RENAMESucceedWhenUsingSameConnection_EvenThoughClientCertificateHasHadTrustRemoved(ClientAndServiceTestCase clientAndServiceTestCase)
-        //{
-        //    var countingService = new CountingService();
-        //    var clientTrustProvider = new DefaultTrustProvider();
-
-        //    using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
-        //               .AsLatestClientAndLatestServiceBuilder()
-        //               .WithCountingService(countingService)
-        //               .WithClientTrustProvider(clientTrustProvider)
-        //               .RecordingClientLogs(out var serviceLoggers)
-        //               .Build(CancellationToken))
-        //    {
-        //        using var cts = new CancellationTokenSource();
-        //        var clientCountingService = clientAndBuilder.CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
-        //        {
-        //            point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
-        //        });
-
-        //        await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-        //        await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-
-        //        countingService.GetCurrentValue().Should().Be(2);
-
-        //        var logs1 = AllLogs(serviceLoggers).ToList();
-
-        //        //clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeTrue();
-        //        clientAndBuilder.Client.TrustOnly(new List<string>());
-
-        //        clientAndBuilder.Client.Disconnect(clientAndBuilder.GetServiceEndPoint());
-        //        clientAndBuilder.Client.RemoveTrust(CertAndThumbprint.TentaclePolling.Thumbprint);
-        //        //clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeFalse();
-
-
-        //        await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-
-        //        //await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
-        //        //var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
-
-        //        //await Task.Delay(10000);
-
-        //        //var logs2 = AllLogs(serviceLoggers).ToList();
-        //        ////Func<LogEvent, bool> hasExpectedLog = logEvent =>
-        //        ////    logEvent.FormattedMessage.Contains("The server at")
-        //        ////    && logEvent.FormattedMessage.Contains("presented an unexpected security certificate");
-
-        //        ////Wait.UntilActionSucceeds(() => AllLogs(serviceLoggers).Should().Contain(log => hasExpectedLog(log)),
-        //        ////    TimeSpan.FromSeconds(20),
-        //        ////    Logger,
-        //        ////    CancellationToken);
-
-        //        //cts.Cancel();
-
-        //        //await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
-
-
-
-        //        ////await AssertionExtensions.Should(() => clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token))).ThrowAsync<HalibutClientException>();
-
-
-        //        //countingService.GetCurrentValue().Should().Be(2, "With a bad certificate the request never should have been made. But increment exists from previous successful call.");
-        //    }
-
-        //    //var countingService = new CountingService();
-        //    //var trustProvider = new DefaultTrustProvider();
-
-        //    //using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
-        //    //           .AsLatestClientAndLatestServiceBuilder()
-        //    //           .WithCountingService(countingService)
-        //    //           .WithClientTrustProvider(trustProvider)
-        //    //           .Build(CancellationToken))
-        //    //{
-        //    //    var clientCountingService = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
-
-        //    //    // Works When Trusted
-        //    //    trustProvider.IsTrusted(CertAndThumbprint.Octopus.Thumbprint).Should().BeTrue();
-        //    //    await clientCountingService.IncrementAsync();
-        //    //    countingService.GetCurrentValue().Should().Be(1);
-
-        //    //    // Remove Trust
-        //    //    trustProvider.Remove(CertAndThumbprint.Octopus.Thumbprint);
-        //    //    trustProvider.IsTrusted(CertAndThumbprint.Octopus.Thumbprint).Should().BeFalse();
-
-        //    //    // Assert Keeps Working
-        //    //    for (int i = 0; i < 10; i++)
-        //    //    {
-        //    //        await clientCountingService.IncrementAsync();
-        //    //        countingService.GetCurrentValue().Should().Be(2 + i);
-        //    //        await Task.Delay(100, CancellationToken);
-        //    //    }
-        //    //}
-        //}
-
-
-
-
-
-
-
-
-
-        //--------------------------------------------
-
+        
         [Test]
         [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
         public async Task FailWhenClientPresentsWrongCertificateToListeningService(ClientAndServiceTestCase clientAndServiceTestCase)
