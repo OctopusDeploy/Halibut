@@ -5,6 +5,7 @@ using Nuke.Common;
 using Nuke.Common.CI;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
+using Nuke.Common.Tooling;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities;
@@ -112,9 +113,10 @@ class Build : NukeBuild
                     .EnableNoBuild()
                     .EnableNoRestore()
                     .EnableBlameCrash()
+                    .EnableBlameCrashCollectAlways() // Lets make sure we can collect them.
                     .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
-                    .SetBlameHangTimeout(TimeSpan.FromMinutes(20).TotalMilliseconds.ToString())
+                    .SetBlameHangTimeout("2000")
                     .SetBlameHangDumpType("full"));
 
             });

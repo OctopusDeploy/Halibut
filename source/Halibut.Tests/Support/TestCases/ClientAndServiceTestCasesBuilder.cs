@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Halibut.Tests.Util;
 
 namespace Halibut.Tests.Support.TestCases
@@ -42,18 +44,23 @@ namespace Halibut.Tests.Support.TestCases
                         if (!forceClientProxyTypes.Any())
                         {
                             yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null);
+                            Thread.Sleep(1000000000);
+                            Environment.Exit(-1);
+                            yield break;
                         }
                         else
                         {
                             if (clientServiceTestVersion.IsPreviousClient())
                             {
                                 yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null);
+                                yield break;
                             }
                             else
                             {
                                 foreach (var forceClientProxyType in forceClientProxyTypes)
                                 {
                                     yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType);
+                                    yield break;
                                 }
                             }
                         }
