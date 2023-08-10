@@ -150,12 +150,38 @@ namespace Halibut.Transport.Streams
 
         public override int EndRead(IAsyncResult asyncResult)
         {
-            return ((Task<int>)asyncResult).Result;
+            try
+            {
+                return ((Task<int>)asyncResult).Result;
+            }
+            catch (AggregateException e) when (e.InnerExceptions.Count == 1 && e.InnerException is not null)
+            {
+                throw e.InnerException;
+            }
         }
 
-        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state) => inner.BeginWrite(buffer, offset, count, callback, state);
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        {
+            // BeginWrite does not respect timeouts. So force it to use WriteAsync, which does.
+            return WriteAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
+        }
 
-        public override void EndWrite(IAsyncResult asyncResult) => inner.EndWrite(asyncResult);
+        public override void EndWrite(IAsyncResult asyncResult)
+        {
+            var task = (Task)asyncResult;
+
+            try
+            {
+                if (task.Exception is not null)
+                {
+                    throw task.Exception;
+                }
+            }
+            catch (AggregateException e) when (e.InnerExceptions.Count == 1 && e.InnerException is not null)
+            {
+                throw e.InnerException;
+            }
+        }
 
         public override void Flush() => inner.Flush();
 

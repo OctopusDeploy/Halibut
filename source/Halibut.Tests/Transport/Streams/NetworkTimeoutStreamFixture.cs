@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Util;
 using Halibut.Transport.Streams;
 using NUnit.Framework;
 
@@ -18,7 +19,8 @@ namespace Halibut.Tests.Transport.Streams
     public class NetworkTimeoutStreamFixture : BaseTest
     {
         [Test]
-        public async Task ReadShouldPassThrough()
+        [StreamMethod]
+        public async Task ReadingFromStreamShouldPassThrough(StreamMethod streamMethod)
         {
             var (disposables, sut, performListenerWrite) = await BuildTcpClientAndTcpListener(CancellationToken);
 
@@ -27,27 +29,37 @@ namespace Halibut.Tests.Transport.Streams
                 await performListenerWrite("Test");
 
                 var buffer = new byte[19];
-                var readBytes = sut.Read(buffer, 0, 19);
+                var readBytes = await sut.ReadFromStream(streamMethod, buffer, 0, 19, CancellationToken);
                 var readData = Encoding.UTF8.GetString(buffer, 0, readBytes);
                 
                 Assert.AreEqual("Test", readData);
             }
         }
-        
+
         [Test]
-        public async Task ReadAsyncShouldPassThrough()
+        [StreamMethod(testSync:false)]
+        public async Task ReadingFromStreamAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
         {
-            var (disposables, sut, performListenerWrite) = await BuildTcpClientAndTcpListener(CancellationToken);
+            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
 
             using (disposables)
             {
-                await performListenerWrite("Test");
+                // Ensure the correct timeout is used
+                sut.WriteTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
+                sut.ReadTimeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
 
-                var buffer = new byte[19];
-                var readBytes = await sut.ReadAsync(buffer, 0, 19, CancellationToken);
-                var readData = Encoding.UTF8.GetString(buffer, 0, readBytes);
+                var stopWatch = Stopwatch.StartNew();
+
+                var actualException = await Try.CatchingError(async () => await sut.ReadFromStream(streamMethod, new byte[19], 0, 19, CancellationToken));
                 
-                Assert.AreEqual("Test", readData);
+                stopWatch.Stop();
+
+                actualException.Should().NotBeNull().And.BeOfType<IOException>();
+                actualException!.Message.Should().ContainAny(
+                    "Unable to read data from the transport connection: Connection timed out.",
+                    "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+
+                stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
             }
         }
 
@@ -63,11 +75,11 @@ namespace Halibut.Tests.Transport.Streams
                     // Ensure the timeouts are not used
                     sut.WriteTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
                     sut.ReadTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
-                    
+
                     var stopWatch = Stopwatch.StartNew();
-                    
+
                     var actualException = await Try.CatchingError(async () => await sut.ReadAsync(new byte[19], 0, 19, readTokenSource.Token));
-                    
+
                     stopWatch.Stop();
 
                     actualException.Should().NotBeNull().And.BeOfType<OperationCanceledException>();
@@ -77,35 +89,10 @@ namespace Halibut.Tests.Transport.Streams
                 }
             }
         }
-
+        
         [Test]
-        public async Task ReadAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException()
-        {
-            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
-
-            using (disposables)
-            {
-                // Ensure the correct timeout is used
-                sut.WriteTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
-                sut.ReadTimeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
-
-                var stopWatch = Stopwatch.StartNew();
-
-                var actualException = await Try.CatchingError(async () => await sut.ReadAsync(new byte[19], 0, 19, CancellationToken));
-                
-                stopWatch.Stop();
-
-                actualException.Should().NotBeNull().And.BeOfType<IOException>();
-                actualException!.Message.Should().ContainAny(
-                    "Unable to read data from the transport connection: Connection timed out.",
-                    "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
-
-                stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
-            }
-        }
-
-        [Test]
-        public async Task WriteShouldPassThrough()
+        [StreamMethod]
+        public async Task WritingToStreamShouldPassThrough(StreamMethod streamMethod)
         {
             string? readData = null;
             
@@ -120,7 +107,7 @@ namespace Halibut.Tests.Transport.Streams
             using (disposables)
             {
                 var buffer = Encoding.UTF8.GetBytes("Test");
-                sut.Write(buffer, 0, buffer.Length);
+                await sut.WriteToStream(streamMethod, buffer, 0, buffer.Length, CancellationToken);
 
                 while ((readData?.Length ?? 0) < 4 && !CancellationToken.IsCancellationRequested)
                 {
@@ -132,32 +119,41 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public async Task WriteAsyncShouldPassThrough()
+        [StreamMethod(testSync: false)]
+        public async Task WritingToStreamAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
         {
-            string? readData = null;
-            
             var (disposables, sut, _) = await BuildTcpClientAndTcpListener(
-                CancellationToken,
-                onListenerRead: async data =>
-                {
-                    await Task.CompletedTask;
-                    readData += data;
-                });
+                CancellationToken, 
+                onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
 
             using (disposables)
             {
-                var buffer = Encoding.UTF8.GetBytes("Test");
-                await sut.WriteAsync(buffer, 0, buffer.Length, CancellationToken);
+                sut.WriteTimeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
+                // Ensure the correct timeout is used
+                sut.ReadTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
 
-                while ((readData?.Length ?? 0) < 4 && !CancellationToken.IsCancellationRequested)
-                {
-                    await Task.Delay(10, CancellationToken);
-                }
+                var data = new byte[655360];
+                var r = new Random();
+                r.NextBytes(data);
 
-                Assert.AreEqual("Test", readData);
+                var stopWatch = Stopwatch.StartNew();
+
+                // Brute force attempt to get the Write to be slow
+                var actualException = await Try.RunTillExceptionOrCancellation(
+                    async () => await sut.WriteToStream(streamMethod, data, 0, data.Length, CancellationToken), 
+                    CancellationToken);
+
+                stopWatch.Stop();
+
+                actualException.Should().NotBeNull().And.BeOfType<IOException>();
+                actualException!.Message.Should().ContainAny(
+                    "Unable to write data to the transport connection: Connection timed out.",
+                    "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+
+                stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
             }
         }
-
+        
         [Test]
         public async Task WriteAsyncShouldCancel()
         {
@@ -178,12 +174,12 @@ namespace Halibut.Tests.Transport.Streams
                     r.NextBytes(data);
 
                     var stopWatch = Stopwatch.StartNew();
-                    
+
                     // Brute force attempt to get the Write to be slow
                     var actualException = await Try.RunTillExceptionOrCancellation(
                         async () => await sut.WriteAsync(data, 0, data.Length, writeTokenSource.Token),
                         CancellationToken);
-                    
+
                     stopWatch.Stop();
 
                     actualException.Should().NotBeNull().And.BeOfType<OperationCanceledException>();
@@ -191,41 +187,6 @@ namespace Halibut.Tests.Transport.Streams
 
                     stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
                 }
-            }
-        }
-
-        [Test]
-        public async Task WriteAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException()
-        {
-            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(
-                CancellationToken, 
-                onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
-
-            using (disposables)
-            {
-                sut.WriteTimeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
-                // Ensure the correct timeout is used
-                sut.ReadTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
-
-                var data = new byte[655360];
-                var r = new Random();
-                r.NextBytes(data);
-
-                var stopWatch = Stopwatch.StartNew();
-
-                // Brute force attempt to get the Write to be slow
-                var actualException = await Try.RunTillExceptionOrCancellation(
-                    async () => await sut.WriteAsync(data, 0, data.Length, CancellationToken), 
-                    CancellationToken);
-
-                stopWatch.Stop();
-
-                actualException.Should().NotBeNull().And.BeOfType<IOException>();
-                actualException!.Message.Should().ContainAny(
-                    "Unable to write data to the transport connection: Connection timed out.",
-                    "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
-
-                stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
             }
         }
 

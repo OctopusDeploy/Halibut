@@ -32,7 +32,38 @@ namespace Halibut.Util
             AsyncCallback? callback,
             object? state)
         {
+            // Sourced from https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/interop-with-other-asynchronous-patterns-and-types
             var tcs = new TaskCompletionSource<T>(state);
+
+            task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    //tcs.TrySetException(t.Exception!.InnerExceptions);
+                    tcs.TrySetException(t.Exception!.InnerExceptions[0]);
+                }
+                else if (t.IsCanceled)
+                {
+                    tcs.TrySetCanceled();
+                }
+                else
+                {
+                    tcs.TrySetResult(t.Result);
+                }
+
+                callback?.Invoke(tcs.Task);
+            }, TaskScheduler.Default);
+
+            return tcs.Task;
+        }
+
+        public static IAsyncResult AsAsynchronousProgrammingModel(
+            this Task task,
+            AsyncCallback? callback,
+            object? state)
+        {
+            // Sourced from https://learn.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/interop-with-other-asynchronous-patterns-and-types
+            var tcs = new TaskCompletionSource<object>(state);
 
             task.ContinueWith(t =>
             {
@@ -43,10 +74,6 @@ namespace Halibut.Util
                 else if (t.IsCanceled)
                 {
                     tcs.TrySetCanceled();
-                }
-                else
-                {
-                    tcs.TrySetResult(t.Result);
                 }
 
                 callback?.Invoke(tcs.Task);
