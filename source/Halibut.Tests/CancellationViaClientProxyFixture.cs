@@ -18,8 +18,8 @@ namespace Halibut.Tests
     public class CancellationViaClientProxyFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task CancellationCanBeDoneViaClientProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -55,7 +55,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task CannotHaveServiceWithHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -79,8 +79,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task HalibutProxyRequestOptionsCanBeSentToLatestAndOldServicesThatPreDateHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -97,8 +97,8 @@ namespace Halibut.Tests
         
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task HalibutProxyRequestOptions_CanNotCancel_InFlightRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

@@ -14,7 +14,7 @@ namespace Halibut.Tests
     public class TestPortForwarderFixture : BaseTest
     {
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ClientCanSendMessagesToTentacle_WithEchoService_AndPortForwrding(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -33,7 +33,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ClientCanNotSendMessagesToTentacle_WithEchoService_AndBrokenPortForwarding(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -55,7 +55,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testWebSocket: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testWebSocket: false)]
         // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
         public async Task ClientCanSendMessagesToTentacle_WithEchoService_AndPortForwarding_AndProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {

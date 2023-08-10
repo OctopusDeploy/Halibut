@@ -27,8 +27,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false)]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -49,8 +49,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FailWhenServerThrowsAnException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -105,7 +105,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task FailWhenServerThrowsDuringADataStream(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

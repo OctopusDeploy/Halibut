@@ -15,7 +15,7 @@ namespace Halibut.Tests.Transport
     public class DiscoveryClientFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task DiscoverMethodReturnsEndpointDetails(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -49,7 +49,7 @@ namespace Halibut.Tests.Transport
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task OctopusCanDiscoverTentacle(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

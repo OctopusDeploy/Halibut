@@ -18,7 +18,7 @@ namespace Halibut.Tests
     public class PollingTentacleDequeuesRequestsInOrderFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             IPendingRequestQueue pendingRequestQueue = null;

@@ -17,7 +17,7 @@ namespace Halibut.Tests
     public class ListeningTentaclesUseAPoolOfConnectionsFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
         public async Task TestOnlyHealthConnectionsAreKeptInThePool(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
