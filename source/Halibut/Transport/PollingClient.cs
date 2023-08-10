@@ -59,8 +59,8 @@ namespace Halibut.Transport
         public void Dispose()
         {
             working = false;
-            Try.CatchingError(workingCancellationTokenSource.Cancel, exception => { });
-            Try.CatchingError(workingCancellationTokenSource.Dispose, exception => { });
+            Try.CatchingError(workingCancellationTokenSource.Cancel, _ => { });
+            Try.CatchingError(workingCancellationTokenSource.Dispose, _ => { });
         }
         
         void ExecutePollingLoop(object ignored)
