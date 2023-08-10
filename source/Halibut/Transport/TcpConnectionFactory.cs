@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport
 {
@@ -52,16 +54,21 @@ namespace Halibut.Transport
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = await CreateConnectedTcpClientAsync(serviceEndpoint, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
-
-            var stream = client.GetStream();
+            
+            var networkStream = client.GetStream();
+            var networkTimeoutStream = new NetworkTimeoutStream(networkStream);
+            var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
-            var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            
-            // TODO - ASYNC ME UP!
-            // This should take a cancellation token.
+
+#if NETFRAMEWORK
+            // TODO: ASYNC ME UP!
+            // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
             await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
-            
+#else
+            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), cancellationToken);
+#endif
+
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
             await ssl.FlushAsync(cancellationToken);
 

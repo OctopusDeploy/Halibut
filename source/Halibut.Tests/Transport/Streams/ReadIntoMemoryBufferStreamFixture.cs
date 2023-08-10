@@ -3,6 +3,8 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Util;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 using NUnit.Framework;
@@ -12,7 +14,8 @@ namespace Halibut.Tests.Transport.Streams
     public class ReadIntoMemoryBufferStreamFixture : BaseTest
     {
         [Test]
-        public async Task ReadsFromSourceStream_IfBufferingWasNotApplied([Values]StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task ReadsFromSourceStream_IfBufferingWasNotApplied(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -21,7 +24,7 @@ namespace Halibut.Tests.Transport.Streams
 
             // Act
             var readBuffer = new byte[bytesToWrite.Length];
-            var bytesRead = await ReadFromStream(streamMethod, sut, readBuffer, 0, bytesToWrite.Length);
+            var bytesRead = await sut.ReadFromStream(streamMethod, readBuffer, 0, bytesToWrite.Length, CancellationToken);
             
             // Assert
             bytesRead.Should().Be(bytesToWrite.Length);
@@ -30,7 +33,8 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitEqualToDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitEqualToDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -41,7 +45,7 @@ namespace Halibut.Tests.Transport.Streams
 
             // Act
             var readBuffer = new byte[bytesToWrite.Length];
-            var bytesRead = await ReadFromStream(streamMethod, sut, readBuffer, 0, bytesToWrite.Length);
+            var bytesRead = await sut.ReadFromStream(streamMethod, readBuffer, 0, bytesToWrite.Length, CancellationToken);
 
             // Assert
             bytesRead.Should().Be(bytesToWrite.Length);
@@ -50,7 +54,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitGreaterThanDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitGreaterThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -61,7 +66,7 @@ namespace Halibut.Tests.Transport.Streams
 
             // Act
             var readBuffer = new byte[bytesToWrite.Length];
-            var bytesRead = await ReadFromStream(streamMethod, sut, readBuffer, 0, bytesToWrite.Length);
+            var bytesRead = await sut.ReadFromStream(streamMethod, readBuffer, 0, bytesToWrite.Length, CancellationToken);
 
             // Assert
             bytesRead.Should().Be(bytesToWrite.Length);
@@ -70,7 +75,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitLessThanDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitLessThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -82,11 +88,11 @@ namespace Halibut.Tests.Transport.Streams
             // Act
             var readBuffer = new byte[bytesToWrite.Length];
             // First round read till we hit the memory buffer
-            var bytesRead = await ReadFromStream(streamMethod, sut, readBuffer, 0, bytesToWrite.Length);
+            var bytesRead = await sut.ReadFromStream(streamMethod, readBuffer, 0, bytesToWrite.Length, CancellationToken);
             bytesRead.Should().Be(bytesToWrite.Length - 1);
 
             // Next round finishes the data from the source
-            bytesRead = await ReadFromStream(streamMethod, sut, readBuffer, bytesToWrite.Length - 1, 1);
+            bytesRead = await sut.ReadFromStream(streamMethod, readBuffer, bytesToWrite.Length - 1, 1, CancellationToken);
             bytesRead.Should().Be(1);
 
             // Assert
@@ -95,7 +101,8 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_ReadingOneByteAtATime([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_ReadingOneByteAtATime(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -109,7 +116,7 @@ namespace Halibut.Tests.Transport.Streams
             var readBuffer = new byte[bytesToWrite.Length];
             for (int i = 0; i < bytesToWrite.Length; i++)
             {
-                var bytesRead = await ReadFromStream(streamMethod, sut, readBuffer, i, 1);
+                var bytesRead = await sut.ReadFromStream(streamMethod, readBuffer, i, 1, CancellationToken);
                 bytesRead.Should().Be(1);
             }
 
@@ -126,33 +133,6 @@ namespace Halibut.Tests.Transport.Streams
             memoryStream.Position = 0;
 
             return memoryStream;
-        }
-
-        async Task<int> ReadFromStream(StreamMethod streamMethod, ReadIntoMemoryBufferStream sut, byte[] readBuffer, int offset, int count)
-        {
-            switch (streamMethod)
-            {
-                case StreamMethod.Async:
-                    return await sut.ReadAsync(readBuffer, offset, count, CancellationToken);
-                case StreamMethod.Sync:
-                    return sut.Read(readBuffer, offset, count);
-                case StreamMethod.LegacyAsync:
-                    // This is the way async reading was done in earlier version of .NET
-                    int bytesRead = -1;
-                    sut.BeginRead(readBuffer, offset, count, AsyncCallback, sut);
-                    void AsyncCallback(IAsyncResult result)
-                    {
-                        bytesRead = sut.EndRead(result);
-                    }
-
-                    while (bytesRead < 0 && !CancellationToken.IsCancellationRequested)
-                    {
-                        await Task.Delay(10);
-                    }
-                    return bytesRead;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(streamMethod), streamMethod, null);
-            }
         }
     }
 }
