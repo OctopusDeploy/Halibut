@@ -66,6 +66,8 @@ namespace Halibut.Transport
                         using (var ssl = new SslStream(networkTimeoutStream, false, ValidateCertificate))
                         {
 #if NETFRAMEWORK
+                            // TODO: ASYNC ME UP!
+                            // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
                             await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 #else
                             await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(), cancellationToken);
