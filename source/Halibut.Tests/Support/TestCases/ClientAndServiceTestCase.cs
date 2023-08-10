@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Util;
 
 namespace Halibut.Tests.Support.TestCases
 {
@@ -12,6 +13,8 @@ namespace Halibut.Tests.Support.TestCases
 
         public ServiceConnectionType ServiceConnectionType { get; }
 
+        public AsyncHalibutFeature ServiceAsyncHalibutFeature { get; }
+
         /// <summary>
         ///     If running a test which wants to make the same or similar calls multiple time, this has a "good"
         ///     number of times to do that. It takes care of generally not picking such a high number the tests
@@ -22,13 +25,19 @@ namespace Halibut.Tests.Support.TestCases
         public ForceClientProxyType? ForceClientProxyType { get; }
         public SyncOrAsync SyncOrAsync => ForceClientProxyType.ToSyncOrAsync();
 
-        public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType, NetworkConditionTestCase networkConditionTestCase, int recommendedIterations, ClientAndServiceTestVersion clientAndServiceTestVersion, ForceClientProxyType? forceClientProxyType)
+        public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType,
+            NetworkConditionTestCase networkConditionTestCase,
+            int recommendedIterations,
+            ClientAndServiceTestVersion clientAndServiceTestVersion,
+            ForceClientProxyType? forceClientProxyType,
+            AsyncHalibutFeature serviceAsyncHalibutFeature)
         {
             ServiceConnectionType = serviceConnectionType;
             NetworkConditionTestCase = networkConditionTestCase;
             RecommendedIterations = recommendedIterations;
             ClientAndServiceTestVersion = clientAndServiceTestVersion;
             ForceClientProxyType = forceClientProxyType;
+            ServiceAsyncHalibutFeature = serviceAsyncHalibutFeature;
         }
 
         public IClientAndServiceBuilder CreateTestCaseBuilder()
@@ -46,6 +55,11 @@ namespace Halibut.Tests.Support.TestCases
                 builder.WithForcingClientProxyType(ForceClientProxyType.Value);
             }
 
+            if (ServiceAsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+            {
+                builder.WithServiceAsyncHalibutFeatureEnabled();
+            }
+
             return builder;
         }
         
@@ -53,13 +67,26 @@ namespace Halibut.Tests.Support.TestCases
         {
             // This is used as the test parameter name, so make this something someone can understand in teamcity or their IDE.
             var testParameter = new List<string>();
+            
+            // These names can be longer than what rider will handle, setting UseShortTestNames=true will help with that.
+            bool useShortString = EnvironmentVariableReaderHelper.EnvironmentVariableAsBool("UseShortTestNames", false);
+            
             testParameter.Add(ServiceConnectionType.ToString());
-            testParameter.Add(ClientAndServiceTestVersion.ToString(ServiceConnectionType));
-            testParameter.Add(NetworkConditionTestCase.ToString());
-            testParameter.Add($"RecommendedIters: {RecommendedIterations}");
+            testParameter.Add(useShortString ? ClientAndServiceTestVersion.ToShortString(ServiceConnectionType): ClientAndServiceTestVersion.ToString(ServiceConnectionType));
+            testParameter.Add(useShortString ? NetworkConditionTestCase.ToShortString() : NetworkConditionTestCase.ToString());
+            testParameter.Add(useShortString ? $"RecIters:{RecommendedIterations}" : $"RecommendedIters: {RecommendedIterations}");
             if (ForceClientProxyType != null)
             {
                 testParameter.Add(ForceClientProxyType.ToString());
+            }
+
+            if (ServiceAsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+            {
+                testParameter.Add("AsyncService");
+            }
+            else
+            {
+                testParameter.Add("SyncService");
             }
             
             return string.Join(", ", testParameter);

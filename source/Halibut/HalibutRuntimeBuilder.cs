@@ -68,6 +68,12 @@ namespace Halibut
             asyncHalibutFeature = AsyncHalibutFeature.Enabled;
             return this;
         }
+        
+        public HalibutRuntimeBuilder WithAsyncHalibutFeature(AsyncHalibutFeature asyncHalibutFeature)
+        {
+            asyncHalibutFeature = this.asyncHalibutFeature;
+            return this;
+        }
 
         internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {

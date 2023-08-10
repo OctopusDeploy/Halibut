@@ -32,6 +32,7 @@ namespace Halibut.Tests.Support
         readonly CertAndThumbprint clientCertAndThumbprint;
         string serviceTrustsThumbprint;
         ForceClientProxyType? forceClientProxyType;
+        AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
         
         
         bool hasService = true;
@@ -279,7 +280,13 @@ namespace Halibut.Tests.Support
         {
             return WithForcingClientProxyType(forceClientProxyType);
         }
-        
+
+        public IClientAndServiceBuilder WithServiceAsyncHalibutFeatureEnabled()
+        {
+            serviceAsyncHalibutFeature = AsyncHalibutFeature.Enabled;
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
         {
             this.forceClientProxyType = forceClientProxyType;
@@ -306,12 +313,8 @@ namespace Halibut.Tests.Support
                 .WithLogFactory(octopusLogFactory)
                 .WithPendingRequestQueueFactory(factory)
                 .WithTrustProvider(clientTrustProvider)
+                .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
-
-            if (forceClientProxyType == ForceClientProxyType.AsyncClient)
-            {
-                clientBuilder = clientBuilder.WithAsyncHalibutFeatureEnabled();
-            }
 
             var client = clientBuilder.Build();
             client.Trust(clientTrustsThumbprint);
@@ -322,6 +325,7 @@ namespace Halibut.Tests.Support
                 var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
+                    .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                     .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
