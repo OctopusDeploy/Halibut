@@ -40,25 +40,23 @@ namespace Halibut.Transport
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
-        readonly CancellationTokenSource cts = new CancellationTokenSource();
-        readonly TcpClientManager tcpClientManager = new TcpClientManager();
+        readonly CancellationTokenSource cts = new();
+        readonly TcpClientManager tcpClientManager = new();
         readonly ExchangeActionAsync exchangeAction;
         readonly AsyncHalibutFeature asyncHalibutFeature;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
 
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, AsyncHalibutFeature asyncHalibutFeature)
-            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, () => new Dictionary<string, string>(), asyncHalibutFeature)
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, AsyncHalibutFeature asyncHalibutFeature) :
-            this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection, asyncHalibutFeature)
-        {
-        }
-
-        public SecureListener(IPEndPoint endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
+        public SecureListener(
+            IPEndPoint endPoint, 
+            X509Certificate2 serverCertificate, 
+            ExchangeProtocolBuilder exchangeProtocolBuilder, 
+            ExchangeActionAsync exchangeAction, 
+            Predicate<string> verifyClientThumbprint, 
+            ILogFactory logFactory, 
+            Func<string> getFriendlyHtmlPageContent, 
+            Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, AsyncHalibutFeature asyncHalibutFeature)
         {
             this.endPoint = endPoint;

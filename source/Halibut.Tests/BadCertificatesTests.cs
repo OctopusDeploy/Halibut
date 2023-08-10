@@ -83,7 +83,7 @@ namespace Halibut.Tests
                 });
 
                 // Act
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => {
@@ -129,14 +129,14 @@ namespace Halibut.Tests
                     });
 
                 // Works normally
-                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
+                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None));
+                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None));
                 
                 // Act
                 clientAndBuilder.Client.TrustOnly(new List<string>());
                 
                 // Assert
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 
@@ -194,7 +194,7 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
                 });
                 
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 Func<LogEvent, bool> hasExpectedLog = logEvent =>
                     logEvent.FormattedMessage.Contains("The server at")
@@ -251,7 +251,7 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
                 
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => { AllLogs(serviceLoggers).Select(l => l.FormattedMessage).ToArray()
