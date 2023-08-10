@@ -17,7 +17,7 @@ namespace Halibut.Tests
     public class WhenCallingAMethodThatDoesNotExist : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
         public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var services = new SingleServiceFactory(new object(), typeof(EchoService));

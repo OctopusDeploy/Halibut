@@ -14,7 +14,7 @@ namespace Halibut.Tests
     public class WhenCallingAServiceThatDoesNotExist : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
         public async Task AServiceNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
