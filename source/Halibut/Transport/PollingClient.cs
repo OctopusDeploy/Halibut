@@ -52,7 +52,7 @@ namespace Halibut.Transport
             }
             else
             {
-                pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions());
+                pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions(workingCancellationTokenSource.Token));
             }
         }
 
@@ -118,35 +118,35 @@ namespace Halibut.Transport
             }
         }
 
-        async Task ExecutePollingLoopAsyncCatchingExceptions()
+        async Task ExecutePollingLoopAsyncCatchingExceptions(CancellationToken cancellationToken)
         {
             try
             {
-                await ExecutePollingLoopAsync();
+                await ExecutePollingLoopAsync(cancellationToken);
             }
             catch (Exception)
             {
                 // We may get errors about the workingCancellationTokenSource being used when it is disposed, we don't care about that.
             }
         }
-        async Task ExecutePollingLoopAsync()
+        async Task ExecutePollingLoopAsync(CancellationToken cancellationToken)
         {
             var retry = createRetryPolicy();
             var sleepFor = TimeSpan.Zero;
-            while (!workingCancellationTokenSource.Token.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
                     try
                     {
                         retry.Try();
-                        await secureClient.ExecuteTransactionAsync(async (protocol, cancellationToken) =>
+                        await secureClient.ExecuteTransactionAsync(async (protocol, ct) =>
                         {
                             // We have successfully connected at this point so reset the retry policy
                             // Subsequent connection issues will try and reconnect quickly and then back-off
                             retry.Success();
-                            await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequest, int.MaxValue, cancellationToken);
-                        }, workingCancellationTokenSource.Token);
+                            await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequest, int.MaxValue, ct);
+                        }, cancellationToken);
                         retry.Success();
                     }
                     finally
@@ -164,7 +164,7 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    await Task.Delay(sleepFor, workingCancellationTokenSource.Token);
+                    await Task.Delay(sleepFor, cancellationToken);
                 }
             }
         }
