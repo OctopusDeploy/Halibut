@@ -133,7 +133,7 @@ namespace Halibut.Transport
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
                 webSocketStream = new WebSocketStream(webSocketContext.WebSocket);
 
-                var req = await webSocketStream.ReadTextMessage().ConfigureAwait(false); // Initial message
+                var req = await webSocketStream.ReadTextMessage(CancellationToken.None).ConfigureAwait(false); // Initial message
                 if (string.IsNullOrEmpty(req))
                 {
                     log.Write(EventType.Diagnostic, "Ignoring empty request");

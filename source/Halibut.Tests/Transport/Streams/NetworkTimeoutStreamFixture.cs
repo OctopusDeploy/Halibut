@@ -83,7 +83,7 @@ namespace Halibut.Tests.Transport.Streams
                     stopWatch.Stop();
 
                     actualException.Should().NotBeNull().And.BeOfType<OperationCanceledException>();
-                    actualException!.Message.Should().Be("The ReadAsync operation was cancelled.");
+                    actualException!.Message.Should().Be($"The {nameof(NetworkTimeoutStream)}.ReadAsync operation was cancelled.");
 
                     stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
                 }
@@ -183,7 +183,7 @@ namespace Halibut.Tests.Transport.Streams
                     stopWatch.Stop();
 
                     actualException.Should().NotBeNull().And.BeOfType<OperationCanceledException>();
-                    actualException!.Message.Should().Be("The WriteAsync operation was cancelled.");
+                    actualException!.Message.Should().Be($"The {nameof(NetworkTimeoutStream)}.WriteAsync operation was cancelled.");
 
                     stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
                 }
