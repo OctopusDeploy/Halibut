@@ -8,7 +8,7 @@ namespace Halibut.Tests.Support
         public static bool EnvironmentVariableAsBool(string envVar, bool defaultValue)
         {
             var value = Environment.GetEnvironmentVariable(envVar);
-            if (string.IsNullOrEmpty(value))
+            if (string.IsNullOrWhiteSpace(value))
             {
                 return defaultValue;
             }
