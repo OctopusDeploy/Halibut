@@ -64,23 +64,10 @@ namespace Halibut.Transport
             var networkTimeoutStream = new NetworkTimeoutStream(networkStream);
             
             var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-            
             await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 #else
-            using var timeoutCts = new CancellationTokenSource(networkStream.ReadTimeout);
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
-            
             var ssl = new SslStream(networkStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
-
-            var options = new SslClientAuthenticationOptions
-            {
-                TargetHost = serviceEndpoint.BaseUri.Host,
-                ClientCertificates = new X509Certificate2Collection(clientCertificate),
-                EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
-                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
-            };
-
-            await ssl.AuthenticateAsClientAsync(options, linkedCts.Token);
+            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), cancellationToken);
 #endif
 
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);

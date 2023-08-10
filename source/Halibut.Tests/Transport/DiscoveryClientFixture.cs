@@ -1,10 +1,14 @@
+using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Transport;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Transport
 {
@@ -32,7 +36,7 @@ namespace Halibut.Tests.Transport
 
         [Test]
         [SyncAndAsync]
-        public async Task DiscoveringNonExistantEndpointThrows(SyncOrAsync syncOrAsync)
+        public async Task DiscoveringNonExistentEndpointThrows(SyncOrAsync syncOrAsync)
         {
             var client = new DiscoveryClient();
             var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "");
@@ -58,6 +62,36 @@ namespace Halibut.Tests.Transport
                     
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
+        public async Task DiscoverShouldRespectTcpClientReceiveTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var dataTransferObserverPauser = new DataTransferObserverBuilder()
+                .WithWritePausing(Logger, 1)
+                .Build();
+            var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
+
+            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .AsLatestClientAndLatestServiceBuilder()
+                .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
+                    .WithDataObserver(() => new BiDirectionalDataTransferObserver(dataTransferObserverDoNothing, dataTransferObserverPauser))
+                    .Build())
+                .Build(CancellationToken);
+
+            var client = new DiscoveryClient();
+
+            var sw = Stopwatch.StartNew();
+#pragma warning disable CS0612
+            await AssertionExtensions.Should(() => clientAndServiceTestCase.SyncOrAsync
+                .WhenSync(() => client.Discover(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken))
+                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken)))
+                .ThrowAsync<HalibutClientException>();
+#pragma warning restore CS0612
+
+            sw.Stop();
+            sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
         }
     }
 }

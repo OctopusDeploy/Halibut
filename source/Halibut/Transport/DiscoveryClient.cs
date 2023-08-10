@@ -6,13 +6,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport
 {
     public class DiscoveryClient
     {
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
-        readonly LogFactory logs = new LogFactory();
+        readonly LogFactory logs = new ();
 
         [Obsolete]
         public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint)
@@ -59,11 +60,19 @@ namespace Halibut.Transport
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
                 using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, log, cancellationToken))
                 {
-                    using (var stream = client.GetStream())
+                    using (var networkStream = client.GetStream())
                     {
-                        using (var ssl = new SslStream(stream, false, ValidateCertificate))
+#if NETFRAMEWORK
+                        //AuthenticateAsClientAsync in .NET 4.8 does not listen to timeouts, and does not have an override that supports a cancellation token.
+                        var networkTimeoutStream = new NetworkTimeoutStream(networkStream);
+                        using (var ssl = new SslStream(networkTimeoutStream, false, ValidateCertificate))
                         {
                             await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+#else
+                        using (var ssl = new SslStream(networkStream, false, ValidateCertificate))
+                        {
+                            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(), cancellationToken);
+#endif
                             await ssl.WriteAsync(HelloLine, 0, HelloLine.Length, cancellationToken);
                             await ssl.FlushAsync(cancellationToken);
 

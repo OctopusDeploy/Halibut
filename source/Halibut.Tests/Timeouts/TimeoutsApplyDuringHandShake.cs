@@ -32,20 +32,8 @@ namespace Halibut.Tests.Timeouts
             int writeNumberToPauseOn // Ie pause on the first or second write
             ) 
         {
-            bool hasPausedAConnection = false;
-            int numberOfWritesSeen = 0;
-            
             var dataTransferObserverPauser = new DataTransferObserverBuilder()
-                .WithWritingDataObserver((tcpPump, _) =>
-                {
-                    Interlocked.Increment(ref numberOfWritesSeen);
-                    if (!hasPausedAConnection && numberOfWritesSeen == writeNumberToPauseOn)
-                    {
-                        hasPausedAConnection = true;
-                        Logger.Information("Pausing pump");
-                        tcpPump.Pause();
-                    }
-                })
+                .WithWritePausing(Logger, writeNumberToPauseOn)
                 .Build();
             var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
             

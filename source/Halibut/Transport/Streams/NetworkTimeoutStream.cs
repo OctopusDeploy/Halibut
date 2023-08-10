@@ -144,7 +144,7 @@ namespace Halibut.Transport.Streams
 
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
         {
-            // BeginRead does not respect timeouts. So force it to use ReadAsync which does.
+            // BeginRead does not respect timeouts. So force it to use ReadAsync, which does.
             return ReadAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
         }
 
