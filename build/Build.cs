@@ -114,7 +114,10 @@ class Build : NukeBuild
                     .EnableBlameCrash()
                     .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
-                    .SetBlameHangTimeout(TimeSpan.FromMinutes(20).TotalMilliseconds.ToString())
+                    // This is set high since when a hang dump is collected it is saved into /tmp/
+                    // On windows the dump collecting utility appears to be missing and so nothing is collected.
+                    // Setting high means we will have time to get in and collect a dump manually
+                    .SetBlameHangTimeout(TimeSpan.FromMinutes(9999).TotalMilliseconds.ToString())
                     .SetBlameHangDumpType("full"));
 
             });
