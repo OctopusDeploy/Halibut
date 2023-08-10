@@ -27,7 +27,8 @@ namespace Halibut.Tests.Support.TestAttributes
                 }
                 
                 yield return StreamMethod.Async;
-                yield return StreamMethod.LegacyAsync;
+                yield return StreamMethod.LegacyAsyncCallEndWithinCallback;
+                yield return StreamMethod.LegacyAsyncCallEndOutsideCallback;
             }
         }
     }

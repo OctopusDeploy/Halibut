@@ -169,13 +169,9 @@ namespace Halibut.Transport.Streams
         public override void EndWrite(IAsyncResult asyncResult)
         {
             var task = (Task)asyncResult;
-
             try
             {
-                if (task.Exception is not null)
-                {
-                    throw task.Exception;
-                }
+                Task.WaitAll(task);
             }
             catch (AggregateException e) when (e.InnerExceptions.Count == 1 && e.InnerException is not null)
             {

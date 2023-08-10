@@ -62,15 +62,12 @@ namespace Halibut.Transport
                 {
                     using (var networkStream = client.GetStream())
                     {
-#if NETFRAMEWORK
-                        //AuthenticateAsClientAsync in .NET 4.8 does not listen to timeouts, and does not have an override that supports a cancellation token.
                         var networkTimeoutStream = new NetworkTimeoutStream(networkStream);
                         using (var ssl = new SslStream(networkTimeoutStream, false, ValidateCertificate))
                         {
+#if NETFRAMEWORK
                             await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 #else
-                        using (var ssl = new SslStream(networkStream, false, ValidateCertificate))
-                        {
                             await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(), cancellationToken);
 #endif
                             await ssl.WriteAsync(HelloLine, 0, HelloLine.Length, cancellationToken);

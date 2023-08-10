@@ -39,8 +39,7 @@ namespace Halibut.Util
             {
                 if (t.IsFaulted)
                 {
-                    //tcs.TrySetException(t.Exception!.InnerExceptions);
-                    tcs.TrySetException(t.Exception!.InnerExceptions[0]);
+                    tcs.TrySetException(t.Exception!.InnerExceptions);
                 }
                 else if (t.IsCanceled)
                 {
@@ -75,8 +74,13 @@ namespace Halibut.Util
                 {
                     tcs.TrySetCanceled();
                 }
-
+                else
+                {
+                    tcs.TrySetResult(new object());
+                }
+                
                 callback?.Invoke(tcs.Task);
+                
             }, TaskScheduler.Default);
 
             return tcs.Task;

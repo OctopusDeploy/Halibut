@@ -22,14 +22,16 @@ namespace Halibut.Tests.Util
                     return await sut.ReadAsync(readBuffer, offset, count, cancellationToken);
                 case StreamMethod.Sync:
                     return sut.Read(readBuffer, offset, count);
-                case StreamMethod.LegacyAsync:
-                    return await sut.ReadFromStreamLegacyAsync(readBuffer, offset, count, cancellationToken);
+                case StreamMethod.LegacyAsyncCallEndWithinCallback:
+                    return await sut.ReadFromStreamLegacyAsyncCallEndWithinCallback(readBuffer, offset, count, cancellationToken);
+                case StreamMethod.LegacyAsyncCallEndOutsideCallback:
+                    return sut.ReadFromStreamLegacyAsyncCallEndOutsideCallback(readBuffer, offset, count);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(streamMethod), streamMethod, null);
             }
         }
 
-        public static async Task<int> ReadFromStreamLegacyAsync(this Stream sut, byte[] readBuffer, int offset, int count, CancellationToken cancellationToken)
+        public static async Task<int> ReadFromStreamLegacyAsyncCallEndWithinCallback(this Stream sut, byte[] readBuffer, int offset, int count, CancellationToken cancellationToken)
         {
             // This is the way async reading was done in earlier version of .NET
             var bytesRead = -1;
@@ -62,6 +64,15 @@ namespace Halibut.Tests.Util
             return bytesRead;
         }
 
+        public static int ReadFromStreamLegacyAsyncCallEndOutsideCallback(this Stream sut, byte[] readBuffer, int offset, int count)
+        {
+            // This is the way async reading was done in earlier version of .NET
+            var result = sut.BeginRead(readBuffer, offset, count, null, sut);
+
+            var bytesRead = sut.EndRead(result);
+            return bytesRead;
+        }
+
         public static async Task WriteToStream(this Stream sut, StreamMethod streamMethod, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             switch (streamMethod)
@@ -72,15 +83,18 @@ namespace Halibut.Tests.Util
                 case StreamMethod.Sync:
                     sut.Write(buffer, offset, count);
                     return;
-                case StreamMethod.LegacyAsync:
-                    await WriteToStreamLegacyAsync(sut, buffer, offset, count, cancellationToken);
+                case StreamMethod.LegacyAsyncCallEndWithinCallback:
+                    await WriteToStreamLegacyAsyncCallEndWithinCallback(sut, buffer, offset, count, cancellationToken);
+                    return;
+                case StreamMethod.LegacyAsyncCallEndOutsideCallback:
+                    WriteToStreamLegacyAsyncCallEndOutsideCallback(sut, buffer, offset, count);
                     return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(streamMethod), streamMethod, null);
             }
         }
 
-        static async Task WriteToStreamLegacyAsync(Stream sut, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        static async Task WriteToStreamLegacyAsyncCallEndWithinCallback(Stream sut, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             // This is the way async writing was done in earlier version of .NET
             var written = false;
@@ -110,6 +124,13 @@ namespace Halibut.Tests.Util
                     throw exception;
                 }
             }
+        }
+
+        static void WriteToStreamLegacyAsyncCallEndOutsideCallback(Stream sut, byte[] buffer, int offset, int count)
+        {
+            // This is the way async writing was done in earlier version of .NET
+            var result = sut.BeginWrite(buffer, offset, count, null, sut);
+            sut.EndWrite(result);
         }
     }
 }
