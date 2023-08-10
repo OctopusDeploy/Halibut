@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
 using NUnit.Framework;
 using Serilog;
 using Serilog.Core;
@@ -17,19 +20,46 @@ namespace Halibut.Tests.Support
             var testName = "";
             if (TeamCityDetection.IsRunningInTeamCity())
             {
-                testName = "[{TestName}] ";
+                testName = "{TestHash} ";
             }
 
-            var outputTemplate = "{Timestamp:HH:mm:ss.fff zzz} "
-                + testName
+            var outputTemplate = 
+                testName
+                + "{Timestamp:HH:mm:ss.fff zzz} "
+                + "{ShortContext} "
                 + "{Message}{NewLine}{Exception}";
 
-            return new LoggerConfiguration()
+            var logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(outputTemplate)))
-                .Enrich.WithProperty("TestName", TestContext.CurrentContext.Test.Name)
+                .Enrich.WithProperty("TestHash", CurrentTestHash())
                 .CreateLogger();
+
+            if (TeamCityDetection.IsRunningInTeamCity())
+            {
+                if (!HasLoggedTestHash.Contains(TestContext.CurrentContext.Test.Name))
+                {
+                    HasLoggedTestHash.Add(TestContext.CurrentContext.Test.Name);
+                    logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {CurrentTestHash()}");
+                }
+            }
+
+            return logger;
         }
+
+        public static string CurrentTestHash()
+        {
+            using (SHA256 mySHA256 = SHA256.Create())
+            {
+                return Convert.ToBase64String(mySHA256.ComputeHash(TestContext.CurrentContext.Test.Name.GetUTF8Bytes()))
+                    .Replace("=", "")
+                    .Replace("+", "")
+                    .Replace("/", "")
+                    .Substring(0, 10); // 64 ^ 10 is a big number, most likely we wont have collisions.
+            }
+        }
+
+        public static ConcurrentBag<string> HasLoggedTestHash = new();
 
         public class NonProgressNUnitSink : ILogEventSink
         {
@@ -46,8 +76,13 @@ namespace Halibut.Tests.Support
                 var output = new StringWriter();
                 if (logEvent.Properties.TryGetValue("SourceContext", out var sourceContext))
                 {
-                    output.Write("[" + sourceContext.ToString().Substring(sourceContext.ToString().LastIndexOf('.') + 1).Replace("\"", "") + "] ");
+                    var context = sourceContext.ToString().Substring(sourceContext.ToString().LastIndexOf('.') + 1).Replace("\"", "");
+                    //output.Write("[" + context + "] ");
+                    
+                    logEvent.AddOrUpdateProperty(new LogEventProperty("ShortContext", new ScalarValue(context)));
                 }
+                
+                
                 _formatter.Format(logEvent, output);
                 // This is the change, call this instead of: TestContext.Progress
 
