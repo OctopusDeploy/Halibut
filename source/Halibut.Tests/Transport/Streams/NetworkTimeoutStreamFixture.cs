@@ -19,7 +19,7 @@ namespace Halibut.Tests.Transport.Streams
     public class NetworkTimeoutStreamFixture : BaseTest
     {
         [Test]
-        [StreamMethod]
+        [StreamMethodTestCase]
         public async Task ReadingFromStreamShouldPassThrough(StreamMethod streamMethod)
         {
             var (disposables, sut, performListenerWrite) = await BuildTcpClientAndTcpListener(CancellationToken);
@@ -37,7 +37,7 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        [StreamMethod(testSync:false)]
+        [StreamMethodTestCase(testSync:false)]
         public async Task ReadingFromStreamAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
         {
             var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
@@ -91,7 +91,7 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        [StreamMethod]
+        [StreamMethodTestCase]
         public async Task WritingToStreamShouldPassThrough(StreamMethod streamMethod)
         {
             string? readData = null;
@@ -119,7 +119,7 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        [StreamMethod(testSync: false)]
+        [StreamMethodTestCase(testSync: false)]
         public async Task WritingToStreamAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
         {
             var (disposables, sut, _) = await BuildTcpClientAndTcpListener(

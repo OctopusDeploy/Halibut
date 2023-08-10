@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
@@ -13,7 +14,8 @@ namespace Halibut.Tests.Transport.Streams
     public class WriteIntoMemoryBufferStreamFixture : BaseTest
     {
         [Test]
-        public async Task DoesNotWriteToSink_IfBufferingWasNotApplied_WithLimitGreaterThanDataSize([Values]StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task DoesNotWriteToSink_IfBufferingWasNotApplied_WithLimitGreaterThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -29,7 +31,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task WriteToSink_IfBufferingWasNotApplied_WithLimitGreaterThanDataSize_WhenDisposed([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task WriteToSink_IfBufferingWasNotApplied_WithLimitGreaterThanDataSize_WhenDisposed(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -47,7 +50,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task WriteToSink_OnlyOne_IfBufferingWasApplied_WithLimitGreaterThanDataSize_AndThenDisposed([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task WriteToSink_OnlyOne_IfBufferingWasApplied_WithLimitGreaterThanDataSize_AndThenDisposed(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -66,7 +70,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task WriteToSink_IfBufferingWasNotApplied_WithLimitLessThanDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task WriteToSink_IfBufferingWasNotApplied_WithLimitLessThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -82,7 +87,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task WriteToSink_IfBufferingWasApplied_WithLimitLessThanDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task WriteToSink_IfBufferingWasApplied_WithLimitLessThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -99,7 +105,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task WriteToSink_IfBufferingWasApplied_WithLimitEqualToDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task WriteToSink_IfBufferingWasApplied_WithLimitEqualToDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -116,7 +123,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task WriteToSink_IfBufferingWasApplied_WithLimitGreaterThanDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task WriteToSink_IfBufferingWasApplied_WithLimitGreaterThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -133,7 +141,8 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public async Task WriteToSink_IfBufferingWasApplied_WithLimitLessThanDataSize_WritingOneByteAtATime([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task WriteToSink_IfBufferingWasApplied_WithLimitLessThanDataSize_WritingOneByteAtATime(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some");
@@ -153,7 +162,5 @@ namespace Halibut.Tests.Transport.Streams
             memoryStream.Length.Should().Be(bytesToWrite.Length);
             sut.BytesWrittenIntoMemory.Should().Be(writeIntoMemoryLimitBytes);
         }
-
-        
     }
 }

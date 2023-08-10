@@ -1,16 +1,14 @@
 ﻿using System;
 using System.Collections;
-using System.Threading.Tasks;
 using Halibut.Tests.Transport.Streams;
-using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
-    public class StreamMethodAttribute : TestCaseSourceAttribute
+    public class StreamMethodTestCaseAttribute : TestCaseSourceAttribute
     {
-        public StreamMethodAttribute(bool testSync = true) : base(
+        public StreamMethodTestCaseAttribute(bool testSync = true) : base(
             typeof(TestCases),
             nameof(TestCases.GetEnumerator),
             new object?[]{testSync})

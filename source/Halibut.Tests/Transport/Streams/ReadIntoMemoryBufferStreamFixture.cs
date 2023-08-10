@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
@@ -13,7 +14,8 @@ namespace Halibut.Tests.Transport.Streams
     public class ReadIntoMemoryBufferStreamFixture : BaseTest
     {
         [Test]
-        public async Task ReadsFromSourceStream_IfBufferingWasNotApplied([Values]StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task ReadsFromSourceStream_IfBufferingWasNotApplied(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -31,7 +33,8 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitEqualToDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitEqualToDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -51,7 +54,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitGreaterThanDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task ReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitGreaterThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -71,7 +75,8 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitLessThanDataSize([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_WithLimitLessThanDataSize(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
@@ -96,7 +101,8 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_ReadingOneByteAtATime([Values] StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task PartiallyReadsFromMemoryBuffer_IfBufferingWasApplied_ReadingOneByteAtATime(StreamMethod streamMethod)
         {
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
