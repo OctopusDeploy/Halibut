@@ -22,7 +22,7 @@ namespace Halibut.Tests.Tentacle
     public class WhenCallingServicesSimilarToTheOnesInTentacle : BaseTest
     {
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FilesCanBeDownloaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -57,7 +57,7 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FilesCanBeUploaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -107,7 +107,7 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ScriptCanBeExecutedWithScriptServiceV1(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -148,7 +148,7 @@ namespace Halibut.Tests.Tentacle
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncAndSyncClients: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ScriptCanBeExecutedWithScriptServiceV2(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

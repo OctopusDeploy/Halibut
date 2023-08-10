@@ -15,7 +15,7 @@ namespace Halibut.Tests
     public class WhenTheTcpConnectionStopsSendingData : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket:false, testPolling:false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket:false, testPolling:false)]
         public async Task HalibutCanRecoverFromIdleTcpDisconnect(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

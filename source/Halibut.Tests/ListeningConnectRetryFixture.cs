@@ -16,7 +16,7 @@ namespace Halibut.Tests
     public class ListeningConnectRetryFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task ListeningRetriesAttemptsUpToTheConfiguredValue(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -50,7 +50,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task ListeningRetriesAttemptsUpToTheConfiguredTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -87,7 +87,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task ListeningRetryListeningSleepIntervalWorks(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
@@ -124,7 +124,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task ListeningRetriesAttemptsCanEventuallyWork(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
