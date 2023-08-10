@@ -59,16 +59,11 @@ namespace Halibut.Transport
         public void Dispose()
         {
             working = false;
-            try
-            {
-                workingCancellationTokenSource.Cancel();
-            }
-            catch
-            {
-            }
+            workingCancellationTokenSource.Cancel();
 
             try
             {
+                // Lets not worry about double dispose.
                 workingCancellationTokenSource.Dispose();
             }
             catch
@@ -118,15 +113,19 @@ namespace Halibut.Transport
             }
         }
 
+        /// <summary>
+        /// Runs ExecutePollingLoopAsync but catches any exception that falls out of it, log here
+        /// rather than let it be unobserved. We are not expecting an exception but just in case.
+        /// </summary>
         async Task ExecutePollingLoopAsyncCatchingExceptions(CancellationToken cancellationToken)
         {
             try
             {
                 await ExecutePollingLoopAsync(cancellationToken);
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                // We may get errors about the workingCancellationTokenSource being used when it is disposed, we don't care about that.
+                log.Write(EventType.Diagnostic, $"PollingClient stopped with an exception: {e}");
             }
         }
         async Task ExecutePollingLoopAsync(CancellationToken cancellationToken)
