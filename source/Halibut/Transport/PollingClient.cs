@@ -24,7 +24,7 @@ namespace Halibut.Transport
         
         readonly Func<RetryPolicy> createRetryPolicy;
         readonly AsyncHalibutFeature asyncHalibutFeature;
-        
+        RequestCancellationTokens? requestCancellationTokens;
 
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy, AsyncHalibutFeature asyncHalibutFeature)
         {
@@ -36,7 +36,6 @@ namespace Halibut.Transport
             workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             this.createRetryPolicy = createRetryPolicy;
             this.asyncHalibutFeature = asyncHalibutFeature;
-            
         }
 
         public void Start()
@@ -52,7 +51,8 @@ namespace Halibut.Transport
             }
             else
             {
-                pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions(workingCancellationTokenSource.Token));
+                requestCancellationTokens = new RequestCancellationTokens(workingCancellationTokenSource.Token, workingCancellationTokenSource.Token);
+                pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions(requestCancellationTokens));
             }
         }
 
@@ -61,8 +61,9 @@ namespace Halibut.Transport
             working = false;
             Try.CatchingError(workingCancellationTokenSource.Cancel, _ => { });
             Try.CatchingError(workingCancellationTokenSource.Dispose, _ => { });
+            Try.CatchingError(() => requestCancellationTokens?.Dispose(), _ => { });
         }
-        
+
         void ExecutePollingLoop(object ignored)
         {
             var retry = createRetryPolicy();
@@ -109,18 +110,19 @@ namespace Halibut.Transport
         /// Runs ExecutePollingLoopAsync but catches any exception that falls out of it, log here
         /// rather than let it be unobserved. We are not expecting an exception but just in case.
         /// </summary>
-        async Task ExecutePollingLoopAsyncCatchingExceptions(CancellationToken cancellationToken)
+        async Task ExecutePollingLoopAsyncCatchingExceptions(RequestCancellationTokens requestCancellationTokens)
         {
             try
             {
-                await ExecutePollingLoopAsync(cancellationToken);
+                await ExecutePollingLoopAsync(requestCancellationTokens);
             }
             catch (Exception e)
             {
                 log.Write(EventType.Diagnostic, $"PollingClient stopped with an exception: {e}");
             }
         }
-        async Task ExecutePollingLoopAsync(CancellationToken cancellationToken)
+
+        async Task ExecutePollingLoopAsync(RequestCancellationTokens requestCancellationTokens)
         {
             var retry = createRetryPolicy();
             var sleepFor = TimeSpan.Zero;
@@ -137,7 +139,7 @@ namespace Halibut.Transport
                             // Subsequent connection issues will try and reconnect quickly and then back-off
                             retry.Success();
                             await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequest, int.MaxValue, ct);
-                        }, cancellationToken);
+                        }, requestCancellationTokens);
                         retry.Success();
                     }
                     finally

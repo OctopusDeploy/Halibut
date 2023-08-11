@@ -45,8 +45,8 @@ namespace Halibut.Tests
             {
                 var client = clientAndService.CreateClientWithOptions<ICachingService, IClientCachingService, IAsyncClientCachingServiceWithOptions>();
 
-                var result1 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken.None));
-                var result2 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken.None));
+                var result1 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
+                var result2 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
 
                 result1.Should().NotBe(result2);
             }
@@ -81,8 +81,8 @@ namespace Halibut.Tests
             {
                 var client = clientAndService.CreateClientWithOptions<ICachingService, IClientCachingService, IAsyncClientCachingServiceWithOptions>();
 
-                var result1 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken.None));
-                var result2 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken.None));
+                var result1 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
+                var result2 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
 
                 result1.Should().Be(result2);
             }

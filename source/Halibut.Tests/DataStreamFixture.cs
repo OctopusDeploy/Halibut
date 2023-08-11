@@ -40,7 +40,7 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncAndSyncClients: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncClients: false)]
         public async Task AsyncDataStreamsAreUsedWhenInAsync(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

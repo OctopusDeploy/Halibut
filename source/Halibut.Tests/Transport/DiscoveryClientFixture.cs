@@ -65,7 +65,7 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false, testAsyncAndSyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task DiscoverShouldRespectTcpClientReceiveTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var dataTransferObserverPauser = new DataTransferObserverBuilder()
