@@ -17,15 +17,18 @@ namespace Halibut.Tests.Support.TestCases
 
         public static NetworkConditionTestCase NetworkConditionPerfect = 
             new (null, 
+                "Perfect", 
                 "Perfect");
 
         public static NetworkConditionTestCase NetworkCondition20MsLatency = 
             new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build(), 
-                "20ms SendDelay");
+                "20ms SendDelay",
+                "20msLatency");
 
         public static NetworkConditionTestCase NetworkCondition20MsLatencyWithLastByteArrivingLate =
             new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).WithNumberOfBytesToDelaySending(1).Build(),
-                "20ms SendDelay last byte arrives late");
+                "20ms SendDelay last byte arrives late",
+                "20msLatency&LastByteLate");
 
         //public static NetworkConditionTestCase NetworkCondition20MsLatencyWithLast2BytesArrivingLate =
         //    new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).WithNumberOfBytesToDelaySending(2).Build(),
@@ -38,17 +41,25 @@ namespace Halibut.Tests.Support.TestCases
         public Func<int, ILogger, PortForwarder>? PortForwarderFactory { get; }
 
         public string NetworkConditionDescription { get; }
+        
+        public string ShortNetworkConditionDescription { get; }
 
-        public NetworkConditionTestCase(Func<int, ILogger, PortForwarder>? portForwarderFactory, string networkConditionDescription)
+        public NetworkConditionTestCase(Func<int, ILogger, PortForwarder>? portForwarderFactory, string networkConditionDescription, string shortNetworkConditionDescription)
         {
             PortForwarderFactory = portForwarderFactory;
 
             NetworkConditionDescription = networkConditionDescription;
+            ShortNetworkConditionDescription = shortNetworkConditionDescription;
         }
 
         public override string ToString()
         {
             return $"Network: '{NetworkConditionDescription}'";
+        }
+        
+        public string ToShortString()
+        {
+            return $"Net: '{ShortNetworkConditionDescription}'";
         }
     }
 }

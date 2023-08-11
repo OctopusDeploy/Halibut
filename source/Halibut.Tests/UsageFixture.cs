@@ -26,7 +26,7 @@ namespace Halibut.Tests
             {
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
                 (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
-
+                
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
@@ -98,7 +98,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -168,7 +168,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             using (var clientAndService = await clientAndServiceTestCase

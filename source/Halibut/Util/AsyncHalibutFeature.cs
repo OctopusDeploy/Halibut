@@ -18,4 +18,12 @@
             return feature == AsyncHalibutFeature.Disabled;
         }
     }
+
+    public static class AsyncHalibutFeatureValues
+    {
+        public static AsyncHalibutFeature[] All()
+        {
+            return new[] {AsyncHalibutFeature.Disabled, AsyncHalibutFeature.Enabled};
+        }
+    }
 }

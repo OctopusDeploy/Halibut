@@ -17,5 +17,6 @@ namespace Halibut.Tests.Support
         IClientAndServiceBuilder WithCachingService();
         IClientAndServiceBuilder NoService();
         IClientAndServiceBuilder WithForcingClientProxyType(ForceClientProxyType forceClientProxyType);
+        IClientAndServiceBuilder WithServiceAsyncHalibutFeatureEnabled();
     }
 }

@@ -69,6 +69,26 @@ namespace Halibut.Tests.Support.TestCases
 
             throw new Exception("Invalid client and service version.");
         }
+        
+        public string ToShortString(ServiceConnectionType serviceConnectionType)
+        {
+            if (IsLatest())
+            {
+                return "v:Latest";
+            }
+
+            if (IsPreviousClient())
+            {
+                return $"vClient:{ClientVersion!.ForServiceConnectionType(serviceConnectionType)}";
+            }
+
+            if (IsPreviousService())
+            {
+                return $"vService:{ServiceVersion!.ForServiceConnectionType(serviceConnectionType)}";
+            }
+
+            throw new Exception("Invalid client and service version.");
+        }
 
         public override string ToString()
         {

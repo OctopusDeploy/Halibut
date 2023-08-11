@@ -7,6 +7,7 @@ using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.Transport.Proxy;
+using Halibut.Util;
 using Octopus.TestPortForwarder;
 using Serilog.Extensions.Logging;
 
@@ -164,7 +165,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return WithForcingClientProxyType(forceClientProxyType);
         }
-        
+
+        public IClientAndServiceBuilder WithServiceAsyncHalibutFeatureEnabled()
+        {
+            throw new NotSupportedException("The service is external and so can not be made to use async");
+        }
+
         public LatestClientAndPreviousServiceVersionBuilder WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
         {
             this.forceClientProxyType = forceClientProxyType;
@@ -187,12 +193,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
+                .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
                 .WithLogFactory(new TestContextLogFactory("Client", halibutLogLevel));
-
-            if (forceClientProxyType == ForceClientProxyType.AsyncClient)
-            {
-                clientBuilder = clientBuilder.WithAsyncHalibutFeatureEnabled();
-            }
 
             var client = clientBuilder.Build();
             client.Trust(serviceCertAndThumbprint.Thumbprint);

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Linq;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestAttributes
@@ -19,18 +20,19 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testListening = true,
             bool testPolling = true,
             bool testAsyncAndSyncClients = true,
+            bool testAsyncServicesAsWell = false, // False means only the sync service will be tested.
             params object[] additionalParameters
             ) :
             base(
                 typeof(LatestClientAndLatestServiceTestCases),
                 nameof(LatestClientAndLatestServiceTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testAsyncAndSyncClients, additionalParameters })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testAsyncAndSyncClients, additionalParameters, testAsyncServicesAsWell})
         {
         }
 
         static class LatestClientAndLatestServiceTestCases
         {
-            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncAndSyncClients, object[] additionalParameters)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncAndSyncClients, object[] additionalParameters, bool testAsyncServicesAsWell)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -54,12 +56,19 @@ namespace Halibut.Tests.Support.TestAttributes
                 {
                     clientProxyTypesToTest = ForceClientProxyTypeValues.All;
                 }
+                
+                var serviceAsyncHalibutFeatureTestCases = AsyncHalibutFeatureValues.All().ToList();
+                if (!testAsyncServicesAsWell)
+                {
+                    serviceAsyncHalibutFeatureTestCases.Remove(AsyncHalibutFeature.Enabled);
+                }
 
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] { ClientAndServiceTestVersion.Latest() },
                     serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
-                    clientProxyTypesToTest
+                    clientProxyTypesToTest,
+                    serviceAsyncHalibutFeatureTestCases
                 );
                 
                 foreach (var clientAndServiceTestCase in builder.Build())

@@ -11,6 +11,7 @@ using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
+using Halibut.Util;
 using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
@@ -42,6 +43,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         bool withTentacleServices = false;
         ILockService lockService;
         ICountingService countingService;
+        AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
 
         PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -219,6 +221,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             throw new Exception("Not supported");
         }
 
+        public IClientAndServiceBuilder WithServiceAsyncHalibutFeatureEnabled()
+        {
+            this.serviceAsyncHalibutFeature = AsyncHalibutFeature.Enabled;
+            return this;
+        }
+
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             CancellationTokenSource cancellationTokenSource = new();
@@ -258,6 +266,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var service = new HalibutRuntimeBuilder()
                 .WithServiceFactory(serviceFactory)
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
+                .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                 .WithLogFactory(new TestContextLogFactory("Tentacle", halibutLogLevel))
                 .Build();
 
