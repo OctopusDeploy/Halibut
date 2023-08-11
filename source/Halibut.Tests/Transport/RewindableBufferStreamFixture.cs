@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport;
 using NUnit.Framework;
 
@@ -157,7 +158,8 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        public void CancelShouldNotRewind()
+        [SyncAndAsync]
+        public async Task CancelShouldNotRewind(SyncOrAsync syncOrAsync)
         {
             using (var baseStream = new MemoryStream(16))
             using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
@@ -169,11 +171,14 @@ namespace Halibut.Tests.Transport
 
                 sut.StartBuffer();
                 var outputBuffer = new byte[inputBuffer.Length];
-                _ = sut.Read(outputBuffer, 0, inputBuffer.Length);
+                await syncOrAsync.WhenSync(() => sut.Read(outputBuffer, 0, inputBuffer.Length))
+                    .WhenAsync(() => sut.ReadAsync(outputBuffer, 0, inputBuffer.Length));
                 sut.CancelBuffer();
 
                 var rewoundOutputBuffer = new byte[1];
-                Assert.AreEqual(0, sut.Read(rewoundOutputBuffer, 0, 1));
+                Assert.AreEqual(0, 
+                    await syncOrAsync.WhenSync(() => sut.Read(rewoundOutputBuffer, 0, 1))
+                        .WhenAsync(() => sut.ReadAsync(rewoundOutputBuffer, 0, 1)));
             }
         }
         
