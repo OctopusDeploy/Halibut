@@ -5,12 +5,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -30,6 +32,45 @@ namespace Halibut.Tests
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+        
+        
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: false)]
+        public async Task AllThePorts(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .WithForcingClientProxyType(ForceClientProxyType.AsyncClient)
+                       .Build(CancellationToken))
+            {
+                var list = new List<PortForwarder>();
+                try
+                {
+                    var portForwarder = new PortForwarderBuilder(clientAndService.ServiceUri, Logger).Build();
+                    list.Add(portForwarder);
+
+                    for (int i = 0; i < 65000; i++)
+                    {
+                        portForwarder = new PortForwarderBuilder(portForwarder.PublicEndpoint, Logger).Build();
+                        list.Add(portForwarder);
+                    }
+                    
+                    var service = new ServiceEndPoint(portForwarder.PublicEndpoint, clientAndService.ServiceEndPoint.RemoteThumbprint);
+
+                    var echo = clientAndService.Client.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(service);
+                    await echo.SayHelloAsync("hello");
+                }
+                finally
+                {
+                    foreach (var portForwarder in list)
+                    {
+
+                        Try.CatchingError(portForwarder.Dispose, exception => { });
+                    }
                 }
             }
         }
