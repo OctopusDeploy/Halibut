@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 
@@ -40,7 +42,6 @@ namespace Halibut.Transport
                 protocol.StopAcceptingClientRequests();
                 try
                 {
-                    // TODO - ASYNC ME UP!
 #pragma warning disable CS0612
                     protocol.EndCommunicationWithServer();
 #pragma warning restore CS0612
@@ -50,6 +51,35 @@ namespace Halibut.Transport
                     // The stream might have already disconnected, so don't worry about it.
                 }
                 stream.Dispose();
+                client.Dispose();
+            }
+            catch (SocketException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                protocol.StopAcceptingClientRequests();
+                try
+                {
+                    await protocol.EndCommunicationWithServerAsync(CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    // The stream might have already disconnected, so don't worry about it.
+                }
+#if NETFRAMEWORK 
+                stream.Dispose();
+#else
+                await stream.DisposeAsync();
+#endif
+
                 client.Dispose();
             }
             catch (SocketException)

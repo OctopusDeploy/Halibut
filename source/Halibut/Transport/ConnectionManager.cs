@@ -8,7 +8,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public class ConnectionManager : IDisposable
+    public class ConnectionManager : IDisposable, IAsyncDisposable
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
@@ -158,6 +158,23 @@ namespace Halibut.Transport
         }
 
 
+
+        public async ValueTask DisposeAsync()
+        {
+            pool.Dispose();
+            lock (activeConnections)
+            {
+                var connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
+                foreach (var connection in connectionsToDispose)
+                {
+                    SafelyDisposeConnection(connection, null);
+                }
+            }
+
+            IsDisposed = true;
+        }
+
+
         void ClearActiveConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
             lock (activeConnections)
@@ -225,6 +242,18 @@ namespace Halibut.Transport
                 }
             }
 
+            public async ValueTask DisposeAsync()
+            {
+                try
+                {
+                    await connection.Value.DisposeAsync();
+                }
+                finally
+                {
+                    onDisposed(this);
+                }
+            }
+
             public void NotifyUsed()
             {
                 connection.Value.NotifyUsed();
@@ -236,6 +265,7 @@ namespace Halibut.Transport
             }
 
             public MessageExchangeProtocol Protocol => connection.Value.Protocol;
+            
         }
     }
 }

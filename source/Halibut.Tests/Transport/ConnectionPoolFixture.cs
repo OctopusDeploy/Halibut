@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System.Threading.Tasks;
+using FluentAssertions;
 using Halibut.Transport;
 using NUnit.Framework;
 
@@ -89,6 +90,12 @@ namespace Halibut.Tests.Transport
             public void Dispose()
             {
                 Disposed = true;
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                await Task.CompletedTask;
+                Dispose();
             }
         }
     }

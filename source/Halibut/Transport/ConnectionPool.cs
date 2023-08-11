@@ -2,16 +2,20 @@ using Halibut.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
-    public class ConnectionPool<TKey, TPooledResource>
+    public class ConnectionPool<TKey, TPooledResource> : IDisposable, IAsyncDisposable
         where TPooledResource : class, IPooledResource
     {
-        readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new Dictionary<TKey, HashSet<TPooledResource>>();
+        readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new();
+        readonly SemaphoreSlim poolLock = new(1, 1);
 
         public int GetTotalConnectionCount()
         {
+            poolLock.Lock
             lock (pool)
             {
                 return pool.Values.Sum(v => v.Count);
@@ -81,8 +85,21 @@ namespace Halibut.Transport
                 pool.Clear();
             }
         }
+        
+        public async ValueTask DisposeAsync()
+        {
+            lock (pool)
+            {
+                foreach (var connection in pool.SelectMany(kv => kv.Value))
+                {
+                    await DestroyConnectionAsync(connection, null);
+                }
 
-        private TPooledResource Take(HashSet<TPooledResource> connections)
+                pool.Clear();
+            }
+        }
+        
+        TPooledResource Take(HashSet<TPooledResource> connections)
         {
             if (connections.Count == 0)
                 return null;
@@ -92,7 +109,7 @@ namespace Halibut.Transport
             return connection;
         }
 
-        private HashSet<TPooledResource> GetOrAdd(TKey endPoint)
+        HashSet<TPooledResource> GetOrAdd(TKey endPoint)
         {
             if (!pool.TryGetValue(endPoint, out var connections))
             {
@@ -103,11 +120,27 @@ namespace Halibut.Transport
             return connections;
         }
 
-        private void DestroyConnection(TPooledResource connection, ILog log)
+        void DestroyConnection(TPooledResource connection, ILog log)
         {
             try
             {
                 connection?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                log?.WriteException(EventType.Error, "Exception disposing connection from pool", ex);
+            }
+        }
+
+        async Task DestroyConnectionAsync(TPooledResource connection, ILog log)
+        {
+            try
+            {
+                if (connection is not null)
+                {
+                    await connection.DisposeAsync();
+                }
+                
             }
             catch (Exception ex)
             {
