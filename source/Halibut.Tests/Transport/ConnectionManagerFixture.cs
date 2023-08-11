@@ -14,7 +14,7 @@ using NUnit.Framework;
 namespace Halibut.Tests.Transport
 {
     [TestFixture]
-    public class ConnectionManagerFixture
+    public class ConnectionManagerFixture : BaseTest
     {
         public (IConnectionFactory ConnectionFactory, ExchangeProtocolBuilder ExchngeProtocolBuilder) SetUp(SyncOrAsync syncOrAsync)
         {
@@ -37,8 +37,8 @@ namespace Halibut.Tests.Transport
             var connectionManager = new ConnectionManager();
 
             //do it twice because this bug only triggers on multiple enumeration, having 1 in the collection doesn't trigger the bug
-            await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
-            await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
+            await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
 
             connectionManager.Disconnect(serviceEndpoint, null);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
@@ -53,10 +53,10 @@ namespace Halibut.Tests.Transport
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
+            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
-            connectionManager.ReleaseConnection(serviceEndpoint, activeConnection);
+            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
 
@@ -69,7 +69,7 @@ namespace Halibut.Tests.Transport
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
+            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
             activeConnection.Dispose();
@@ -85,7 +85,7 @@ namespace Halibut.Tests.Transport
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
             var connectionManager = new ConnectionManager();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
+            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
             connectionManager.Disconnect(serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));

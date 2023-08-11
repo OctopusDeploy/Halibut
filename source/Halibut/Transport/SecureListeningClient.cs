@@ -186,7 +186,7 @@ namespace Halibut.Transport
                     }
 
                     // Only return the connection to the pool if all went well
-                    connectionManager.ReleaseConnection(ServiceEndpoint, connection);
+                    await connectionManager.ReleaseConnectionAsync(ServiceEndpoint, connection, cancellationToken);
                 }
                 catch (AuthenticationException ex)
                 {
@@ -225,7 +225,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        connectionManager.ClearPooledConnections(ServiceEndpoint, log);
+                        await connectionManager.ClearPooledConnectionsAsync(ServiceEndpoint, log, cancellationToken);
                     }
                 }
                 catch (IOException ex) when (ex.IsSocketConnectionReset())

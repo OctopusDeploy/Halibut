@@ -446,10 +446,17 @@ namespace Halibut
             friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
         }
 
+        [Obsolete]
         public void Disconnect(ServiceEndPoint endpoint)
         {
             var log = logs.ForEndpoint(endpoint.BaseUri);
             connectionManager.Disconnect(endpoint, log);
+        }
+
+        public async Task DisconnectAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
+            var log = logs.ForEndpoint(endpoint.BaseUri);
+            await connectionManager.DisconnectAsync(endpoint, log, cancellationToken);
         }
 
         public void Dispose()

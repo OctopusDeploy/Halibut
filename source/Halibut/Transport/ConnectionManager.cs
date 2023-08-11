@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Nito.AsyncEx;
 
 namespace Halibut.Transport
 {
@@ -12,6 +13,7 @@ namespace Halibut.Transport
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
+        readonly SemaphoreSlim activeConnectionsLock = new(1, 1);
 
         public bool IsDisposed { get; private set; }
 
@@ -36,7 +38,7 @@ namespace Halibut.Transport
         [Obsolete]
         Tuple<IConnection, Action> GetConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            lock (activeConnections)
+            using (activeConnectionsLock.Lock())
             {
                 var existingConnectionFromPool = pool.Take(serviceEndpoint);
                 var openableConnection = existingConnectionFromPool != null 
@@ -49,10 +51,9 @@ namespace Halibut.Transport
         
         async Task<IConnection> TryGetExistingConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
-            lock (activeConnections)
+            using (await activeConnectionsLock.LockAsync(cancellationToken))
             {
-                var existingConnectionFromPool = pool.Take(serviceEndpoint);
+                var existingConnectionFromPool = await pool.TakeAsync(serviceEndpoint, cancellationToken);
                 if (existingConnectionFromPool != null)
                 {
                     AddConnectionToActiveConnections(serviceEndpoint, existingConnectionFromPool);
@@ -64,7 +65,7 @@ namespace Halibut.Transport
         async Task<IConnection> GetConnectionByCreatingItAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             var connection = await CreateNewConnectionWithIOAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-            lock (activeConnections)
+            using (await activeConnectionsLock.LockAsync(cancellationToken))
             {
                 AddConnectionToActiveConnections(serviceEndpoint, connection);
             }
@@ -102,9 +103,10 @@ namespace Halibut.Transport
             }
         }
 
+        [Obsolete]
         public void ReleaseConnection(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
-            lock (activeConnections)
+            using (activeConnectionsLock.Lock())
             {
                 pool.Return(serviceEndpoint, connection);
                 if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
@@ -114,18 +116,38 @@ namespace Halibut.Transport
             }
         }
 
+        public async Task ReleaseConnectionAsync(ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
+        {
+            using (await activeConnectionsLock.LockAsync(cancellationToken))
+            {
+                await pool.ReturnAsync(serviceEndpoint, connection, cancellationToken);
+                if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
+                {
+                    connections.Remove(connection);
+                }
+            }
+        }
+
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
-            lock (activeConnections)
+            using (activeConnectionsLock.Lock())
             {
                 pool.Clear(serviceEndPoint, log);
+            }
+        }
+
+        public async Task ClearPooledConnectionsAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
+        {
+            using (await activeConnectionsLock.LockAsync(cancellationToken))
+            {
+                await pool.ClearAsync(serviceEndPoint, log, cancellationToken);
             }
         }
 
         static IConnection[] NoConnections = new IConnection[0];
         public IReadOnlyCollection<IConnection> GetActiveConnections(ServiceEndPoint serviceEndPoint)
         {
-            lock (activeConnections)
+            using (activeConnectionsLock.Lock())
             {
                 if (activeConnections.TryGetValue(serviceEndPoint, out var value))
                 {
@@ -142,10 +164,16 @@ namespace Halibut.Transport
             ClearActiveConnections(serviceEndPoint, log);
         }
 
+        public async Task DisconnectAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
+        {
+            await ClearPooledConnectionsAsync(serviceEndPoint, log, cancellationToken);
+            ClearActiveConnections(serviceEndPoint, log);
+        }
+
         public void Dispose()
         {
             pool.Dispose();
-            lock (activeConnections)
+            using (activeConnectionsLock.Lock())
             {
                 var connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
                 foreach (var connection in connectionsToDispose)
@@ -160,7 +188,7 @@ namespace Halibut.Transport
 
         void ClearActiveConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
-            lock (activeConnections)
+            using (activeConnectionsLock.Lock())
             {
                 if (activeConnections.TryGetValue(serviceEndPoint, out var activeConnectionsForEndpoint))
                 {
@@ -174,7 +202,7 @@ namespace Halibut.Transport
 
         void OnConnectionDisposed(IConnection connection)
         {
-            lock (activeConnections)
+            using (activeConnectionsLock.Lock())
             {
                 var setsContainingConnection = activeConnections.Where(c => c.Value.Contains(connection)).ToList();
                 var setsToRemoveCompletely = setsContainingConnection.Where(c => c.Value.Count == 1).ToList();
