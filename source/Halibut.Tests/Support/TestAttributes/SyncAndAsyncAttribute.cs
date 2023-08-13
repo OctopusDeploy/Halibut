@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Transport.Streams;
 using Halibut.Util;
 using NUnit.Framework;
 
@@ -92,6 +95,18 @@ namespace Halibut.Tests.Support.TestAttributes
                 SyncOrAsync.Async => AsyncHalibutFeature.Enabled,
                 _ => throw new ArgumentOutOfRangeException(nameof(syncOrAsync), syncOrAsync, null)
             };
+        }
+
+        public static async Task WriteToStream(this SyncOrAsync syncOrAsync, Stream stream, byte[] bytes)
+        {
+            await syncOrAsync.WhenSync(() => stream.WriteByteArray(bytes))
+                .WhenAsync(() => stream.WriteByteArrayAsync(bytes, CancellationToken.None));
+        }
+        
+        public static async Task<int> ReadFromStream(this SyncOrAsync syncOrAsync, Stream stream, byte[] bytes, int offset, int count)
+        {
+            return await syncOrAsync.WhenSync(() => stream.Read(bytes, offset, count))
+                .WhenAsync(() => stream.ReadAsync(bytes, offset, count, CancellationToken.None));
         }
     }
 
