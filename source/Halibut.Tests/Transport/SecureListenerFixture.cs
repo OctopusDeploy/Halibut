@@ -9,7 +9,6 @@ using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport;
-using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
@@ -61,9 +60,11 @@ namespace Halibut.Tests.Transport
                     Certificates.TentacleListening,
                     null,
                     null,
-                    thumbprint => true,
+                    _ => true,
                     new LogFactory(),
                     () => "",
+                    () => new Dictionary<string, string>(),
+                    (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
                     syncOrAsync.ToAsyncHalibutFeature()
                 );
 

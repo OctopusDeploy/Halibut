@@ -65,6 +65,17 @@ namespace Halibut.Transport.Streams
             await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken);
         }
         
+        /// <summary>
+        /// Net48 does not have a method which just writes all bytes of an array to a stream.
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="bytes"></param>
+        /// <param name="cancellationToken"></param>
+        public static void WriteByteArray(this Stream stream, byte[] bytes)
+        {
+            stream.Write(bytes, 0, bytes.Length);
+        }
+        
         public static async Task<byte[]> ReadBytesAsync(this Stream stream, int countToRead, CancellationToken cancellationToken)
         {
             var buffer = new byte[countToRead];

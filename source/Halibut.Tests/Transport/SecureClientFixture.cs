@@ -70,10 +70,12 @@ namespace Halibut.Tests.Transport
             var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null!;
 
+            using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);
+
 #pragma warning disable CS0612
             await syncOrAsync
                 .WhenSync(() => secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None))
-                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None));
+                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), requestCancellationTokens));
 #pragma warning restore CS0612
 
             // The pool should be cleared after the second failure

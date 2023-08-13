@@ -362,7 +362,6 @@ namespace Halibut.Tests.Support
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
-                ;
                 var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
                 var webSocketListeningPort = webSocketListeningInfo.WebSocketListeningPort;
 

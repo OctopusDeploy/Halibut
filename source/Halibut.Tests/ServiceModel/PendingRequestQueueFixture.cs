@@ -26,7 +26,7 @@ namespace Halibut.Tests.ServiceModel
             var request = new RequestMessageBuilder(endpoint).Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
             
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, CancellationToken);
             await sut.DequeueAsync(CancellationToken);
             
 
@@ -53,7 +53,7 @@ namespace Halibut.Tests.ServiceModel
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
             var unexpectedResponse = new ResponseMessageBuilder(Guid.NewGuid().ToString()).Build();
 
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, CancellationToken);
             await sut.DequeueAsync(CancellationToken);
 
 
@@ -90,7 +90,7 @@ namespace Halibut.Tests.ServiceModel
             
             // Act
             var stopwatch = Stopwatch.StartNew();
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, CancellationToken);
             var response = await queueAndWaitTask;
 
             // Assert
@@ -122,7 +122,7 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var stopwatch = Stopwatch.StartNew();
-            var (queueAndWaitTask, _) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
+            var (queueAndWaitTask, _) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, syncOrAsync, CancellationToken);
             var response = await queueAndWaitTask;
 
             // Assert
@@ -153,7 +153,7 @@ namespace Halibut.Tests.ServiceModel
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
             // Act
-            var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
+            var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, syncOrAsync, CancellationToken);
 
             await Task.Delay(2000, CancellationToken);
 
@@ -186,7 +186,7 @@ namespace Halibut.Tests.ServiceModel
             var queueAndWaitTasksInOrder = new List<Task<ResponseMessage>>();
             foreach (var request in requestsInOrder)
             {
-                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
+                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, CancellationToken);
                 queueAndWaitTasksInOrder.Add(queueAndWaitTask);
             }
 
@@ -215,7 +215,7 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var queueAndWaitTasksInOrder = requestsInOrder
-                .Select(request => StartQueueAndWait(sut, request, CancellationToken))
+                .Select(request => StartQueueAndWait(sut, request, syncOrAsync, CancellationToken))
                 .ToList();
 
             await WaitForQueueCountToBecome(sut, requestsInOrder.Count);
@@ -249,7 +249,7 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var queueAndWaitTasksInOrder = requestsInOrder
-                .Select(request => StartQueueAndWait(sut, request, CancellationToken))
+                .Select(request => StartQueueAndWait(sut, request, SyncOrAsync.Async, CancellationToken))
                 .ToList();
 
             await WaitForQueueCountToBecome(sut, requestsInOrder.Count);
@@ -277,7 +277,7 @@ namespace Halibut.Tests.ServiceModel
             var cancellationTokenSource = new CancellationTokenSource();
 
             // Act
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationTokenSource.Token);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, cancellationTokenSource.Token);
 
             cancellationTokenSource.Cancel();
 
@@ -306,7 +306,7 @@ namespace Halibut.Tests.ServiceModel
             var cancellationTokenSource = new CancellationTokenSource();
 
             // Act
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationTokenSource.Token);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, cancellationTokenSource.Token);
 
             var dequeued = await sut.DequeueAsync(CancellationToken);
 
@@ -342,7 +342,7 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var stopwatch = Stopwatch.StartNew();
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationTokenSource.Token);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, cancellationTokenSource.Token);
             
             await sut.DequeueAsync(CancellationToken);
             cancellationTokenSource.Cancel();
@@ -393,7 +393,7 @@ namespace Halibut.Tests.ServiceModel
             var previousRequest = new RequestMessageBuilder(endpoint).Build();
             var expectedPreviousResponse = ResponseMessageBuilder.FromRequest(previousRequest).Build();
 
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, previousRequest, CancellationToken);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, previousRequest, SyncOrAsync.Async ,CancellationToken);
             await sut.DequeueAsync(CancellationToken);
             await sut.ApplyResponse(expectedPreviousResponse, previousRequest.Destination);
             await queueAndWaitTask;
@@ -425,7 +425,7 @@ namespace Halibut.Tests.ServiceModel
 
             await Task.Delay(1000, CancellationToken);
 
-            var queueAndWaitTask = StartQueueAndWait(sut, request, CancellationToken);
+            var queueAndWaitTask = StartQueueAndWait(sut, request, syncOrAsync, CancellationToken);
             
             var dequeuedRequest = await dequeueTask;
             
@@ -459,7 +459,7 @@ namespace Halibut.Tests.ServiceModel
             await Task.Delay(1000, CancellationToken);
 
             // Act
-            var queueAndWaitTask = StartQueueAndWait(sut, request, CancellationToken);
+            var queueAndWaitTask = StartQueueAndWait(sut, request, syncOrAsync, CancellationToken);
 
             // Assert
             await Task.WhenAll(dequeueTasks);
@@ -488,7 +488,7 @@ namespace Halibut.Tests.ServiceModel
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
             var cancellationTokenSource = new CancellationTokenSource();
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationTokenSource.Token);
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, cancellationTokenSource.Token);
 
             cancellationTokenSource.Cancel();
 
@@ -511,11 +511,12 @@ namespace Halibut.Tests.ServiceModel
         async Task<Task<ResponseMessage>> StartQueueAndWaitAndWaitForRequestToBeQueued(
             IPendingRequestQueue pendingRequestQueue,
             RequestMessage request,
+            SyncOrAsync syncOrAsync,
             CancellationToken queueAndWaitCancellationToken)
         {
             var count = pendingRequestQueue.Count;
 
-            var task = StartQueueAndWait(pendingRequestQueue, request, queueAndWaitCancellationToken);
+            var task = StartQueueAndWait(pendingRequestQueue, request, syncOrAsync, queueAndWaitCancellationToken);
 
             await WaitForQueueCountToBecome(pendingRequestQueue, count + 1);
 
@@ -530,21 +531,33 @@ namespace Halibut.Tests.ServiceModel
             }
         }
 
-        Task<ResponseMessage> StartQueueAndWait(IPendingRequestQueue pendingRequestQueue, RequestMessage request, CancellationToken queueAndWaitCancellationToken)
+        Task<ResponseMessage> StartQueueAndWait(IPendingRequestQueue pendingRequestQueue, RequestMessage request, SyncOrAsync syncOrAsync, CancellationToken queueAndWaitCancellationToken)
         {
             var task = Task.Run(
-                async () => await pendingRequestQueue.QueueAndWaitAsync(request, queueAndWaitCancellationToken),
+                async () =>
+                {
+                    if (syncOrAsync == SyncOrAsync.Sync)
+                    {
+                        return await pendingRequestQueue.QueueAndWaitAsync(request, queueAndWaitCancellationToken);
+                    }
+
+                    return await pendingRequestQueue.QueueAndWaitAsync(request, new RequestCancellationTokens(queueAndWaitCancellationToken, CancellationToken.None));
+                },
                 CancellationToken);
             return task;
         }
 
-        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(IPendingRequestQueue sut, RequestMessage request, CancellationToken cancellationToken)
+        async Task<(Task<ResponseMessage> queueAndWaitTask, RequestMessage dequeued)> QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(
+            IPendingRequestQueue sut, 
+            RequestMessage request, 
+            SyncOrAsync syncOrAsync,
+            CancellationToken cancellationToken)
         {
             //For most tests, this is not a good method to use. It is a fix for some specific tests to cope with a race condition when Team City runs out of resources (and causes tests to become flaky)
 
             while (true)
             {
-                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationToken);
+                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, syncOrAsync, CancellationToken);
                 sut.Count.Should().Be(1, "Item should be queued");
 
                 var dequeued = await sut.DequeueAsync(cancellationToken);

@@ -12,6 +12,7 @@ using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Proxy;
+using NSubstitute;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
 
@@ -140,20 +141,20 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            public async Task BecauseTheProxyIsNotResponding_TheExceptionShouldBeANetworkError()
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+            public async Task BecauseTheProxyIsNotResponding_TheExceptionShouldBeANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var tcpKiller = new TCPListenerWhichKillsNewConnections())
-                using (var octopus = new HalibutRuntime(Certificates.Octopus))
+                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .WithStandardServices()
+                           .WithProxy()
+                           .Build(CancellationToken))
                 {
-                    var serviceEndPoint = new ServiceEndPoint(
-                        new Uri("https://localhost:" + tcpKiller.Port),
-                        Certificates.TentacleListeningPublicThumbprint,
-                        new ProxyDetails("127.0.0.1", tcpKiller.Port, ProxyType.HTTP));
+                    clientAndService.HttpProxy!.Dispose();
 
-                    serviceEndPoint.RetryCountLimit = 1;
-
-                    var echo = octopus.CreateClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint);
-
+                    var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                    {
+                        point.RetryCountLimit = 1;
+                    });
                     (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello")))
                         .And
                         .IsNetworkError()
