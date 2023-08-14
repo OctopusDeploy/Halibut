@@ -181,7 +181,7 @@ namespace Halibut
 
         Task HandleMessageAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
         {
-            return protocol.ExchangeAsServerAsync(HandleIncomingRequest, id => GetQueue(id.SubscriptionId), cancellationToken);
+            return protocol.ExchangeAsServerAsync(HandleIncomingRequestAsync, id => GetQueue(id.SubscriptionId), cancellationToken);
         }
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
@@ -413,6 +413,11 @@ namespace Halibut
         ResponseMessage HandleIncomingRequest(RequestMessage request)
         {
             return invoker.Invoke(request);
+        }
+
+        async Task<ResponseMessage> HandleIncomingRequestAsync(RequestMessage request)
+        {
+            return await invoker.InvokeAsync(request);
         }
 
         public void Trust(string clientThumbprint)

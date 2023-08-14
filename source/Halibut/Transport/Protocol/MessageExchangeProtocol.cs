@@ -181,7 +181,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task ExchangeAsServerAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
+        public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
         {
             var identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
             await stream.IdentifyAsServerAsync(cancellationToken);
@@ -231,7 +231,7 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task ProcessClientRequestsAsync(Func<RequestMessage, ResponseMessage> incomingRequestProcessor, CancellationToken cancellationToken)
+        async Task ProcessClientRequestsAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, CancellationToken cancellationToken)
         {
             while (acceptClientRequests && !cancellationToken.IsCancellationRequested)
             {
@@ -242,7 +242,7 @@ namespace Halibut.Transport.Protocol
                     return;
                 }
 
-                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                var response = await InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
 
                 if (!acceptClientRequests || cancellationToken.IsCancellationRequested)
                 {
@@ -386,6 +386,18 @@ namespace Halibut.Transport.Protocol
             try
             {
                 return incomingRequestProcessor(request);
+            }
+            catch (Exception ex)
+            {
+                return ResponseMessage.FromException(request, ex);
+            }
+        }
+        
+        static async Task<ResponseMessage> InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
+        {
+            try
+            {
+                return await incomingRequestProcessor(request);
             }
             catch (Exception ex)
             {
