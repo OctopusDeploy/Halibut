@@ -101,7 +101,7 @@ namespace Halibut
             var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
             typeRegistry.AddToMessageContract(messageContracts);
 
-            var builder = new MessageSerializerBuilder();
+            var builder = new MessageSerializerBuilder(logFactory);
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
 

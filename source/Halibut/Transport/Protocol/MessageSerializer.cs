@@ -19,8 +19,9 @@ namespace Halibut.Transport.Protocol
         readonly long readIntoMemoryLimitBytes;
         readonly long writeIntoMemoryLimitBytes;
         readonly DeflateStreamInputBufferReflector deflateReflector;
-
-        public MessageSerializer() // kept for backwards compatibility.
+        
+        public MessageSerializer(
+            ILogFactory logFactory) // kept for backwards compatibility.
         {
             typeRegistry = new TypeRegistry();
             createSerializer = () =>
@@ -30,23 +31,23 @@ namespace Halibut.Transport.Protocol
                 settings.SerializationBinder = binder;
                 return JsonSerializer.Create(settings);
             };
-            deflateReflector = new DeflateStreamInputBufferReflector(new InMemoryConnectionLog("poll://foo/"));
+            deflateReflector = new DeflateStreamInputBufferReflector(logFactory.ForPrefix(nameof(MessageSerializer)));
             observer = new NoMessageSerializerObserver();
         }
-
         internal MessageSerializer(
             ITypeRegistry typeRegistry, 
             Func<JsonSerializer> createSerializer,
             IMessageSerializerObserver observer,
             long readIntoMemoryLimitBytes,
-            long writeIntoMemoryLimitBytes)
+            long writeIntoMemoryLimitBytes,
+            ILogFactory logFactory)
         {
             this.typeRegistry = typeRegistry;
             this.createSerializer = createSerializer;
             this.observer = observer;
             this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
-            deflateReflector = new DeflateStreamInputBufferReflector(new InMemoryConnectionLog("poll://foo/"));
+            deflateReflector = new DeflateStreamInputBufferReflector(logFactory.ForPrefix(nameof(MessageSerializer)));
         }
 
         public void AddToMessageContract(params Type[] types) // kept for backwards compatibility

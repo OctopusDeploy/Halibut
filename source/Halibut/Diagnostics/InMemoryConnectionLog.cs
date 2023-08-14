@@ -9,11 +9,19 @@ namespace Halibut.Diagnostics
     internal class InMemoryConnectionLog : ILog
     {
         readonly string endpoint;
-        readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
+        readonly Logging.ILog logger;
+        readonly ConcurrentQueue<LogEvent> events = new();
 
         public InMemoryConnectionLog(string endpoint)
         {
             this.endpoint = endpoint;
+            this.logger = LogProvider.GetLogger("Halibut");
+        }
+
+        public InMemoryConnectionLog(string endpoint, Logging.ILog logger)
+        {
+            this.endpoint = endpoint;
+            this.logger = logger;
         }
 
         public void Write(EventType type, string message, params object[] args)
@@ -60,7 +68,6 @@ namespace Halibut.Diagnostics
 
         void SendToTrace(LogEvent logEvent, LogLevel level)
         {
-            var logger = LogProvider.GetLogger("Halibut");
             logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
         }
     }
