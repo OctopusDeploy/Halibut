@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Exceptions;
+using Halibut.Util;
 
 namespace Halibut.ServiceModel
 {
@@ -17,6 +18,33 @@ namespace Halibut.ServiceModel
             lock (serviceTypes)
             {
                 serviceTypes.Add(serviceType);    
+            }
+
+            return this;
+        }
+
+        public DelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
+        {
+            AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<TContract, TAsyncContract>();
+            
+            var serviceType = typeof(TContract);
+            services.Add(serviceType.Name, () => implementation());
+            lock (serviceTypes)
+            {
+                serviceTypes.Add(serviceType);
+            }
+
+            return this;
+        }
+        
+        // Used for testing badly-registered sync/async contracts
+        internal DelegateServiceFactory RegisterWithNoVerification<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
+        {
+            var serviceType = typeof(TContract);
+            services.Add(serviceType.Name, () => implementation());
+            lock (serviceTypes)
+            {
+                serviceTypes.Add(serviceType);
             }
 
             return this;

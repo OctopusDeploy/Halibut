@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.TestUtils.Contracts
 {
@@ -31,4 +32,34 @@ namespace Halibut.TestUtils.Contracts
             return length;
         }
     }
+
+    public class AsyncEchoService : IAsyncEchoService
+    {
+        readonly EchoService service = new EchoService();
+        
+        public async Task<int> LongRunningOperationAsync(CancellationToken cancellationToken)
+        {
+            await Task.Delay(10000, cancellationToken);
+            return 16;
+        }
+
+        public async Task<string> SayHelloAsync(string name, CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            return service.SayHello(name + "Async");
+        }
+
+        public async Task<bool> CrashAsync(CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            return service.Crash();
+        }
+
+        public async Task<int> CountBytesAsync(DataStream dataStream, CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            return service.CountBytes(dataStream);
+        }
+    }
 }
+
