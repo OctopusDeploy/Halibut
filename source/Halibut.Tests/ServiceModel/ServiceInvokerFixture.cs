@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
@@ -17,8 +17,9 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void InvokeWithParams()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .Register<IEchoService>(() => new EchoService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithService<IEchoService>(() => new EchoService())
+                .Build();
 
             var value = Some.RandomAsciiStringOfLength(8);
             var sut = new ServiceInvoker(serviceFactory);
@@ -36,8 +37,9 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public void InvokeWithNoParams()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .Register<ICountingService>(() => new CountingService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithService<ICountingService>(() => new CountingService())
+                .Build();
 
             var sut = new ServiceInvoker(serviceFactory);
             var request = new RequestMessage
@@ -53,8 +55,9 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithParamsOnAsyncService()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService())
+                .Build();
 
             var value = Some.RandomAsciiStringOfLength(8);
             var sut = new ServiceInvoker(serviceFactory);
@@ -72,8 +75,9 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithNoParamsOnAsyncService()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .Register<ICountingService, IAsyncCountingService>(() => new AsyncCountingService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithService<ICountingService, IAsyncCountingService>(() => new AsyncCountingService())
+                .Build();
 
             var sut = new ServiceInvoker(serviceFactory);
             var request = new RequestMessage
@@ -89,8 +93,9 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithParamsOnSyncService()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .Register<IEchoService>(() => new EchoService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithService<IEchoService>(() => new EchoService())
+                .Build();
 
             var value = Some.RandomAsciiStringOfLength(8);
             var sut = new ServiceInvoker(serviceFactory);
@@ -108,8 +113,9 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithNoParamsOnSyncService()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .Register<ICountingService, IAsyncCountingService>(() => new AsyncCountingService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithService<ICountingService, IAsyncCountingService>(() => new AsyncCountingService())
+                .Build();
 
             var sut = new ServiceInvoker(serviceFactory);
             var request = new RequestMessage
@@ -125,8 +131,10 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithNoParams_AsyncServiceMissingSuffix()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .RegisterWithNoVerification<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithConventionVerificationDisabled()
+                .WithService<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService())
+                .Build();
 
             var sut = new ServiceInvoker(serviceFactory);
             var request = new RequestMessage()
@@ -141,8 +149,10 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithNoParams_AsyncServiceMissingCancellationToken()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .RegisterWithNoVerification<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithConventionVerificationDisabled()
+                .WithService<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService())
+                .Build();
 
             var sut = new ServiceInvoker(serviceFactory);
             var request = new RequestMessage()
@@ -157,8 +167,10 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithParams_AsyncServiceMissingSuffix()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .RegisterWithNoVerification<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithConventionVerificationDisabled()
+                .WithService<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService())
+                .Build();
 
             var sut = new ServiceInvoker(serviceFactory);
             var value = Some.RandomAsciiStringOfLength(8);
@@ -175,8 +187,10 @@ namespace Halibut.Tests.ServiceModel
         [Test]
         public async Task AsyncInvokeWithParams_AsyncServiceMissingCancellationToken()
         {
-            var serviceFactory = new DelegateServiceFactory()
-                .RegisterWithNoVerification<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService());
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithConventionVerificationDisabled()
+                .WithService<IBrokenConventionService, IAsyncBrokenConventionService>(() => new AsyncBrokenConventionService())
+                .Build();
 
             var sut = new ServiceInvoker(serviceFactory);
             var request = new RequestMessage()
