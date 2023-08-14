@@ -65,13 +65,12 @@ namespace Halibut
 
         public HalibutRuntimeBuilder WithAsyncHalibutFeatureEnabled()
         {
-            asyncHalibutFeature = AsyncHalibutFeature.Enabled;
-            return this;
+            return WithAsyncHalibutFeature(AsyncHalibutFeature.Enabled);
         }
         
         public HalibutRuntimeBuilder WithAsyncHalibutFeature(AsyncHalibutFeature asyncHalibutFeature)
         {
-            asyncHalibutFeature = this.asyncHalibutFeature;
+            this.asyncHalibutFeature = asyncHalibutFeature;
             return this;
         }
 
