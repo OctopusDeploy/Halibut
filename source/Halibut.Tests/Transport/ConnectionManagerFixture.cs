@@ -265,7 +265,6 @@ namespace Halibut.Tests.Transport
 
         static MessageExchangeProtocol GetProtocol(Stream stream, ILog log)
         {
-            //return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), log), log);
             throw new NotImplementedException("Not important for this test");
         }
     }

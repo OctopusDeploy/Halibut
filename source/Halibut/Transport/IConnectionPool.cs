@@ -14,6 +14,5 @@ namespace Halibut.Transport
         Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken);
         void Clear(TKey key, ILog log = null);
         Task ClearAsync(TKey key, ILog log, CancellationToken cancellationToken);
-        void Dispose();
     }
 }

@@ -25,15 +25,18 @@ namespace Halibut.Transport
         public void Dispose()
         {
             pool.Dispose();
-            IConnection[] connectionsToDispose;
-            using (activeConnectionsLock.Lock())
+            using (connectionsLock.Lock())
             {
-                connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
-            }
+                IConnection[] connectionsToDispose;
+                using (activeConnectionsLock.Lock())
+                {
+                    connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
+                }
 
-            foreach (var connection in connectionsToDispose)
-            {
-                SafelyDisposeConnection(connection, null);
+                foreach (var connection in connectionsToDispose)
+                {
+                    SafelyDisposeConnection(connection, null);
+                }
             }
 
             IsDisposed = true;
