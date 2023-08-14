@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Transport;
+using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
@@ -10,17 +11,17 @@ namespace Halibut.Tests.Transport
         [Test]
         public void ShouldGetConnectionFromPool()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            pool.Return("http://foo", new Connection());
-            pool.Return("http://foo", new Connection());
-            pool.Return("http://foo", new Connection());
+            var pool = new ConnectionPool<string, TestConnection>();
+            pool.Return("http://foo", new TestConnection());
+            pool.Return("http://foo", new TestConnection());
+            pool.Return("http://foo", new TestConnection());
             pool.Take("http://foo").Should().NotBeNull();
             pool.Take("http://foo").Should().NotBeNull();
             pool.Take("http://foo").Should().NotBeNull();
             pool.Take("http://foo").Should().BeNull();
             pool.Take("http://foo").Should().BeNull();
             pool.Take("http://foo").Should().BeNull();
-            pool.Return("http://foo", new Connection());
+            pool.Return("http://foo", new TestConnection());
             pool.Take("http://foo").Should().NotBeNull();
             pool.Take("http://foo").Should().BeNull();
         }
@@ -28,17 +29,17 @@ namespace Halibut.Tests.Transport
         [Test]
         public async Task ShouldGetConnectionFromPoolAsync()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            await pool.ReturnAsync("http://foo", new Connection(), CancellationToken);
-            await pool.ReturnAsync("http://foo", new Connection(), CancellationToken);
-            await pool.ReturnAsync("http://foo", new Connection(), CancellationToken);
+            var pool = new ConnectionPool<string, TestConnection>();
+            await pool.ReturnAsync("http://foo", new TestConnection(), CancellationToken);
+            await pool.ReturnAsync("http://foo", new TestConnection(), CancellationToken);
+            await pool.ReturnAsync("http://foo", new TestConnection(), CancellationToken);
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().NotBeNull();
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().NotBeNull();
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().NotBeNull();
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().BeNull();
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().BeNull();
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().BeNull();
-            await pool.ReturnAsync("http://foo", new Connection(), CancellationToken);
+            await pool.ReturnAsync("http://foo", new TestConnection(), CancellationToken);
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().NotBeNull();
             (await pool.TakeAsync("http://foo", CancellationToken)).Should().BeNull();
         }
@@ -46,9 +47,9 @@ namespace Halibut.Tests.Transport
         [Test]
         public void ShouldGetConnectionFromPoolByKey()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            pool.Return("http://foo1", new Connection());
-            pool.Return("http://foo2", new Connection());
+            var pool = new ConnectionPool<string, TestConnection>();
+            pool.Return("http://foo1", new TestConnection());
+            pool.Return("http://foo2", new TestConnection());
             pool.Take("http://foo1").Should().NotBeNull();
             pool.Take("http://foo1").Should().BeNull();
         }
@@ -56,9 +57,9 @@ namespace Halibut.Tests.Transport
         [Test]
         public async Task ShouldGetConnectionFromPoolByKeyAsync()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            await pool.ReturnAsync("http://foo1", new Connection(), CancellationToken);
-            await pool.ReturnAsync("http://foo2", new Connection(), CancellationToken);
+            var pool = new ConnectionPool<string, TestConnection>();
+            await pool.ReturnAsync("http://foo1", new TestConnection(), CancellationToken);
+            await pool.ReturnAsync("http://foo2", new TestConnection(), CancellationToken);
             (await pool.TakeAsync("http://foo1", CancellationToken)).Should().NotBeNull();
             (await pool.TakeAsync("http://foo1", CancellationToken)).Should().BeNull();
         }
@@ -66,8 +67,8 @@ namespace Halibut.Tests.Transport
         [Test]
         public void ShouldLetConnectionsExpire()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            var connection = new Connection();
+            var pool = new ConnectionPool<string, TestConnection>();
+            var connection = new TestConnection();
 
             pool.Return("http://foo", connection);
             connection.UsageCount.Should().Be(1);
@@ -86,8 +87,8 @@ namespace Halibut.Tests.Transport
         [Test]
         public async Task ShouldLetConnectionsExpireAsync()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            var connection = new Connection();
+            var pool = new ConnectionPool<string, TestConnection>();
+            var connection = new TestConnection();
 
             await pool.ReturnAsync("http://foo", connection, CancellationToken);
             connection.UsageCount.Should().Be(1);
@@ -106,8 +107,8 @@ namespace Halibut.Tests.Transport
         [Test]
         public void ShouldNotAllowMultipleReturnsOfSameConnection()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            var connection = new Connection();
+            var pool = new ConnectionPool<string, TestConnection>();
+            var connection = new TestConnection();
 
             pool.GetTotalConnectionCount().Should().Be(0);
 
@@ -121,8 +122,8 @@ namespace Halibut.Tests.Transport
         [Test]
         public async Task ShouldNotAllowMultipleReturnsOfSameConnectionAsync()
         {
-            var pool = new ConnectionPool<string, Connection>();
-            var connection = new Connection();
+            var pool = new ConnectionPool<string, TestConnection>();
+            var connection = new TestConnection();
 
             pool.GetTotalConnectionCount().Should().Be(0);
 
@@ -132,27 +133,40 @@ namespace Halibut.Tests.Transport
             await pool.ReturnAsync("http://foo", connection, CancellationToken);
             pool.GetTotalConnectionCount().Should().Be(1);
         }
+    }
 
-        class Connection : IPooledResource
+    //TODO: Move to new home
+    public class TestConnection : IConnection
+    {
+        bool hasExpired;
+        public void NotifyUsed()
         {
-            public void NotifyUsed()
+            UsageCount++;
+            if (UsageCount >= 3)
             {
-                UsageCount++;
+                hasExpired = true;
             }
+        }
 
-            public bool HasExpired()
-            {
-                return UsageCount >= 3;
-            }
+        public bool HasExpired()
+        {
+            return hasExpired;
+        }
 
-            public int UsageCount { get; private set; }
+        public int UsageCount { get; private set; }
 
-            public bool Disposed { get; private set; }
+        public bool Disposed { get; private set; }
 
-            public void Dispose()
-            {
-                Disposed = true;
-            }
+        public void Dispose()
+        {
+            Disposed = true;
+        }
+
+        public MessageExchangeProtocol Protocol { get; }
+
+        public void Expire()
+        {
+            hasExpired = true;
         }
     }
 }

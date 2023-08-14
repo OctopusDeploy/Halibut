@@ -13,65 +13,82 @@ namespace Halibut.Transport
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
+
+        // We have separate locks for connections in general (including the pool) vs specifically activeConnections.
+        // This is because disposing calls OnConnectionDisposed, which causes deadlocks if we are not careful.
+        readonly SemaphoreSlim connectionsLock = new(1, 1);
         readonly SemaphoreSlim activeConnectionsLock = new(1, 1);
+        
 
         public bool IsDisposed { get; private set; }
+
+        public void Dispose()
+        {
+            pool.Dispose();
+            IConnection[] connectionsToDispose;
+            using (activeConnectionsLock.Lock())
+            {
+                connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
+            }
+
+            foreach (var connection in connectionsToDispose)
+            {
+                SafelyDisposeConnection(connection, null);
+            }
+
+            IsDisposed = true;
+        }
 
         [Obsolete]
         public IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            var openableConnection = GetConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+            Tuple<IConnection, Action> openableConnection;
+            using (connectionsLock.Lock())
+            {
+                var existingConnectionFromPool = pool.Take(serviceEndpoint);
+                openableConnection = existingConnectionFromPool != null
+                    ? Tuple.Create<IConnection, Action>(existingConnectionFromPool, () => { }) // existing connections from the pool are already open
+                    : CreateNewConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+
+                using (activeConnectionsLock.Lock())
+                {
+                    AddConnectionToActiveConnections(serviceEndpoint, openableConnection.Item1);
+                }
+            }
+
             openableConnection.Item2(); // Since this involves IO, this should never be done inside a lock
             return openableConnection.Item1;
         }
 
         public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            var connection = await TryGetExistingConnectionAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-            if (connection != null) return connection;
-            
-            return await GetConnectionByCreatingItAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-        }
-
-        // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
-        // For existing open connections, the openConnection method does nothing
-        [Obsolete]
-        Tuple<IConnection, Action> GetConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
-            using (activeConnectionsLock.Lock())
-            {
-                var existingConnectionFromPool = pool.Take(serviceEndpoint);
-                var openableConnection = existingConnectionFromPool != null 
-                    ? Tuple.Create<IConnection, Action>(existingConnectionFromPool, () => { }) // existing connections from the pool are already open
-                    : CreateNewConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-                AddConnectionToActiveConnections(serviceEndpoint, openableConnection.Item1);
-                return openableConnection;
-            }
-        }
-        
-        async Task<IConnection> TryGetExistingConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
-            using (await activeConnectionsLock.LockAsync(cancellationToken))
+            //TODO: Can we keep this lock around the whole thing?
+            using (await connectionsLock.LockAsync(cancellationToken))
             {
                 var existingConnectionFromPool = await pool.TakeAsync(serviceEndpoint, cancellationToken);
                 if (existingConnectionFromPool != null)
                 {
-                    AddConnectionToActiveConnections(serviceEndpoint, existingConnectionFromPool);
+                    using (await activeConnectionsLock.LockAsync(cancellationToken))
+                    {
+                        AddConnectionToActiveConnections(serviceEndpoint, existingConnectionFromPool);
+                    }
+
+                    return existingConnectionFromPool;
                 }
-                return existingConnectionFromPool;
             }
-        }
-        
-        async Task<IConnection> GetConnectionByCreatingItAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
+
             var connection = await CreateNewConnectionWithIOAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-            using (await activeConnectionsLock.LockAsync(cancellationToken))
+            using (await connectionsLock.LockAsync(cancellationToken))
             {
-                AddConnectionToActiveConnections(serviceEndpoint, connection);
+                using (await activeConnectionsLock.LockAsync(cancellationToken))
+                {
+                    AddConnectionToActiveConnections(serviceEndpoint, connection);
+                }
             }
+
             return connection;
         }
-
+        
         [Obsolete]
         Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
@@ -106,31 +123,37 @@ namespace Halibut.Transport
         [Obsolete]
         public void ReleaseConnection(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
-            using (activeConnectionsLock.Lock())
+            using (connectionsLock.Lock())
             {
                 pool.Return(serviceEndpoint, connection);
-                if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
+                using (activeConnectionsLock.Lock())
                 {
-                    connections.Remove(connection);
+                    if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
+                    {
+                        connections.Remove(connection);
+                    }
                 }
             }
         }
 
         public async Task ReleaseConnectionAsync(ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
         {
-            using (await activeConnectionsLock.LockAsync(cancellationToken))
+            using (await connectionsLock.LockAsync(cancellationToken))
             {
                 await pool.ReturnAsync(serviceEndpoint, connection, cancellationToken);
-                if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
+                using (await activeConnectionsLock.LockAsync(cancellationToken))
                 {
-                    connections.Remove(connection);
+                    if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
+                    {
+                        connections.Remove(connection);
+                    }
                 }
             }
         }
 
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
-            using (activeConnectionsLock.Lock())
+            using (connectionsLock.Lock())
             {
                 pool.Clear(serviceEndPoint, log);
             }
@@ -138,7 +161,7 @@ namespace Halibut.Transport
 
         public async Task ClearPooledConnectionsAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
         {
-            using (await activeConnectionsLock.LockAsync(cancellationToken))
+            using (await connectionsLock.LockAsync(cancellationToken))
             {
                 await pool.ClearAsync(serviceEndPoint, log, cancellationToken);
             }
@@ -147,11 +170,14 @@ namespace Halibut.Transport
         static IConnection[] NoConnections = new IConnection[0];
         public IReadOnlyCollection<IConnection> GetActiveConnections(ServiceEndPoint serviceEndPoint)
         {
-            using (activeConnectionsLock.Lock())
+            using (connectionsLock.Lock())
             {
-                if (activeConnections.TryGetValue(serviceEndPoint, out var value))
+                using (activeConnectionsLock.Lock())
                 {
-                    return value.ToArray();
+                    if (activeConnections.TryGetValue(serviceEndPoint, out var value))
+                    {
+                        return value.ToArray();
+                    }
                 }
             }
 
@@ -160,46 +186,46 @@ namespace Halibut.Transport
 
         public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)
         {
-            ClearPooledConnections(serviceEndPoint, log);
-            ClearActiveConnections(serviceEndPoint, log);
+            using (connectionsLock.Lock())
+            {
+                pool.Clear(serviceEndPoint, log);
+                var toDelete = new List<IConnection>();
+                using (activeConnectionsLock.Lock())
+                {
+                    if (activeConnections.TryGetValue(serviceEndPoint, out var activeConnectionsForEndpoint))
+                    {
+                        toDelete = activeConnectionsForEndpoint.ToList();
+                    }
+                }
+
+                foreach (var connection in toDelete)
+                {
+                    SafelyDisposeConnection(connection, log);
+                }
+            }
         }
 
         public async Task DisconnectAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
         {
-            await ClearPooledConnectionsAsync(serviceEndPoint, log, cancellationToken);
-            ClearActiveConnections(serviceEndPoint, log);
-        }
-
-        public void Dispose()
-        {
-            pool.Dispose();
-            using (activeConnectionsLock.Lock())
+            using (await connectionsLock.LockAsync(cancellationToken))
             {
-                var connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
-                foreach (var connection in connectionsToDispose)
+                await pool.ClearAsync(serviceEndPoint, log, cancellationToken);
+                var toDelete = new List<IConnection>();
+                using (await activeConnectionsLock.LockAsync(cancellationToken))
                 {
-                    SafelyDisposeConnection(connection, null);
-                }
-            }
-
-            IsDisposed = true;
-        }
-
-
-        void ClearActiveConnections(ServiceEndPoint serviceEndPoint, ILog log)
-        {
-            using (activeConnectionsLock.Lock())
-            {
-                if (activeConnections.TryGetValue(serviceEndPoint, out var activeConnectionsForEndpoint))
-                {
-                    foreach (var connection in activeConnectionsForEndpoint.ToArray())
+                    if (activeConnections.TryGetValue(serviceEndPoint, out var activeConnectionsForEndpoint))
                     {
-                        SafelyDisposeConnection(connection, log);
+                        toDelete = activeConnectionsForEndpoint.ToList();
                     }
                 }
+
+                foreach (var connection in toDelete)
+                {
+                    SafelyDisposeConnection(connection, log);
+                }
             }
         }
-
+        
         void OnConnectionDisposed(IConnection connection)
         {
             using (activeConnectionsLock.Lock())
