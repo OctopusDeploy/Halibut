@@ -18,16 +18,18 @@ namespace Halibut.Transport
     {
         readonly ILog log;
         readonly ConnectionManager connectionManager;
+        readonly IClientCertificateValidatorFactory clientCertificateValidatorFactory;
         readonly X509Certificate2 clientCertificate;
         readonly ExchangeProtocolBuilder exchangeProtocolBuilder;
 
-        public SecureListeningClient(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecureListeningClient(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager, IClientCertificateValidatorFactory clientCertificateValidatorFactory)
         {
             this.exchangeProtocolBuilder = exchangeProtocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
             this.log = log;
             this.connectionManager = connectionManager;
+            this.clientCertificateValidatorFactory = clientCertificateValidatorFactory;
         }
 
         public ServiceEndPoint ServiceEndpoint { get; }
@@ -57,7 +59,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = connectionManager.AcquireConnection(exchangeProtocolBuilder, new TcpConnectionFactory(clientCertificate), ServiceEndpoint, log, cancellationToken);
+                        connection = connectionManager.AcquireConnection(exchangeProtocolBuilder, new TcpConnectionFactory(clientCertificate, clientCertificateValidatorFactory), ServiceEndpoint, log, cancellationToken);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
@@ -168,7 +170,7 @@ namespace Halibut.Transport
                     {
                         connection = await connectionManager.AcquireConnectionAsync(
                             exchangeProtocolBuilder, 
-                            new TcpConnectionFactory(clientCertificate), 
+                            new TcpConnectionFactory(clientCertificate, clientCertificateValidatorFactory), 
                             ServiceEndpoint, 
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);

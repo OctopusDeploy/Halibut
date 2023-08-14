@@ -20,6 +20,7 @@ namespace Halibut.Tests.Transport
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
         ILog log;
+        ClientCertificateValidatorFactory clientCertificateValidatorFactory;
 
         [SetUp]
         public void SetUp()
@@ -27,6 +28,7 @@ namespace Halibut.Tests.Transport
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
             tentacle = new HalibutRuntime(services, Certificates.TentacleListening);
+            clientCertificateValidatorFactory = new ClientCertificateValidatorFactory();
             var tentaclePort = tentacle.Listen();
             tentacle.Trust(Certificates.OctopusPublicThumbprint);
             endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint)
@@ -67,7 +69,7 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager);
+            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager, clientCertificateValidatorFactory);
             ResponseMessage response = null!;
 
             using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 
@@ -20,6 +21,7 @@ namespace Halibut
         Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
         AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
+        IClientCertificateValidatorFactory clientCertificateValidatorFactory;
 
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
@@ -27,6 +29,12 @@ namespace Halibut
             return this;
         }
 
+        public HalibutRuntimeBuilder WithClientCertificateValidatorFactory(IClientCertificateValidatorFactory clientCertificateValidator)
+        {
+            this.clientCertificateValidatorFactory = clientCertificateValidator;
+            return this;
+        }
+        
         public HalibutRuntimeBuilder WithServerCertificate(X509Certificate2 serverCertificate)
         {
             this.serverCertificate = serverCertificate;
@@ -96,6 +104,7 @@ namespace Halibut
 #pragma warning restore CS0612
             var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
+            var clientCertificateValidatorFactory = this.clientCertificateValidatorFactory ?? new ClientCertificateValidatorFactory();
 
             var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
             typeRegistry.AddToMessageContract(messageContracts);
@@ -113,7 +122,8 @@ namespace Halibut
                 typeRegistry,
                 messageSerializer, 
                 pollingReconnectRetryPolicy,
-                asyncHalibutFeature);
+                asyncHalibutFeature,
+                clientCertificateValidatorFactory);
 
             if (onUnauthorizedClientConnect is not null)
             {

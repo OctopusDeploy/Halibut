@@ -19,10 +19,12 @@ namespace Halibut.Transport
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
 
         readonly X509Certificate2 clientCertificate;
+        readonly IClientCertificateValidatorFactory clientCertificateValidatorFactory;
 
-        public TcpConnectionFactory(X509Certificate2 clientCertificate)
+        public TcpConnectionFactory(X509Certificate2 clientCertificate, IClientCertificateValidatorFactory clientCertificateValidatorFactory)
         {
             this.clientCertificate = clientCertificate;
+            this.clientCertificateValidatorFactory = clientCertificateValidatorFactory;
         }
 
         [Obsolete]
@@ -30,12 +32,12 @@ namespace Halibut.Transport
         {
             log.Write(EventType.OpeningNewConnection, $"Opening a new connection to {serviceEndpoint.BaseUri}");
 
-            var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
 
             var stream = client.GetStream();
 
+            var certificateValidator = clientCertificateValidatorFactory.Create(serviceEndpoint);
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
             var ssl = new SslStream(stream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
             ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);

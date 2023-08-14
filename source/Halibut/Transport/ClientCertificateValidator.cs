@@ -4,7 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Halibut.Transport
 {
-    class ClientCertificateValidator
+    class ClientCertificateValidator : IClientCertificateValidator
     {
         readonly ServiceEndPoint endPoint;
 
@@ -24,6 +24,41 @@ namespace Halibut.Transport
             }
 
             throw new UnexpectedCertificateException(providedCert, endPoint);
+        }
+    }
+
+    class TrustRootCertificateAuthorityValidator : IClientCertificateValidator
+    {
+        public bool Validate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
+        {
+           var result = new X509Certificate2(certificate).Verify();
+           return result;
+        }
+    }
+
+    public interface IClientCertificateValidator
+    {
+        bool Validate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors);
+    }
+    
+    public interface IClientCertificateValidatorFactory
+    {
+        IClientCertificateValidator Create(ServiceEndPoint serviceEndpoint);
+    }
+    
+    public class ClientCertificateValidatorFactory : IClientCertificateValidatorFactory
+    {
+        public IClientCertificateValidator Create(ServiceEndPoint serviceEndpoint)
+        {
+            return new ClientCertificateValidator(serviceEndpoint);
+        }
+    }
+    
+    public class TrustRootCertificateAuthorityValidatorFactory : IClientCertificateValidatorFactory
+    {
+        public IClientCertificateValidator Create(ServiceEndPoint serviceEndpoint)
+        {
+            return new TrustRootCertificateAuthorityValidator();
         }
     }
 }
