@@ -36,6 +36,7 @@ namespace Halibut
         readonly ITypeRegistry typeRegistry;
         readonly Lazy<ResponseCache> responseCache = new();
         readonly Func<RetryPolicy> pollingReconnectRetryPolicy;
+        readonly IClientCertificateValidatorFactory clientCertificateValidatorFactory;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -80,7 +81,8 @@ namespace Halibut
             ITypeRegistry typeRegistry, 
             IMessageSerializer messageSerializer, 
             Func<RetryPolicy> pollingReconnectRetryPolicy,
-            AsyncHalibutFeature asyncHalibutFeature)
+            AsyncHalibutFeature asyncHalibutFeature,
+            IClientCertificateValidatorFactory clientCertificateValidatorFactory)
         {
             AsyncHalibutFeature = asyncHalibutFeature;
             this.serverCertificate = serverCertificate;
@@ -90,6 +92,7 @@ namespace Halibut
             this.typeRegistry = typeRegistry;
             this.messageSerializer = messageSerializer;
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
+            this.clientCertificateValidatorFactory = clientCertificateValidatorFactory;
             invoker = new ServiceInvoker(serviceFactory);
         }
 
@@ -181,7 +184,7 @@ namespace Halibut
             }
             else
             {
-                client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager);
+                client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager, clientCertificateValidatorFactory);
             }
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
         }
@@ -350,7 +353,7 @@ namespace Halibut
         [Obsolete]
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, clientCertificateValidatorFactory);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -362,7 +365,7 @@ namespace Halibut
 
         async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
-            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, clientCertificateValidatorFactory);
 
             ResponseMessage response = null;
 
