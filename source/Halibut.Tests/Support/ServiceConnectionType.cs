@@ -10,12 +10,10 @@ namespace Halibut.Tests.Support
     public static class ServiceConnectionTypes
     {
         public static ServiceConnectionType[] All => new[]
-            {
-               ServiceConnectionType.Listening,
-               ServiceConnectionType.Polling,
-#if SUPPORTS_WEB_SOCKET_CLIENT
-             ServiceConnectionType.PollingOverWebSocket
-#endif
+        {
+            ServiceConnectionType.Listening,
+            ServiceConnectionType.Polling,
+            ServiceConnectionType.PollingOverWebSocket
         };
 
         public static ServiceConnectionType[] AllExceptWebSockets => new[]

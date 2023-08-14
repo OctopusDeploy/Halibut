@@ -4,7 +4,6 @@
 // See https://github.com/dotnet/corefx/issues/12038
 
 using Halibut.Util;
-#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Diagnostics;
 using System.Net.Sockets;
@@ -255,4 +254,3 @@ namespace Halibut.Transport
         }
     }
 }
-#endif

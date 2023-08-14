@@ -55,7 +55,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
-    <DefineConstants>$(DefineConstants);HAS_REAL_PROXY;SUPPORTS_WEB_SOCKET_CLIENT</DefineConstants>
+    <DefineConstants>$(DefineConstants);HAS_REAL_PROXY</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

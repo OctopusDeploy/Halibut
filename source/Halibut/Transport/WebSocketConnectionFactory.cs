@@ -1,6 +1,6 @@
-#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Net;
+using System.Net.Security;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -72,19 +72,30 @@ namespace Halibut.Transport
             client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
             client.Options.AddSubProtocol("Octopus");
             client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
+#if NETCOREAPP
+            client.Options.RemoteCertificateValidationCallback = (object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+                => ValidateRemoteCert(serviceEndpoint, certificate, sslPolicyErrors);
+#endif
+
+
             if (serviceEndpoint.Proxy != null)
                 client.Options.Proxy = new WebSocketProxy(serviceEndpoint.Proxy);
 
             try
             {
+#if !NETCOREAPP
                 ServerCertificateInterceptor.Expect(connectionId);
+#endif
                 using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
                 {
                     using (cancellationToken.Register(() => cts?.Cancel()))
                         client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token)
                             .ConfigureAwait(false).GetAwaiter().GetResult();
                 }
+
+#if !NETCOREAPP
                 ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
+#endif
             }
             catch
             {
@@ -96,14 +107,16 @@ namespace Halibut.Transport
                 client.Dispose();
                 throw;
             }
+#if !NETCOREAPP
             finally
             {
                 ServerCertificateInterceptor.Remove(connectionId);
             }
+#endif
 
             return client;
         }
-        
+
         async Task<ClientWebSocket> CreateConnectedClientAsync(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
         {
             if (!serviceEndpoint.IsWebSocketEndpoint)
@@ -117,10 +130,16 @@ namespace Halibut.Transport
             client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
             if (serviceEndpoint.Proxy != null)
                 client.Options.Proxy = new WebSocketProxy(serviceEndpoint.Proxy);
+#if NETCOREAPP
+            client.Options.RemoteCertificateValidationCallback = (object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors) 
+                => ValidateRemoteCert(serviceEndpoint, certificate, sslPolicyErrors);
+#endif
 
             try
             {
+#if !NETCOREAPP
                 ServerCertificateInterceptor.Expect(connectionId);
+#endif
                 using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
                 {
                     using (cancellationToken.Register(() => cts?.Cancel()))
@@ -128,7 +147,9 @@ namespace Halibut.Transport
                         await client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token);
                     }
                 }
+#if !NETCOREAPP
                 ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
+#endif
             }
             catch
             {
@@ -140,12 +161,20 @@ namespace Halibut.Transport
                 client.Dispose();
                 throw;
             }
+#if !NETCOREAPP
             finally
             {
                 ServerCertificateInterceptor.Remove(connectionId);
             }
-
+#endif
             return client;
+        }
+
+        private static bool ValidateRemoteCert(ServiceEndPoint serviceEndPoint, X509Certificate certificate, SslPolicyErrors sslPolicyErrors)
+        {
+            if (certificate == null) return false;
+
+            return new X509Certificate2(certificate).Thumbprint == serviceEndPoint.RemoteThumbprint;
         }
     }
 
@@ -173,4 +202,3 @@ namespace Halibut.Transport
         public ICredentials Credentials { get; set; }
     }
 }
-#endif
