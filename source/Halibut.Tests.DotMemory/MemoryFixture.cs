@@ -160,7 +160,7 @@ namespace Halibut.Tests.DotMemory
 
                 MakeRequest(calculator, "polling", expectSuccess);
 
-                await runtime.DisconnectAsync(clientEndpoint, CancellationToken.None);
+                runtime.Disconnect(clientEndpoint);
             }
         }
 
@@ -190,7 +190,7 @@ namespace Halibut.Tests.DotMemory
 
                 MakeRequest(calculator, "websocket polling", expectSuccess);
 
-                await runtime.DisconnectAsync(clientEndpoint, CancellationToken.None);
+                runtime.Disconnect(clientEndpoint);
             }
         }
 
