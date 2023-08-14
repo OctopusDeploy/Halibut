@@ -28,7 +28,7 @@ namespace Halibut.Tests
                 
                 var port = octopusServer.Listen();
                 
-                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + port), CertAndThumbprint.TentaclePolling.Thumbprint));
+                tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri("https://localhost:" + port), CertAndThumbprint.Octopus.Thumbprint));
 
                 var echo = octopusServer.CreateClient<IEchoService>("poll://SQ-TENTAPOLL", CertAndThumbprint.TentaclePolling.Thumbprint);
 
