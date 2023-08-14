@@ -34,7 +34,7 @@ namespace Halibut.Tests.Transport
             var (connectionFactory, exchangeProtocolBuilder) = SetUp(syncOrAsync);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = new ConnectionManager(new HalibutTimeoutsAndLimits());
 
             //do it twice because this bug only triggers on multiple enumeration, having 1 in the collection doesn't trigger the bug
             await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
@@ -51,7 +51,7 @@ namespace Halibut.Tests.Transport
             var (connectionFactory, exchangeProtocolBuilder) = SetUp(syncOrAsync);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = new ConnectionManager(new HalibutTimeoutsAndLimits());
 
             var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
@@ -67,7 +67,7 @@ namespace Halibut.Tests.Transport
             var (connectionFactory, exchangeProtocolBuilder) = SetUp(syncOrAsync);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = new ConnectionManager(new HalibutTimeoutsAndLimits());
 
             var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
@@ -83,7 +83,7 @@ namespace Halibut.Tests.Transport
             var (connectionFactory, exchangeProtocolBuilder) = SetUp(syncOrAsync);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            var connectionManager = new ConnectionManager();
+            var connectionManager = new ConnectionManager(new HalibutTimeoutsAndLimits());
 
             var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, exchangeProtocolBuilder, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken.None);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
@@ -94,7 +94,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog log, SyncOrAsync syncOrAsync)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), log), log);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), new HalibutTimeoutsAndLimits(), log), log);
         }
     }
 }

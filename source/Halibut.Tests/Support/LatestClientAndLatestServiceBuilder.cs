@@ -47,6 +47,7 @@ namespace Halibut.Tests.Support
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
         ITrustProvider clientTrustProvider;
         Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
+        HalibutTimeoutsAndLimits? halibutTimeoutsAndLimits;
 
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
@@ -105,6 +106,12 @@ namespace Halibut.Tests.Support
         IClientAndServiceBuilder IClientAndServiceBuilder.NoService()
         {
             return NoService();
+        }
+
+        public LatestClientAndLatestServiceBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
@@ -314,6 +321,7 @@ namespace Halibut.Tests.Support
                 .WithPendingRequestQueueFactory(factory)
                 .WithTrustProvider(clientTrustProvider)
                 .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
+                .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
             var client = clientBuilder.Build();
@@ -326,6 +334,7 @@ namespace Halibut.Tests.Support
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                     .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
+                    .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                     .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);

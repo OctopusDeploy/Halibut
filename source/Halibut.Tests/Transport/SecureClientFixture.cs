@@ -4,14 +4,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.Logging;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NSubstitute;
 using NUnit.Framework;
+using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Transport
 {
@@ -33,7 +36,7 @@ namespace Halibut.Tests.Transport
             {
                 ConnectionErrorRetryTimeout = TimeSpan.MaxValue
             };
-            log = new InMemoryConnectionLog(endpoint.ToString());
+            log = TestContextLogFactory.CreateTestLog("Client", LogLevel.Info).ForEndpoint(endpoint.BaseUri);
         }
 
         public void Dispose()
@@ -45,7 +48,7 @@ namespace Halibut.Tests.Transport
         [SyncAndAsync]
         public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
         {
-            var connectionManager = new ConnectionManager();
+            var connectionManager = new ConnectionManager(new HalibutTimeoutsAndLimits());
             var stream = Substitute.For<IMessageExchangeStream>();
 
             syncOrAsync
@@ -67,7 +70,7 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager);
+            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, new HalibutTimeoutsAndLimits(), log, connectionManager);
             ResponseMessage response = null!;
 
             using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);
@@ -88,7 +91,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger, SyncOrAsync syncOrAsync)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), logger), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), new HalibutTimeoutsAndLimits(), logger), logger);
         }
     }
 }

@@ -75,5 +75,7 @@ namespace Halibut
 
         OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }
         AsyncHalibutFeature AsyncHalibutFeature { get; }
+        
+        public HalibutTimeoutsAndLimits TimeoutsAndLimits { get; }
     }
 }

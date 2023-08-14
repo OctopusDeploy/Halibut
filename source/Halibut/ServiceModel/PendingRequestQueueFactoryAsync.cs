@@ -6,15 +6,17 @@ namespace Halibut.ServiceModel
     class PendingRequestQueueFactoryAsync : IPendingRequestQueueFactory
     {
         readonly ILogFactory logFactory;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public PendingRequestQueueFactoryAsync(ILogFactory logFactory)
+        public PendingRequestQueueFactoryAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILogFactory logFactory)
         {
             this.logFactory = logFactory;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
         }
 
         public IPendingRequestQueue CreateQueue(Uri endpoint)
         {
-            return new PendingRequestQueueAsync(logFactory.ForEndpoint(endpoint));
+            return new PendingRequestQueueAsync(halibutTimeoutsAndLimits, logFactory.ForEndpoint(endpoint));
         }
     }
 }

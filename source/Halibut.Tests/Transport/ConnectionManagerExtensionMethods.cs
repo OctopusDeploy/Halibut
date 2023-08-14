@@ -15,7 +15,7 @@ namespace Halibut.Tests.Transport
 #pragma warning disable CS0612 // Type or member is obsolete
             return await syncOrAsync
                 .WhenSync(() => connectionManager.AcquireConnection(exchangeProtocolBuilder, connectionFactory, serviceEndPoint, log, cancellationToken))
-                .WhenAsync(async () => await connectionManager.AcquireConnectionAsync(exchangeProtocolBuilder, connectionFactory, serviceEndPoint, log, cancellationToken));
+                .WhenAsync(async () => await connectionManager.AcquireConnectionAsync(exchangeProtocolBuilder, connectionFactory, serviceEndPoint, new HalibutTimeoutsAndLimits(), log, cancellationToken));
 #pragma warning restore CS0612 // Type or member is obsolete
         }
     }

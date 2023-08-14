@@ -50,7 +50,11 @@ namespace Halibut.Transport.Protocol
             var buffer = new ArraySegment<byte>(new byte[10000]);
             while (true)
             {
+                // TODO - ASYNC ME UP!
+                // What should the timeout be here? thew new code that allows passing in a timeout or the static value?
+#pragma warning disable CS0612
                 using(var cts = new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout))
+#pragma warning restore CS0612
                 using(var combined = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancel.Token))
                 {
                     var result = await context.ReceiveAsync(buffer, combined.Token).ConfigureAwait(false);

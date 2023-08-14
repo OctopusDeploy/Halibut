@@ -1,4 +1,6 @@
 ﻿using System;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
@@ -57,6 +59,16 @@ namespace Halibut.Tests.Support
         public static LatestClientAndLatestServiceBuilder WithInstantReconnectPollingRetryPolicy(this LatestClientAndLatestServiceBuilder builder)
         {
             return builder.WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero));
+        }
+
+        public static LatestClientAndLatestServiceBuilder WhenTestingAsyncClient(this LatestClientAndLatestServiceBuilder builder, ClientAndServiceTestCase clientAndServiceTestCase, Action<LatestClientAndLatestServiceBuilder> action)
+        {
+
+            if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Async)
+            {
+                action(builder);
+            }
+            return builder;
         }
     }
 }

@@ -44,6 +44,7 @@ namespace Halibut.Transport
         readonly TcpClientManager tcpClientManager = new();
         readonly ExchangeActionAsync exchangeAction;
         readonly AsyncHalibutFeature asyncHalibutFeature;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
@@ -57,7 +58,9 @@ namespace Halibut.Transport
             ILogFactory logFactory, 
             Func<string> getFriendlyHtmlPageContent, 
             Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
-            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, AsyncHalibutFeature asyncHalibutFeature)
+            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, 
+            AsyncHalibutFeature asyncHalibutFeature,
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -69,6 +72,7 @@ namespace Halibut.Transport
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
             this.asyncHalibutFeature = asyncHalibutFeature;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -174,8 +178,19 @@ namespace Halibut.Transport
         {
             try
             {
-                client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                if (asyncHalibutFeature.IsEnabled())
+                {
+                    client.SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds;
+                    client.ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                }
+                else
+                {
+#pragma warning disable CS0612
+                    client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
+                    client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+#pragma warning restore CS0612
+                }
+                
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
                 await ExecuteRequest(client).ConfigureAwait(false);

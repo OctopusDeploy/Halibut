@@ -12,6 +12,7 @@ namespace Halibut.Transport
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
         public bool IsDisposed { get; private set; }
 
@@ -23,12 +24,12 @@ namespace Halibut.Transport
             return openableConnection.Item1;
         }
 
-        public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, CancellationToken cancellationToken)
         {
             var connection = await TryGetExistingConnectionAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
             if (connection != null) return connection;
             
-            return await GetConnectionByCreatingItAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+            return await GetConnectionByCreatingItAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, halibutTimeoutsAndLimits, log, cancellationToken);
         }
 
         // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
@@ -61,7 +62,7 @@ namespace Halibut.Transport
             }
         }
         
-        async Task<IConnection> GetConnectionByCreatingItAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        async Task<IConnection> GetConnectionByCreatingItAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, CancellationToken cancellationToken)
         {
             var connection = await CreateNewConnectionWithIOAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
             lock (activeConnections)
@@ -123,6 +124,12 @@ namespace Halibut.Transport
         }
 
         static IConnection[] NoConnections = new IConnection[0];
+
+        public ConnectionManager(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+        }
+
         public IReadOnlyCollection<IConnection> GetActiveConnections(ServiceEndPoint serviceEndPoint)
         {
             lock (activeConnections)
