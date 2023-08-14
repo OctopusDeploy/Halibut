@@ -13,6 +13,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
+using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -167,7 +168,7 @@ namespace Halibut.Tests
 
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
 
-                serviceLoggers[serviceLoggers.Keys.First()].GetLogs().Should()
+                serviceLoggers[serviceLoggers.Keys.First(x => x != nameof(MessageSerializer))].GetLogs().Should()
                     .Contain(log => log.FormattedMessage
                         .Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint " +
                                   "'76225C0717A16C1D0BA4A7FFA76519D286D8A248' which is not in the list of thumbprints that we trust"));

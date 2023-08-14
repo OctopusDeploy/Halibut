@@ -2,14 +2,21 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Halibut.Logging;
 
 namespace Halibut.Diagnostics
 {
     public class LogFactory : ILogFactory
     {
-        readonly ConcurrentDictionary<string, InMemoryConnectionLog> events = new ConcurrentDictionary<string, InMemoryConnectionLog>();
-        readonly HashSet<Uri> endpoints = new HashSet<Uri>();
-        readonly HashSet<string> prefixes = new HashSet<string>();
+        readonly ConcurrentDictionary<string, InMemoryConnectionLog> events = new();
+        readonly HashSet<Uri> endpoints = new();
+        readonly HashSet<string> prefixes = new();
+        readonly Logging.ILog logger;
+
+        public LogFactory()
+        {
+            logger = LogProvider.GetLogger("Halibut");
+        }
 
         public Uri[] GetEndpoints()
         {
@@ -28,14 +35,14 @@ namespace Halibut.Diagnostics
             endpoint = NormalizeEndpoint(endpoint);
             lock (endpoints)
                 endpoints.Add(endpoint);
-            return events.GetOrAdd(endpoint.ToString(), e => new InMemoryConnectionLog(endpoint.ToString()));
+            return events.GetOrAdd(endpoint.ToString(), e => new InMemoryConnectionLog(endpoint.ToString(), logger));
         }
 
         public ILog ForPrefix(string prefix)
         {
             lock (prefixes)
                 prefixes.Add(prefix);
-            return events.GetOrAdd(prefix, e => new InMemoryConnectionLog(prefix));
+            return events.GetOrAdd(prefix, e => new InMemoryConnectionLog(prefix, logger));
         }
 
         static Uri NormalizeEndpoint(Uri endpoint)

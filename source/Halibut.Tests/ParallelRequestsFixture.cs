@@ -17,6 +17,7 @@ namespace Halibut.Tests
 {
     public static class ParallelRequestsFixture
     {
+        [Parallelizable(ParallelScope.None)]
         public class AsyncParallelRequestFixture : BaseTest
         {
             [Test]
@@ -118,7 +119,7 @@ namespace Halibut.Tests
             }
         }
 
-        [Parallelizable(ParallelScope.Children)]
+        [Parallelizable(ParallelScope.None)]
         public class SyncParallelRequestsFixture : BaseTest
         {
             [Test]
