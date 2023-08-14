@@ -65,7 +65,7 @@ namespace Halibut
             queueFactory = new DefaultPendingRequestQueueFactory(logs);
             typeRegistry = new TypeRegistry();
             typeRegistry.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
-            messageSerializer = new MessageSerializerBuilder()
+            messageSerializer = new MessageSerializerBuilder(logs)
                 .WithTypeRegistry(typeRegistry)
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);

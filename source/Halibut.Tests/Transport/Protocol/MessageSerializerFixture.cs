@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
@@ -19,7 +20,7 @@ namespace Halibut.Tests.Transport.Protocol
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task SendReceiveMessageShouldRoundTrip(MessageSerializerTestCase testCase)
         {
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
 
@@ -40,7 +41,7 @@ namespace Halibut.Tests.Transport.Protocol
         public async Task WriteMessage_ObservesThatMessageIsWritten(MessageSerializerTestCase testCase)
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .WithMessageSerializerObserver(messageSerializerObserver)
                 .Build();
@@ -62,14 +63,14 @@ namespace Halibut.Tests.Transport.Protocol
         public async Task ReadMessage_ObservesThatMessageIsRead(MessageSerializerTestCase testCase)
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .WithMessageSerializerObserver(messageSerializerObserver)
                 .Build();
 
             using (var stream = new MemoryStream())
             {
-                var writingSerializer = new MessageSerializerBuilder()
+                var writingSerializer = new MessageSerializerBuilder(new LogFactory())
                     .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                     .Build();
                 await WriteMessage(testCase, writingSerializer, stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
@@ -93,7 +94,7 @@ namespace Halibut.Tests.Transport.Protocol
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task BackwardsCompatibility_ExtraParametersInServerErrorAreIgnored(MessageSerializerTestCase testCase)
         {
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
             // This is bson of a RequestMessage which contains a hacked ServerError which has an extra field which no version of Halibut will ever have.
@@ -113,7 +114,7 @@ namespace Halibut.Tests.Transport.Protocol
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task WhenTheStreamEndsBeforeAnyBytesAreRead_AnEndOfStreamExceptionIsThrown(MessageSerializerTestCase testCase)
         {
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
             using (var stream = new RewindableBufferStream(new MemoryStream(new byte[0])))
@@ -126,7 +127,7 @@ namespace Halibut.Tests.Transport.Protocol
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task WhenTheStreamEndsMidWayThroughReadingAMessage_AEndOfStreamExceptionIsThrown(MessageSerializerTestCase testCase)
         {
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
             var completeBytes = CreateBytesFromMessage("Hello this is the message");
@@ -141,7 +142,7 @@ namespace Halibut.Tests.Transport.Protocol
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task WhenTheStreamContainsAnIncompleteZipStream_SomeSortOfZipErrorIsThrown(MessageSerializerTestCase testCase)
         {
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
             var completeBytes = CreateBytesFromMessage(Some.RandomAsciiStringOfLength(22000));
@@ -158,7 +159,7 @@ namespace Halibut.Tests.Transport.Protocol
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task WhenTheStreamContainsAnInvalidObject_SomeSortOfJsonErrorsThrown(MessageSerializerTestCase testCase)
         {
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
 
@@ -176,7 +177,7 @@ namespace Halibut.Tests.Transport.Protocol
             using (var stream = new MemoryStream())
             using (var rewindableStream = new RewindableBufferStream(stream))
             {
-                var sut = new MessageSerializerBuilder()
+                var sut = new MessageSerializerBuilder(new LogFactory())
                     .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                     .Build();
                 await WriteMessage(testCase, sut, stream, "Test");
@@ -190,7 +191,7 @@ namespace Halibut.Tests.Transport.Protocol
         public async Task ReadMessage_Rewindable_ObservesThatMessageIsRead(MessageSerializerTestCase testCase)
         {
             var messageSerializerObserver = new TestMessageSerializerObserver();
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .WithMessageSerializerObserver(messageSerializerObserver)
                 .Build();
@@ -198,7 +199,7 @@ namespace Halibut.Tests.Transport.Protocol
             using (var stream = new MemoryStream())
             using (var rewindableStream = new RewindableBufferStream(stream))
             {
-                var writingSerializer = new MessageSerializerBuilder()
+                var writingSerializer = new MessageSerializerBuilder(new LogFactory())
                     .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                     .Build();
                 await WriteMessage(testCase, writingSerializer, stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
@@ -221,7 +222,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             const string trailingData = "SomeOtherData";
 
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
 
@@ -249,7 +250,7 @@ namespace Halibut.Tests.Transport.Protocol
             const string trailingData = "SomeOtherData";
 
             var messageSerializerObserver = new TestMessageSerializerObserver();
-            var sut = new MessageSerializerBuilder()
+            var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .WithMessageSerializerObserver(messageSerializerObserver)
                 .Build();
@@ -257,7 +258,7 @@ namespace Halibut.Tests.Transport.Protocol
             using (var stream = new MemoryStream())
             using (var rewindableStream = new RewindableBufferStream(stream))
             {
-                var writingSerializer = new MessageSerializerBuilder()
+                var writingSerializer = new MessageSerializerBuilder(new LogFactory())
                     .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                     .Build();
                 await WriteMessage(testCase, writingSerializer, stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
@@ -278,7 +279,7 @@ namespace Halibut.Tests.Transport.Protocol
         
         static byte[] CreateBytesFromMessage(object message)
         {
-            var writingSerializer = new MessageSerializerBuilder().Build();
+            var writingSerializer = new MessageSerializerBuilder(new LogFactory()).Build();
 
             using (var stream = new MemoryStream())
             {

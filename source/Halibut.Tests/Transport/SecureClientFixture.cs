@@ -88,7 +88,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger, SyncOrAsync syncOrAsync)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), syncOrAsync.ToAsyncHalibutFeature(), logger), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), logger), logger);
         }
     }
 }
