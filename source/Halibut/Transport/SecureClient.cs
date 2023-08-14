@@ -18,11 +18,11 @@ namespace Halibut.Transport
     {
         [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ILog log;
-        readonly ConnectionManager connectionManager;
+        readonly IConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
         readonly ExchangeProtocolBuilder protocolBuilder;
 
-        public SecureClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecureClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, IConnectionManager connectionManager)
         {
             this.protocolBuilder = protocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;

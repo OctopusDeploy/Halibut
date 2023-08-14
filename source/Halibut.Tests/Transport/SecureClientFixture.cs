@@ -45,7 +45,7 @@ namespace Halibut.Tests.Transport
         [SyncAndAsync]
         public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
         {
-            using var connectionManager = new ConnectionManager();
+            using var connectionManager = syncOrAsync.CreateConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
 
             syncOrAsync

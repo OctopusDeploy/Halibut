@@ -17,11 +17,11 @@ namespace Halibut.Transport
     class SecureListeningClient : ISecureClient
     {
         readonly ILog log;
-        readonly ConnectionManager connectionManager;
+        readonly IConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
         readonly ExchangeProtocolBuilder exchangeProtocolBuilder;
 
-        public SecureListeningClient(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecureListeningClient(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, IConnectionManager connectionManager)
         {
             this.exchangeProtocolBuilder = exchangeProtocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;

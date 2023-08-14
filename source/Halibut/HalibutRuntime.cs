@@ -28,7 +28,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new();
         readonly IServiceInvoker invoker;
         readonly ILogFactory logs;
-        readonly ConnectionManager connectionManager = new();
+        readonly IConnectionManager connectionManager;
         readonly PollingClientCollection pollingClients = new();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new();
@@ -69,6 +69,8 @@ namespace Halibut
                 .WithTypeRegistry(typeRegistry)
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
+
+            connectionManager = new ConnectionManager();
         }
 
         internal HalibutRuntime(
@@ -91,6 +93,17 @@ namespace Halibut
             this.messageSerializer = messageSerializer;
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             invoker = new ServiceInvoker(serviceFactory);
+
+            if (asyncHalibutFeature == AsyncHalibutFeature.Enabled)
+            {
+                connectionManager = new ConnectionManagerAsync();
+            }
+            else
+            {
+#pragma warning disable CS0612
+                connectionManager = new ConnectionManager();
+#pragma warning restore CS0612
+            }
         }
 
         public ILogFactory Logs => logs;

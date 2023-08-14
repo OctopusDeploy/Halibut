@@ -10,7 +10,19 @@ namespace Halibut.Tests.Transport
 {
     public static class ConnectionManagerExtensionMethods
     {
-        public static async Task<IConnection> AcquireConnection_SyncOrAsync(this ConnectionManager connectionManager, SyncOrAsync syncOrAsync, ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
+        public static IConnectionManager CreateConnectionManager(this SyncOrAsync syncOrAsync)
+        {
+            switch (syncOrAsync)
+            {
+                case SyncOrAsync.Sync:
+                    return new ConnectionManager();
+                case SyncOrAsync.Async:
+                    return new ConnectionManagerAsync();
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(syncOrAsync), syncOrAsync, null);
+            }
+        }
+        public static async Task<IConnection> AcquireConnection_SyncOrAsync(this IConnectionManager connectionManager, SyncOrAsync syncOrAsync, ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
         {
 #pragma warning disable CS0612 // Type or member is obsolete
             return await syncOrAsync
@@ -19,7 +31,7 @@ namespace Halibut.Tests.Transport
 #pragma warning restore CS0612 // Type or member is obsolete
         }
 
-        public static async Task ReleaseConnection_SyncOrAsync(this ConnectionManager connectionManager, SyncOrAsync syncOrAsync, ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
+        public static async Task ReleaseConnection_SyncOrAsync(this IConnectionManager connectionManager, SyncOrAsync syncOrAsync, ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
         {
 #pragma warning disable CS0612 // Type or member is obsolete
             await syncOrAsync

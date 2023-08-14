@@ -4,19 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Nito.AsyncEx;
 
 namespace Halibut.Transport
 {
-    public class ConnectionPool<TKey, TPooledResource>
+    public class ConnectionPool<TKey, TPooledResource> : IConnectionPool<TKey, TPooledResource>
         where TPooledResource : class, IPooledResource
     {
-        readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new();
-        readonly SemaphoreSlim poolLock = new(1, 1);
+        readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new Dictionary<TKey, HashSet<TPooledResource>>();
 
         public int GetTotalConnectionCount()
         {
-            using (poolLock.Lock())
+            lock (pool)
             {
                 return pool.Values.Sum(v => v.Count);
             }
@@ -24,7 +22,7 @@ namespace Halibut.Transport
 
         public TPooledResource Take(TKey endPoint)
         {
-            using (poolLock.Lock())
+            lock (pool)
             {
                 var connections = GetOrAdd(endPoint);
 
@@ -40,27 +38,14 @@ namespace Halibut.Transport
             }
         }
 
-        public async Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
+        public Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
         {
-            using (await poolLock.LockAsync(cancellationToken))
-            {
-                var connections = GetOrAdd(endPoint);
-
-                while (true)
-                {
-                    var connection = Take(connections);
-
-                    if (connection == null || !connection.HasExpired())
-                        return connection;
-
-                    await DestroyConnectionAsync(connection, null, cancellationToken);
-                }
-            }
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
         public void Return(TKey endPoint, TPooledResource resource)
         {
-            using (poolLock.Lock())
+            lock (pool)
             {
                 var connections = GetOrAdd(endPoint);
                 connections.Add(resource);
@@ -74,25 +59,14 @@ namespace Halibut.Transport
             }
         }
 
-        public async Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken)
+        public Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken)
         {
-            using (await poolLock.LockAsync(cancellationToken))
-            {
-                var connections = GetOrAdd(endPoint);
-                connections.Add(resource);
-                resource.NotifyUsed();
-
-                while (connections.Count > 5)
-                {
-                    var connection = Take(connections);
-                    await DestroyConnectionAsync(connection, null, cancellationToken);
-                }
-            }
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
         public void Clear(TKey key, ILog log = null)
         {
-            using (poolLock.Lock())
+            lock (pool)
             {
                 if (!pool.TryGetValue(key, out var connections))
                     return;
@@ -107,28 +81,14 @@ namespace Halibut.Transport
             }
         }
 
-        public async Task ClearAsync(TKey key, ILog log, CancellationToken cancellationToken)
+        public Task ClearAsync(TKey key, ILog log, CancellationToken cancellationToken)
         {
-            using (await poolLock.LockAsync(cancellationToken))
-            {
-                if (!pool.TryGetValue(key, out var connections))
-                    return;
-
-                foreach (var connection in connections)
-                {
-                    await DestroyConnectionAsync(connection, log, cancellationToken);
-                }
-
-                connections.Clear();
-                pool.Remove(key);
-            }
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
-
-
 
         public void Dispose()
         {
-            using (poolLock.Lock())
+            lock (pool)
             {
                 foreach (var connection in pool.SelectMany(kv => kv.Value))
                 {
@@ -139,7 +99,7 @@ namespace Halibut.Transport
             }
         }
 
-        TPooledResource Take(HashSet<TPooledResource> connections)
+        private TPooledResource Take(HashSet<TPooledResource> connections)
         {
             if (connections.Count == 0)
                 return null;
@@ -149,7 +109,7 @@ namespace Halibut.Transport
             return connection;
         }
 
-        HashSet<TPooledResource> GetOrAdd(TKey endPoint)
+        private HashSet<TPooledResource> GetOrAdd(TKey endPoint)
         {
             if (!pool.TryGetValue(endPoint, out var connections))
             {
@@ -160,23 +120,8 @@ namespace Halibut.Transport
             return connections;
         }
 
-        void DestroyConnection(TPooledResource connection, ILog log)
+        private void DestroyConnection(TPooledResource connection, ILog log)
         {
-            try
-            {
-                connection?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                log?.WriteException(EventType.Error, "Exception disposing connection from pool", ex);
-            }
-        }
-
-        async Task DestroyConnectionAsync(TPooledResource connection, ILog log, CancellationToken cancellationToken)
-        {
-            // TODO - ASYNC ME UP! This will come when the async disposal story is done
-            await Task.CompletedTask;
-
             try
             {
                 connection?.Dispose();

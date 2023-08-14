@@ -26,10 +26,10 @@ namespace Halibut.Transport
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
         readonly ILog log;
-        readonly ConnectionManager connectionManager;
+        readonly IConnectionManager connectionManager;
         readonly ExchangeProtocolBuilder protocolBuilder;
 
-        public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, IConnectionManager connectionManager)
         {
             this.protocolBuilder = protocolBuilder;
             this.serviceEndpoint = serviceEndpoint;
