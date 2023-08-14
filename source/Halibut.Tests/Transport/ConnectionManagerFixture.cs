@@ -31,7 +31,7 @@ namespace Halibut.Tests.Transport
             await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
 
-            connectionManager.Disconnect(serviceEndpoint, null);
+            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
 
@@ -80,7 +80,7 @@ namespace Halibut.Tests.Transport
             var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
-            connectionManager.Disconnect(serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
@@ -99,9 +99,9 @@ namespace Halibut.Tests.Transport
 
             var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
 
-            connectionManager.ReleaseConnection(serviceEndpoint, activeConnection);
+            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
 
-            connectionManager.Disconnect(serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()));
+            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
             createdTestConnection.Disposed.Should().BeTrue();
@@ -136,7 +136,7 @@ namespace Halibut.Tests.Transport
             using (var connectionManager = syncOrAsync.CreateConnectionManager())
             {
                 var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
-                connectionManager.ReleaseConnection(serviceEndpoint, activeConnection);
+                await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
             }
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
@@ -154,7 +154,7 @@ namespace Halibut.Tests.Transport
             using var connectionManager = syncOrAsync.CreateConnectionManager();
 
             var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
-            connectionManager.ReleaseConnection(serviceEndpoint, activeConnection);
+            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
 
             var testConnection = createdTestConnections.Should().ContainSingle().Subject;
             testConnection.Expire();
@@ -186,7 +186,7 @@ namespace Halibut.Tests.Transport
 
             foreach (var connection in connections)
             {
-                connectionManager.ReleaseConnection(serviceEndpoint, connection);
+                await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, connection, CancellationToken);
             }
 
             createdTestConnections.Where(c => c.Disposed).Should().HaveCount(5);
@@ -206,9 +206,9 @@ namespace Halibut.Tests.Transport
             var inMemoryConnectionLog = new InMemoryConnectionLog(serviceEndpoint.ToString());
             var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
 
-            connectionManager.ReleaseConnection(serviceEndpoint, activeConnection);
-            
-            connectionManager.ClearPooledConnections(serviceEndpoint, inMemoryConnectionLog);
+            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
+
+            await connectionManager.ClearPooledConnections_SyncOrAsync(syncOrAsync, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
             createdTestConnection.Disposed.Should().BeTrue();
@@ -227,9 +227,9 @@ namespace Halibut.Tests.Transport
             var inMemoryConnectionLog = new InMemoryConnectionLog(serviceEndpoint.ToString());
             await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
             var returnedConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
-            connectionManager.ReleaseConnection(serviceEndpoint, returnedConnection);
+            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, returnedConnection, CancellationToken);
             
-            connectionManager.Disconnect(serviceEndpoint, inMemoryConnectionLog);
+            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
 
             createdTestConnections.Should().HaveCount(2);
             createdTestConnections.Should().AllSatisfy(c => c.Disposed.Should().BeTrue());

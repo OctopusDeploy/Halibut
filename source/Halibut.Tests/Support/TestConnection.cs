@@ -8,6 +8,17 @@ namespace Halibut.Tests.Support
     {
         bool hasExpired;
 
+        public int UsageCount { get; private set; }
+
+        public bool Disposed { get; private set; }
+
+        public MessageExchangeProtocol Protocol => null;
+
+        public void Dispose()
+        {
+            Disposed = true;
+        }
+
         public void NotifyUsed()
         {
             UsageCount++;
@@ -17,18 +28,7 @@ namespace Halibut.Tests.Support
         {
             return hasExpired;
         }
-
-        public int UsageCount { get; private set; }
-
-        public bool Disposed { get; private set; }
-
-        public void Dispose()
-        {
-            Disposed = true;
-        }
-
-        public MessageExchangeProtocol Protocol => null;
-
+        
         public void Expire()
         {
             hasExpired = true;

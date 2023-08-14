@@ -22,6 +22,7 @@ namespace Halibut.Tests.Transport
                     throw new ArgumentOutOfRangeException(nameof(syncOrAsync), syncOrAsync, null);
             }
         }
+
         public static async Task<IConnection> AcquireConnection_SyncOrAsync(this IConnectionManager connectionManager, SyncOrAsync syncOrAsync, ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
         {
 #pragma warning disable CS0612 // Type or member is obsolete
@@ -37,6 +38,24 @@ namespace Halibut.Tests.Transport
             await syncOrAsync
                 .WhenSync(() => connectionManager.ReleaseConnection(serviceEndpoint, connection))
                 .WhenAsync(async () => await connectionManager.ReleaseConnectionAsync(serviceEndpoint, connection, cancellationToken));
+#pragma warning restore CS0612 // Type or member is obsolete
+        }
+
+        public static async Task Disconnect_SyncOrAsync(this IConnectionManager connectionManager, SyncOrAsync syncOrAsync, ServiceEndPoint serviceEndPoint, ILog? log, CancellationToken cancellationToken)
+        {
+#pragma warning disable CS0612 // Type or member is obsolete
+            await syncOrAsync
+                .WhenSync(() => connectionManager.Disconnect(serviceEndPoint, log))
+                .WhenAsync(async () => await connectionManager.DisconnectAsync(serviceEndPoint, log, cancellationToken));
+#pragma warning restore CS0612 // Type or member is obsolete
+        }
+
+        public static async Task ClearPooledConnections_SyncOrAsync(this IConnectionManager connectionManager, SyncOrAsync syncOrAsync, ServiceEndPoint serviceEndPoint, ILog? log, CancellationToken cancellationToken)
+        {
+#pragma warning disable CS0612 // Type or member is obsolete
+            await syncOrAsync
+                .WhenSync(() => connectionManager.ClearPooledConnections(serviceEndPoint, log))
+                .WhenAsync(async () => await connectionManager.ClearPooledConnectionsAsync(serviceEndPoint, log, cancellationToken));
 #pragma warning restore CS0612 // Type or member is obsolete
         }
     }
