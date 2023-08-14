@@ -13,8 +13,8 @@ namespace Halibut.Transport.Protocol
     public class WebSocketStream : Stream
     {
         readonly WebSocket context;
-
         bool isDisposed;
+        readonly CancellationTokenSource cancel = new CancellationTokenSource();
 
         static readonly TimeSpan SendCancelTimeout = TimeSpan.FromSeconds(1);
 
@@ -25,6 +25,20 @@ namespace Halibut.Transport.Protocol
 
         public override void Flush()
         {
+        }
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            AssertCanReadOrWrite();
+            var segment = new ArraySegment<byte>(buffer, offset, count);
+            var receiveResult = await context.ReceiveAsync(segment, cancellationToken);
+            return receiveResult.Count;
+        }
+
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            AssertCanReadOrWrite();
+            await context.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, false, cancellationToken);
         }
 
         public override long Seek(long offset, SeekOrigin origin)
@@ -40,16 +54,39 @@ namespace Halibut.Transport.Protocol
         public override int Read(byte[] buffer, int offset, int count)
         {
             AssertCanReadOrWrite();
-            return ReadAsync(buffer, offset, count, CancellationToken.None)
+            var segment = new ArraySegment<byte>(buffer, offset, count);
+            var receiveResult = context.ReceiveAsync(segment, CancellationToken.None)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
+            return receiveResult.Count;
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        [Obsolete]
+        public async Task<string> ReadTextMessageSynchronouslyAsync()
         {
             AssertCanReadOrWrite();
-            var segment = new ArraySegment<byte>(buffer, offset, count);
-            var receiveResult = await context.ReceiveAsync(segment, cancellationToken);
-            return receiveResult.Count;
+            var sb = new StringBuilder();
+            var buffer = new ArraySegment<byte>(new byte[10000]);
+            while (true)
+            {
+                using (var cts = new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout))
+                using (var combined = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancel.Token))
+                {
+                    var result = await context.ReceiveAsync(buffer, combined.Token).ConfigureAwait(false);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                            await context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Close received", sendCancel.Token).ConfigureAwait(false);
+                        return null;
+                    }
+
+                    if (result.MessageType != WebSocketMessageType.Text)
+                        throw new Exception($"Encountered an unexpected message type {result.MessageType}");
+                    sb.Append(Encoding.UTF8.GetString(buffer.Array, 0, result.Count));
+
+                    if (result.EndOfMessage)
+                        return sb.ToString();
+                }
+            }
         }
 
         public async Task<string> ReadTextMessage(CancellationToken cancellationToken)
@@ -60,7 +97,7 @@ namespace Halibut.Transport.Protocol
 
             while (true)
             {
-                var readResult = await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(async (ct) =>
+                var readResult = await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(async ct =>
                     {
 						// TODO - ASYNC ME UP!
 		                // What should the timeout be here? thew new code that allows passing in a timeout or the static value?
@@ -86,7 +123,6 @@ namespace Halibut.Transport.Protocol
                         return new IOException($"Unable to read data from the transport connection: {socketException.Message}.", socketException);
                     },
                     HalibutLimits.TcpClientReceiveTimeout,
-                    nameof(WebSocketStream),
                     nameof(ReadTextMessage),
                     cancellationToken);
 
@@ -100,14 +136,8 @@ namespace Halibut.Transport.Protocol
         public override void Write(byte[] buffer, int offset, int count)
         {
             AssertCanReadOrWrite();
-            WriteAsync(buffer, offset, count, CancellationToken.None)
+            context.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, false, CancellationToken.None)
                 .ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-
-        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            AssertCanReadOrWrite();
-            await context.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, false, cancellationToken);
         }
 
         public async Task WriteTextMessage(string message)
@@ -145,9 +175,9 @@ namespace Halibut.Transport.Protocol
             if (context.State != WebSocketState.Open)
                 return;
 
-            using var sendCancel = new CancellationTokenSource(SendCancelTimeout);
-            context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", sendCancel.Token)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", sendCancel.Token)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
         public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
@@ -168,7 +198,9 @@ namespace Halibut.Transport.Protocol
                 finally
                 {
                     isDisposed = true;
+                    cancel.Cancel();
                     context.Dispose();
+                    cancel.Dispose();
                 }
             }
 

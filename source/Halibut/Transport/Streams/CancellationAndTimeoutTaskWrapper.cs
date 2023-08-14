@@ -13,7 +13,6 @@ namespace Halibut.Transport.Streams
             Action onCancellationAction,
             Func<Exception> getExceptionOnTimeout,
             TimeSpan timeout,
-            string callingTypeName,
             string methodName,
             CancellationToken cancellationToken)
         {
@@ -55,7 +54,7 @@ namespace Halibut.Transport.Streams
 
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    throw new OperationCanceledException($"The {callingTypeName}.{methodName} operation was cancelled.", innerException);
+                    throw new OperationCanceledException($"The {methodName} operation was cancelled.", innerException);
                 }
             }
         }

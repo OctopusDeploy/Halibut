@@ -114,7 +114,6 @@ namespace Halibut.Transport.Streams
                 OnCancellationAction,
                 CreateExceptionOnTimeout,
                 TimeSpan.FromMilliseconds(timeout),
-                nameof(NetworkTimeoutStream),
                 methodName,
                 cancellationToken);
         }

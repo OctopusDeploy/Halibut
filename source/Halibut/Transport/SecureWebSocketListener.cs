@@ -100,7 +100,7 @@ namespace Halibut.Transport
                     }
                     catch (Exception ex)
                     {
-                        if(!cts.IsCancellationRequested)
+                        if (!cts.IsCancellationRequested)
                             log.WriteException(EventType.Error, "Error accepting Web Socket client", ex);
                     }
                 }
@@ -133,7 +133,18 @@ namespace Halibut.Transport
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
                 webSocketStream = new WebSocketStream(webSocketContext.WebSocket);
 
-                var req = await webSocketStream.ReadTextMessage(CancellationToken.None).ConfigureAwait(false); // Initial message
+                string req;
+                if (asyncHalibutFeature.IsEnabled())
+                {
+                    req = await webSocketStream.ReadTextMessage(cts.Token).ConfigureAwait(false);
+                }
+                else
+                {
+#pragma warning disable CS0612 // Type or member is obsolete
+                    req = await webSocketStream.ReadTextMessageSynchronouslyAsync().ConfigureAwait(false); // Initial message
+#pragma warning restore CS0612 // Type or member is obsolete
+                }
+
                 if (string.IsNullOrEmpty(req))
                 {
                     log.Write(EventType.Diagnostic, "Ignoring empty request");
@@ -156,7 +167,7 @@ namespace Halibut.Transport
             }
             catch (TaskCanceledException)
             {
-                if(!cts.Token.IsCancellationRequested)
+                if (!cts.Token.IsCancellationRequested)
                     log.Write(EventType.Error, "A timeout occurred while receiving data");
             }
             catch (Exception ex)
@@ -171,18 +182,17 @@ namespace Halibut.Transport
             }
         }
 
-      
         async Task SendFriendlyHtmlPage(HttpListenerResponse response)
         {
             var message = getFriendlyHtmlPageContent();
             var headers = getFriendlyHtmlPageHeaders();
             response.AddHeader("Content-Type", "text/html; charset=utf-8");
-            foreach(var header in headers)
+            foreach (var header in headers)
                 response.AddHeader(header.Key, header.Value);
 
             // This could fail if the client terminates the connection and we attempt to write to it
             // Disposing the StreamWriter will close the stream - it owns the stream
-            using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)){ NewLine = "\r\n" })
+            using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)) { NewLine = "\r\n" })
             {
                 if (asyncHalibutFeature.IsEnabled())
                 {
@@ -239,7 +249,7 @@ namespace Halibut.Transport
                 throw new Exception("The X509 certificate provided does not have a private key, and so it cannot be used for listening.");
             }
         }
-        
+
         public void Dispose()
         {
             cts.Cancel();
