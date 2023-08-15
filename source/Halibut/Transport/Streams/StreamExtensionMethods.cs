@@ -108,5 +108,15 @@ namespace Halibut.Transport.Streams
             return (long) (uint) ((int) buffer[4] | (int) buffer[5] << 8 | (int) buffer[6] << 16 | (int) buffer[7] << 24) << 32 | (long) (uint) ((int) buffer[0] | (int) buffer[1] << 8 | (int) buffer[2] << 16 | (int) buffer[3] << 24);
             // ReSharper restore RedundantCast
         }
+
+#if NETFRAMEWORK
+        public static async ValueTask DisposeAsync(this Stream stream)
+        {
+            // Streams do not implement IAsyncDisposable. So they cannot be disposed of using the native `DisposeAsync` method.
+            // Since streams have to be disposed synchronously anyway, this extension just becomes an easy way to reduce #if statements everywhere.
+            await Task.CompletedTask;
+            stream.Dispose();
+        }
+#endif
     }
 }

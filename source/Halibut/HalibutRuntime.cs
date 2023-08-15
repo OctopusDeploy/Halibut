@@ -51,7 +51,7 @@ namespace Halibut
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate) : this(serviceFactory, serverCertificate, new DefaultTrustProvider())
         {
         }
-
+        
         [Obsolete]
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider)
         {
@@ -495,10 +495,24 @@ namespace Halibut
                     listener?.Dispose();
                 }
             }
+        }
 
+        public async ValueTask DisposeAsync()
+        {
+            pollingClients.Dispose();
+            await connectionManager.DisposeAsync();
+            
             if (responseCache.IsValueCreated)
             {
-                responseCache.Value.Dispose();
+                responseCache.Value?.Dispose();
+            }
+
+            lock (listeners)
+            {
+                foreach (var listener in listeners)
+                {
+                    listener?.Dispose();
+                }
             }
         }
 
@@ -517,6 +531,5 @@ namespace Halibut
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                                    Environment.OSVersion.Version >= new Version(6, 2);
 #pragma warning restore DE0009 // API is deprecated
-
     }
 }

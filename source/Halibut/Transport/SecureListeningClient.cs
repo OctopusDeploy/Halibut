@@ -182,8 +182,11 @@ namespace Halibut.Transport
                     }
                     catch
                     {
-                        // TODO - ASYNC ME UP!
-                        connection?.Dispose();
+                        if (connection is not null)
+                        {
+                            await connection.DisposeAsync();
+                        }
+
                         if (connectionManager.IsDisposed)
                             return;
                         throw;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 
@@ -16,6 +17,12 @@ namespace Halibut.Tests.Support
 
         public void Dispose()
         {
+            Disposed = true;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await Task.CompletedTask;
             Disposed = true;
         }
 

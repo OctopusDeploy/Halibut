@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport
 {
@@ -74,12 +75,7 @@ namespace Halibut.Transport
                 {
                     // The stream might have already disconnected, so don't worry about it.
                 }
-#if NETFRAMEWORK 
-                stream.Dispose();
-#else
                 await stream.DisposeAsync();
-#endif
-
                 client.Dispose();
             }
             catch (SocketException)

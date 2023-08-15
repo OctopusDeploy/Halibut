@@ -15,7 +15,7 @@ namespace Halibut
         TrustAndAllowConnection
     }
 
-    public interface IHalibutRuntime : IDisposable
+    public interface IHalibutRuntime : IDisposable, IAsyncDisposable
     {
         ILogFactory Logs { get; }
         int Listen();
