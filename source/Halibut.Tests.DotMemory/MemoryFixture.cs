@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.ServiceModel;
@@ -39,7 +38,7 @@ namespace Halibut.Tests.DotMemory
 
         [Test]
         [DotMemoryUnit(SavingStrategy = SavingStrategy.OnCheckFail, Directory = @"c:\temp\dotmemoryunit", WorkspaceNumberLimit = 5, DiskSpaceLimit = 104857600)]
-        public async Task TcpClientsAreDisposedCorrectly()
+        public void TcpClientsAreDisposedCorrectly()
         {
             if (!dotMemoryApi.IsEnabled)
                 Assert.Inconclusive("This test is meant to be run under dotMemory Unit. In your IDE, right click on the test icon and choose 'Run under dotMemory Unit'.");
@@ -57,12 +56,12 @@ namespace Halibut.Tests.DotMemory
                 for (var i = 0; i < NumberOfClients; i++)
                 {
                     expectedTcpClientCount++; // each time the server polls, it keeps a tcpclient (as we dont have support to say StopPolling)
-                    await RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
+                    RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
                 }
 
 #if SUPPORTS_WEB_SOCKET_CLIENT
                 for (var i = 0; i < NumberOfClients; i++)
-                    await RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
+                    RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
 #endif
 
                 //https://dotnettools-support.jetbrains.com/hc/en-us/community/posts/360000088690-How-reproduce-DotMemory-s-Force-GC-button-s-behaviour-on-code-with-c-?page=1#community_comment_360000072750
@@ -137,7 +136,7 @@ namespace Halibut.Tests.DotMemory
             }
         }
 
-        static async Task RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
+        static void RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
         {
             using (var runtime = new HalibutRuntimeBuilder()
                        .WithServerCertificate(clientCertificate)
@@ -164,7 +163,7 @@ namespace Halibut.Tests.DotMemory
             }
         }
 
-        static async Task RunWebSocketPollingClient(
+        static void RunWebSocketPollingClient(
             HalibutRuntime server,
             X509Certificate2 clientCertificate, 
             string remoteThumbprint,
