@@ -27,7 +27,7 @@ namespace Halibut.Tests.Transport
 #pragma warning disable CS0612
             var discovered = await clientAndServiceTestCase.SyncOrAsync
                 .WhenSync(() => client.Discover(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken))
-                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken));
+                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken));
 #pragma warning restore CS0612
 
             discovered.RemoteThumbprint.Should().BeEquivalentTo(clientAndService.GetServiceEndPoint().RemoteThumbprint);
@@ -44,7 +44,7 @@ namespace Halibut.Tests.Transport
 #pragma warning disable CS0612
             await syncOrAsync
                 .WhenSync(() => Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint), "No such host is known")).IgnoreResult()
-                .WhenAsync(async () => await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, CancellationToken), "No such host is known"));
+                .WhenAsync(async () => await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, new HalibutTimeoutsAndLimits(), CancellationToken), "No such host is known"));
 #pragma warning restore CS0612
         }
         
@@ -86,7 +86,7 @@ namespace Halibut.Tests.Transport
 #pragma warning disable CS0612
             await AssertionExtensions.Should(() => clientAndServiceTestCase.SyncOrAsync
                 .WhenSync(() => client.Discover(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken))
-                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken)))
+                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken)))
                 .ThrowAsync<HalibutClientException>();
 #pragma warning restore CS0612
 

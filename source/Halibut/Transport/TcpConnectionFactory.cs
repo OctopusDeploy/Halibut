@@ -19,10 +19,12 @@ namespace Halibut.Transport
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
 
         readonly X509Certificate2 clientCertificate;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public TcpConnectionFactory(X509Certificate2 clientCertificate)
+        public TcpConnectionFactory(X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.clientCertificate = clientCertificate;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
         }
 
         [Obsolete]
@@ -52,7 +54,7 @@ namespace Halibut.Transport
             log.Write(EventType.OpeningNewConnection, $"Opening a new connection to {serviceEndpoint.BaseUri}");
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
-            var client = await CreateConnectedTcpClientAsync(serviceEndpoint, log, cancellationToken);
+            var client = await CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
             
             var networkStream = client.GetStream();
@@ -98,12 +100,12 @@ namespace Halibut.Transport
             return client;
         }
         
-        internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, ILog log, CancellationToken cancellationToken)
+        internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, CancellationToken cancellationToken)
         {
             TcpClient client;
             if (endPoint.Proxy == null)
             {
-                client = CreateTcpClient();
+                client = CreateTcpClientAsync(halibutTimeoutsAndLimits);
                 await client.ConnectWithTimeoutAsync(endPoint.BaseUri, endPoint.TcpClientConnectTimeout, cancellationToken);
             }
             else
@@ -112,12 +114,13 @@ namespace Halibut.Transport
                 
                 client = await new ProxyClientFactory()
                     .CreateProxyClient(log, endPoint.Proxy)
-                    .WithTcpClientFactory(CreateTcpClient)
+                    .WithTcpClientFactory(() => CreateTcpClientAsync(halibutTimeoutsAndLimits))
                     .CreateConnectionAsync(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout, cancellationToken);
             }
             return client;
         }
 
+        [Obsolete]
         internal static TcpClient CreateTcpClient()
         {
             var addressFamily = Socket.OSSupportsIPv6
@@ -127,12 +130,37 @@ namespace Halibut.Transport
             return CreateTcpClient(addressFamily);
         }
 
+        internal static TcpClient CreateTcpClientAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            var addressFamily = Socket.OSSupportsIPv6
+                ? AddressFamily.InterNetworkV6
+                : AddressFamily.InterNetwork;
+
+            return CreateTcpClientAsync(addressFamily, halibutTimeoutsAndLimits);
+        }
+
+        [Obsolete]
         internal static TcpClient CreateTcpClient(AddressFamily addressFamily)
         {
             var client = new TcpClient(addressFamily)
             {
                 SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds,
                 ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds
+            };
+
+            if (client.Client.AddressFamily == AddressFamily.InterNetworkV6)
+            {
+                client.Client.DualMode = true;
+            }
+            return client;
+        }
+        
+        internal static TcpClient CreateTcpClientAsync(AddressFamily addressFamily, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            var client = new TcpClient(addressFamily)
+            {
+                SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds,
+                ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds
             };
 
             if (client.Client.AddressFamily == AddressFamily.InterNetworkV6)

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Streams;
 using Halibut.Util;
+using Nito.Disposables;
 
 namespace Halibut.Transport.Protocol
 {
@@ -27,19 +28,36 @@ namespace Halibut.Transport.Protocol
         readonly StreamWriter streamWriter = null;
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new(1, 0);
-        readonly ControlMessageReader controlMessageReader = new();
+        readonly ControlMessageReader controlMessageReader;
+        HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, AsyncHalibutFeature asyncHalibutFeature, ILog log)
+        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, AsyncHalibutFeature asyncHalibutFeature, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
         {
-            this.stream = asyncHalibutFeature.IsEnabled() ? new RewindableBufferStream(new NetworkTimeoutStream(stream), HalibutLimits.RewindableBufferStreamSize) : new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+            this.stream = asyncHalibutFeature.IsEnabled() ? 
+                new RewindableBufferStream(new NetworkTimeoutStream(stream), halibutTimeoutsAndLimits.RewindableBufferStreamSize) : 
+#pragma warning disable CS0612
+                new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
+#pragma warning restore CS0612
+            
             this.log = log;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.controlMessageReader = new ControlMessageReader(halibutTimeoutsAndLimits);
             this.serializer = serializer;
 
 #pragma warning disable CS0612 // Type or member is obsolete
             streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
 #pragma warning restore CS0612 // Type or member is obsolete
             
-            SetNormalTimeouts();
+            if (asyncHalibutFeature.IsEnabled())
+            {
+                SetNormalTimeoutsAsync();
+            }
+            else
+            {
+#pragma warning disable CS0612
+                SetNormalTimeouts();
+#pragma warning restore CS0612
+            }
         }
 
         static int streamCount;
@@ -105,9 +123,9 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendNextAsync(CancellationToken cancellationToken)
         {
-            SetShortTimeouts();
+            SetShortTimeoutsAsync();
             await SendControlMessageAsync(Next, cancellationToken);
-            SetNormalTimeouts();
+            SetNormalTimeoutsAsync();
         }
 
         [Obsolete]
@@ -137,9 +155,9 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendEndAsync(CancellationToken cancellationToken)
         {
-            SetShortTimeouts(); 
+            SetShortTimeoutsAsync(); 
             await SendControlMessageAsync(End, cancellationToken);
-            SetNormalTimeouts();
+            SetNormalTimeoutsAsync();
         }
 
         [Obsolete]
@@ -201,7 +219,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task ExpectProceedAsync(CancellationToken cancellationToken)
         {
-            SetShortTimeouts();
+            SetShortTimeoutsAsync();
 
             var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
 
@@ -215,7 +233,7 @@ namespace Halibut.Transport.Protocol
                 throw new ProtocolException($"Expected {Proceed}, got: " + line);
             }
 
-            SetNormalTimeouts();
+            SetNormalTimeoutsAsync();
         }
 
         [Obsolete]
@@ -531,6 +549,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         void SetNormalTimeouts()
         {
             if (!stream.CanTimeout)
@@ -540,6 +559,7 @@ namespace Halibut.Transport.Protocol
             stream.ReadTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
         }
 
+        [Obsolete]
         void SetShortTimeouts()
         {
             if (!stream.CanTimeout)
@@ -547,6 +567,29 @@ namespace Halibut.Transport.Protocol
 
             stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+        }
+        
+        void SetNormalTimeoutsAsync()
+        {
+            // TODO - ASYNC ME UP!
+            // We should always be given a stream that can timeout.
+            if (!stream.CanTimeout)
+                return;
+
+            stream.WriteTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+        }
+        
+        void SetShortTimeoutsAsync()
+        {
+            
+            // TODO - ASYNC ME UP!
+            // We should always be given a stream that can timeout.
+            if (!stream.CanTimeout)
+                return;
+
+            stream.WriteTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
+            stream.ReadTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
         }
     }
 }

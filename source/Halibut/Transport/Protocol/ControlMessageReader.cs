@@ -9,6 +9,13 @@ namespace Halibut.Transport.Protocol
 {
     internal class ControlMessageReader
     {
+        HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+
+        public ControlMessageReader(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+        }
+
         [Obsolete]
         internal string ReadUntilNonEmptyControlMessage(Stream stream)
         {
@@ -106,7 +113,7 @@ namespace Halibut.Transport.Protocol
 
         internal async Task<string> ReadControlMessageAsync(Stream stream, CancellationToken cancellationToken)
         {
-            using var timeoutCts = GetCancellationTokenSourceFromStreamReadTimeout(stream);
+            using var timeoutCts = GetCancellationTokenSourceFromStreamReadTimeoutAsync(stream);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, cancellationToken);
             var sb = new StringBuilder();
 
@@ -142,6 +149,7 @@ namespace Halibut.Transport.Protocol
             }
         }
         
+        [Obsolete]
         static CancellationTokenSource GetCancellationTokenSourceFromStreamReadTimeout(Stream stream)
         {
             if (stream.CanTimeout)
@@ -150,6 +158,18 @@ namespace Halibut.Transport.Protocol
             }
 
             return new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout); // Just default to a higher timeout, rather than be cancellation token none
+        }
+        
+        CancellationTokenSource GetCancellationTokenSourceFromStreamReadTimeoutAsync(Stream stream)
+        {
+            // TODO - ASYNC ME UP!
+            // We should always be given a stream that can timeout.
+            if (stream.CanTimeout)
+            {
+                return new CancellationTokenSource(stream.ReadTimeout);
+            }
+
+            return new CancellationTokenSource(halibutTimeoutsAndLimits.TcpClientReceiveTimeout); // Just default to a higher timeout, rather than be cancellation token none
         }
     }
 }

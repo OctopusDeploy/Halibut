@@ -23,18 +23,19 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testSyncClients = true,
             bool testAsyncClients = true,
             bool testAsyncServicesAsWell = false, // False means only the sync service will be tested.
+            bool testSyncService = true,
             params object[] additionalParameters
             ) :
             base(
                 typeof(LatestClientAndLatestServiceTestCases),
                 nameof(LatestClientAndLatestServiceTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testSyncClients, testAsyncClients, testAsyncServicesAsWell, additionalParameters })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testSyncClients, testAsyncClients, testAsyncServicesAsWell, testSyncService, additionalParameters })
         {
         }
 
         static class LatestClientAndLatestServiceTestCases
         {
-            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testSyncClients, bool testAsyncClients, bool testAsyncServicesAsWell, object[] additionalParameters)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testSyncClients, bool testAsyncClients, bool testAsyncServicesAsWell, bool testSyncService, object[] additionalParameters)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -69,6 +70,11 @@ namespace Halibut.Tests.Support.TestAttributes
                 if (!testAsyncServicesAsWell)
                 {
                     serviceAsyncHalibutFeatureTestCases.Remove(AsyncHalibutFeature.Enabled);
+                }
+
+                if (!testSyncService)
+                {
+                    serviceAsyncHalibutFeatureTestCases.Remove(AsyncHalibutFeature.Disabled);
                 }
 
                 var builder = new ClientAndServiceTestCasesBuilder(

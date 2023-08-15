@@ -18,7 +18,7 @@ namespace Halibut.ServiceModel
         readonly ILog log;
         readonly TimeSpan pollingQueueWaitTimeout;
 
-        public PendingRequestQueueAsync(ILog log) : this(log, HalibutLimits.PollingQueueWaitTimeout)
+        public PendingRequestQueueAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log) : this(log, halibutTimeoutsAndLimits.PollingQueueWaitTimeout)
         {
             this.log = log;
         }

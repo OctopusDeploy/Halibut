@@ -20,7 +20,14 @@ namespace Halibut
         Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
         AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
+        HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
+        public HalibutRuntimeBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            return this;
+        }
+        
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
             this.serviceFactory = serviceFactory;
@@ -88,11 +95,17 @@ namespace Halibut
 
         public HalibutRuntime Build()
         {
+            var halibutTimeoutsAndLimits = this.halibutTimeoutsAndLimits;
+            if (this.asyncHalibutFeature.IsEnabled())
+            {
+                halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
+            }
+            
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
             var logFactory = this.logFactory ?? new LogFactory();
 #pragma warning disable CS0612
-            var queueFactory = this.queueFactory ?? (asyncHalibutFeature.IsEnabled() ? new PendingRequestQueueFactoryAsync(logFactory) : new DefaultPendingRequestQueueFactory(logFactory));
+            var queueFactory = this.queueFactory ?? (asyncHalibutFeature.IsEnabled() ? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory) : new DefaultPendingRequestQueueFactory(logFactory));
 #pragma warning restore CS0612
             var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
@@ -113,7 +126,8 @@ namespace Halibut
                 typeRegistry,
                 messageSerializer, 
                 pollingReconnectRetryPolicy,
-                asyncHalibutFeature);
+                asyncHalibutFeature,
+                halibutTimeoutsAndLimits);
 
             if (onUnauthorizedClientConnect is not null)
             {

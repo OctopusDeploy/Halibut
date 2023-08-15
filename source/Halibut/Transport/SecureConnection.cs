@@ -30,7 +30,11 @@ namespace Halibut.Transport
 
         public bool HasExpired()
         {
+            // TODO - ASYNC ME UP!
+            // Use the HalibutRuntimeLimits
+#pragma warning disable CS0612
             return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.SafeTcpClientPooledConnectionTimeout);
+#pragma warning restore CS0612
         }
         
         public void Dispose()
