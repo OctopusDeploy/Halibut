@@ -11,6 +11,7 @@ using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Streams;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -19,12 +20,14 @@ namespace Halibut.Transport
         static readonly byte[] MxLine = Encoding.ASCII.GetBytes("MX" + Environment.NewLine + Environment.NewLine);
 
         readonly X509Certificate2 clientCertificate;
+        readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public TcpConnectionFactory(X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        public TcpConnectionFactory(X509Certificate2 clientCertificate, AsyncHalibutFeature asyncHalibutFeature, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.clientCertificate = clientCertificate;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.asyncHalibutFeature = asyncHalibutFeature;
         }
 
         [Obsolete]
@@ -46,7 +49,7 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
 
-            return new SecureConnection(client, ssl, exchangeProtocolBuilder, log);
+            return new SecureConnection(client, ssl, exchangeProtocolBuilder, asyncHalibutFeature, halibutTimeoutsAndLimits, log);
         }
         
         public async Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
@@ -76,7 +79,7 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
 
-            return new SecureConnection(client, ssl, exchangeProtocolBuilder, log);
+            return new SecureConnection(client, ssl, exchangeProtocolBuilder, asyncHalibutFeature, halibutTimeoutsAndLimits, log);
         }
 
         [Obsolete]
