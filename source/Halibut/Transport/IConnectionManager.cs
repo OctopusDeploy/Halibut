@@ -7,7 +7,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public interface IConnectionManager : IDisposable
+    public interface IConnectionManager : IDisposable, IAsyncDisposable
     {
         bool IsDisposed { get; }
         IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken);

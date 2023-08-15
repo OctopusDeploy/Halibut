@@ -42,6 +42,26 @@ namespace Halibut.Transport
             IsDisposed = true;
         }
 
+        public async ValueTask DisposeAsync()
+        {
+            await pool.DisposeAsync();
+            using (await connectionsLock.LockAsync())
+            {
+                IConnection[] connectionsToDispose;
+                using (await activeConnectionsLock.LockAsync())
+                {
+                    connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
+                }
+
+                foreach (var connection in connectionsToDispose)
+                {
+                    await SafelyDisposeConnectionAsync(connection, null);
+                }
+            }
+
+            IsDisposed = true;
+        }
+
         [Obsolete]
         public IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
@@ -97,7 +117,7 @@ namespace Halibut.Transport
         Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken));
-            var connection = new DisposableNotifierConnection(lazyConnection, OnConnectionDisposed);
+            var connection = new DisposableNotifierConnection(lazyConnection, OnConnectionDisposed, OnConnectionDisposedAsync);
             return Tuple.Create<IConnection, Action>(connection, () =>
             {
                 // ReSharper disable once UnusedVariable
@@ -108,7 +128,7 @@ namespace Halibut.Transport
         async Task<IConnection> CreateNewConnectionWithIoAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             var connection = await connectionFactory.EstablishNewConnectionAsync(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken);
-            return new DisposableNotifierConnection(new Lazy<IConnection>(() => connection), OnConnectionDisposed);
+            return new DisposableNotifierConnection(new Lazy<IConnection>(() => connection), OnConnectionDisposed, OnConnectionDisposedAsync);
         }
 
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
@@ -224,7 +244,7 @@ namespace Halibut.Transport
 
                 foreach (var connection in toDelete)
                 {
-                    SafelyDisposeConnection(connection, log);
+                    await SafelyDisposeConnectionAsync(connection, log);
                 }
             }
         }
@@ -235,17 +255,32 @@ namespace Halibut.Transport
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
             using (activeConnectionsLock.Lock(cts.Token))
             {
-                var setsContainingConnection = activeConnections.Where(c => c.Value.Contains(connection)).ToList();
-                var setsToRemoveCompletely = setsContainingConnection.Where(c => c.Value.Count == 1).ToList();
-                foreach (var setContainingConnection in setsContainingConnection.Except(setsToRemoveCompletely))
-                {
-                    setContainingConnection.Value.Remove(connection);
-                }
+                RemoveFromActiveConnections(connection);
+            }
+        }
 
-                foreach (var setToRemoveCompletely in setsToRemoveCompletely)
-                {
-                    activeConnections.Remove(setToRemoveCompletely.Key);
-                }
+        async Task OnConnectionDisposedAsync(IConnection connection)
+        {
+            // If we are not careful, we can introduce a deadlock. Time this out just in case we ever accidentally introduce one.
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+            using (await activeConnectionsLock.LockAsync(cts.Token))
+            {
+                RemoveFromActiveConnections(connection);
+            }
+        }
+
+        void RemoveFromActiveConnections(IConnection connection)
+        {
+            var setsContainingConnection = activeConnections.Where(c => c.Value.Contains(connection)).ToList();
+            var setsToRemoveCompletely = setsContainingConnection.Where(c => c.Value.Count == 1).ToList();
+            foreach (var setContainingConnection in setsContainingConnection.Except(setsToRemoveCompletely))
+            {
+                setContainingConnection.Value.Remove(connection);
+            }
+
+            foreach (var setToRemoveCompletely in setsToRemoveCompletely)
+            {
+                activeConnections.Remove(setToRemoveCompletely.Key);
             }
         }
 
@@ -261,15 +296,35 @@ namespace Halibut.Transport
             }
         }
 
+        static async Task SafelyDisposeConnectionAsync(IConnection connection, ILog log)
+        {
+            try
+            {
+                if (connection is not null)
+                {
+                    await connection.DisposeAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                log?.WriteException(EventType.Error, "Exception disposing connection", ex);
+            }
+        }
+
         class DisposableNotifierConnection : IConnection
         {
             readonly Lazy<IConnection> connection;
             readonly Action<IConnection> onDisposed;
+            readonly Func<IConnection, Task> onDisposedAsync;
 
-            public DisposableNotifierConnection(Lazy<IConnection> connection, Action<IConnection> onDisposed)
+            public DisposableNotifierConnection(
+                Lazy<IConnection> connection, 
+                Action<IConnection> onDisposed,
+                Func<IConnection, Task> onDisposedAsync)
             {
                 this.connection = connection;
                 this.onDisposed = onDisposed;
+                this.onDisposedAsync = onDisposedAsync;
             }
 
             public void Dispose()
@@ -281,6 +336,18 @@ namespace Halibut.Transport
                 finally
                 {
                     onDisposed(this);
+                }
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                try
+                {
+                    await connection.Value.DisposeAsync();
+                }
+                finally
+                {
+                    await onDisposedAsync(this);
                 }
             }
 

@@ -163,7 +163,7 @@ namespace Halibut.ServiceModel
                     // we cannot walk away from the request as it is already in progress and no longer in the connecting phase
                     cancelled = true;
                     
-                    using (await transferLock.LockAsync(CancellationToken.None))
+                    using (await transferLock.LockAsync())
                     {
                         if (!transferBegun)
                         {

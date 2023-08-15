@@ -5,7 +5,8 @@ using Halibut.Diagnostics;
 
 namespace Halibut.Transport
 {
-    public interface IConnectionPool<TKey, TPooledResource> where TPooledResource : class, IPooledResource
+    public interface IConnectionPool<TKey, TPooledResource> : IDisposable, IAsyncDisposable
+        where TPooledResource : class, IPooledResource 
     {
         int GetTotalConnectionCount();
         TPooledResource Take(TKey endPoint);

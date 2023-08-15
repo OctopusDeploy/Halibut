@@ -44,7 +44,7 @@ namespace Halibut.Transport
                 return openableConnection;
             }
         }
-        
+
         [Obsolete]
         Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
@@ -56,7 +56,7 @@ namespace Halibut.Transport
                 var c = lazyConnection.Value;
             });
         }
-        
+
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
             if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
@@ -140,23 +140,10 @@ namespace Halibut.Transport
             IsDisposed = true;
         }
 
-
-
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync()
         {
-            pool.Dispose();
-            lock (activeConnections)
-            {
-                var connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
-                foreach (var connection in connectionsToDispose)
-                {
-                    SafelyDisposeConnection(connection, null);
-                }
-            }
-
-            IsDisposed = true;
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
-
 
         void ClearActiveConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
@@ -225,16 +212,9 @@ namespace Halibut.Transport
                 }
             }
 
-            public async ValueTask DisposeAsync()
+            public ValueTask DisposeAsync()
             {
-                try
-                {
-                    await connection.Value.DisposeAsync();
-                }
-                finally
-                {
-                    onDisposed(this);
-                }
+                throw new NotImplementedException("Should not be called when async Halibut is not being used.");
             }
 
             public void NotifyUsed()
@@ -248,7 +228,6 @@ namespace Halibut.Transport
             }
 
             public MessageExchangeProtocol Protocol => connection.Value.Protocol;
-            
         }
     }
 }
