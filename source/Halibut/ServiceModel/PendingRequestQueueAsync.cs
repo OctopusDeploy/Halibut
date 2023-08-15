@@ -28,12 +28,20 @@ namespace Halibut.ServiceModel
             this.log = log;
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
         }
-        
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+
+        [Obsolete]
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken queuedRequestCancellationToken)
+        {
+            await Task.CompletedTask;
+
+            throw new NotSupportedException($"Use {nameof(QueueAndWaitAsync)} with {nameof(RequestCancellationTokens)}");
+        }
+
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
             var pending = new PendingRequest(request, log);
 
-            using (await queueLock.LockAsync(cancellationToken))
+            using (await queueLock.LockAsync(requestCancellationTokens.LinkedCancellationToken))
             {
                 queue.Enqueue(pending);
                 inProgress.Add(request.Id, pending);
@@ -42,7 +50,7 @@ namespace Halibut.ServiceModel
 
             try
             {
-                await pending.WaitUntilComplete(cancellationToken);
+                await pending.WaitUntilComplete(requestCancellationTokens);
             }
             finally
             {
@@ -131,7 +139,7 @@ namespace Halibut.ServiceModel
 
             public RequestMessage Request => request;
 
-            public async Task WaitUntilComplete(CancellationToken cancellationToken)
+            public async Task WaitUntilComplete(RequestCancellationTokens requestCancellationTokens)
             {
                 log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
@@ -140,7 +148,7 @@ namespace Halibut.ServiceModel
 
                 try
                 {
-                    responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestQueueTimeout, cancellationToken);
+                    responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestQueueTimeout, requestCancellationTokens.LinkedCancellationToken);
                     if (responseSet)
                     {
                         log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
@@ -150,11 +158,12 @@ namespace Halibut.ServiceModel
                 catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
                 {
                     // responseWaiter.Set is only called when the request has been collected and the response received.
-                    // It is possible that the transfer has already started once the cancellationToken is cancelled
-                    // In this case we cannot walk away from the request as it is already in progress and no longer in the connecting phase
+                    // It is possible that the transfer has already started once the requestCancellationTokens.LinkedCancellationToke is cancelled
+                    // If the requestCancellationTokens.InProgressCancellationToken is Ct.None or not cancelled then
+                    // we cannot walk away from the request as it is already in progress and no longer in the connecting phase
                     cancelled = true;
                     
-                    using (await transferLock.LockAsync())
+                    using (await transferLock.LockAsync(CancellationToken.None))
                     {
                         if (!transferBegun)
                         {
@@ -163,7 +172,10 @@ namespace Halibut.ServiceModel
                             throw;
                         }
 
-                        log.Write(EventType.MessageExchange, "Request {0} was cancelled after it had been collected by the polling endpoint and will not be cancelled", request);
+                        if (!requestCancellationTokens.CanCancelInProgressRequest())
+                        {
+                            log.Write(EventType.MessageExchange, "Request {0} was cancelled after it had been collected by the polling endpoint and will not be cancelled", request);
+                        }
                     }
                 }
 
@@ -182,8 +194,8 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    // We cannot use cancellationToken here, because if we were cancelled, and the transfer has begun, we should attempt to wait for it.
-                    responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestMaximumMessageProcessingTimeout, CancellationToken.None);
+                    // We cannot use requestCancellationTokens.ConnectingCancellationToken here, because if we were cancelled, and the transfer has begun, we should attempt to wait for it.
+                    responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestMaximumMessageProcessingTimeout, requestCancellationTokens.InProgressRequestCancellationToken);
                     if (responseSet)
                     {
                         // We end up here when the request is cancelled but already being transferred so we need to adjust the log message accordingly
@@ -198,7 +210,16 @@ namespace Halibut.ServiceModel
                     }
                     else
                     {
-                        SetResponse(ResponseMessage.FromException(request, new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({request.Destination.PollingRequestMaximumMessageProcessingTimeout}), so the request timed out.")));
+                        if (requestCancellationTokens.InProgressRequestCancellationToken.IsCancellationRequested)
+                        {
+                            log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received", request);
+                            SetResponse(ResponseMessage.FromException(request, new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded.")));
+                        }
+                        else
+                        {
+                            log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
+                            SetResponse(ResponseMessage.FromException(request, new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({request.Destination.PollingRequestMaximumMessageProcessingTimeout}), so the request timed out.")));    
+                        }
                     }
                 }
                 else

@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 
@@ -17,11 +18,11 @@ namespace Halibut.Transport
     {
         [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ILog log;
-        readonly ConnectionManager connectionManager;
+        readonly IConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
         readonly ExchangeProtocolBuilder protocolBuilder;
 
-        public SecureClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, ConnectionManager connectionManager)
+        public SecureClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, IConnectionManager connectionManager)
         {
             this.protocolBuilder = protocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;
@@ -131,7 +132,7 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
-        public async Task ExecuteTransactionAsync(ExchangeActionAsync protocolHandler, CancellationToken cancellationToken)
+        public async Task ExecuteTransactionAsync(ExchangeActionAsync protocolHandler, RequestCancellationTokens requestCancellationTokens)
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
 
@@ -144,7 +145,7 @@ namespace Halibut.Transport
             {
                 if (i > 0)
                 {
-                    await Task.Delay(retryInterval, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(retryInterval, requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
                     log.Write(EventType.OpeningNewConnection, $"Retrying connection to {ServiceEndpoint.Format()} - attempt #{i}.");
                 }
 
@@ -160,15 +161,18 @@ namespace Halibut.Transport
                             new TcpConnectionFactory(clientCertificate), 
                             ServiceEndpoint, 
                             log, 
-                            cancellationToken).ConfigureAwait(false);
+                            requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
 
-                        await protocolHandler(connection.Protocol, cancellationToken).ConfigureAwait(false);
+                        // TODO: Enhancement: Pass the RequestCancellationTokens to the protocol handler so that it can cancel
+                        // PrepareExchangeAsClientAsync as part of the ConnectingCancellationToken being cancelled
+                        await protocolHandler(connection.Protocol, requestCancellationTokens.InProgressRequestCancellationToken).ConfigureAwait(false);
                     }
                     catch
                     {
+                        // TODO - ASYNC ME UP!
                         connection?.Dispose();
                         if (connectionManager.IsDisposed)
                             return;
@@ -176,7 +180,7 @@ namespace Halibut.Transport
                     }
 
                     // Only return the connection to the pool if all went well
-                    connectionManager.ReleaseConnection(ServiceEndpoint, connection);
+                    await connectionManager.ReleaseConnectionAsync(ServiceEndpoint, connection, requestCancellationTokens.InProgressRequestCancellationToken);
                 }
                 catch (AuthenticationException ex)
                 {
@@ -210,7 +214,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        connectionManager.ClearPooledConnections(ServiceEndpoint, log);
+                        await connectionManager.ClearPooledConnectionsAsync(ServiceEndpoint, log, requestCancellationTokens.InProgressRequestCancellationToken);
                     }
                 }
                 catch (IOException ex) when (ex.IsSocketConnectionReset())

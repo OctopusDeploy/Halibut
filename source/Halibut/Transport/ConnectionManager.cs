@@ -8,7 +8,8 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport
 {
-    public class ConnectionManager : IDisposable, IAsyncDisposable
+    [Obsolete]
+    public class ConnectionManager : IConnectionManager
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
@@ -23,12 +24,9 @@ namespace Halibut.Transport
             return openableConnection.Item1;
         }
 
-        public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        public Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            var connection = await TryGetExistingConnectionAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-            if (connection != null) return connection;
-            
-            return await GetConnectionByCreatingItAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
         // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
@@ -39,7 +37,7 @@ namespace Halibut.Transport
             lock (activeConnections)
             {
                 var existingConnectionFromPool = pool.Take(serviceEndpoint);
-                var openableConnection = existingConnectionFromPool != null 
+                var openableConnection = existingConnectionFromPool != null
                     ? Tuple.Create<IConnection, Action>(existingConnectionFromPool, () => { }) // existing connections from the pool are already open
                     : CreateNewConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
                 AddConnectionToActiveConnections(serviceEndpoint, openableConnection.Item1);
@@ -47,30 +45,6 @@ namespace Halibut.Transport
             }
         }
         
-        async Task<IConnection> TryGetExistingConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-            lock (activeConnections)
-            {
-                var existingConnectionFromPool = pool.Take(serviceEndpoint);
-                if (existingConnectionFromPool != null)
-                {
-                    AddConnectionToActiveConnections(serviceEndpoint, existingConnectionFromPool);
-                }
-                return existingConnectionFromPool;
-            }
-        }
-        
-        async Task<IConnection> GetConnectionByCreatingItAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
-            var connection = await CreateNewConnectionWithIOAsync(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-            lock (activeConnections)
-            {
-                AddConnectionToActiveConnections(serviceEndpoint, connection);
-            }
-            return connection;
-        }
-
         [Obsolete]
         Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
@@ -83,12 +57,6 @@ namespace Halibut.Transport
             });
         }
         
-        async Task<IConnection> CreateNewConnectionWithIOAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
-            var connection = await connectionFactory.EstablishNewConnectionAsync(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken);
-            return new DisposableNotifierConnection(new Lazy<IConnection>(() => connection), OnConnectionDisposed);
-        }
-
         void AddConnectionToActiveConnections(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
             if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
@@ -97,7 +65,7 @@ namespace Halibut.Transport
             }
             else
             {
-                connections = new HashSet<IConnection> {connection};
+                connections = new HashSet<IConnection> { connection };
                 activeConnections.Add(serviceEndpoint, connections);
             }
         }
@@ -114,12 +82,22 @@ namespace Halibut.Transport
             }
         }
 
+        public Task ReleaseConnectionAsync(ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+        }
+
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
             lock (activeConnections)
             {
                 pool.Clear(serviceEndPoint, log);
             }
+        }
+
+        public Task ClearPooledConnectionsAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
         static IConnection[] NoConnections = new IConnection[0];
@@ -140,6 +118,11 @@ namespace Halibut.Transport
         {
             ClearPooledConnections(serviceEndPoint, log);
             ClearActiveConnections(serviceEndPoint, log);
+        }
+
+        public Task DisconnectAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
         public void Dispose()

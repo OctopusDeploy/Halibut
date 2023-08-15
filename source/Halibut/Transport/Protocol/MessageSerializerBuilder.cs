@@ -1,4 +1,5 @@
 ﻿using System;
+using Halibut.Diagnostics;
 using Halibut.Transport.Observability;
 using Newtonsoft.Json;
 
@@ -6,6 +7,7 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializerBuilder
     {
+        readonly ILogFactory logFactory;
         ITypeRegistry typeRegistry;
         Action<JsonSerializerSettings> configureSerializer;
         IMessageSerializerObserver messageSerializerObserver;
@@ -14,6 +16,11 @@ namespace Halibut.Transport.Protocol
         long readIntoMemoryLimitBytes = 1024L * 64L;
         // Initial prod telemetry indicated values < 7K would be fine. But to be safe, 64K to future proof, and stay below the LOH threshold of 85K.
         long writeIntoMemoryLimitBytes = 1024L * 64L;
+
+        public MessageSerializerBuilder(ILogFactory logFactory)
+        {
+            this.logFactory = logFactory;
+        }
 
         public MessageSerializerBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
         {
@@ -60,7 +67,8 @@ namespace Halibut.Transport.Protocol
                 Serializer, 
                 messageSerializerObserver,
                 readIntoMemoryLimitBytes,
-                writeIntoMemoryLimitBytes);
+                writeIntoMemoryLimitBytes,
+                logFactory);
 
             return messageSerializer;
         }

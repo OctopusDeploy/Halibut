@@ -59,12 +59,20 @@ namespace Halibut.ServiceModel
             return pending.Response;
         }
 
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken queuedRequestCancellationToken)
         {
 #pragma warning disable 612
-            var responseMessage = QueueAndWait(request, cancellationToken);
+            var responseMessage = QueueAndWait(request, queuedRequestCancellationToken);
 #pragma warning restore 612
             return await Task.FromResult(responseMessage);
+        }
+
+        [Obsolete]
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
+        {
+            await Task.CompletedTask;
+
+            throw new NotSupportedException($"Use {nameof(QueueAndWaitAsync)} with {nameof(CancellationToken)}");
         }
 
         public bool IsEmpty

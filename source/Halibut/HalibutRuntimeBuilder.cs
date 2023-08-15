@@ -65,13 +65,12 @@ namespace Halibut
 
         public HalibutRuntimeBuilder WithAsyncHalibutFeatureEnabled()
         {
-            asyncHalibutFeature = AsyncHalibutFeature.Enabled;
-            return this;
+            return WithAsyncHalibutFeature(AsyncHalibutFeature.Enabled);
         }
         
         public HalibutRuntimeBuilder WithAsyncHalibutFeature(AsyncHalibutFeature asyncHalibutFeature)
         {
-            asyncHalibutFeature = this.asyncHalibutFeature;
+            this.asyncHalibutFeature = asyncHalibutFeature;
             return this;
         }
 
@@ -101,7 +100,7 @@ namespace Halibut
             var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
             typeRegistry.AddToMessageContract(messageContracts);
 
-            var builder = new MessageSerializerBuilder();
+            var builder = new MessageSerializerBuilder(logFactory);
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
 

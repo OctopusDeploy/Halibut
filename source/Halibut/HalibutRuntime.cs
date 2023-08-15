@@ -28,7 +28,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new();
         readonly IServiceInvoker invoker;
         readonly ILogFactory logs;
-        readonly ConnectionManager connectionManager = new();
+        readonly IConnectionManager connectionManager;
         readonly PollingClientCollection pollingClients = new();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new();
@@ -65,10 +65,12 @@ namespace Halibut
             queueFactory = new DefaultPendingRequestQueueFactory(logs);
             typeRegistry = new TypeRegistry();
             typeRegistry.AddToMessageContract(serviceFactory.RegisteredServiceTypes.ToArray());
-            messageSerializer = new MessageSerializerBuilder()
+            messageSerializer = new MessageSerializerBuilder(logs)
                 .WithTypeRegistry(typeRegistry)
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
+
+            connectionManager = new ConnectionManager();
         }
 
         internal HalibutRuntime(
@@ -91,6 +93,17 @@ namespace Halibut
             this.messageSerializer = messageSerializer;
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             invoker = new ServiceInvoker(serviceFactory);
+
+            if (asyncHalibutFeature == AsyncHalibutFeature.Enabled)
+            {
+                connectionManager = new ConnectionManagerAsync();
+            }
+            else
+            {
+#pragma warning disable CS0612
+                connectionManager = new ConnectionManager();
+#pragma warning restore CS0612
+            }
         }
 
         public ILogFactory Logs => logs;
@@ -318,7 +331,7 @@ namespace Halibut
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, RequestCancellationTokens requestCancellationTokens)
         {
             var endPoint = request.Destination;
 
@@ -334,10 +347,10 @@ namespace Halibut
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                    response = await SendOutgoingHttpsRequestAsync(request, requestCancellationTokens).ConfigureAwait(false);
                     break;
                 case "poll":
-                    response = await SendOutgoingPollingRequest(request, cancellationToken).ConfigureAwait(false);
+                    response = await SendOutgoingPollingRequestAsync(request, requestCancellationTokens).ConfigureAwait(false);
                     break;
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
@@ -360,7 +373,7 @@ namespace Halibut
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
@@ -371,7 +384,7 @@ namespace Halibut
                 {
                     response = await protocol.ExchangeAsClientAsync(request, cts).ConfigureAwait(false);
                 }, 
-                cancellationToken).ConfigureAwait(false);
+                requestCancellationTokens).ConfigureAwait(false);
 
             return response;
         }
@@ -380,6 +393,12 @@ namespace Halibut
         {
             var queue = GetQueue(request.Destination.BaseUri);
             return await queue.QueueAndWaitAsync(request, cancellationToken);
+        }
+
+        async Task<ResponseMessage> SendOutgoingPollingRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
+        {
+            var queue = GetQueue(request.Destination.BaseUri);
+            return await queue.QueueAndWaitAsync(request, requestCancellationTokens);
         }
 
         ResponseMessage HandleIncomingRequest(RequestMessage request)
@@ -446,10 +465,17 @@ namespace Halibut
             friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
         }
 
+        [Obsolete]
         public void Disconnect(ServiceEndPoint endpoint)
         {
             var log = logs.ForEndpoint(endpoint.BaseUri);
             connectionManager.Disconnect(endpoint, log);
+        }
+
+        public async Task DisconnectAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
+            var log = logs.ForEndpoint(endpoint.BaseUri);
+            await connectionManager.DisconnectAsync(endpoint, log, cancellationToken);
         }
 
         public void Dispose()

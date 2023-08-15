@@ -1,6 +1,4 @@
-using System;
 using System.IO;
-using System.Net;
 using System.Threading;
 
 namespace Halibut.TestUtils.Contracts
@@ -9,7 +7,6 @@ namespace Halibut.TestUtils.Contracts
     {
         public void WaitForFileToBeDeleted(string file, string fileSignalWhenRequestIsStarted)
         {
-            
             File.Create(fileSignalWhenRequestIsStarted);
             while (File.Exists(file))
             {

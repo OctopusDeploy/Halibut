@@ -9,9 +9,11 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
 {
+    public delegate Task<ResponseMessage> MessageRouter(RequestMessage request, MethodInfo serviceMethod, RequestCancellationTokens requestCancellationTokens);
+
     public class HalibutProxyWithAsync : DispatchProxyAsync
     {
-        Func<RequestMessage, MethodInfo, CancellationToken, Task<ResponseMessage>> messageRouter;
+        MessageRouter messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
@@ -19,7 +21,12 @@ namespace Halibut.ServiceModel
         CancellationToken globalCancellationToken;
         ILog logger;
 
-        public void Configure(Func<RequestMessage, MethodInfo, CancellationToken, Task<ResponseMessage>> messageRouter, Type contractType, ServiceEndPoint endPoint, ILog logger, CancellationToken cancellationToken)
+        public void Configure(
+            MessageRouter messageRouter, 
+            Type contractType, 
+            ServiceEndPoint endPoint, 
+            ILog logger, 
+            CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
@@ -31,12 +38,12 @@ namespace Halibut.ServiceModel
 
         public override object Invoke(MethodInfo targetMethod, object[] args)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException($"Synchronous calls cannot be made with the {nameof(HalibutProxyWithAsync)}");
         }
 
         public override async Task InvokeAsync(MethodInfo asyncMethod, object[] args)
         {
-            var (serviceMethod, result) = await MakeRpcCall(asyncMethod, args);
+            await MakeRpcCall(asyncMethod, args);
         }
 
         public override async Task<T> InvokeAsyncT<T>(MethodInfo asyncMethod, object[] args)
@@ -65,7 +72,9 @@ namespace Halibut.ServiceModel
 
             var request = CreateRequest(asyncMethod, serviceMethod, args);
 
-            var response = await messageRouter(request, serviceMethod, ConnectingCancellationToken(halibutProxyRequestOptions));
+            using var requestCancellationTokens = RequestCancellationTokens(halibutProxyRequestOptions);
+
+            var response = await messageRouter(request, serviceMethod, requestCancellationTokens);
 
             EnsureNotError(response);
             
@@ -95,14 +104,16 @@ namespace Halibut.ServiceModel
             return request;
         }
 
-        CancellationToken ConnectingCancellationToken(HalibutProxyRequestOptions halibutProxyRequestOptions)
+        RequestCancellationTokens RequestCancellationTokens(HalibutProxyRequestOptions halibutProxyRequestOptions)
         {
-            if (halibutProxyRequestOptions == null || halibutProxyRequestOptions.ConnectCancellationToken == null)
+            if (halibutProxyRequestOptions == null)
             {
-                return globalCancellationToken;
+                return new RequestCancellationTokens(globalCancellationToken, CancellationToken.None);
             }
 
-            return (CancellationToken) halibutProxyRequestOptions.ConnectCancellationToken;
+            return new RequestCancellationTokens(
+                halibutProxyRequestOptions.ConnectingCancellationToken ?? CancellationToken.None,
+                halibutProxyRequestOptions.InProgressRequestCancellationToken ?? CancellationToken.None);
         }
 
         void EnsureNotError(ResponseMessage responseMessage)

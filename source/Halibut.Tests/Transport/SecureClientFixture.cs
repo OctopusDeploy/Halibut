@@ -45,7 +45,7 @@ namespace Halibut.Tests.Transport
         [SyncAndAsync]
         public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
         {
-            var connectionManager = new ConnectionManager();
+            using var connectionManager = syncOrAsync.CreateConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
 
             syncOrAsync
@@ -70,10 +70,12 @@ namespace Halibut.Tests.Transport
             var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager);
             ResponseMessage response = null!;
 
+            using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);
+
 #pragma warning disable CS0612
             await syncOrAsync
                 .WhenSync(() => secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None))
-                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None));
+                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), requestCancellationTokens));
 #pragma warning restore CS0612
 
             // The pool should be cleared after the second failure
@@ -86,7 +88,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger, SyncOrAsync syncOrAsync)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder().Build(), syncOrAsync.ToAsyncHalibutFeature(), logger), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), logger), logger);
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Caching;
 using Halibut.Util;
@@ -71,6 +72,7 @@ namespace Halibut
         void Route(ServiceEndPoint to, ServiceEndPoint via);
         void SetFriendlyHtmlPageContent(string html);
         void Disconnect(ServiceEndPoint endpoint);
+        Task DisconnectAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken);
         Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
 
         OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }

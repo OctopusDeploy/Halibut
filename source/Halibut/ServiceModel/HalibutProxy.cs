@@ -157,14 +157,20 @@ namespace Halibut.ServiceModel
         {
             return messageRouter(requestMessage, targetMethod, connectCancellationToken);
         }
+
         CancellationToken ConnectingCancellationToken(HalibutProxyRequestOptions halibutProxyRequestOptions)
         {
-            if (halibutProxyRequestOptions == null || halibutProxyRequestOptions.ConnectCancellationToken == null)
+            if (halibutProxyRequestOptions?.InProgressRequestCancellationToken != null && halibutProxyRequestOptions?.InProgressRequestCancellationToken != CancellationToken.None)
+            {
+                throw new ArgumentException($"{nameof(HalibutProxyRequestOptions)}.{nameof(HalibutProxyRequestOptions.InProgressRequestCancellationToken)} is not supported by HalibutProxy");
+            }
+
+            if (halibutProxyRequestOptions == null || halibutProxyRequestOptions.ConnectingCancellationToken == null)
             {
                 return globalCancellationToken;
             }
 
-            return (CancellationToken) halibutProxyRequestOptions.ConnectCancellationToken;
+            return (CancellationToken) halibutProxyRequestOptions.ConnectingCancellationToken;
         }
 
         void EnsureNotError(ResponseMessage responseMessage)

@@ -13,6 +13,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
+using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -83,7 +84,7 @@ namespace Halibut.Tests
                 });
 
                 // Act
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => {
@@ -129,14 +130,14 @@ namespace Halibut.Tests
                     });
 
                 // Works normally
-                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
-                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token));
+                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None));
+                await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None));
                 
                 // Act
                 clientAndBuilder.Client.TrustOnly(new List<string>());
                 
                 // Assert
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 
@@ -167,7 +168,7 @@ namespace Halibut.Tests
 
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
 
-                serviceLoggers[serviceLoggers.Keys.First()].GetLogs().Should()
+                serviceLoggers[serviceLoggers.Keys.First(x => x != nameof(MessageSerializer))].GetLogs().Should()
                     .Contain(log => log.FormattedMessage
                         .Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint " +
                                   "'76225C0717A16C1D0BA4A7FFA76519D286D8A248' which is not in the list of thumbprints that we trust"));
@@ -194,7 +195,7 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
                 });
                 
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 Func<LogEvent, bool> hasExpectedLog = logEvent =>
                     logEvent.FormattedMessage.Contains("The server at")
@@ -251,7 +252,7 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
                 
-                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
+                var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);
 
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => { AllLogs(serviceLoggers).Select(l => l.FormattedMessage).ToArray()
