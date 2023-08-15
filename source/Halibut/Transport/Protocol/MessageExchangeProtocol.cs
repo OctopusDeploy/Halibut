@@ -120,7 +120,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task ExchangeAsSubscriberAsync(Uri subscriptionId, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, int maxAttempts, CancellationToken cancellationToken)
+        public async Task ExchangeAsSubscriberAsync(Uri subscriptionId, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, int maxAttempts, CancellationToken cancellationToken)
         {
             if (!identified)
             {
@@ -149,13 +149,13 @@ namespace Halibut.Transport.Protocol
             stream.ExpectProceeed();
         }
 
-        static async Task ReceiveAndProcessRequestAsync(IMessageExchangeStream stream, Func<RequestMessage, ResponseMessage> incomingRequestProcessor, CancellationToken cancellationToken)
+        static async Task ReceiveAndProcessRequestAsync(IMessageExchangeStream stream, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, CancellationToken cancellationToken)
         {
             var request = await stream.ReceiveAsync<RequestMessage>(cancellationToken);
 
             if (request != null)
             {
-                var response = InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                var response = await InvokeAndWrapAnyExceptionsAsync(request, incomingRequestProcessor);
                 await stream.SendAsync(response, cancellationToken);
             }
 
@@ -242,7 +242,7 @@ namespace Halibut.Transport.Protocol
                     return;
                 }
 
-                var response = await InvokeAndWrapAnyExceptions(request, incomingRequestProcessor);
+                var response = await InvokeAndWrapAnyExceptionsAsync(request, incomingRequestProcessor);
 
                 if (!acceptClientRequests || cancellationToken.IsCancellationRequested)
                 {
@@ -393,7 +393,7 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        static async Task<ResponseMessage> InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
+        static async Task<ResponseMessage> InvokeAndWrapAnyExceptionsAsync(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
         {
             try
             {

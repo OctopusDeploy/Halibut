@@ -185,7 +185,7 @@ namespace Halibut.Tests.Transport.Protocol
 #pragma warning disable CS0612
             await syncOrAsync
                 .WhenSync(() => protocol.ExchangeAsSubscriber(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5))
-                .WhenAsync(async () => await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5, CancellationToken.None));
+                .WhenAsync(async () => await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), 5, CancellationToken.None));
 #pragma warning restore CS0612
             
             AssertOutput(@"
@@ -280,9 +280,9 @@ namespace Halibut.Tests.Transport.Protocol
                 })
                 .WhenAsync(async () =>
                 {
-                    await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5, CancellationToken.None);
+                    await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), 5, CancellationToken.None);
                     stream.NextReadReturns(new RequestMessage());
-                    await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => ResponseMessage.FromException(req, new Exception("Divide by zero")), 5, CancellationToken.None);
+                    await protocol.ExchangeAsSubscriberAsync(new Uri("poll://12831"), req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), 5, CancellationToken.None);
                 });
 
             AssertOutput(@"
