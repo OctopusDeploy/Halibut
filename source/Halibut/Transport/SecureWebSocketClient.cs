@@ -25,15 +25,17 @@ namespace Halibut.Transport
         [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly ILog log;
         readonly IConnectionManager connectionManager;
         readonly ExchangeProtocolBuilder protocolBuilder;
 
-        public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, ILog log, IConnectionManager connectionManager)
+        public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, IConnectionManager connectionManager)
         {
             this.protocolBuilder = protocolBuilder;
             this.serviceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.log = log;
             this.connectionManager = connectionManager;
         }
@@ -65,7 +67,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = connectionManager.AcquireConnection(protocolBuilder, new WebSocketConnectionFactory(clientCertificate), serviceEndpoint, log, cancellationToken);
+                        connection = connectionManager.AcquireConnection(protocolBuilder, new WebSocketConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), serviceEndpoint, log, cancellationToken);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
@@ -157,8 +159,9 @@ namespace Halibut.Transport
                     {
                         connection = await connectionManager.AcquireConnectionAsync(
                             protocolBuilder, 
-                            new WebSocketConnectionFactory(clientCertificate), 
+                            new WebSocketConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), 
                             serviceEndpoint, 
+                            halibutTimeoutsAndLimits,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
 

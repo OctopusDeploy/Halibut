@@ -13,6 +13,7 @@ namespace Halibut.Transport
     {
         readonly ConnectionPool<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
         public bool IsDisposed { get; private set; }
 
@@ -24,7 +25,7 @@ namespace Halibut.Transport
             return openableConnection.Item1;
         }
 
-        public Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
+        public Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, CancellationToken cancellationToken)
         {
             throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
@@ -101,6 +102,12 @@ namespace Halibut.Transport
         }
 
         static IConnection[] NoConnections = new IConnection[0];
+
+        public ConnectionManager(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+        }
+
         public IReadOnlyCollection<IConnection> GetActiveConnections(ServiceEndPoint serviceEndPoint)
         {
             lock (activeConnections)

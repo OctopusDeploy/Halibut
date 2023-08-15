@@ -65,7 +65,8 @@ namespace Halibut.Tests.Transport
                     () => "",
                     () => new Dictionary<string, string>(),
                     (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
-                    syncOrAsync.ToAsyncHalibutFeature()
+                    syncOrAsync.ToAsyncHalibutFeature(),
+                    new HalibutTimeoutsAndLimits()
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)

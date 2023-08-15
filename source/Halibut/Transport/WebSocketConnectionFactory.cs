@@ -15,10 +15,12 @@ namespace Halibut.Transport
     public class WebSocketConnectionFactory : IConnectionFactory
     {
         readonly X509Certificate2 clientCertificate;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public WebSocketConnectionFactory(X509Certificate2 clientCertificate)
+        public WebSocketConnectionFactory(X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.clientCertificate = clientCertificate;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
         }
 
         [Obsolete]
