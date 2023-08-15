@@ -160,8 +160,7 @@ namespace Halibut.Transport
                         connection = await connectionManager.AcquireConnectionAsync(
                             protocolBuilder, 
                             new WebSocketConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), 
-                            serviceEndpoint, 
-                            halibutTimeoutsAndLimits,
+                            serviceEndpoint,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
 

@@ -171,8 +171,7 @@ namespace Halibut.Transport
                         connection = await connectionManager.AcquireConnectionAsync(
                             exchangeProtocolBuilder, 
                             new TcpConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), 
-                            ServiceEndpoint, 
-                            halibutTimeoutsAndLimits,
+                            ServiceEndpoint,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
 

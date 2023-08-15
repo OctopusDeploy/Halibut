@@ -72,13 +72,8 @@ namespace Halibut
                 .WithTypeRegistry(typeRegistry)
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
-<<<<<<< HEAD
 
             connectionManager = new ConnectionManager();
-=======
-            this.connectionManager = new ConnectionManager(null);
-            
->>>>>>> origin/main
         }
 
         internal HalibutRuntime(
@@ -102,27 +97,22 @@ namespace Halibut
             this.messageSerializer = messageSerializer;
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             invoker = new ServiceInvoker(serviceFactory);
-<<<<<<< HEAD
+            TimeoutsAndLimits = halibutTimeoutsAndLimits;
 
             if (asyncHalibutFeature == AsyncHalibutFeature.Enabled)
             {
-                connectionManager = new ConnectionManagerAsync();
+                connectionManager = new ConnectionManagerAsync(halibutTimeoutsAndLimits);
             }
             else
             {
+                if (halibutTimeoutsAndLimits != null)
+                {
+                    throw new Exception($"{nameof(halibutTimeoutsAndLimits)} must be null when in sync mode");
+                }
 #pragma warning disable CS0612
                 connectionManager = new ConnectionManager();
 #pragma warning restore CS0612
             }
-=======
-            if (asyncHalibutFeature == AsyncHalibutFeature.Disabled && halibutTimeoutsAndLimits != null)
-            {
-                throw new Exception($"{nameof(halibutTimeoutsAndLimits)} must be null when in sync mode");
-            }
-            
-            this.TimeoutsAndLimits = halibutTimeoutsAndLimits;
-            this.connectionManager = new ConnectionManager(halibutTimeoutsAndLimits);
->>>>>>> origin/main
         }
 
         public ILogFactory Logs => logs;

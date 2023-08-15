@@ -13,6 +13,7 @@ namespace Halibut.Transport
     {
         readonly ConnectionPoolAsync<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
         // We have separate locks for connections in general (including the pool) vs specifically activeConnections.
         // This is because disposing calls OnConnectionDisposed, which causes deadlocks if we are not careful.
@@ -21,6 +22,11 @@ namespace Halibut.Transport
         
 
         public bool IsDisposed { get; private set; }
+
+        public ConnectionManagerAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+        }
 
         public void Dispose()
         {

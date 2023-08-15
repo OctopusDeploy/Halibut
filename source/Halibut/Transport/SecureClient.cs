@@ -162,7 +162,6 @@ namespace Halibut.Transport
                             protocolBuilder, 
                             new TcpConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), 
                             ServiceEndpoint,
-                            halibutTimeoutsAndLimits,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
 
