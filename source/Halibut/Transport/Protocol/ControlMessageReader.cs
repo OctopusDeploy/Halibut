@@ -162,6 +162,8 @@ namespace Halibut.Transport.Protocol
         
         CancellationTokenSource GetCancellationTokenSourceFromStreamReadTimeoutAsync(Stream stream)
         {
+            // TODO - ASYNC ME UP!
+            // We should always be given a stream that can timeout.
             if (stream.CanTimeout)
             {
                 return new CancellationTokenSource(stream.ReadTimeout);
