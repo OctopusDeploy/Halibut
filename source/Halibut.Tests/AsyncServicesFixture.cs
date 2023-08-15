@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
@@ -14,8 +16,8 @@ namespace Halibut.Tests
     public class AsyncServicesFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true)]
-        public async Task AsyncServicesCanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
+        [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testNetworkConditions: false)]
+        public async Task AsyncServiceWithParams_CanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var clientAndServiceBuilder = clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder();
@@ -34,18 +36,8 @@ namespace Halibut.Tests
             var clientAndService = await clientAndServiceBuilder.Build(CancellationToken);
 
             var value = Some.RandomAsciiStringOfLength(8);
-            string result = null;
-            await clientAndServiceTestCase.ForceClientProxyType.ToSyncOrAsync()
-                .WhenSync(() =>
-                {
-                    var echoServiceClient = clientAndService.Client.CreateClient<IEchoService>(clientAndService.ServiceEndPoint, CancellationToken);
-                    result = echoServiceClient.SayHello(value);
-                })
-                .WhenAsync(async () =>
-                {
-                    var echoServiceClient = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-                    result = await echoServiceClient.SayHelloAsync(value);
-                });
+            var echoServiceClient = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+            var result = await echoServiceClient.SayHelloAsync(value);
 
             if (clientAndServiceTestCase.ServiceAsyncHalibutFeature.IsEnabled())
             {
@@ -55,6 +47,37 @@ namespace Halibut.Tests
             {
                 result.Should().Be($"{value}...");
             }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testNetworkConditions: false)]
+        public async Task AsyncServiceWithNoParams_CanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var clientAndServiceBuilder = clientAndServiceTestCase.CreateTestCaseBuilder()
+                .AsLatestClientAndLatestServiceBuilder();
+
+            if (clientAndServiceTestCase.ServiceAsyncHalibutFeature.IsEnabled())
+            {
+                clientAndServiceBuilder = clientAndServiceBuilder
+                    .WithAsyncService<ILockService, IAsyncLockService>(() => new AsyncLockService());
+            }
+            else
+            {
+                clientAndServiceBuilder = clientAndServiceBuilder
+                    .WithService<ILockService>(() => new LockService());
+            }
+
+            var clientAndService = await clientAndServiceBuilder.Build(CancellationToken);
+
+            string fileToWaitFor = Path.GetTempFileName();
+            string fileWhenRequestStarted = Path.GetTempFileName();
+            
+            File.Delete(fileToWaitFor);
+
+            var lockServiceClient = clientAndService.CreateClient<ILockService, IAsyncClientLockService>();
+            await lockServiceClient.WaitForFileToBeDeletedAsync(fileToWaitFor, fileWhenRequestStarted);
+
+            File.Exists(fileWhenRequestStarted).Should().BeTrue();
         }
     }
 }

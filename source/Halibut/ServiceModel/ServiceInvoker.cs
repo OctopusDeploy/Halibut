@@ -209,9 +209,27 @@ namespace Halibut.ServiceModel
 
         async Task<object> InvokeAsyncMethod(MethodInfo method, object obj, params object[] parameters)
         {
+            var returnType = method.ReturnType;
+
+            // If the return type is not Task or Task<T>, then shrug and explode!
+            if (!typeof(Task).IsAssignableFrom(returnType))
+            {
+                throw new Exception();
+            }
+
             var task = (Task)method.Invoke(obj, parameters);
             await task.ConfigureAwait(false);
-            var resultProperty = task.GetType().GetProperty("Result");
+
+            if (returnType == typeof(Task))
+            {
+                // If async method has a 'void' return type (i.e. Task with no generic params),
+                // then return null to match behaviour of MethodInfo.Invoke
+                return null;
+            }
+
+            // If the return type is not Task, we assume it is Task<T>
+            var resultType = returnType.GetGenericArguments().First();
+            var resultProperty = typeof(Task<>).MakeGenericType(resultType).GetProperty("Result");
             return resultProperty.GetValue(task);
         }
 
