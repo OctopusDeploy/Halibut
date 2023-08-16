@@ -53,12 +53,12 @@ namespace Halibut.Transport
             }
         }
 
-        public async Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
+        public async Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint serviceEndpoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, CancellationToken cancellationToken)
         {
             try
             {
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
-                using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, log, cancellationToken))
+                using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, log, cancellationToken))
                 {
                     using (var networkStream = client.GetStream())
                     {

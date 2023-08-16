@@ -8,20 +8,13 @@ using Nito.AsyncEx;
 
 namespace Halibut.Transport
 {
-    public class ConnectionPoolAsync<TKey, TPooledResource> : IConnectionPool<TKey, TPooledResource>
+    public class ConnectionPoolAsync<TKey, TPooledResource> : IConnectionPool<TKey, TPooledResource> 
         where TPooledResource : class, IPooledResource
     {
         readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new();
         readonly SemaphoreSlim poolLock = new(1, 1);
 
-        public int GetTotalConnectionCount()
-        {
-            using (poolLock.Lock())
-            {
-                return pool.Values.Sum(v => v.Count);
-            }
-        }
-
+        [Obsolete]
         public TPooledResource Take(TKey endPoint)
         {
             using (poolLock.Lock())
@@ -58,6 +51,7 @@ namespace Halibut.Transport
             }
         }
 
+        [Obsolete]
         public void Return(TKey endPoint, TPooledResource resource)
         {
             using (poolLock.Lock())
@@ -90,6 +84,7 @@ namespace Halibut.Transport
             }
         }
 
+        [Obsolete]
         public void Clear(TKey key, ILog log = null)
         {
             using (poolLock.Lock())

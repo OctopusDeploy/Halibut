@@ -67,13 +67,18 @@ namespace Halibut.Tests.Transport
             var pool = syncOrAsync.CreateConnectionPool<string, TestConnection>();
             var connection = new TestConnection();
 
-            pool.GetTotalConnectionCount().Should().Be(0);
+            var takeResult = await pool.Take_SyncOrAsync(syncOrAsync, "http://foo", CancellationToken);
+            takeResult.Should().BeNull();
 
             await pool.Return_SyncOrAsync(syncOrAsync, "http://foo", connection, CancellationToken);
-            pool.GetTotalConnectionCount().Should().Be(1);
-
             await pool.Return_SyncOrAsync(syncOrAsync, "http://foo", connection, CancellationToken);
-            pool.GetTotalConnectionCount().Should().Be(1);
+
+            // Assert by taking twice. The second one should be null again
+            takeResult = await pool.Take_SyncOrAsync(syncOrAsync, "http://foo", CancellationToken);
+            takeResult.Should().Be(connection);
+
+            takeResult = await pool.Take_SyncOrAsync(syncOrAsync, "http://foo", CancellationToken);
+            takeResult.Should().BeNull();
         }
     }
 }

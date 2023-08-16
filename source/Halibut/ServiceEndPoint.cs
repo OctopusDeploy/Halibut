@@ -8,11 +8,15 @@ namespace Halibut
     {
         readonly string baseUriString;
 
+        // TODO - ASYNC ME UP!
+        // Mark as obsolete since it should be created by taking a HalibutRuntimeLimit
         public ServiceEndPoint(string baseUri, string remoteThumbprint)
             : this(new Uri(baseUri), remoteThumbprint)
         {
         }
 
+        // TODO - ASYNC ME UP!
+        // Mark as obsolete since it should be created by taking a HalibutRuntimeLimit
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
             : this(baseUri, remoteThumbprint, null)
         {
@@ -35,11 +39,13 @@ namespace Halibut
             Proxy = proxy;
         }
 
+#pragma warning disable CS0612
         /// <summary>
         /// The amount of time the client will wait for the server to collect a message from the
         /// polling request queue before raising a TimeoutException
         /// </summary>
         public TimeSpan PollingRequestQueueTimeout { get; set; } = HalibutLimits.PollingRequestQueueTimeout;
+
 
         /// <summary>
         /// The amount of time the client will wait for the server to process a message collected
@@ -67,6 +73,7 @@ namespace Halibut
         /// Amount of time to wait for a successful TCP or WSS connection
         /// </summary>
         public TimeSpan TcpClientConnectTimeout { get; set; } = HalibutLimits.TcpClientConnectTimeout;
+#pragma warning restore CS0612
 
         public Uri BaseUri { get; }
 

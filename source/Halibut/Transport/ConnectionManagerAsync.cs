@@ -16,12 +16,14 @@ namespace Halibut.Transport
 
         // We have separate locks for connections in general (including the pool) vs specifically activeConnections.
         // This is because disposing calls OnConnectionDisposed, which causes deadlocks if we are not careful.
+        // I.e. use connectionsLock when interacting with anything to do with connections (e.g. the pool, or activeConnections),
+        //      but use activeConnectionsLock AND connectionsLock when specifically interacting with activeConnections.
         readonly SemaphoreSlim connectionsLock = new(1, 1);
         readonly SemaphoreSlim activeConnectionsLock = new(1, 1);
         
 
         public bool IsDisposed { get; private set; }
-
+        
         public void Dispose()
         {
             pool.Dispose();
@@ -175,6 +177,7 @@ namespace Halibut.Transport
             }
         }
 
+        [Obsolete]
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
             using (connectionsLock.Lock())
@@ -207,6 +210,7 @@ namespace Halibut.Transport
             return Array.Empty<IConnection>();
         }
 
+        [Obsolete]
         public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)
         {
             using (connectionsLock.Lock())
@@ -338,6 +342,7 @@ namespace Halibut.Transport
                     onDisposed(this);
                 }
             }
+
 
             public async ValueTask DisposeAsync()
             {

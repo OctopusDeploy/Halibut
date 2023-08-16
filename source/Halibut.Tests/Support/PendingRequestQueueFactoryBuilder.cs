@@ -46,7 +46,7 @@ namespace Halibut.Tests.Support
             switch (syncOrAsync)
             {
                 case SyncOrAsync.Async:
-                    return new PendingRequestQueueFactoryAsync(logFactory);
+                    return new PendingRequestQueueFactoryAsync(new HalibutTimeoutsAndLimits(), logFactory);
                 case SyncOrAsync.Sync:
                     return new DefaultPendingRequestQueueFactory(logFactory);
                 default:

@@ -2,8 +2,8 @@
 {
     public enum AsyncHalibutFeature
     {
-        Enabled,
-        Disabled    
+        Disabled,
+        Enabled
     }
 
     public static class AsyncHalibutFeatureExtensionMethods
