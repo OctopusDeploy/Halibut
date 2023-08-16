@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -114,8 +115,14 @@ namespace Halibut.Transport.Streams
         {
             // Streams do not implement IAsyncDisposable. So they cannot be disposed of using the native `DisposeAsync` method.
             // Since streams have to be disposed synchronously anyway, this extension just becomes an easy way to reduce #if statements everywhere.
-            await Task.CompletedTask;
-            stream.Dispose();
+            if (stream is IAsyncDisposable asyncDisposableStream)
+            {
+                await asyncDisposableStream.DisposeAsync();
+            }
+            else
+            {
+                stream.Dispose();
+            }
         }
 #endif
     }

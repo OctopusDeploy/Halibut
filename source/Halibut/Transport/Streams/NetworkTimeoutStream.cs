@@ -194,8 +194,6 @@ namespace Halibut.Transport.Streams
 #if !NETFRAMEWORK
         public override void CopyTo(Stream destination, int bufferSize) => inner.CopyTo(destination, bufferSize);
         
-        public override async ValueTask DisposeAsync() => await inner.DisposeAsync();
-        
         public override int Read(Span<byte> buffer) => inner.Read(buffer);
 
         public override void Write(ReadOnlySpan<byte> buffer) => inner.Write(buffer);

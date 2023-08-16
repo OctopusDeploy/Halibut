@@ -6,7 +6,7 @@ using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Streams
 {
-    public class ReadIntoMemoryBufferStream : Stream
+    public class ReadIntoMemoryBufferStream : AsyncDisposableStream
     {
         readonly MemoryStream memoryBuffer;
         readonly Stream sourceStream;
@@ -33,6 +33,16 @@ namespace Halibut.Transport.Streams
                 {
                     sourceStream.Dispose();
                 }
+            }
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await memoryBuffer.DisposeAsync();
+
+            if (onDispose == OnDispose.DisposeInputStream)
+            {
+                await sourceStream.DisposeAsync();
             }
         }
 
