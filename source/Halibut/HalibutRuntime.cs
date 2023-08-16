@@ -222,7 +222,7 @@ namespace Halibut
 
         public async Task<ServiceEndPoint> DiscoverAsync(Uri uri, CancellationToken cancellationToken)
         {
-            return await DiscoverAsync(new ServiceEndPoint(uri, null), cancellationToken);
+            return await DiscoverAsync(new ServiceEndPoint(uri, null, TimeoutsAndLimits), cancellationToken);
         }
 
         [Obsolete]
@@ -246,12 +246,12 @@ namespace Halibut
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint)
         {
-            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), CancellationToken.None);
+            return CreateClient<TService>(new ServiceEndPoint(new Uri(endpointBaseUri), publicThumbprint, TimeoutsAndLimits), CancellationToken.None);
         }
 
         public TService CreateClient<TService>(string endpointBaseUri, string publicThumbprint, CancellationToken cancellationToken)
         {
-            return CreateClient<TService>(new ServiceEndPoint(endpointBaseUri, publicThumbprint), cancellationToken);
+            return CreateClient<TService>(new ServiceEndPoint(new Uri(endpointBaseUri), publicThumbprint, TimeoutsAndLimits), cancellationToken);
         }
 
         public TService CreateClient<TService>(ServiceEndPoint endpoint)

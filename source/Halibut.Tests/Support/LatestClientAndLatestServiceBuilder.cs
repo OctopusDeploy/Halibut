@@ -366,7 +366,7 @@ namespace Halibut.Tests.Support
                         clientListenPort = portForwarder.ListeningPort;
                     }
 
-                    service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + clientListenPort), serviceTrustsThumbprint, httpProxyDetails));
+                    service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + clientListenPort), serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
@@ -390,7 +390,7 @@ namespace Halibut.Tests.Support
                     }
 
                     var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
-                    service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, serviceTrustsThumbprint, httpProxyDetails));
+                    service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
@@ -519,7 +519,7 @@ namespace Halibut.Tests.Support
 
             public ServiceEndPoint GetServiceEndPoint()
             {
-                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails);
+                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails, Client.TimeoutsAndLimits);
             }
 
             public TService CreateClient<TService>(CancellationToken? cancellationToken = null)
