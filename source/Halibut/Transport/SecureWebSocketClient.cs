@@ -25,12 +25,21 @@ namespace Halibut.Transport
         [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
+
+        readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly ILog log;
         readonly IConnectionManager connectionManager;
         readonly ExchangeProtocolBuilder protocolBuilder;
 
-        public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, IConnectionManager connectionManager)
+
+        public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, 
+            ServiceEndPoint serviceEndpoint,
+            X509Certificate2 clientCertificate,
+            AsyncHalibutFeature asyncHalibutFeature,
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
+            ILog log,
+            IConnectionManager connectionManager)
         {
             this.protocolBuilder = protocolBuilder;
             this.serviceEndpoint = serviceEndpoint;
@@ -38,6 +47,7 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.log = log;
             this.connectionManager = connectionManager;
+            this.asyncHalibutFeature = asyncHalibutFeature;
         }
 
         public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
@@ -67,7 +77,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = connectionManager.AcquireConnection(protocolBuilder, new WebSocketConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), serviceEndpoint, log, cancellationToken);
+                        connection = connectionManager.AcquireConnection(protocolBuilder, new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits), serviceEndpoint, log, cancellationToken);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
@@ -158,8 +168,8 @@ namespace Halibut.Transport
                     try
                     {
                         connection = await connectionManager.AcquireConnectionAsync(
-                            protocolBuilder, 
-                            new WebSocketConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), 
+                            protocolBuilder,
+                            new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits), 
                             serviceEndpoint,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);

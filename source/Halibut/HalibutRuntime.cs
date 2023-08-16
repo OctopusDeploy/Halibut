@@ -196,14 +196,14 @@ namespace Halibut
             if (endPoint.IsWebSocketEndpoint)
             {
 #if SUPPORTS_WEB_SOCKET_CLIENT
-                client = new SecureWebSocketClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, TimeoutsAndLimits, log, connectionManager);
+                client = new SecureWebSocketClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, log, connectionManager);
 #else
                 throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
 #endif
             }
             else
             {
-                client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, TimeoutsAndLimits, log, connectionManager);
+                client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, log, connectionManager);
             }
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
         }
@@ -372,7 +372,7 @@ namespace Halibut
         [Obsolete]
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, TimeoutsAndLimits, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -384,7 +384,7 @@ namespace Halibut
 
         async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
-            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, TimeoutsAndLimits, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, logs.ForEndpoint(request.Destination.BaseUri), connectionManager);
 
             ResponseMessage response = null;
 

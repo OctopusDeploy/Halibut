@@ -12,6 +12,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 using ILog = Halibut.Diagnostics.ILog;
@@ -48,6 +49,10 @@ namespace Halibut.Tests.Transport
         [SyncAndAsync]
         public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
         {
+            AsyncHalibutFeature asyncHalibutFeature = syncOrAsync == SyncOrAsync.Sync ? AsyncHalibutFeature.Disabled : AsyncHalibutFeature.Enabled;
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = null;
+            if (asyncHalibutFeature.IsEnabled()) halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
+
             using var connectionManager = syncOrAsync.CreateConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
 
@@ -70,7 +75,7 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, new HalibutTimeoutsAndLimits(), log, connectionManager);
+            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, asyncHalibutFeature, halibutTimeoutsAndLimits, log, connectionManager);
             ResponseMessage response = null!;
 
             using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);

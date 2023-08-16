@@ -10,6 +10,7 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 
