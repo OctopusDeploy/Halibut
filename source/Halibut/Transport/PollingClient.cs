@@ -11,7 +11,8 @@ namespace Halibut.Transport
 {
     public class PollingClient : IPollingClient
     {
-        readonly Func<RequestMessage, ResponseMessage> handleIncomingRequest;
+        readonly Func<RequestMessage, ResponseMessage>? handleIncomingRequest;
+        readonly Func<RequestMessage, Task<ResponseMessage>>? handleIncomingRequestAsync;
         readonly ILog log;
         readonly ISecureClient secureClient;
         readonly Uri subscription;
@@ -31,6 +32,18 @@ namespace Halibut.Transport
             this.subscription = subscription;
             this.secureClient = secureClient;
             this.handleIncomingRequest = handleIncomingRequest;
+            this.log = log;
+            this.cancellationToken = cancellationToken;
+            workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            this.createRetryPolicy = createRetryPolicy;
+            this.asyncHalibutFeature = asyncHalibutFeature;
+        }
+        
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequestAsync, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy, AsyncHalibutFeature asyncHalibutFeature)
+        {
+            this.subscription = subscription;
+            this.secureClient = secureClient;
+            this.handleIncomingRequestAsync = handleIncomingRequestAsync;
             this.log = log;
             this.cancellationToken = cancellationToken;
             workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -138,7 +151,7 @@ namespace Halibut.Transport
                             // We have successfully connected at this point so reset the retry policy
                             // Subsequent connection issues will try and reconnect quickly and then back-off
                             retry.Success();
-                            await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequest, int.MaxValue, ct);
+                            await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequestAsync, int.MaxValue, ct);
                         }, requestCancellationTokens);
                         retry.Success();
                     }

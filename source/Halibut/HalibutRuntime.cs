@@ -181,7 +181,7 @@ namespace Halibut
 
         Task HandleMessageAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
         {
-            return protocol.ExchangeAsServerAsync(HandleIncomingRequest, id => GetQueue(id.SubscriptionId), cancellationToken);
+            return protocol.ExchangeAsServerAsync(HandleIncomingRequestAsync, id => GetQueue(id.SubscriptionId), cancellationToken);
         }
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
@@ -205,7 +205,15 @@ namespace Halibut
             {
                 client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, log, connectionManager);
             }
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
+
+            if (AsyncHalibutFeature.IsEnabled())
+            {
+                pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequestAsync, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
+            }
+            else
+            {
+                pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
+            }
         }
 
         [Obsolete]
@@ -413,6 +421,11 @@ namespace Halibut
         ResponseMessage HandleIncomingRequest(RequestMessage request)
         {
             return invoker.Invoke(request);
+        }
+
+        async Task<ResponseMessage> HandleIncomingRequestAsync(RequestMessage request)
+        {
+            return await invoker.InvokeAsync(request);
         }
 
         public void Trust(string clientThumbprint)
