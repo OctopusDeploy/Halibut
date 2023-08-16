@@ -142,7 +142,7 @@ namespace Halibut.Tests.Timeouts
 
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
 
-                var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 50);
+                var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 20);
                 var sw = Stopwatch.StartNew();
                 var e = (await AssertAsync.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend))).And;
                 AssertExceptionLooksLikeAWriteTimeout(e);
