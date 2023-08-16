@@ -41,27 +41,29 @@ namespace Halibut.ServiceModel
         public async Task<ResponseMessage> InvokeAsync(RequestMessage requestMessage)
         {
             using var lease = factory.CreateService(requestMessage.ServiceName);
-            var methods = lease.Service.GetType().GetHalibutServiceMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (methods.Count != 0)
-            {
-                var method = SelectMethod(methods, requestMessage);
-                var args = GetArguments(requestMessage, method);
-                var result = method.Invoke(lease.Service, args);
-                return ResponseMessage.FromResult(requestMessage, result);
-            }
 
-            var asyncMethodName = requestMessage.MethodName + "Async";
+            var asyncMethodName = AsyncCompatibilityHelper.GetAsyncMethodName(requestMessage.MethodName);
             var asyncMethods = lease.Service.GetType().GetHalibutServiceMethods().Where(m => string.Equals(m.Name, asyncMethodName, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (asyncMethods.Count == 0)
+
+            if (asyncMethods.Count != 0)
             {
-                throw new MethodNotFoundHalibutClientException(string.Format("Method {0}::{1} not found", lease.Service.GetType().FullName, asyncMethodName));
+                var asyncMethod = SelectAsyncMethod(asyncMethods, requestMessage);
+                var asyncArgs = GetArguments(requestMessage, asyncMethod);
+                asyncArgs[asyncArgs.Length - 1] = CancellationToken.None;
+                var asyncResult = await InvokeAsyncMethod(asyncMethod, lease.Service, asyncArgs);
+                return ResponseMessage.FromResult(requestMessage, asyncResult);
             }
 
-            var asyncMethod = SelectAsyncMethod(asyncMethods, requestMessage);
-            var asyncArgs = GetArguments(requestMessage, asyncMethod);
-            asyncArgs[asyncArgs.Length - 1] = CancellationToken.None;
-            var asyncResult = await InvokeAsyncMethod(asyncMethod, lease.Service, asyncArgs);
-            return ResponseMessage.FromResult(requestMessage, asyncResult);
+            var methods = lease.Service.GetType().GetHalibutServiceMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (methods.Count == 0)
+            {
+                throw new MethodNotFoundHalibutClientException(string.Format("Method {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
+            }
+
+            var method = SelectMethod(methods, requestMessage);
+            var args = GetArguments(requestMessage, method);
+            var result = method.Invoke(lease.Service, args);
+            return ResponseMessage.FromResult(requestMessage, result);
         }
 
         static MethodInfo SelectAsyncMethod(IList<MethodInfo> methods, RequestMessage requestMessage)

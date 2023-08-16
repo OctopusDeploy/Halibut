@@ -8,12 +8,12 @@ namespace Halibut.Tests.Util
 {
     // Just like the DelegateServiceFactory, but without any sanity checking
     // when registering async implementations of sync services.
-    public class NaiveDelegateServiceFactory : IServiceFactory
+    public class NoSanityCheckingDelegateServiceFactory : IServiceFactory
     {
         readonly Dictionary<string, Func<object>> services = new(StringComparer.OrdinalIgnoreCase);
         readonly HashSet<Type> serviceTypes = new();
 
-        public NaiveDelegateServiceFactory Register<TContract>(Func<TContract> implementation)
+        public NoSanityCheckingDelegateServiceFactory Register<TContract>(Func<TContract> implementation)
         {
             var serviceType = typeof(TContract);
             services.Add(serviceType.Name, () => implementation());
@@ -25,7 +25,7 @@ namespace Halibut.Tests.Util
             return this;
         }
 
-        public NaiveDelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
+        public NoSanityCheckingDelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
         {
             var serviceType = typeof(TContract);
             services.Add(serviceType.Name, () => implementation());

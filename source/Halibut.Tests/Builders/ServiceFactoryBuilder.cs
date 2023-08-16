@@ -8,7 +8,7 @@ namespace Halibut.Tests.Builders
     {
         bool _conventionVerificationDisabled;
         DelegateServiceFactory factoryWithConventionVerification = new();
-        NaiveDelegateServiceFactory factoryWithNoConventionVerification = new();
+        NoSanityCheckingDelegateServiceFactory factoryWithNoConventionVerification = new();
         
 
         public ServiceFactoryBuilder WithService<TContract>(Func<TContract> factoryFunc)
