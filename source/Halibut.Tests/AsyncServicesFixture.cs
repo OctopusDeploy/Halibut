@@ -16,8 +16,8 @@ namespace Halibut.Tests
     public class AsyncServicesFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testNetworkConditions: false)]
-        public async Task AsyncServiceWithParams_CanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
+        [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testSyncService:false, testNetworkConditions: false)]
+        public async Task AsyncServiceWithReturnType_CanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var clientAndServiceBuilder = clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder();
@@ -50,8 +50,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testNetworkConditions: false)]
-        public async Task AsyncServiceWithNoParams_CanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
+        [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testSyncService: false, testNetworkConditions: false)]
+        public async Task AsyncServiceWithNoReturnType_CanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var clientAndServiceBuilder = clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder();
@@ -67,7 +67,7 @@ namespace Halibut.Tests
                     .WithService<ILockService>(() => new LockService());
             }
 
-            var clientAndService = await clientAndServiceBuilder.Build(CancellationToken);
+            using var clientAndService = await clientAndServiceBuilder.Build(CancellationToken);
 
             string fileToWaitFor = Path.GetTempFileName();
             string fileWhenRequestStarted = Path.GetTempFileName();

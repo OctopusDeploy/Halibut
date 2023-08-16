@@ -216,7 +216,7 @@ namespace Halibut.ServiceModel
             // If the return type is not Task or Task<T>, then shrug and explode!
             if (!typeof(Task).IsAssignableFrom(returnType))
             {
-                throw new Exception();
+                throw new InvalidOperationException($"InvokeAsyncMethod cannot be called on a method that does not return Task or Task<T> ({returnType.Name})");
             }
 
             var task = (Task)method.Invoke(obj, parameters);
