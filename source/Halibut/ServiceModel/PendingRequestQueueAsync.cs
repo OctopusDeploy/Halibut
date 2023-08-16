@@ -54,7 +54,7 @@ namespace Halibut.ServiceModel
             }
             finally
             {
-                using (await queueLock.LockAsync())
+                using (await queueLock.LockAsync(CancellationToken.None))
                 {
                     inProgress.Remove(request.Id);
                 }
@@ -113,7 +113,7 @@ namespace Halibut.ServiceModel
                 return;
             }
 
-            using (await queueLock.LockAsync())
+            using (await queueLock.LockAsync(CancellationToken.None))
             {
                 if (inProgress.TryGetValue(response.Id, out var pending))
                 {
@@ -163,7 +163,7 @@ namespace Halibut.ServiceModel
                     // we cannot walk away from the request as it is already in progress and no longer in the connecting phase
                     cancelled = true;
                     
-                    using (await transferLock.LockAsync())
+                    using (await transferLock.LockAsync(CancellationToken.None))
                     {
                         if (!transferBegun)
                         {
@@ -180,7 +180,7 @@ namespace Halibut.ServiceModel
                 }
 
                 var waitForTransferToComplete = false;
-                using (await transferLock.LockAsync())
+                using (await transferLock.LockAsync(CancellationToken.None))
                 {
                     if (transferBegun)
                     {
@@ -248,7 +248,7 @@ namespace Halibut.ServiceModel
 
             public async Task<bool> BeginTransfer()
             {
-                using (await transferLock.LockAsync())
+                using (await transferLock.LockAsync(CancellationToken.None))
                 {
                     if (completed)
                     {
