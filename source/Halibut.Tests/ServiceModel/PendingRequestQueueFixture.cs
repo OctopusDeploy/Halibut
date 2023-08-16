@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -233,7 +234,7 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
-        [Ignore("This test takes way too long on Team City")]
+        [IgnoreOnTeamCity("This test takes way too long on Team City")]
         [NonParallelizable]
         public async Task QueueAndWait_Can_Queue_Dequeue_Apply_VeryLargeNumberOfRequests()
         {
@@ -262,6 +263,83 @@ namespace Halibut.Tests.ServiceModel
             
             // Assert
             await ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
+        }
+
+        [Test]
+        [NonParallelizable]
+        public async Task QueueAndWait_Can_Queue_Dequeue_WhenRequestsAreBeingCancelled()
+        {
+            // Arrange
+            const string endpoint = "poll://endpoint001";
+            const int totalRequest = 500;
+            const int minimumCancelledRequest = 100;
+
+            var sut = new PendingRequestQueueBuilder().WithSyncOrAsync(SyncOrAsync.Async).WithEndpoint(endpoint).Build();
+            
+            var requestsInOrder = Enumerable.Range(0, totalRequest)
+                .Select(_ => new RequestMessageBuilder(endpoint).Build())
+                .ToList();
+
+            // Act
+            var queueAndWaitTasksInOrder = requestsInOrder
+                .Select(request =>
+                {
+                    var requestCancellationTokenSource = new CancellationTokenSource();
+                    return new Tuple<Task<ResponseMessage>, CancellationTokenSource>(
+                        StartQueueAndWait(sut, request, SyncOrAsync.Async, requestCancellationTokenSource.Token), 
+                        requestCancellationTokenSource);
+                })
+                .ToList();
+
+            await WaitForQueueCountToBecome(sut, requestsInOrder.Count);
+            
+            var index = 0;
+            var cancelled = 0;
+            var dequeueTasks = new ConcurrentBag<Task<RequestMessage>>();
+
+            var cancelSomeTask = Task.Run(() =>
+            {
+                foreach (var _ in requestsInOrder)
+                {
+                    var currentIndex = Interlocked.Increment(ref index);
+
+                    if(currentIndex % 2 == 0)
+                    {
+                        Interlocked.Increment(ref cancelled);
+                        queueAndWaitTasksInOrder.ElementAt(index-1).Item2.Cancel();
+                    }
+                }
+            });
+
+            // Cancellation is slow so give it a head start
+            while (cancelled < minimumCancelledRequest)
+            {
+                await Task.Delay(10);
+            }
+
+            var dequeueAllTask = Task.Run(() =>
+            {
+                foreach (var _ in requestsInOrder)
+                {
+                    var task = sut.DequeueAsync(CancellationToken);
+                    dequeueTasks.Add(task);
+                }
+            });
+
+            await Task.WhenAll(cancelSomeTask, dequeueAllTask);
+
+            var completedTask = await Task.WhenAll(dequeueTasks);
+
+            foreach (var queueAndWait in queueAndWaitTasksInOrder)
+            {
+                queueAndWait.Item2.Dispose();
+            }
+
+            // Assert
+            // This test is pretty non-deterministic. It attempts to create some cancellation chaos
+            // and we just want to ensure some things did cancel and some things did complete and nothing
+            // threw an exception
+            completedTask.Count(x => x != null).Should().BeLessThan(totalRequest - minimumCancelledRequest).And.BeGreaterThanOrEqualTo(totalRequest / 2);
         }
 
         [Test]
@@ -354,7 +432,7 @@ namespace Halibut.Tests.ServiceModel
             response.Id.Should().Be(request.Id);
             response.Error.Message.Should().Be("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:01), so the request timed out.");
         }
-
+        
         [Test]
         public async Task DequeueAsync_WithNothingQueued_WillWaitPollingQueueWaitTimeout_ShouldReturnNull()
         {
