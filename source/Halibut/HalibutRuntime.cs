@@ -28,7 +28,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new();
         readonly IServiceInvoker invoker;
         readonly ILogFactory logs;
-        readonly ConnectionManager connectionManager;
+        readonly IConnectionManager connectionManager;
         readonly PollingClientCollection pollingClients = new();
         string friendlyHtmlPageContent = DefaultFriendlyHtmlPageContent;
         Dictionary<string, string> friendlyHtmlPageHeaders = new();
@@ -72,8 +72,8 @@ namespace Halibut
                 .WithTypeRegistry(typeRegistry)
                 .Build();
             invoker = new ServiceInvoker(serviceFactory);
-            this.connectionManager = new ConnectionManager(null);
-            
+
+            connectionManager = new ConnectionManager();
         }
 
         internal HalibutRuntime(
@@ -97,13 +97,22 @@ namespace Halibut
             this.messageSerializer = messageSerializer;
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             invoker = new ServiceInvoker(serviceFactory);
-            if (asyncHalibutFeature == AsyncHalibutFeature.Disabled && halibutTimeoutsAndLimits != null)
+            TimeoutsAndLimits = halibutTimeoutsAndLimits;
+
+            if (asyncHalibutFeature == AsyncHalibutFeature.Enabled)
             {
-                throw new Exception($"{nameof(halibutTimeoutsAndLimits)} must be null when in sync mode");
+                connectionManager = new ConnectionManagerAsync();
             }
-            
-            this.TimeoutsAndLimits = halibutTimeoutsAndLimits;
-            this.connectionManager = new ConnectionManager(halibutTimeoutsAndLimits);
+            else
+            {
+                if (halibutTimeoutsAndLimits != null)
+                {
+                    throw new Exception($"{nameof(halibutTimeoutsAndLimits)} must be null when in sync mode");
+                }
+#pragma warning disable CS0612
+                connectionManager = new ConnectionManager();
+#pragma warning restore CS0612
+            }
         }
 
         public ILogFactory Logs => logs;
@@ -465,10 +474,17 @@ namespace Halibut
             friendlyHtmlPageHeaders = headers?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, string>();
         }
 
+        [Obsolete]
         public void Disconnect(ServiceEndPoint endpoint)
         {
             var log = logs.ForEndpoint(endpoint.BaseUri);
             connectionManager.Disconnect(endpoint, log);
+        }
+
+        public async Task DisconnectAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken)
+        {
+            var log = logs.ForEndpoint(endpoint.BaseUri);
+            await connectionManager.DisconnectAsync(endpoint, log, cancellationToken);
         }
 
         public void Dispose()

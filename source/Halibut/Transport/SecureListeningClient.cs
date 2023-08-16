@@ -17,12 +17,12 @@ namespace Halibut.Transport
     class SecureListeningClient : ISecureClient
     {
         readonly ILog log;
-        readonly ConnectionManager connectionManager;
+        readonly IConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
         readonly ExchangeProtocolBuilder exchangeProtocolBuilder;
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public SecureListeningClient(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, ConnectionManager connectionManager)
+        public SecureListeningClient(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, IConnectionManager connectionManager)
         {
             this.exchangeProtocolBuilder = exchangeProtocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;
@@ -171,8 +171,7 @@ namespace Halibut.Transport
                         connection = await connectionManager.AcquireConnectionAsync(
                             exchangeProtocolBuilder, 
                             new TcpConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), 
-                            ServiceEndpoint, 
-                            halibutTimeoutsAndLimits,
+                            ServiceEndpoint,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
 
@@ -193,7 +192,7 @@ namespace Halibut.Transport
                     }
 
                     // Only return the connection to the pool if all went well
-                    connectionManager.ReleaseConnection(ServiceEndpoint, connection);
+                    await connectionManager.ReleaseConnectionAsync(ServiceEndpoint, connection, requestCancellationTokens.InProgressRequestCancellationToken);
                 }
                 catch (AuthenticationException ex)
                 {
@@ -232,7 +231,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        connectionManager.ClearPooledConnections(ServiceEndpoint, log);
+                        await connectionManager.ClearPooledConnectionsAsync(ServiceEndpoint, log, requestCancellationTokens.InProgressRequestCancellationToken);
                     }
                 }
                 catch (IOException ex) when (ex.IsSocketConnectionReset())

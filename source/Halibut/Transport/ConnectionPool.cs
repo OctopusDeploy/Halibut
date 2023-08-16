@@ -2,22 +2,17 @@ using Halibut.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
-    public class ConnectionPool<TKey, TPooledResource>
+    public class ConnectionPool<TKey, TPooledResource> : IConnectionPool<TKey, TPooledResource>
         where TPooledResource : class, IPooledResource
     {
         readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new Dictionary<TKey, HashSet<TPooledResource>>();
 
-        public int GetTotalConnectionCount()
-        {
-            lock (pool)
-            {
-                return pool.Values.Sum(v => v.Count);
-            }
-        }
-
+        [Obsolete]
         public TPooledResource Take(TKey endPoint)
         {
             lock (pool)
@@ -36,6 +31,12 @@ namespace Halibut.Transport
             }
         }
 
+        public Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+        }
+
+        [Obsolete]
         public void Return(TKey endPoint, TPooledResource resource)
         {
             lock (pool)
@@ -52,6 +53,12 @@ namespace Halibut.Transport
             }
         }
 
+        public Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+        }
+
+        [Obsolete]
         public void Clear(TKey key, ILog log = null)
         {
             lock (pool)
@@ -67,6 +74,11 @@ namespace Halibut.Transport
                 connections.Clear();
                 pool.Remove(key);
             }
+        }
+
+        public Task ClearAsync(TKey key, ILog log, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
         public void Dispose()

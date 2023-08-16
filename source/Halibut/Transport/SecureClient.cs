@@ -18,12 +18,12 @@ namespace Halibut.Transport
     {
         [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ILog log;
-        readonly ConnectionManager connectionManager;
+        readonly IConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
         readonly ExchangeProtocolBuilder protocolBuilder;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public SecureClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, ConnectionManager connectionManager)
+        public SecureClient(ExchangeProtocolBuilder protocolBuilder, ServiceEndPoint serviceEndpoint, X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log, IConnectionManager connectionManager)
         {
             this.protocolBuilder = protocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;
@@ -162,7 +162,6 @@ namespace Halibut.Transport
                             protocolBuilder, 
                             new TcpConnectionFactory(clientCertificate, halibutTimeoutsAndLimits), 
                             ServiceEndpoint,
-                            halibutTimeoutsAndLimits,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);
 
@@ -183,7 +182,7 @@ namespace Halibut.Transport
                     }
 
                     // Only return the connection to the pool if all went well
-                    connectionManager.ReleaseConnection(ServiceEndpoint, connection);
+                    await connectionManager.ReleaseConnectionAsync(ServiceEndpoint, connection, requestCancellationTokens.InProgressRequestCancellationToken);
                 }
                 catch (AuthenticationException ex)
                 {
@@ -217,7 +216,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        connectionManager.ClearPooledConnections(ServiceEndpoint, log);
+                        await connectionManager.ClearPooledConnectionsAsync(ServiceEndpoint, log, requestCancellationTokens.InProgressRequestCancellationToken);
                     }
                 }
                 catch (IOException ex) when (ex.IsSocketConnectionReset())

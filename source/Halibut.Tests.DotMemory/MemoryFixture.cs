@@ -163,7 +163,12 @@ namespace Halibut.Tests.DotMemory
             }
         }
 
-        static void RunWebSocketPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, string trustedCertificate, bool expectSuccess = true)
+        static void RunWebSocketPollingClient(
+            HalibutRuntime server,
+            X509Certificate2 clientCertificate, 
+            string remoteThumbprint,
+            string trustedCertificate,
+            bool expectSuccess = true)
         {
             using (var runtime = new HalibutRuntimeBuilder()
                        .WithServerCertificate(clientCertificate)
