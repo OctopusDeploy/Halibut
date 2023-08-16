@@ -136,7 +136,7 @@ namespace Halibut.Transport
                 string req;
                 if (asyncHalibutFeature.IsEnabled())
                 {
-                    req = await webSocketStream.ReadTextMessage(cts.Token).ConfigureAwait(false);
+                    req = await webSocketStream.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientReceiveTimeout, cts.Token).ConfigureAwait(false);
                 }
                 else
                 {

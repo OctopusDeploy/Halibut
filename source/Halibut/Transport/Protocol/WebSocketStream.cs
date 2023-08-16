@@ -89,7 +89,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task<string> ReadTextMessage(CancellationToken cancellationToken)
+        public async Task<string> ReadTextMessage(TimeSpan timeout, CancellationToken cancellationToken)
         {
             AssertCanReadOrWrite();
             var sb = new StringBuilder();
@@ -99,8 +99,6 @@ namespace Halibut.Transport.Protocol
             {
                 var readResult = await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(async ct =>
                     {
-						// TODO - ASYNC ME UP!
-		                // What should the timeout be here? thew new code that allows passing in a timeout or the static value?
                         var result = await context.ReceiveAsync(buffer, ct).ConfigureAwait(false);
                         if (result.MessageType == WebSocketMessageType.Close)
                         {
@@ -122,7 +120,7 @@ namespace Halibut.Transport.Protocol
                         var socketException = new SocketException(10060);
                         return new IOException($"Unable to read data from the transport connection: {socketException.Message}.", socketException);
                     },
-                    HalibutLimits.TcpClientReceiveTimeout,
+                    timeout,
                     nameof(ReadTextMessage),
                     cancellationToken);
 
