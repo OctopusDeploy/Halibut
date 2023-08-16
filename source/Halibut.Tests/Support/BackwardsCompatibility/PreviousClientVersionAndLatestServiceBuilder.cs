@@ -303,7 +303,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 portForwarder = portForwarderFactory?.Invoke((int) runningOldHalibutBinary.ProxyClientListenPort!);
 
                 var listenPort = portForwarder?.ListeningPort ?? (int)runningOldHalibutBinary.ProxyClientListenPort!;
-                service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint, httpProxyDetails));
+                service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint, httpProxyDetails, service.TimeoutsAndLimits));
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
@@ -339,7 +339,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                 var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
 
-                service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, httpProxyDetails));
+                service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
             }
             else
             {
@@ -401,7 +401,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             /// </summary>
             public HalibutRuntime Client { get; }
 
-            public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+            public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, Client.TimeoutsAndLimits);
 
             public HalibutRuntime ProxyClient => Client;
             public PortForwarder? PortForwarder { get; }
@@ -454,7 +454,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     throw new Exception($"Unsupported, since types within {typeof(TClientService)} would not actually be passed on to the remote process which holds the actual client under test.", e);
                 }
                 
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint);
+                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, Client.TimeoutsAndLimits);
                 
                 return ProxyClient.CreateAsyncClient<TService, TClientService>(serviceEndpoint);
             }

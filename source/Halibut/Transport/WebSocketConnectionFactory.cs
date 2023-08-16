@@ -9,6 +9,7 @@ using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Proxy.Exceptions;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -16,11 +17,15 @@ namespace Halibut.Transport
     {
         readonly X509Certificate2 clientCertificate;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly AsyncHalibutFeature asyncHalibutFeature;
 
-        public WebSocketConnectionFactory(X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        public WebSocketConnectionFactory(X509Certificate2 clientCertificate,
+            AsyncHalibutFeature asyncHalibutFeature,
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.clientCertificate = clientCertificate;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.asyncHalibutFeature = asyncHalibutFeature;
         }
 
         [Obsolete]
@@ -39,7 +44,7 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
-            return new SecureConnection(client, stream, exchangeProtocolBuilder, log);
+            return new SecureConnection(client, stream, exchangeProtocolBuilder, asyncHalibutFeature, halibutTimeoutsAndLimits, log);
         }
         
         public async Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
@@ -57,7 +62,7 @@ namespace Halibut.Transport
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
-            return new SecureConnection(client, stream, exchangeProtocolBuilder, log);
+            return new SecureConnection(client, stream, exchangeProtocolBuilder,  asyncHalibutFeature, halibutTimeoutsAndLimits, log);
         }
 
         [Obsolete]

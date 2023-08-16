@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
+using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -13,13 +14,22 @@ namespace Halibut.Transport
     {
         readonly IDisposable client;
         readonly Stream stream;
+        readonly AsyncHalibutFeature asyncHalibutFeature;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly MessageExchangeProtocol protocol;
         DateTimeOffset lastUsed;
 
-        public SecureConnection(IDisposable client, Stream stream, ExchangeProtocolBuilder exchangeProtocolBuilder, ILog log)
+        public SecureConnection(IDisposable client, 
+            Stream stream,
+            ExchangeProtocolBuilder exchangeProtocolBuilder,
+            AsyncHalibutFeature asyncHalibutFeature,
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
+            ILog log)
         {
             this.client = client;
             this.stream = stream;
+            this.asyncHalibutFeature = asyncHalibutFeature;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             protocol = exchangeProtocolBuilder(stream, log);
             lastUsed = DateTimeOffset.UtcNow;
         }
@@ -33,8 +43,10 @@ namespace Halibut.Transport
 
         public bool HasExpired()
         {
-            // TODO - ASYNC ME UP!
-            // Use the HalibutRuntimeLimits
+            if (asyncHalibutFeature.IsEnabled())
+            {
+                return lastUsed < DateTimeOffset.UtcNow.Subtract(halibutTimeoutsAndLimits.SafeTcpClientPooledConnectionTimeout);
+            }
 #pragma warning disable CS0612
             return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.SafeTcpClientPooledConnectionTimeout);
 #pragma warning restore CS0612

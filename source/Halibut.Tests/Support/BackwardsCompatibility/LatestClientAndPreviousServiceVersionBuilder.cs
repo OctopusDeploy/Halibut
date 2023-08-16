@@ -335,7 +335,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
 
             public HalibutRuntime Client { get; }
-            public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
+            public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails, Client.TimeoutsAndLimits);
 
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
@@ -364,7 +364,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
+                var serviceEndpoint = ServiceEndPoint;
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TClientService>(forceClientProxyType, Client, serviceEndpoint);
             }
@@ -376,7 +376,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails);
+                var serviceEndpoint = ServiceEndPoint;
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(forceClientProxyType, Client, serviceEndpoint);
             }

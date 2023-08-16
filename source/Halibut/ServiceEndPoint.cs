@@ -8,22 +8,31 @@ namespace Halibut
     {
         readonly string baseUriString;
 
-        // TODO - ASYNC ME UP!
-        // Mark as obsolete since it should be created by taking a HalibutRuntimeLimit
+        [Obsolete]
         public ServiceEndPoint(string baseUri, string remoteThumbprint)
             : this(new Uri(baseUri), remoteThumbprint)
         {
         }
 
-        // TODO - ASYNC ME UP!
-        // Mark as obsolete since it should be created by taking a HalibutRuntimeLimit
+        [Obsolete]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
-            : this(baseUri, remoteThumbprint, null)
+            : this(baseUri, remoteThumbprint, null, null)
         {
         }
 
         [JsonConstructor]
-        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy)
+        [Obsolete]
+        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy) 
+            : this(baseUri, remoteThumbprint, proxy, null)
+        {
+        }
+
+        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+            : this(baseUri, remoteThumbprint, null, halibutTimeoutsAndLimits)
+        {
+        }
+
+        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             if (IsWebSocketAddress(baseUri))
             {
@@ -37,6 +46,16 @@ namespace Halibut
             }
             RemoteThumbprint = remoteThumbprint;
             Proxy = proxy;
+
+            if (halibutTimeoutsAndLimits != null)
+            {
+                this.PollingRequestQueueTimeout = halibutTimeoutsAndLimits.PollingRequestQueueTimeout;
+                this.PollingRequestMaximumMessageProcessingTimeout = halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout;
+                this.RetryListeningSleepInterval = halibutTimeoutsAndLimits.RetryListeningSleepInterval;
+                this.RetryCountLimit = halibutTimeoutsAndLimits.RetryCountLimit;
+                this.ConnectionErrorRetryTimeout = halibutTimeoutsAndLimits.ConnectionErrorRetryTimeout;
+                this.TcpClientConnectTimeout = halibutTimeoutsAndLimits.TcpClientConnectTimeout;
+            }
         }
 
 #pragma warning disable CS0612
