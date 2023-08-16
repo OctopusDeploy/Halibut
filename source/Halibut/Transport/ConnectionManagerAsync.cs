@@ -13,21 +13,17 @@ namespace Halibut.Transport
     {
         readonly ConnectionPoolAsync<ServiceEndPoint, IConnection> pool = new();
         readonly Dictionary<ServiceEndPoint, HashSet<IConnection>> activeConnections = new();
-        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
         // We have separate locks for connections in general (including the pool) vs specifically activeConnections.
         // This is because disposing calls OnConnectionDisposed, which causes deadlocks if we are not careful.
+        // I.e. use connectionsLock when interacting with anything to do with connections (e.g. the pool, or activeConnections),
+        //      but use activeConnectionsLock AND connectionsLock when specifically interacting with activeConnections.
         readonly SemaphoreSlim connectionsLock = new(1, 1);
         readonly SemaphoreSlim activeConnectionsLock = new(1, 1);
         
 
         public bool IsDisposed { get; private set; }
-
-        public ConnectionManagerAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
-        {
-            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
-        }
-
+        
         public void Dispose()
         {
             pool.Dispose();
@@ -161,6 +157,7 @@ namespace Halibut.Transport
             }
         }
 
+        [Obsolete]
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
             using (connectionsLock.Lock())
@@ -193,6 +190,7 @@ namespace Halibut.Transport
             return Array.Empty<IConnection>();
         }
 
+        [Obsolete]
         public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)
         {
             using (connectionsLock.Lock())
@@ -237,6 +235,8 @@ namespace Halibut.Transport
         
         void OnConnectionDisposed(IConnection connection)
         {
+            //TODO: Async version
+
             // If we are not careful, we can introduce a deadlock. Time this out just in case we ever accidentally introduce one.
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
             using (activeConnectionsLock.Lock(cts.Token))

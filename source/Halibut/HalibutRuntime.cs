@@ -101,7 +101,7 @@ namespace Halibut
 
             if (asyncHalibutFeature == AsyncHalibutFeature.Enabled)
             {
-                connectionManager = new ConnectionManagerAsync(halibutTimeoutsAndLimits);
+                connectionManager = new ConnectionManagerAsync();
             }
             else
             {

@@ -70,6 +70,7 @@ namespace Halibut.Transport
             }
         }
 
+        [Obsolete]
         public void ReleaseConnection(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
             lock (activeConnections)
@@ -87,6 +88,7 @@ namespace Halibut.Transport
             throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
+        [Obsolete]
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
             lock (activeConnections)
@@ -114,6 +116,7 @@ namespace Halibut.Transport
             return NoConnections;
         }
 
+        [Obsolete]
         public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)
         {
             ClearPooledConnections(serviceEndPoint, log);

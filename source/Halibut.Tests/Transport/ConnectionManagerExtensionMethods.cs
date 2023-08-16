@@ -17,7 +17,7 @@ namespace Halibut.Tests.Transport
                 case SyncOrAsync.Sync:
                     return new ConnectionManager();
                 case SyncOrAsync.Async:
-                    return new ConnectionManagerAsync(new HalibutTimeoutsAndLimits());
+                    return new ConnectionManagerAsync();
                 default:
                     throw new ArgumentOutOfRangeException(nameof(syncOrAsync), syncOrAsync, null);
             }

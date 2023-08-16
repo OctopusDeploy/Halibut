@@ -12,14 +12,7 @@ namespace Halibut.Transport
     {
         readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new Dictionary<TKey, HashSet<TPooledResource>>();
 
-        public int GetTotalConnectionCount()
-        {
-            lock (pool)
-            {
-                return pool.Values.Sum(v => v.Count);
-            }
-        }
-
+        [Obsolete]
         public TPooledResource Take(TKey endPoint)
         {
             lock (pool)
@@ -43,6 +36,7 @@ namespace Halibut.Transport
             throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
+        [Obsolete]
         public void Return(TKey endPoint, TPooledResource resource)
         {
             lock (pool)
@@ -64,6 +58,7 @@ namespace Halibut.Transport
             throw new NotImplementedException("Should not be called when async Halibut is not being used.");
         }
 
+        [Obsolete]
         public void Clear(TKey key, ILog log = null)
         {
             lock (pool)
