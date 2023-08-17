@@ -60,7 +60,7 @@ namespace Halibut.Transport.Protocol
             try
             {
 #if !NETFRAMEWORK
-            await
+                await
 #endif
                 using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 65536))
                 {
