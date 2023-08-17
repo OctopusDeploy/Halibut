@@ -395,15 +395,22 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 logger.Information("*     Subsequent errors should be ignored      *");
                 logger.Information("****** ****** ****** ****** ****** ****** ******");
 
-                Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
-                
-                Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);
-                Try.CatchingError(Client.Dispose, logError);
-                Try.CatchingError(() => runningOldHalibutBinary?.Dispose(), logError);
-                Try.CatchingError(() => HttpProxy?.Dispose(), logError);
-                Try.CatchingError(() => PortForwarder?.Dispose(), logError);
-                Try.CatchingError(() => disposableCollection.Dispose(), logError);
-                Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
+                void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
+
+                Try.CatchingError(() => cancellationTokenSource?.Cancel(), LogError);
+                if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+                {
+                    Try.DisposingAsync(Client, LogError).GetAwaiter().GetResult();
+                }
+                else
+                {
+                    Try.CatchingError(Client.Dispose, LogError);
+                }
+                Try.CatchingError(() => runningOldHalibutBinary?.Dispose(), LogError);
+                Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
+                Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
+                Try.CatchingError(() => disposableCollection.Dispose(), LogError);
+                Try.CatchingError(() => cancellationTokenSource?.Dispose(), LogError);
             }
         }
     }

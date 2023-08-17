@@ -17,6 +17,25 @@ namespace Halibut.Tests.Support
                 onFailure(e);
             }        
         }
+        
+        public static async Task DisposingAsync(IAsyncDisposable? toDispose, Action<Exception> onFailure)
+        {
+            try
+            {
+                if (toDispose is null)
+                {
+                    return;
+                }
+
+                await toDispose.DisposeAsync();
+            }
+            catch (Exception e)
+            {
+                onFailure(e);
+            }
+
+            
+        }
 
         public static async Task<Exception?> CatchingError(Func<Task> tryThisAction)
         {
