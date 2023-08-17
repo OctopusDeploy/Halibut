@@ -141,10 +141,13 @@ namespace Halibut.Tests.Timeouts
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
-
-                var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 100);
+                
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend))).And;
+                var e = (await AssertAsync.Throws<HalibutClientException>(() =>
+                {
+                    var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 100);
+                    return echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend);
+                })).And;
                 AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");

@@ -24,10 +24,11 @@ namespace Halibut.Transport
             this.baseStream = baseStream;
             rewindBuffer = new byte[rewindBufferSize];
         }
-
+        
         public override async ValueTask DisposeAsync()
         {
             await Task.CompletedTask;
+            Dispose();
         }
 
         public override void Flush() => baseStream.Flush();
