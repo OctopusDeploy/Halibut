@@ -8,6 +8,7 @@ using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
@@ -615,15 +616,35 @@ namespace Halibut.Tests.Support
                 logger.Information("*     Subsequent errors should be ignored      *");
                 logger.Information("****** ****** ****** ****** ****** ****** ******");
 
-                Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
+                void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
 
-                Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);
-                Try.CatchingError(Client.Dispose, logError);
-                Try.CatchingError(() => Service?.Dispose(), logError);
-                Try.CatchingError(() => HttpProxy?.Dispose(), logError);
-                Try.CatchingError(() => PortForwarder?.Dispose(), logError);
-                Try.CatchingError(disposableCollection.Dispose, logError);
-                Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
+                Try.CatchingError(() => cancellationTokenSource?.Cancel(), LogError);
+
+                if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+                {
+                    Try.DisposingAsync(Client, LogError).GetAwaiter().GetResult();
+                }
+                else
+                {
+                    Try.CatchingError(Client.Dispose, LogError);
+                }
+
+                if (Service is not null)
+                {
+                    if (Service.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+                    {
+                        Try.DisposingAsync(Service, LogError).GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        Try.CatchingError(Service.Dispose, LogError);
+                    }
+                }
+
+                Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
+                Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
+                Try.CatchingError(disposableCollection.Dispose, LogError);
+                Try.CatchingError(() => cancellationTokenSource?.Dispose(), LogError);
             }
         }
     }
