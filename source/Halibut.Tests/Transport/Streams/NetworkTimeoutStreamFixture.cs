@@ -238,7 +238,7 @@ namespace Halibut.Tests.Transport.Streams
                 using var serviceTcpClient = await service.AcceptTcpClientAsync();
                 serviceTcpClient.ReceiveBufferSize = 10;
                 serviceTcpClient.SendBufferSize = 10;
-
+                
                 using var serviceStream = serviceTcpClient.GetStream();
                 performServiceWriteFunc = async data => await serviceStream.WriteAsync(Encoding.UTF8.GetBytes(data), 0, data.Length, cancellationToken);
                 

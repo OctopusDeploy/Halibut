@@ -34,7 +34,7 @@ namespace Halibut.Tests.Transport
         public async Task ReadAsyncShouldPassThrough()
         {
             using (var baseStream = new MemoryStream(16))
-            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            await using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
                 await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
@@ -52,7 +52,7 @@ namespace Halibut.Tests.Transport
         public async Task ReadAsyncShouldPassTheCancellationTokenToTheUnderlyingStream()
         {
             using (var baseStream = new MemoryStream(16))
-            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            await using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
                 await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
@@ -95,7 +95,7 @@ namespace Halibut.Tests.Transport
         public async Task ReadAsyncZeroRewindShouldPassThrough()
         {
             using (var baseStream = new MemoryStream(16))
-            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            await using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
                 await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
@@ -139,7 +139,7 @@ namespace Halibut.Tests.Transport
         public async Task ReadAsyncShouldReadRewindBufferAfterRewind()
         {
             using (var baseStream = new MemoryStream(16))
-            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            await using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
                 await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
@@ -162,7 +162,7 @@ namespace Halibut.Tests.Transport
         public async Task CancelShouldNotRewind(SyncOrAsync syncOrAsync)
         {
             using (var baseStream = new MemoryStream(16))
-            using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
+            await using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
                 baseStream.Write(inputBuffer, 0, inputBuffer.Length);
@@ -211,7 +211,7 @@ namespace Halibut.Tests.Transport
         public async Task ReadingMoreThanTheBufferSizeShouldSupportRewindingAsync()
         {
             using (var baseStream = new MemoryStream(2))
-            using (var sut =  new RewindableBufferStream(baseStream, 2))
+            await using (var sut =  new RewindableBufferStream(baseStream, 2))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
                 baseStream.Write(inputBuffer, 0, inputBuffer.Length);

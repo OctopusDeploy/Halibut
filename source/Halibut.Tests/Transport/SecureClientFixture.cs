@@ -53,7 +53,7 @@ namespace Halibut.Tests.Transport
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = null;
             if (asyncHalibutFeature.IsEnabled()) halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
 
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = syncOrAsync.CreateConnectionManager();
             var stream = Substitute.For<IMessageExchangeStream>();
 
             syncOrAsync

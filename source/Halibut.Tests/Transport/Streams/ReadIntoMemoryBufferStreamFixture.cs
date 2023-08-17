@@ -20,7 +20,7 @@ namespace Halibut.Tests.Transport.Streams
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
             using var memoryStream = CreateMemoryStreamPopulatedWith(bytesToWrite);
-            using var sut = new ReadIntoMemoryBufferStream(memoryStream, 1000, OnDispose.LeaveInputStreamOpen);
+            await using var sut = new ReadIntoMemoryBufferStream(memoryStream, 1000, OnDispose.LeaveInputStreamOpen);
 
             // Act
             var readBuffer = new byte[bytesToWrite.Length];
@@ -39,7 +39,7 @@ namespace Halibut.Tests.Transport.Streams
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
             using var memoryStream = CreateMemoryStreamPopulatedWith(bytesToWrite);
-            using var sut = new ReadIntoMemoryBufferStream(memoryStream, bytesToWrite.Length, OnDispose.LeaveInputStreamOpen);
+            await using var sut = new ReadIntoMemoryBufferStream(memoryStream, bytesToWrite.Length, OnDispose.LeaveInputStreamOpen);
 
             await sut.BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken);
 
@@ -60,7 +60,7 @@ namespace Halibut.Tests.Transport.Streams
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
             using var memoryStream = CreateMemoryStreamPopulatedWith(bytesToWrite);
-            using var sut = new ReadIntoMemoryBufferStream(memoryStream, bytesToWrite.Length + 1, OnDispose.LeaveInputStreamOpen);
+            await using var sut = new ReadIntoMemoryBufferStream(memoryStream, bytesToWrite.Length + 1, OnDispose.LeaveInputStreamOpen);
 
             await sut.BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken);
 
@@ -81,7 +81,7 @@ namespace Halibut.Tests.Transport.Streams
             // Arrange
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
             using var memoryStream = CreateMemoryStreamPopulatedWith(bytesToWrite);
-            using var sut = new ReadIntoMemoryBufferStream(memoryStream, bytesToWrite.Length - 1, OnDispose.LeaveInputStreamOpen);
+            await using var sut = new ReadIntoMemoryBufferStream(memoryStream, bytesToWrite.Length - 1, OnDispose.LeaveInputStreamOpen);
 
             await sut.BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken);
 
@@ -108,7 +108,7 @@ namespace Halibut.Tests.Transport.Streams
             var bytesToWrite = Encoding.ASCII.GetBytes("Some bytes for testing");
             var readIntoMemoryLimitBytes = bytesToWrite.Length / 2;
             using var memoryStream = CreateMemoryStreamPopulatedWith(bytesToWrite);
-            using var sut = new ReadIntoMemoryBufferStream(memoryStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+            await using var sut = new ReadIntoMemoryBufferStream(memoryStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
 
             await sut.BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken);
 

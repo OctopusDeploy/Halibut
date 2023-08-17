@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Halibut.Transport.Streams;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,9 @@ namespace Halibut.Transport.Protocol
         
         public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
         {
+#if !NETFRAMEWORK
+            await
+#endif
             using (var file = new FileStream(filePath, FileMode.Create))
             {
                 await writerAsync(file, cancellationToken);

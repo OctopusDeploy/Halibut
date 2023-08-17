@@ -15,6 +15,9 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
             {
                 try
                 {
+#if !NETFRAMEWORK
+                    await
+#endif
                     using (var fileStreamLock = new FileStream(stayAliveFile, FileMode.Open, FileAccess.Read, FileShare.None))
                     {
                         Console.WriteLine("Got a lock, going to die now");

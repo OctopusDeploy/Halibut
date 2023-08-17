@@ -27,7 +27,7 @@ namespace Halibut.Tests
         [SyncAndAsyncTestCase("https://{machine}:{port}/")]
         public async Task SupportsHttpsGet(string address, SyncOrAsync syncOrAsync)
         {
-            using (var octopus = GetHalibutRuntime(syncOrAsync))
+            await using (var octopus = GetHalibutRuntime(syncOrAsync))
             {
                 var listenPort = octopus.Listen();
                 var uri = address.Replace("{machine}", Dns.GetHostName()).Replace("{port}", listenPort.ToString());
@@ -46,7 +46,7 @@ namespace Halibut.Tests
         {
             var expectedResult = expected ?? html; // Handle the null case which reverts to default html
 
-            using (var octopus = GetHalibutRuntime(syncOrAsync))
+            await using (var octopus = GetHalibutRuntime(syncOrAsync))
             {
                 octopus.SetFriendlyHtmlPageContent(html);
                 var listenPort = octopus.Listen();
@@ -61,7 +61,7 @@ namespace Halibut.Tests
         [SyncAndAsync]
         public async Task CanSetCustomFriendlyHtmlPageHeaders(SyncOrAsync syncOrAsync)
         {
-            using (var octopus = GetHalibutRuntime(syncOrAsync))
+            await using (var octopus = GetHalibutRuntime(syncOrAsync))
             {
                 octopus.SetFriendlyHtmlPageHeaders(new Dictionary<string, string> { { "X-Content-Type-Options", "nosniff" }, { "X-Frame-Options", "DENY" } });
                 var listenPort = octopus.Listen();
@@ -79,7 +79,7 @@ namespace Halibut.Tests
         public async Task ConnectingOverHttpShouldFailQuickly(SyncOrAsync syncOrAsync)
         {
             var logger = new SerilogLoggerBuilder().Build();
-            using (var octopus = GetHalibutRuntime(syncOrAsync))
+            await using (var octopus = GetHalibutRuntime(syncOrAsync))
             {
                 logger.Information("Halibut runtime created.");
                 var listenPort = octopus.Listen();

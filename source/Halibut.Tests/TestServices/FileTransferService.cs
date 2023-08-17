@@ -27,6 +27,9 @@ namespace Halibut.Tests.TestServices
                 },
                 async (writer, ct) =>
                 {
+#if !NETFRAMEWORK
+                    await
+#endif
                     using (var stream = new FileStream(remotePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
                         await stream.CopyToAsync(writer);

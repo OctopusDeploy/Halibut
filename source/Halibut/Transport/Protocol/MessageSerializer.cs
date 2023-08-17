@@ -73,9 +73,11 @@ namespace Halibut.Transport.Protocol
 
         public async Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
         {
-            using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
-            using var compressedInMemoryBuffer = new WriteIntoMemoryBufferStream(compressedByteCountingStream, writeIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
-
+            await using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+            await using var compressedInMemoryBuffer = new WriteIntoMemoryBufferStream(compressedByteCountingStream, writeIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+#if !NETFRAMEWORK
+            await
+#endif
             using (var zip = new DeflateStream(compressedInMemoryBuffer, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
@@ -127,7 +129,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task<T> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
         {
-            using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
+            await using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {
                 Exception exceptionFromDeserialisation = null;
                 try
@@ -199,13 +201,15 @@ namespace Halibut.Transport.Protocol
             rewindableBuffer.StartBuffer();
             try
             {
-                using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+                await using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
 
-                
+#if !NETFRAMEWORK
+            await
+#endif
                 using var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true);
-                using var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
+                await using var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
 
-                using var deflatedInMemoryStream = new ReadIntoMemoryBufferStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+                await using var deflatedInMemoryStream = new ReadIntoMemoryBufferStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
                 await deflatedInMemoryStream.BufferIntoMemoryFromSourceStreamUntilLimitReached(cancellationToken);
 
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })

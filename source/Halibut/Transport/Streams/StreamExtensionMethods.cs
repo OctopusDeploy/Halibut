@@ -71,7 +71,6 @@ namespace Halibut.Transport.Streams
         /// </summary>
         /// <param name="stream"></param>
         /// <param name="bytes"></param>
-        /// <param name="cancellationToken"></param>
         public static void WriteByteArray(this Stream stream, byte[] bytes)
         {
             stream.Write(bytes, 0, bytes.Length);

@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Protocol
 {
@@ -79,7 +80,9 @@ namespace Halibut.Transport.Protocol
         public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
         {
             if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
-
+#if !NETFRAMEWORK
+            await
+#endif
             using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
             {
                 await readerAsync(file, cancellationToken);

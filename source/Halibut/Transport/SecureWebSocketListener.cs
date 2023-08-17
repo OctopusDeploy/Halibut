@@ -77,6 +77,9 @@ namespace Halibut.Transport
 
         async Task Accept()
         {
+#if !NETFRAMEWORK
+            await
+#endif
             using (cts.Token.Register(listener.Stop))
             {
                 while (!cts.IsCancellationRequested)
@@ -182,6 +185,10 @@ namespace Halibut.Transport
 
             // This could fail if the client terminates the connection and we attempt to write to it
             // Disposing the StreamWriter will close the stream - it owns the stream
+
+#if !NETFRAMEWORK
+            await
+#endif
             using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)){ NewLine = "\r\n" })
             {
                 if (asyncHalibutFeature.IsEnabled())
