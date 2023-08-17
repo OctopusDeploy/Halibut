@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Transport.Streams
 {
-    public class ErrorRecordingStream : Stream
+    public class ErrorRecordingStream : AsyncDisposableStream
     {
         readonly Stream innerStream;
         readonly bool closeInner;
@@ -108,12 +108,20 @@ namespace Halibut.Transport.Streams
             get => innerStream.Position;
             set => innerStream.Position = value;
         }
-
+        
         protected override void Dispose(bool disposing)
         {
             if (closeInner && disposing)
             {
                 innerStream.Dispose();
+            }
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            if (closeInner)
+            {
+                await innerStream.DisposeAsync();
             }
         }
     }

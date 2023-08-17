@@ -26,7 +26,7 @@ namespace Halibut.Transport
 
         public Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         // Connection is Lazy instantiated, so it is safe to use. If you need to wait for it to open (eg for error handling, an openConnection method is provided)
@@ -85,7 +85,7 @@ namespace Halibut.Transport
 
         public Task ReleaseConnectionAsync(ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         [Obsolete]
@@ -99,7 +99,7 @@ namespace Halibut.Transport
 
         public Task ClearPooledConnectionsAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         static IConnection[] NoConnections = new IConnection[0];
@@ -125,7 +125,7 @@ namespace Halibut.Transport
 
         public Task DisconnectAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         public void Dispose()
@@ -143,6 +143,10 @@ namespace Halibut.Transport
             IsDisposed = true;
         }
 
+        public ValueTask DisposeAsync()
+        {
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
+        }
 
         void ClearActiveConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
@@ -209,6 +213,11 @@ namespace Halibut.Transport
                 {
                     onDisposed(this);
                 }
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                throw new NotSupportedException("Should not be called when async Halibut is not being used.");
             }
 
             public void NotifyUsed()

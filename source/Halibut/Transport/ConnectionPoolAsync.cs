@@ -46,7 +46,7 @@ namespace Halibut.Transport
                     if (connection == null || !connection.HasExpired())
                         return connection;
 
-                    await DestroyConnectionAsync(connection, null, cancellationToken);
+                    await DestroyConnectionAsync(connection, null);
                 }
             }
         }
@@ -79,7 +79,7 @@ namespace Halibut.Transport
                 while (connections.Count > 5)
                 {
                     var connection = Take(connections);
-                    await DestroyConnectionAsync(connection, null, cancellationToken);
+                    await DestroyConnectionAsync(connection, null);
                 }
             }
         }
@@ -111,7 +111,7 @@ namespace Halibut.Transport
 
                 foreach (var connection in connections)
                 {
-                    await DestroyConnectionAsync(connection, log, cancellationToken);
+                    await DestroyConnectionAsync(connection, log);
                 }
 
                 connections.Clear();
@@ -126,6 +126,19 @@ namespace Halibut.Transport
                 foreach (var connection in pool.SelectMany(kv => kv.Value))
                 {
                     DestroyConnection(connection, null);
+                }
+
+                pool.Clear();
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            using (await poolLock.LockAsync())
+            {
+                foreach (var connection in pool.SelectMany(kv => kv.Value))
+                {
+                    await DestroyConnectionAsync(connection, null);
                 }
 
                 pool.Clear();
@@ -153,7 +166,7 @@ namespace Halibut.Transport
             return connections;
         }
 
-        void DestroyConnection(TPooledResource connection, ILog log)
+        static void DestroyConnection(TPooledResource connection, ILog log)
         {
             try
             {
@@ -165,14 +178,14 @@ namespace Halibut.Transport
             }
         }
 
-        async Task DestroyConnectionAsync(TPooledResource connection, ILog log, CancellationToken cancellationToken)
+        static async Task DestroyConnectionAsync(TPooledResource connection, ILog log)
         {
-            // TODO - ASYNC ME UP! This will come when the async disposal story is done
-            await Task.CompletedTask;
-
             try
             {
-                connection?.Dispose();
+                if (connection is not null)
+                {
+                    await connection.DisposeAsync();
+                }
             }
             catch (Exception ex)
             {

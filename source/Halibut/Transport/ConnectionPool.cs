@@ -33,7 +33,7 @@ namespace Halibut.Transport
 
         public Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         [Obsolete]
@@ -55,7 +55,7 @@ namespace Halibut.Transport
 
         public Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         [Obsolete]
@@ -78,7 +78,7 @@ namespace Halibut.Transport
 
         public Task ClearAsync(TKey key, ILog log, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException("Should not be called when async Halibut is not being used.");
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         public void Dispose()
@@ -92,6 +92,11 @@ namespace Halibut.Transport
 
                 pool.Clear();
             }
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
         }
 
         private TPooledResource Take(HashSet<TPooledResource> connections)

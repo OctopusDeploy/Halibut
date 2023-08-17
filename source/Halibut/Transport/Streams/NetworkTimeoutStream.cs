@@ -9,13 +9,18 @@ using Halibut.Util;
 
 namespace Halibut.Transport.Streams
 {
-    class NetworkTimeoutStream : Stream
+    class NetworkTimeoutStream : AsyncDisposableStream
     {
         readonly Stream inner;
 
         public NetworkTimeoutStream(Stream inner)
         {
             this.inner = inner;
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            await inner.DisposeAsync();
         }
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
@@ -193,8 +198,6 @@ namespace Halibut.Transport.Streams
 
 #if !NETFRAMEWORK
         public override void CopyTo(Stream destination, int bufferSize) => inner.CopyTo(destination, bufferSize);
-        
-        public override async ValueTask DisposeAsync() => await inner.DisposeAsync();
         
         public override int Read(Span<byte> buffer) => inner.Read(buffer);
 

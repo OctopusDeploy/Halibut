@@ -39,7 +39,7 @@ namespace Halibut.Tests.Util
             return inner.Read(buffer, offset, count);
         }
         
-        public async override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             beforeReadAction(inner);
             return await inner.ReadAsync(buffer, offset, count, cancellationToken);
@@ -51,7 +51,7 @@ namespace Halibut.Tests.Util
             inner.Write(buffer, offset, count);
         }
         
-        public async override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             beforeWriteAction(inner);
             await inner.WriteAsync(buffer, offset, count, cancellationToken);
