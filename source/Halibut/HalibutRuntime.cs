@@ -52,7 +52,7 @@ namespace Halibut
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate) : this(serviceFactory, serverCertificate, new DefaultTrustProvider())
         {
         }
-
+        
         [Obsolete]
         public HalibutRuntime(IServiceFactory serviceFactory, X509Certificate2 serverCertificate, ITrustProvider trustProvider)
         {
@@ -181,7 +181,7 @@ namespace Halibut
 
         Task HandleMessageAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
         {
-            return protocol.ExchangeAsServerAsync(HandleIncomingRequest, id => GetQueue(id.SubscriptionId), cancellationToken);
+            return protocol.ExchangeAsServerAsync(HandleIncomingRequestAsync, id => GetQueue(id.SubscriptionId), cancellationToken);
         }
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
@@ -205,7 +205,15 @@ namespace Halibut
             {
                 client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, log, connectionManager);
             }
-            pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
+
+            if (AsyncHalibutFeature.IsEnabled())
+            {
+                pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequestAsync, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
+            }
+            else
+            {
+                pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
+            }
         }
 
         [Obsolete]
@@ -415,6 +423,11 @@ namespace Halibut
             return invoker.Invoke(request);
         }
 
+        async Task<ResponseMessage> HandleIncomingRequestAsync(RequestMessage request)
+        {
+            return await invoker.InvokeAsync(request);
+        }
+
         public void Trust(string clientThumbprint)
         {
             trustProvider.Add(clientThumbprint);
@@ -504,10 +517,24 @@ namespace Halibut
                     listener?.Dispose();
                 }
             }
+        }
 
+        public async ValueTask DisposeAsync()
+        {
+            pollingClients.Dispose();
+            await connectionManager.DisposeAsync();
+            
             if (responseCache.IsValueCreated)
             {
-                responseCache.Value.Dispose();
+                responseCache.Value?.Dispose();
+            }
+
+            lock (listeners)
+            {
+                foreach (var listener in listeners)
+                {
+                    listener?.Dispose();
+                }
             }
         }
 
@@ -526,6 +553,5 @@ namespace Halibut
         public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                                    Environment.OSVersion.Version >= new Version(6, 2);
 #pragma warning restore DE0009 // API is deprecated
-
     }
 }

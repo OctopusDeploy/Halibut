@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Observability
 {
@@ -11,7 +12,7 @@ namespace Halibut.Transport.Observability
         LeaveInputStreamOpen
     }
 
-    public class ByteCountingStream : Stream
+    public class ByteCountingStream : AsyncDisposableStream
     {
         readonly Stream countBytesFromStream;
         readonly OnDispose onDispose;
@@ -45,6 +46,14 @@ namespace Halibut.Transport.Observability
             }
         }
 
+        public override async ValueTask DisposeAsync()
+        {
+            if (onDispose == OnDispose.DisposeInputStream)
+            {
+                await countBytesFromStream.DisposeAsync();
+            }
+        }
+
         public override long Position
         {
             get => countBytesFromStream.Position;
@@ -62,7 +71,7 @@ namespace Halibut.Transport.Observability
             get => countBytesFromStream.WriteTimeout;
             set => countBytesFromStream.WriteTimeout = value;
         }
-        
+
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => countBytesFromStream.CopyToAsync(destination, bufferSize, cancellationToken);
         
         public override void Flush() => countBytesFromStream.Flush();

@@ -1,32 +1,32 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Exceptions;
-using Halibut.Util;
+using Halibut.ServiceModel;
 
-namespace Halibut.ServiceModel
+namespace Halibut.Tests.Util
 {
-    public class DelegateServiceFactory : IServiceFactory
+    // Just like the DelegateServiceFactory, but without any sanity checking
+    // when registering async implementations of sync services.
+    public class NoSanityCheckingDelegateServiceFactory : IServiceFactory
     {
-        readonly Dictionary<string, Func<object>> services = new Dictionary<string, Func<object>>(StringComparer.OrdinalIgnoreCase);
-        readonly HashSet<Type> serviceTypes = new HashSet<Type>();
+        readonly Dictionary<string, Func<object>> services = new(StringComparer.OrdinalIgnoreCase);
+        readonly HashSet<Type> serviceTypes = new();
 
-        public DelegateServiceFactory Register<TContract>(Func<TContract> implementation)
+        public NoSanityCheckingDelegateServiceFactory Register<TContract>(Func<TContract> implementation)
         {
             var serviceType = typeof(TContract);
             services.Add(serviceType.Name, () => implementation());
             lock (serviceTypes)
             {
-                serviceTypes.Add(serviceType);    
+                serviceTypes.Add(serviceType);
             }
 
             return this;
         }
 
-        public DelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
+        public NoSanityCheckingDelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
         {
-            AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<TContract, TAsyncContract>();
-            
             var serviceType = typeof(TContract);
             services.Add(serviceType.Name, () => implementation());
             lock (serviceTypes)
@@ -58,40 +58,36 @@ namespace Halibut.ServiceModel
             var service = serviceBuilder();
             return new Lease(service);
         }
-        
+
         public IReadOnlyList<Type> RegisteredServiceTypes
         {
             get
             {
                 lock (serviceTypes)
                 {
-                    return serviceTypes.ToList();    
+                    return serviceTypes.ToList();
                 }
             }
         }
+    }
 
-        #region Nested type: Lease
+    class Lease : IServiceLease
+    {
+        readonly object service;
 
-        class Lease : IServiceLease
+        public Lease(object service)
         {
-            readonly object service;
-
-            public Lease(object service)
-            {
-                this.service = service;
-            }
-
-            public object Service => service;
-
-            public void Dispose()
-            {
-                if (service is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-            }
+            this.service = service;
         }
 
-        #endregion
+        public object Service => service;
+
+        public void Dispose()
+        {
+            if (service is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
     }
 }

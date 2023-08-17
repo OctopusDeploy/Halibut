@@ -6,7 +6,9 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
@@ -25,6 +27,7 @@ namespace Halibut.Tests.Support
 {
     public class LatestClientAndLatestServiceBuilder : IClientAndServiceBuilder
     {
+        ServiceFactoryBuilder serviceFactoryBuilder = new();
         IServiceFactory? serviceFactory;
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
@@ -114,6 +117,12 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public LatestClientAndLatestServiceBuilder WithAsyncConventionsDisabled()
+        {
+            serviceFactoryBuilder = serviceFactoryBuilder.WithConventionVerificationDisabled();
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
             this.serviceFactory = serviceFactory;
@@ -122,9 +131,38 @@ namespace Halibut.Tests.Support
         
         public LatestClientAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
-            if (serviceFactory == null) serviceFactory = new DelegateServiceFactory();
-            if (serviceFactory is not DelegateServiceFactory) throw new Exception("WithService can only be used with a delegate service factory");
-            (serviceFactory as DelegateServiceFactory)?.Register(implementation);
+            serviceFactoryBuilder.WithService(implementation);
+            
+            if (serviceFactory != null)
+            {
+                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
+                {
+                    delegateServiceFactory.Register(implementation);
+                }
+                else
+                {
+                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
+                }
+            }
+
+            return this;
+        }
+
+        public LatestClientAndLatestServiceBuilder WithAsyncService<TContract, TClientContract>(Func<TClientContract> implementation)
+        {
+            serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);
+            
+            if (serviceFactory != null)
+            {
+                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
+                {
+                    delegateServiceFactory.Register<TContract, TClientContract>(implementation);
+                }
+                else
+                {
+                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
+                }
+            }
 
             return this;
         }
@@ -310,7 +348,7 @@ namespace Halibut.Tests.Support
             var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndLatestServiceBuilder>();
             CancellationTokenSource cancellationTokenSource = new();
             
-            serviceFactory ??= new DelegateServiceFactory();
+            serviceFactory ??= serviceFactoryBuilder.Build();
             var octopusLogFactory = BuildClientLogger();
 
             var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
@@ -578,15 +616,35 @@ namespace Halibut.Tests.Support
                 logger.Information("*     Subsequent errors should be ignored      *");
                 logger.Information("****** ****** ****** ****** ****** ****** ******");
 
-                Action<Exception> logError = e => logger.Warning(e, "Ignoring error in dispose");
+                void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
 
-                Try.CatchingError(() => cancellationTokenSource?.Cancel(), logError);
-                Try.CatchingError(Client.Dispose, logError);
-                Try.CatchingError(() => Service?.Dispose(), logError);
-                Try.CatchingError(() => HttpProxy?.Dispose(), logError);
-                Try.CatchingError(() => PortForwarder?.Dispose(), logError);
-                Try.CatchingError(disposableCollection.Dispose, logError);
-                Try.CatchingError(() => cancellationTokenSource?.Dispose(), logError);
+                Try.CatchingError(() => cancellationTokenSource?.Cancel(), LogError);
+
+                if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+                {
+                    Try.DisposingAsync(Client, LogError).GetAwaiter().GetResult();
+                }
+                else
+                {
+                    Try.CatchingError(Client.Dispose, LogError);
+                }
+
+                if (Service is not null)
+                {
+                    if (Service.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+                    {
+                        Try.DisposingAsync(Service, LogError).GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        Try.CatchingError(Service.Dispose, LogError);
+                    }
+                }
+
+                Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
+                Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
+                Try.CatchingError(disposableCollection.Dispose, LogError);
+                Try.CatchingError(() => cancellationTokenSource?.Dispose(), LogError);
             }
         }
     }
