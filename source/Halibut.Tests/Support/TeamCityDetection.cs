@@ -1,10 +1,11 @@
 using System;
+using NUnit.Framework.Constraints;
 
 namespace Halibut.Tests.Support
 {
     public class TeamCityDetection
     {
-        public static bool IsRunningInTeamCity()
+        public static Lazy<bool> IsRunningInTeamcityLazy = new Lazy<bool>(() =>
         {
             foreach (var tcEnvVar in new string[] { "TEAMCITY_VERSION", "TEAMCITY_BUILD_ID" })
             {
@@ -15,6 +16,11 @@ namespace Halibut.Tests.Support
                 }
             }
             return false;
+        });
+        
+        public static bool IsRunningInTeamCity()
+        {
+            return IsRunningInTeamcityLazy.Value;
         }
     }
 }
