@@ -40,5 +40,10 @@ namespace Halibut.ServiceModel
 
             return syncMethodInfo;
         }
+
+        public static string GetAsyncMethodName(string methodName)
+        {
+            return methodName + "Async";
+        }
     }
 }

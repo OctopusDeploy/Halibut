@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Halibut.TestUtils.Contracts
 {
@@ -13,6 +14,22 @@ namespace Halibut.TestUtils.Contracts
         public int GetCurrentValue()
         {
             return count;
+        }
+    }
+    
+    public class AsyncCountingService : IAsyncCountingService
+    {
+        ICountingService service = new CountingService();
+        public async Task<int> IncrementAsync(CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            return service.Increment();
+        }
+
+        public async Task<int> GetCurrentValueAsync(CancellationToken cancellationToken)
+        {
+            await Task.CompletedTask;
+            return service.GetCurrentValue();
         }
     }
 }

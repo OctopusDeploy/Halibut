@@ -6,6 +6,7 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
@@ -26,6 +27,7 @@ namespace Halibut.Tests.Support
 {
     public class LatestClientAndLatestServiceBuilder : IClientAndServiceBuilder
     {
+        ServiceFactoryBuilder serviceFactoryBuilder = new();
         IServiceFactory? serviceFactory;
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
@@ -115,6 +117,12 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public LatestClientAndLatestServiceBuilder WithAsyncConventionsDisabled()
+        {
+            serviceFactoryBuilder = serviceFactoryBuilder.WithConventionVerificationDisabled();
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
             this.serviceFactory = serviceFactory;
@@ -123,9 +131,38 @@ namespace Halibut.Tests.Support
         
         public LatestClientAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
-            if (serviceFactory == null) serviceFactory = new DelegateServiceFactory();
-            if (serviceFactory is not DelegateServiceFactory) throw new Exception("WithService can only be used with a delegate service factory");
-            (serviceFactory as DelegateServiceFactory)?.Register(implementation);
+            serviceFactoryBuilder.WithService(implementation);
+            
+            if (serviceFactory != null)
+            {
+                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
+                {
+                    delegateServiceFactory.Register(implementation);
+                }
+                else
+                {
+                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
+                }
+            }
+
+            return this;
+        }
+
+        public LatestClientAndLatestServiceBuilder WithAsyncService<TContract, TClientContract>(Func<TClientContract> implementation)
+        {
+            serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);
+            
+            if (serviceFactory != null)
+            {
+                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
+                {
+                    delegateServiceFactory.Register<TContract, TClientContract>(implementation);
+                }
+                else
+                {
+                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
+                }
+            }
 
             return this;
         }
@@ -311,7 +348,7 @@ namespace Halibut.Tests.Support
             var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndLatestServiceBuilder>();
             CancellationTokenSource cancellationTokenSource = new();
             
-            serviceFactory ??= new DelegateServiceFactory();
+            serviceFactory ??= serviceFactoryBuilder.Build();
             var octopusLogFactory = BuildClientLogger();
 
             var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
