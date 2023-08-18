@@ -211,8 +211,10 @@ namespace Halibut.Transport.Protocol
                 // If the end of stream was found and we read nothing from the streams
                 if (stream.WasTheEndOfStreamEncountered && compressedByteCountingStream.BytesRead == 0 && decompressedByteCountingStream.BytesRead == 0)
                 {
-                    // Return null since that is what this would do.
-                    // However doing this if here means we don't do sync IO
+                    // When this happens we would normally continue to the BsonDataReader which would
+                    // do a sync read(), to find that the stream had ended. We avoid that sync call by
+                    // short circuiting to what would happen which is:  
+                    // The BsonReader would return a non null MessageEnvelope with a null message, which is what we do here.
                     return new MessageEnvelope<T>().Message; // And hack around we can't return null
                 }
 
