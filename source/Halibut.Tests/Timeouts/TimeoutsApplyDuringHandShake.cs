@@ -20,10 +20,10 @@ namespace Halibut.Tests.Timeouts
     public class TimeoutsApplyDuringHandShake : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { true, 1 })]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { false, 1 })]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { true, 2 })]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, additionalParameters: new object[] { false, 2 })]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, additionalParameters: new object[] { true, 1 })]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, additionalParameters: new object[] { false, 1 })]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, additionalParameters: new object[] { true, 2 })]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, additionalParameters: new object[] { false, 2 })]
         public async Task WhenTheFirstWriteOverTheWireOccursOnAConnectionThatImmediatelyPauses_AWriteTimeoutShouldApply(
             ClientAndServiceTestCase clientAndServiceTestCase,
             bool onClientToOrigin, // Don't dwell on what this means, we just want to test all combinations of where the timeout can occur.
