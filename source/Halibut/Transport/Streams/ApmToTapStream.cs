@@ -8,6 +8,10 @@ using Halibut.Util;
 
 namespace Halibut.Transport.Streams
 {
+    /// <summary>
+    /// Ensures that calls to old APM-style async methods are redirected
+    /// to new TAP-style async methods.
+    /// </summary>
     class ApmToTapStream : AsyncDisposableStream
     {
         readonly Stream inner;
@@ -39,7 +43,8 @@ namespace Halibut.Transport.Streams
 
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
         {
-            // BeginRead does not respect timeouts. So force it to use ReadAsync, which does.
+            // Don't continue down the `BeginRead` execution path, as that will eventually go sync.
+            // Redirect to ReadAsync to ensure code execution stays async.
             return ReadAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
         }
 
@@ -57,7 +62,8 @@ namespace Halibut.Transport.Streams
 
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
         {
-            // BeginWrite does not respect timeouts. So force it to use WriteAsync, which does.
+            // Don't continue down the `BeginWrite` execution path, as that will eventually go sync.
+            // Redirect to WriteAsync to ensure code execution stays async.
             return WriteAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
         }
 
