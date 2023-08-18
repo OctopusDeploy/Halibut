@@ -89,56 +89,33 @@ namespace Halibut.Transport.Streams
 
         async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
-            int timeout, 
+            int timeout,
             bool isRead,
-            string methodName, 
+            string methodName,
             CancellationToken cancellationToken)
         {
-            using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
-            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellationTokenSource.Token);
-
-            var actionTask = action(linkedCancellationTokenSource.Token);
-            var cancellationTask = linkedCancellationTokenSource.Token.AsTask<T>();
-
-            try
+            void OnCancellationAction()
             {
-                var completedTask = await Task.WhenAny(actionTask, cancellationTask);
-
-                if (completedTask == cancellationTask)
+                try
                 {
-                    actionTask.IgnoreUnobservedExceptions();
-
-                    try
-                    {
-                        inner.Close();
-                    }
-                    catch { }
-
-                    ThrowMeaningfulException();
+                    inner.Close();
                 }
+                catch { }
+            };
 
-                return await actionTask;
-            }
-            catch (Exception e)
+            Exception CreateExceptionOnTimeout()
             {
-                ThrowMeaningfulException(e);
-
-                throw;
+                var socketException = new SocketException(10060);
+                return new IOException($"Unable to {(isRead ? "read data from" : "write data to")} the transport connection: {socketException.Message}.", socketException);
             }
 
-            void ThrowMeaningfulException(Exception? innerException = null)
-            {
-                if (timeoutCancellationTokenSource.IsCancellationRequested)
-                {
-                    var socketException = new SocketException(10060);
-                    throw new IOException($"Unable to {(isRead ? "read data from" : "write data to")} the transport connection: {socketException.Message}.", socketException);
-                }
-
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException($"The {methodName} operation was cancelled.", innerException);
-                }
-            }
+            return await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(
+                action,
+                OnCancellationAction,
+                CreateExceptionOnTimeout,
+                TimeSpan.FromMilliseconds(timeout),
+                methodName,
+                cancellationToken);
         }
 
         public override void Close() => inner.Close();
@@ -227,6 +204,7 @@ namespace Halibut.Transport.Streams
         public override bool CanSeek => inner.CanSeek;
         public override bool CanWrite => inner.CanWrite;
         public override long Length => inner.Length;
+
         public override long Position
         {
             get => inner.Position;
