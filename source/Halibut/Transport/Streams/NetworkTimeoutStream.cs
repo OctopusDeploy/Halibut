@@ -15,6 +15,8 @@ namespace Halibut.Transport.Streams
     class NetworkTimeoutStream : AsyncDisposableStream
     {
         readonly Stream inner;
+        bool hasTimedOut = false;
+        Exception? timeoutException = null;
 
         public NetworkTimeoutStream(Stream inner)
         {
@@ -23,6 +25,8 @@ namespace Halibut.Transport.Streams
 
         public override async ValueTask DisposeAsync()
         {
+            ThrowIfAlreadyTimedOut();
+
             await inner.DisposeAsync();
         }
 
@@ -90,13 +94,23 @@ namespace Halibut.Transport.Streams
         }
 #endif
 
-        public override void Close() => inner.Close();
+        public override void Close()
+        {
+            ThrowIfAlreadyTimedOut();
+            
+            inner.Close();
+        }
 
-        public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => await inner.CopyToAsync(destination, bufferSize, cancellationToken);
-        
+        public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+        {
+            ThrowIfAlreadyTimedOut();
+            
+            await inner.CopyToAsync(destination, bufferSize, cancellationToken);
+        }
+
         public override int ReadByte()
         {
-            return CloseOnTimeout(() => inner.ReadByte());
+            return TryCloseOnTimeout(() => inner.ReadByte());
         }
 
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
@@ -136,61 +150,105 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        public override void Flush() => inner.Flush();
+        public override void Flush()
+        {
+            ThrowIfAlreadyTimedOut();
+            
+            inner.Flush();
+        }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            return CloseOnTimeout(() => inner.Read(buffer, offset, count));
+            return TryCloseOnTimeout(() => inner.Read(buffer, offset, count));
         }
 
-        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            ThrowIfAlreadyTimedOut();
+            
+            return inner.Seek(offset, origin);
+        }
 
-        public override void SetLength(long value) => inner.SetLength(value);
+        public override void SetLength(long value)
+        {
+            ThrowIfAlreadyTimedOut();
+            
+            inner.SetLength(value);
+        }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            CloseOnTimeout(() => inner.Write(buffer, offset, count));
+            TryCloseOnTimeout(() => inner.Write(buffer, offset, count));
         }
 
         public override void WriteByte(byte value)
         {
-            CloseOnTimeout(() => inner.WriteByte(value));
+            TryCloseOnTimeout(() => inner.WriteByte(value));
         }
 
 #if !NETFRAMEWORK
-        public override void CopyTo(Stream destination, int bufferSize) => inner.CopyTo(destination, bufferSize);
-        
+        public override void CopyTo(Stream destination, int bufferSize)
+        {
+            ThrowIfAlreadyTimedOut();
+            
+            inner.CopyTo(destination, bufferSize);
+        }
+
         public override int Read(Span<byte> buffer)
         {
+            ThrowIfAlreadyTimedOut();
+
             try
             {
                 return inner.Read(buffer);
             }
             catch (Exception ex) when (IsTimeoutException(ex))
             {
-                inner.Close();
+                try
+                {
+                    CloseOnTimeout(ex);
+                }
+                catch { }
+
                 throw;
             }
         }
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
+            ThrowIfAlreadyTimedOut();
+
             try
             {
                 inner.Write(buffer);
             }
             catch (Exception ex) when (IsTimeoutException(ex))
             {
-                inner.Close();
+                try
+                {
+                    CloseOnTimeout(ex);
+                }
+                catch { }
+
                 throw;
             }
         }
 #endif
 
 #if NETFRAMEWORK
-        public override ObjRef CreateObjRef(Type requestedType) => inner.CreateObjRef(requestedType);
+        public override ObjRef CreateObjRef(Type requestedType)
+        {
+            ThrowIfAlreadyTimedOut();
+            
+            return inner.CreateObjRef(requestedType);
+        }
 
-        public override object? InitializeLifetimeService() => inner.InitializeLifetimeService();
+        public override object? InitializeLifetimeService()
+        {
+            ThrowIfAlreadyTimedOut();
+
+            return inner.InitializeLifetimeService();
+        }
 #endif
 
         public override int ReadTimeout
@@ -236,6 +294,8 @@ namespace Halibut.Transport.Streams
             string methodName, 
             CancellationToken cancellationToken)
         {
+            ThrowIfAlreadyTimedOut();
+
             using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellationTokenSource.Token);
 
@@ -283,26 +343,51 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        void CloseOnTimeout(Action action)
+        void TryCloseOnTimeout(Action action)
         {
-            CloseOnTimeout<object?>(() =>
+            ThrowIfAlreadyTimedOut();
+
+            try
             {
                 action();
-                return null;
-            });
+            }
+            catch (Exception ex) when (IsTimeoutException(ex))
+            {
+                try
+                {
+                    CloseOnTimeout(ex);
+                }
+                catch { }
+
+                throw;
+            }
         }
 
-        T CloseOnTimeout<T>(Func<T> action)
+        T TryCloseOnTimeout<T>(Func<T> action)
         {
+            ThrowIfAlreadyTimedOut();
+
             try
             {
                 return action();
             }
             catch (Exception ex) when (IsTimeoutException(ex))
             {
-                inner.Close();
+                try
+                {
+                    CloseOnTimeout(ex);
+                }
+                catch { }
+
                 throw;
             }
+        }
+
+        void CloseOnTimeout(Exception ex)
+        {
+            timeoutException = ex;
+            hasTimedOut = true;
+            inner.Close();
         }
 
         static bool IsTimeoutException(Exception exception)
@@ -313,6 +398,14 @@ namespace Halibut.Transport.Streams
             }
 
             return exception.InnerException != null && IsTimeoutException(exception.InnerException);
+        }
+
+        void ThrowIfAlreadyTimedOut()
+        {
+            if (hasTimedOut)
+            {
+                throw timeoutException ?? new SocketException((int)SocketError.TimedOut);
+            }
         }
     }
 }

@@ -280,11 +280,10 @@ namespace Halibut.Tests.Transport.Streams
             await client.ConnectAsync("localhost", ((IPEndPoint)service.LocalEndpoint).Port);
             
             var clientStream = client.GetStream();
-            disposableCollection.Add(clientStream);
-
             var callCountingStream = new CallCountingStream(clientStream);
             var sut = new NetworkTimeoutStream(callCountingStream);
-            disposableCollection.Add(sut);
+
+            disposableCollection.AddIgnoringDisposalError(sut);
 
             while (performServiceWriteFunc == null)
             { 

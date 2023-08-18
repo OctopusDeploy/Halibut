@@ -60,10 +60,9 @@ namespace Halibut.Transport
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
                 using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, log, cancellationToken))
                 {
-                    using (var networkStream = client.GetStream())
+                    using (var networkStream = client.GetStream().AsNetworkTimeoutStream())
                     {
-                        var networkTimeoutStream = new NetworkTimeoutStream(networkStream);
-                        using (var ssl = new SslStream(networkTimeoutStream, false, ValidateCertificate))
+                        using (var ssl = new SslStream(networkStream, false, ValidateCertificate))
                         {
 #if NETFRAMEWORK
                             // TODO: ASYNC ME UP!

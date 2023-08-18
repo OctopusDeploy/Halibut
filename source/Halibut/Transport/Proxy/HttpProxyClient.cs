@@ -340,7 +340,7 @@ namespace Halibut.Transport.Proxy
         
         async Task SendConnectionCommandAsync(string host, int port, CancellationToken cancellationToken)
         {
-            var stream = new NetworkTimeoutStream(TcpClient.GetStream());
+            var stream = TcpClient.GetStream().AsNetworkTimeoutStream();
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 

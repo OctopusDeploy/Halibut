@@ -60,9 +60,8 @@ namespace Halibut.Transport
             var client = await CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
             
-            var networkStream = client.GetStream();
-            var networkTimeoutStream = new NetworkTimeoutStream(networkStream);
-            var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
+            var networkStream = client.GetStream().AsNetworkTimeoutStream();
+            var ssl = new SslStream(networkStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
 
