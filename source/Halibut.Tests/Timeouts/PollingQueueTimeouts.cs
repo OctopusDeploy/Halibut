@@ -18,7 +18,7 @@ namespace Halibut.Tests.Timeouts
     public class PollingQueueTimeouts : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();

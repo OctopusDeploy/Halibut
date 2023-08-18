@@ -167,8 +167,10 @@ namespace Halibut.Transport
 
                     errorEventType = EventType.Error;
 
+                    var halibutLimitsStream = new HalibutLimitsStream(webSocketStream, halibutTimeoutsAndLimits.TcpClientReceiveTimeout, halibutTimeoutsAndLimits.TcpClientSendTimeout);
+
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                    await ExchangeMessages(webSocketStream).ConfigureAwait(false);
+                    await ExchangeMessages(new NetworkTimeoutStream(halibutLimitsStream)).ConfigureAwait(false);
                 }
             }
             catch (TaskCanceledException)
@@ -247,7 +249,7 @@ namespace Halibut.Transport
             return true;
         }
 
-        Task ExchangeMessages(WebSocketStream stream)
+        Task ExchangeMessages(Stream stream)
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
