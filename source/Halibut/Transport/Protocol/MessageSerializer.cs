@@ -194,7 +194,7 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task<T> ReadCompressedMessageAsync<T>(Stream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
+        async Task<T> ReadCompressedMessageAsync<T>(ErrorRecordingStream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
         {
             rewindableBuffer.StartBuffer();
             try
@@ -207,6 +207,14 @@ namespace Halibut.Transport.Protocol
 
                 using var deflatedInMemoryStream = new ReadIntoMemoryBufferStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
                 await deflatedInMemoryStream.BufferIntoMemoryFromSourceStreamUntilLimitReached(cancellationToken);
+                
+                // If the end of stream was found and we read nothing from the streams
+                if (stream.WasTheEndOfStreamEncountered && compressedByteCountingStream.BytesRead == 0 && decompressedByteCountingStream.BytesRead == 0)
+                {
+                    // Return null since that is what this would do.
+                    // However doing this if here means we don't do sync IO
+                    return new MessageEnvelope<T>().Message; // And hack around we can't return null
+                }
 
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
                 {
