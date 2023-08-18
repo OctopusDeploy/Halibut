@@ -2,10 +2,13 @@
 using System;
 using System.IO;
 using System.Net.Sockets;
-using System.Runtime.Remoting;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Util;
+
+#if NETFRAMEWORK
+using System.Runtime.Remoting;
+#endif
 
 namespace Halibut.Transport.Streams
 {
@@ -87,6 +90,145 @@ namespace Halibut.Transport.Streams
         }
 #endif
 
+        public override void Close() => inner.Close();
+
+        public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => await inner.CopyToAsync(destination, bufferSize, cancellationToken);
+        
+        public override int ReadByte()
+        {
+            return CloseOnTimeout(() => inner.ReadByte());
+        }
+
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        {
+            // BeginRead does not respect timeouts. So force it to use ReadAsync, which does.
+            return ReadAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
+        }
+
+        public override int EndRead(IAsyncResult asyncResult)
+        {
+            try
+            {
+                return ((Task<int>)asyncResult).Result;
+            }
+            catch (AggregateException e) when (e.InnerExceptions.Count == 1 && e.InnerException is not null)
+            {
+                throw e.InnerException;
+            }
+        }
+
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        {
+            // BeginWrite does not respect timeouts. So force it to use WriteAsync, which does.
+            return WriteAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
+        }
+
+        public override void EndWrite(IAsyncResult asyncResult)
+        {
+            var task = (Task)asyncResult;
+            try
+            {
+                Task.WaitAll(task);
+            }
+            catch (AggregateException e) when (e.InnerExceptions.Count == 1 && e.InnerException is not null)
+            {
+                throw e.InnerException;
+            }
+        }
+
+        public override void Flush() => inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            return CloseOnTimeout(() => inner.Read(buffer, offset, count));
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
+
+        public override void SetLength(long value) => inner.SetLength(value);
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            CloseOnTimeout(() => inner.Write(buffer, offset, count));
+        }
+
+        public override void WriteByte(byte value)
+        {
+            CloseOnTimeout(() => inner.WriteByte(value));
+        }
+
+#if !NETFRAMEWORK
+        public override void CopyTo(Stream destination, int bufferSize) => inner.CopyTo(destination, bufferSize);
+        
+        public override int Read(Span<byte> buffer)
+        {
+            try
+            {
+                return inner.Read(buffer);
+            }
+            catch (Exception ex) when (IsTimeoutException(ex))
+            {
+                inner.Close();
+                throw;
+            }
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            try
+            {
+                inner.Write(buffer);
+            }
+            catch (Exception ex) when (IsTimeoutException(ex))
+            {
+                inner.Close();
+                throw;
+            }
+        }
+#endif
+
+#if NETFRAMEWORK
+        public override ObjRef CreateObjRef(Type requestedType) => inner.CreateObjRef(requestedType);
+
+        public override object? InitializeLifetimeService() => inner.InitializeLifetimeService();
+#endif
+
+        public override int ReadTimeout
+        {
+            get => inner.ReadTimeout;
+            set => inner.ReadTimeout = value;
+        }
+
+        public override int WriteTimeout
+        {
+            get => inner.WriteTimeout;
+            set => inner.WriteTimeout = value;
+        }
+
+        public override bool CanTimeout => inner.CanTimeout;
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => inner.CanSeek;
+        public override bool CanWrite => inner.CanWrite;
+        public override long Length => inner.Length;
+        public override long Position
+        {
+            get => inner.Position;
+            set => inner.Position = value;
+        }
+
+        public bool DataAvailable
+        {
+            get
+            {
+                if (inner is NetworkStream networkStream)
+                {
+                    return networkStream.DataAvailable;
+                }
+
+                throw new NotSupportedException($"{nameof(DataAvailable)} is only available when wrapping a {nameof(NetworkStream)}");
+            }
+        }
+
         async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
             int timeout, 
@@ -130,7 +272,7 @@ namespace Halibut.Transport.Streams
             {
                 if (timeoutCancellationTokenSource.IsCancellationRequested)
                 {
-                    var socketException = new SocketException(10060);
+                    var socketException = new SocketException((int)SocketError.TimedOut);
                     throw new IOException($"Unable to {(isRead ? "read data from" : "write data to")} the transport connection: {socketException.Message}.", socketException);
                 }
 
@@ -141,109 +283,36 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        public override void Close() => inner.Close();
-
-        public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => await inner.CopyToAsync(destination, bufferSize, cancellationToken);
-        
-        public override int ReadByte() => inner.ReadByte();
-
-        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        void CloseOnTimeout(Action action)
         {
-            // BeginRead does not respect timeouts. So force it to use ReadAsync, which does.
-            return ReadAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
+            CloseOnTimeout<object?>(() =>
+            {
+                action();
+                return null;
+            });
         }
 
-        public override int EndRead(IAsyncResult asyncResult)
+        T CloseOnTimeout<T>(Func<T> action)
         {
             try
             {
-                return ((Task<int>)asyncResult).Result;
+                return action();
             }
-            catch (AggregateException e) when (e.InnerExceptions.Count == 1 && e.InnerException is not null)
+            catch (Exception ex) when (IsTimeoutException(ex))
             {
-                throw e.InnerException;
+                inner.Close();
+                throw;
             }
         }
 
-        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback? callback, object? state)
+        static bool IsTimeoutException(Exception exception)
         {
-            // BeginWrite does not respect timeouts. So force it to use WriteAsync, which does.
-            return WriteAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
-        }
-
-        public override void EndWrite(IAsyncResult asyncResult)
-        {
-            var task = (Task)asyncResult;
-            try
+            if (exception is SocketException { SocketErrorCode: SocketError.TimedOut })
             {
-                Task.WaitAll(task);
+                return true;
             }
-            catch (AggregateException e) when (e.InnerExceptions.Count == 1 && e.InnerException is not null)
-            {
-                throw e.InnerException;
-            }
-        }
 
-        public override void Flush() => inner.Flush();
-
-        public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
-
-        public override long Seek(long offset, SeekOrigin origin) => inner.Seek(offset, origin);
-
-        public override void SetLength(long value) => inner.SetLength(value);
-
-        public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
-
-        public override void WriteByte(byte value) => inner.WriteByte(value);
-
-#if !NETFRAMEWORK
-        public override void CopyTo(Stream destination, int bufferSize) => inner.CopyTo(destination, bufferSize);
-        
-        public override int Read(Span<byte> buffer) => inner.Read(buffer);
-
-        public override void Write(ReadOnlySpan<byte> buffer) => inner.Write(buffer);
-#endif
-
-#if NETFRAMEWORK
-        public override ObjRef CreateObjRef(Type requestedType) => inner.CreateObjRef(requestedType);
-
-        public override object? InitializeLifetimeService() => inner.InitializeLifetimeService();
-#endif
-
-        public override int ReadTimeout
-        {
-            get => inner.ReadTimeout;
-            set => inner.ReadTimeout = value;
-        }
-
-        public override int WriteTimeout
-        {
-            get => inner.WriteTimeout;
-            set => inner.WriteTimeout = value;
-        }
-
-        public override bool CanTimeout => inner.CanTimeout;
-        public override bool CanRead => inner.CanRead;
-        public override bool CanSeek => inner.CanSeek;
-        public override bool CanWrite => inner.CanWrite;
-        public override long Length => inner.Length;
-        public override long Position
-        {
-            get => inner.Position;
-            set => inner.Position = value;
-        }
-
-        public bool DataAvailable
-        {
-            get
-            {
-                if (inner is NetworkStream networkStream)
-                {
-                    return networkStream.DataAvailable;
-                }
-
-                throw new NotSupportedException($"{nameof(DataAvailable)} is only available when wrapping a {nameof(NetworkStream)}");
-            }
+            return exception.InnerException != null && IsTimeoutException(exception.InnerException);
         }
     }
 }

@@ -22,7 +22,7 @@ namespace Halibut.Tests.Transport.Streams
         [StreamMethodTestCase]
         public async Task ReadingFromStreamShouldPassThrough(StreamMethod streamMethod)
         {
-            var (disposables, sut, performListenerWrite) = await BuildTcpClientAndTcpListener(CancellationToken);
+            var (disposables, sut, _, performListenerWrite) = await BuildTcpClientAndTcpListener(CancellationToken);
 
             using (disposables)
             {
@@ -37,10 +37,10 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        [StreamMethodTestCase(testSync:false)]
-        public async Task ReadingFromStreamAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
+        [StreamMethodTestCase]
+        public async Task ReadingFromStreamShouldTimeout_AndCloseTheStream_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
         {
-            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
+            var (disposables, sut, callCountingStream, _) = await BuildTcpClientAndTcpListener(CancellationToken);
 
             using (disposables)
             {
@@ -60,6 +60,7 @@ namespace Halibut.Tests.Transport.Streams
                     "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
+                callCountingStream.CloseCallCount.Should().Be(1, "The Stream should have been closed on Timeout");
             }
         }
 
@@ -68,7 +69,7 @@ namespace Halibut.Tests.Transport.Streams
         {
             using (var readTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
             {
-                var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
+                var (disposables, sut, _, _) = await BuildTcpClientAndTcpListener(CancellationToken);
 
                 using (disposables)
                 {
@@ -96,7 +97,7 @@ namespace Halibut.Tests.Transport.Streams
         {
             string? readData = null;
             
-            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(
+            var (disposables, sut, _, _) = await BuildTcpClientAndTcpListener(
                 CancellationToken,
                 onListenerRead: async data =>
                 {
@@ -120,9 +121,9 @@ namespace Halibut.Tests.Transport.Streams
         
         [Test]
         [StreamMethodTestCase(testSync: false)]
-        public async Task WritingToStreamAsyncShouldTimeout_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
+        public async Task WritingToStreamShouldTimeout_AndCloseTheStream_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamMethod streamMethod)
         {
-            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(
+            var (disposables, sut, callCountingStream, _) = await BuildTcpClientAndTcpListener(
                 CancellationToken, 
                 onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
 
@@ -151,6 +152,7 @@ namespace Halibut.Tests.Transport.Streams
                     "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
+                callCountingStream.CloseCallCount.Should().Be(1, "The Stream should have been closed on Timeout");
             }
         }
         
@@ -159,7 +161,7 @@ namespace Halibut.Tests.Transport.Streams
         {
             using (var writeTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
             {
-                var (disposables, sut, _) = await BuildTcpClientAndTcpListener(
+                var (disposables, sut, _, _) = await BuildTcpClientAndTcpListener(
                     CancellationToken,
                     onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
 
@@ -193,7 +195,7 @@ namespace Halibut.Tests.Transport.Streams
         [Test]
         public async Task CloseShouldPassThrough()
         {
-            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
+            var (disposables, sut, _, _) = await BuildTcpClientAndTcpListener(CancellationToken);
 
             using (disposables)
             {
@@ -207,7 +209,7 @@ namespace Halibut.Tests.Transport.Streams
         [Test]
         public async Task DisposeShouldPassThrough()
         {
-            var (disposables, sut, _) = await BuildTcpClientAndTcpListener(CancellationToken);
+            var (disposables, sut, _, _) = await BuildTcpClientAndTcpListener(CancellationToken);
 
             using (disposables)
             {
@@ -223,7 +225,7 @@ namespace Halibut.Tests.Transport.Streams
             await Task.Delay(-1, cancellationToken);
         }
 
-        async Task<(IDisposable Disposables, Stream SystemUnderTest, Func<string, Task> PerformServiceWriteFunc)> BuildTcpClientAndTcpListener(
+        async Task<(IDisposable Disposables, Stream SystemUnderTest, CallCountingStream callCountingStream, Func<string, Task> PerformServiceWriteFunc)> BuildTcpClientAndTcpListener(
             CancellationToken cancellationToken, 
             Func<string, Task>? onListenerRead = null)
         {
@@ -264,7 +266,8 @@ namespace Halibut.Tests.Transport.Streams
             var clientStream = client.GetStream();
             disposableCollection.Add(clientStream);
 
-            var sut = new NetworkTimeoutStream(clientStream);
+            var callCountingStream = new CallCountingStream(clientStream);
+            var sut = new NetworkTimeoutStream(callCountingStream);
             disposableCollection.Add(sut);
 
             while (performServiceWriteFunc == null)
@@ -272,7 +275,7 @@ namespace Halibut.Tests.Transport.Streams
                 await Task.Delay(10, cancellationToken);
             }
 
-            return (disposableCollection, sut, performServiceWriteFunc!);
+            return (disposableCollection, sut, callCountingStream, performServiceWriteFunc!);
         }
     }
 }
