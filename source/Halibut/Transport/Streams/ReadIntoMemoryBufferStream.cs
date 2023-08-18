@@ -6,7 +6,7 @@ using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Streams
 {
-    public class ReadIntoMemoryBufferStream : AsyncDisposableStream
+    public class ReadIntoMemoryBufferStream : AsyncStream
     {
         readonly MemoryStream memoryBuffer;
         readonly Stream sourceStream;
@@ -36,7 +36,7 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        public override async ValueTask DisposeAsync()
+        protected override async ValueTask _DisposeAsync()
         {
             await memoryBuffer.DisposeAsync();
 
@@ -84,6 +84,11 @@ namespace Halibut.Transport.Streams
         }
 
         public override void Flush() => throw new NotSupportedException();
+        
+        protected override Task _FlushAsync(CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
@@ -95,7 +100,7 @@ namespace Halibut.Transport.Streams
             return sourceStream.Read(buffer, offset, count);
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override async Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             if (ShouldReadFromMemoryStream)
             {
@@ -105,10 +110,17 @@ namespace Halibut.Transport.Streams
             return await sourceStream.ReadAsync(buffer, offset, count, cancellationToken);
         }
 
+        
+
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
 
         public override void SetLength(long value) => throw new NotSupportedException();
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        
+        protected override Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
 
         public async Task BufferIntoMemoryFromSourceStreamUntilLimitReached(CancellationToken cancellationToken)
         {

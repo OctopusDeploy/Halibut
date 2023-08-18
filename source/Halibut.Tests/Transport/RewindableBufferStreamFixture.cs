@@ -5,7 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Transport.Streams;
 using Halibut.Transport;
+using Halibut.Transport.Streams;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
@@ -235,5 +237,10 @@ namespace Halibut.Tests.Transport
         {
             public static RewindableBufferStream Build(Stream stream) => new RewindableBufferStream(stream);
         }
+    }
+
+    public class RewindableBufferStreamIsAsyncFixture : StreamWrapperSupportsAsyncIOFixture
+    {
+        protected override AsyncStream WrapStream(Stream stream) => new RewindableBufferStream(stream);
     }
 }

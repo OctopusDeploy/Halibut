@@ -12,7 +12,7 @@ namespace Halibut.Transport.Observability
         LeaveInputStreamOpen
     }
 
-    public class ByteCountingStream : AsyncDisposableStream
+    public class ByteCountingStream : AsyncStream
     {
         readonly Stream countBytesFromStream;
         readonly OnDispose onDispose;
@@ -46,7 +46,7 @@ namespace Halibut.Transport.Observability
             }
         }
 
-        public override async ValueTask DisposeAsync()
+        protected override async ValueTask _DisposeAsync()
         {
             if (onDispose == OnDispose.DisposeInputStream)
             {
@@ -76,20 +76,9 @@ namespace Halibut.Transport.Observability
         
         public override void Flush() => countBytesFromStream.Flush();
 
-        public override Task FlushAsync(CancellationToken cancellationToken) => countBytesFromStream.FlushAsync(cancellationToken);
+        protected override Task _FlushAsync(CancellationToken cancellationToken) => countBytesFromStream.FlushAsync(cancellationToken);
 
-        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state) => countBytesFromStream.BeginRead(buffer, offset, count, callback, state);
-        
-        public override int EndRead(IAsyncResult asyncResult)
-        {
-            var bytesRead = countBytesFromStream.EndRead(asyncResult);
-
-            BytesRead += bytesRead;
-
-            return bytesRead;
-        }
-
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override async Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             var bytesRead = await countBytesFromStream.ReadAsync(buffer, offset, count, cancellationToken);
 
@@ -97,12 +86,8 @@ namespace Halibut.Transport.Observability
 
             return bytesRead;
         }
-        
-        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state) => countBytesFromStream.BeginWrite(buffer, offset, count, callback, state);
 
-        public override void EndWrite(IAsyncResult asyncResult) => countBytesFromStream.EndWrite(asyncResult);
-
-        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             await countBytesFromStream.WriteAsync(buffer, offset, count, cancellationToken);
             BytesWritten += count;

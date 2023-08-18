@@ -73,13 +73,13 @@ namespace Halibut.Transport.Protocol
 
         public async Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
         {
-            await using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
-            await using var compressedInMemoryBuffer = new WriteIntoMemoryBufferStream(compressedByteCountingStream, writeIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
-            await using var apmToTapStream = new ApmToTapStream(compressedInMemoryBuffer);
+            using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+            using var compressedInMemoryBuffer = new WriteIntoMemoryBufferStream(compressedByteCountingStream, writeIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+
 #if !NETFRAMEWORK
             await
 #endif
-            using (var zip = new DeflateStream(apmToTapStream, CompressionMode.Compress, true))
+            using (var zip = new DeflateStream(compressedInMemoryBuffer, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 // for the moment this MUST be object so that the $type property is included
@@ -203,13 +203,12 @@ namespace Halibut.Transport.Protocol
             try
             {
                 await using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
-
-                await using var apmToTapStream = new ApmToTapStream(compressedByteCountingStream);
+                
 #if !NETFRAMEWORK
                 await
-#endif                
-                using var zip = new DeflateStream(apmToTapStream, CompressionMode.Decompress, true);
-                await using var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
+#endif
+                using var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true);
+                using var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
 
                 await using var deflatedInMemoryStream = new ReadIntoMemoryBufferStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
                 await deflatedInMemoryStream.BufferIntoMemoryFromSourceStreamUntilLimitReached(cancellationToken);

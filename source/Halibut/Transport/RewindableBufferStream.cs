@@ -10,7 +10,7 @@ namespace Halibut.Transport
     /// Only supports rewinding the last read of the underlying stream. Which appears to be all
     /// that is required when rewinding from a Deflate stream over read.
     /// </summary>
-    public class RewindableBufferStream : AsyncDisposableStream, IRewindableBuffer
+    public class RewindableBufferStream : AsyncStream, IRewindableBuffer
     {
         readonly Stream baseStream;
         readonly byte[] rewindBuffer;
@@ -23,12 +23,6 @@ namespace Halibut.Transport
         {
             this.baseStream = baseStream;
             rewindBuffer = new byte[rewindBufferSize];
-        }
-        
-        public override async ValueTask DisposeAsync()
-        {
-            await Task.CompletedTask;
-            Dispose();
         }
 
         public override void Flush() => baseStream.Flush();
@@ -114,7 +108,7 @@ namespace Halibut.Transport
         /// <param name="count"><inheritdoc/></param>
         /// <param name="cancellationToken"><inheritdoc/></param>
         /// <returns><inheritdoc/></returns>
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override async Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             count = ReduceReadCountToBufferSize(count);
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
@@ -143,11 +137,20 @@ namespace Halibut.Transport
             baseStream.Write(buffer, offset, count);
         }
 
-        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             await baseStream.WriteAsync(buffer, offset, count, cancellationToken);
         }
+        
+        protected override Task _FlushAsync(CancellationToken cancellationToken)
+        {
+            return baseStream.FlushAsync(cancellationToken);
+        }
 
+        protected override ValueTask _DisposeAsync()
+        {
+            return baseStream.DisposeAsync();
+        }
 
         public override bool CanRead => true;
         public override bool CanSeek => false;
