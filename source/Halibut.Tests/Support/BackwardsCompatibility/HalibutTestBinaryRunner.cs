@@ -120,7 +120,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                         if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                     }
-                    
+
                     await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version))
                         .WithArguments(new string[0])
                         .WithWorkingDirectory(tmp.FullPath)
@@ -128,6 +128,10 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         .WithStandardErrorPipe(PipeTarget.ToDelegate(ProcessLogs))
                         .WithEnvironmentVariables(settings)
                         .ExecuteAsync(cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Don't throw when we cancel the running of the binary, this is an expected way of killing it.
                 }
                 catch (Exception e)
                 {
