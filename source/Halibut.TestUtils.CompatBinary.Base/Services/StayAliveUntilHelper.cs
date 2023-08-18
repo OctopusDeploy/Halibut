@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,10 +7,10 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
 {
     public class StayAliveUntilHelper
     {
-        public static async Task WaitUntilSignaledToDie()
+        public static async Task WaitUntilSignaledToDie(CancellationToken cancellationToken)
         {
             var stayAliveFile = SettingsHelper.CompatBinaryStayAliveLockFile();
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -42,8 +41,8 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
                 {
                     Environment.Exit(0);
                 }
-                
-                Thread.Sleep(2000);
+
+                await Task.Delay(2000, cancellationToken);
             }
             
         }
