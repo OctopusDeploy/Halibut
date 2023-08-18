@@ -114,7 +114,7 @@ namespace Halibut.Transport.Protocol
 
                         return new { Completed = result.EndOfMessage, Successful = true };
                     },
-                    onCancellationAction: () => { },
+                    onCancellationAction: async () => { await Task.CompletedTask; },
                     getExceptionOnTimeout: () =>
                     {
                         var socketException = new SocketException(10060);

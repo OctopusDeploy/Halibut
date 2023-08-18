@@ -1,7 +1,7 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Tests.Transport.Streams;
 
 namespace Halibut.Tests.Util
@@ -12,6 +12,29 @@ namespace Halibut.Tests.Util
         {
             var bytes = s.GetBytesUtf8();
             stream.Write(bytes, 0, bytes.Length);
+        }
+
+        public static async Task<int> ReadFromStream(this Stream sut, StreamReadMethod streamMethod, byte[] readBuffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            switch (streamMethod)
+            {
+                case StreamReadMethod.Read:
+                    return sut.Read(readBuffer, offset, count);
+                case StreamReadMethod.ReadByte:
+                    return sut.ReadByte();
+                case StreamReadMethod.BeginReadEndWithinCallback:
+                    return await sut.ReadFromStreamLegacyAsyncCallEndWithinCallback(readBuffer, offset, count, cancellationToken);
+                case StreamReadMethod.BeginReadEndOutsideCallback:
+                    return sut.ReadFromStreamLegacyAsyncCallEndOutsideCallback(readBuffer, offset, count);
+                case StreamReadMethod.ReadAsync:
+                    return await sut.ReadAsync(readBuffer, offset, count, cancellationToken);
+#if !NETFRAMEWORK
+                case StreamReadMethod.ReadAsyncForMemoryByteArray:
+                    return await sut.ReadAsync(new Memory<byte>(readBuffer, offset, count), cancellationToken);
+#endif
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(streamMethod), streamMethod, null);
+            }
         }
 
         public static async Task<int> ReadFromStream(this Stream sut, StreamMethod streamMethod, byte[] readBuffer, int offset, int count, CancellationToken cancellationToken)
@@ -94,6 +117,35 @@ namespace Halibut.Tests.Util
             }
         }
 
+        public static async Task WriteToStream(this Stream sut, StreamWriteMethod streamWriteMethod, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            switch (streamWriteMethod)
+            {
+                case StreamWriteMethod.Write:
+                    sut.Write(buffer, offset, count);
+                    return;
+                case StreamWriteMethod.WriteByte:
+                    sut.WriteByte(buffer[0]);
+                    return;
+                case StreamWriteMethod.BeginWriteEndWithinCallback:
+                    await WriteToStreamLegacyAsyncCallEndWithinCallback(sut, buffer, offset, count, cancellationToken);
+                    return;
+                case StreamWriteMethod.BeginWriteEndOutsideCallback:
+                    WriteToStreamLegacyAsyncCallEndOutsideCallback(sut, buffer, offset, count);
+                    return;
+                case StreamWriteMethod.WriteAsync:
+                    await sut.WriteAsync(buffer, offset, count, cancellationToken);
+                    return;
+#if !NETFRAMEWORK
+                case StreamWriteMethod.WriteAsyncForMemoryByteArray:
+                    await sut.WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken);
+                    return;
+#endif
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(streamWriteMethod), streamWriteMethod, null);
+            }
+        }
+        
         static async Task WriteToStreamLegacyAsyncCallEndWithinCallback(Stream sut, byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             // This is the way async writing was done in earlier version of .NET
@@ -131,6 +183,31 @@ namespace Halibut.Tests.Util
             // This is the way async writing was done in earlier version of .NET
             var result = sut.BeginWrite(buffer, offset, count, null, sut);
             sut.EndWrite(result);
+        }
+
+        public static async Task CopyToStream(this Stream sut, StreamCopyToMethod streamCopyToMethod, Stream destination, int bufferSize, CancellationToken cancellationToken)
+        {
+            switch (streamCopyToMethod)
+            {
+                case StreamCopyToMethod.CopyTo:
+                    sut.CopyTo(destination);
+                    return;
+                case StreamCopyToMethod.CopyToWithBufferSize:
+                    sut.CopyTo(destination, bufferSize);
+                    return;
+                case StreamCopyToMethod.CopyToAsync:
+#if NETFRAMEWORK
+                    await sut.CopyToAsync(destination);
+#else
+                    await sut.CopyToAsync(destination, cancellationToken);
+#endif
+                    return;
+                case StreamCopyToMethod.CopyToAsyncWithBufferSize:
+                    await sut.CopyToAsync(destination, bufferSize, cancellationToken);
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(streamCopyToMethod), streamCopyToMethod, null);
+            }
         }
     }
 }

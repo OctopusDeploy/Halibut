@@ -10,7 +10,7 @@ namespace Halibut.Transport.Streams
     {
         public static async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
-            Action onCancellationAction,
+            Func<Task> onCancellationAction,
             Func<Exception> getExceptionOnTimeout,
             TimeSpan timeout,
             string methodName,
@@ -31,7 +31,7 @@ namespace Halibut.Transport.Streams
                 {
                     actionTask.IgnoreUnobservedExceptions();
 
-                    onCancellationAction();
+                    await onCancellationAction();
 
                     ThrowMeaningfulException();
                 }
