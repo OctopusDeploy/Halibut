@@ -252,7 +252,7 @@ namespace Halibut.Transport.Streams
 
                     try
                     {
-                        inner.Close();
+                        await inner.DisposeAsync();
                     }
                     catch { }
 

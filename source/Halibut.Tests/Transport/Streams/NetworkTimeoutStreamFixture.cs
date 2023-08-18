@@ -58,9 +58,17 @@ namespace Halibut.Tests.Transport.Streams
                 actualException!.Message.Should().ContainAny(
                     "Unable to read data from the transport connection: Connection timed out.",
                     "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
-
+                
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
-                callCountingStream.CloseCallCount.Should().Be(1, "The Stream should have been closed on Timeout");
+
+                if (streamMethod == StreamMethod.Sync)
+                {
+                    callCountingStream.CloseCallCount.Should().Be(1, "The Stream should have been Closed on Timeout");
+                }
+                else
+                {
+                    callCountingStream.DisposeAsyncCallCount.Should().Be(1, "The Stream should have been DisposedAsync on Timeout");
+                }
             }
         }
 
@@ -152,7 +160,15 @@ namespace Halibut.Tests.Transport.Streams
                     "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
-                callCountingStream.CloseCallCount.Should().Be(1, "The Stream should have been closed on Timeout");
+                
+                if (streamMethod == StreamMethod.Sync)
+                {
+                    callCountingStream.CloseCallCount.Should().Be(1, "The Stream should have been Closed on Timeout");
+                }
+                else
+                {
+                    callCountingStream.DisposeAsyncCallCount.Should().Be(1, "The Stream should have been DisposedAsync on Timeout");
+                }
             }
         }
         
