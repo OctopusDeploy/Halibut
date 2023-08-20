@@ -147,7 +147,12 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
+            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? 
+#pragma warning disable CS0612
+                HandleMessage : 
+#pragma warning restore CS0612
+                HandleMessageAsync;
+
             var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature, TimeoutsAndLimits);
             lock (listeners)
             {
@@ -159,7 +164,12 @@ namespace Halibut
 
         public void ListenWebSocket(string endpoint)
         {
-            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? HandleMessage : HandleMessageAsync;
+            ExchangeActionAsync exchangeActionAsync = AsyncHalibutFeature.IsDisabled() ? 
+#pragma warning disable CS0612
+                HandleMessage : 
+#pragma warning restore CS0612
+                HandleMessageAsync;
+
             var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature, TimeoutsAndLimits);
             
             lock (listeners)
@@ -170,13 +180,12 @@ namespace Halibut
             listener.Start();
         }
 
+        [Obsolete]
         Task HandleMessage(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
         {
-#pragma warning disable CS0612
             return protocol.ExchangeAsServerSynchronouslyAsync(
                 HandleIncomingRequest,
                 id => GetQueue(id.SubscriptionId));
-#pragma warning restore CS0612
         }
 
         Task HandleMessageAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
@@ -184,6 +193,7 @@ namespace Halibut
             return protocol.ExchangeAsServerAsync(HandleIncomingRequestAsync, id => GetQueue(id.SubscriptionId), cancellationToken);
         }
 
+        [Obsolete]
         public void Poll(Uri subscription, ServiceEndPoint endPoint)
         {
             Poll(subscription, endPoint, CancellationToken.None);
@@ -212,7 +222,9 @@ namespace Halibut
             }
             else
             {
+#pragma warning disable CS0612
                 pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequest, log, cancellationToken, pollingReconnectRetryPolicy, AsyncHalibutFeature));
+#pragma warning restore CS0612
             }
         }
 
@@ -406,6 +418,7 @@ namespace Halibut
             return response;
         }
 
+        [Obsolete]
         async Task<ResponseMessage> SendOutgoingPollingRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
@@ -418,6 +431,7 @@ namespace Halibut
             return await queue.QueueAndWaitAsync(request, requestCancellationTokens);
         }
 
+        [Obsolete]
         ResponseMessage HandleIncomingRequest(RequestMessage request)
         {
             return invoker.Invoke(request);
@@ -547,11 +561,5 @@ namespace Halibut
             }
             return result;
         }
-
-#pragma warning disable DE0009 // API is deprecated
-        // ReSharper disable once InconsistentNaming
-        public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
-                                                   Environment.OSVersion.Version >= new Version(6, 2);
-#pragma warning restore DE0009 // API is deprecated
     }
 }

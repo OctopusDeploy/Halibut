@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
+    [Obsolete]
     public class ConnectionPool<TKey, TPooledResource> : IConnectionPool<TKey, TPooledResource>
         where TPooledResource : class, IPooledResource
     {

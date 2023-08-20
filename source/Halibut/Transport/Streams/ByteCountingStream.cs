@@ -2,9 +2,8 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Transport.Streams;
 
-namespace Halibut.Transport.Observability
+namespace Halibut.Transport.Streams
 {
     public enum OnDispose
     {
@@ -23,7 +22,7 @@ namespace Halibut.Transport.Observability
             this.onDispose = onDispose;
         }
 
-        public long BytesWritten { get; private set; } 
+        public long BytesWritten { get; private set; }
         public long BytesRead { get; private set; }
 
         public override bool CanRead => countBytesFromStream.CanRead;
@@ -73,7 +72,7 @@ namespace Halibut.Transport.Observability
         }
 
         public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) => countBytesFromStream.CopyToAsync(destination, bufferSize, cancellationToken);
-        
+
         public override void Flush() => countBytesFromStream.Flush();
 
         protected override Task _FlushAsync(CancellationToken cancellationToken) => countBytesFromStream.FlushAsync(cancellationToken);
@@ -100,12 +99,12 @@ namespace Halibut.Transport.Observability
         public override int Read(byte[] buffer, int offset, int count)
         {
             var bytesRead = countBytesFromStream.Read(buffer, offset, count);
-            
+
             BytesRead += bytesRead;
 
             return bytesRead;
         }
-        
+
         public override void Write(byte[] buffer, int offset, int count)
         {
             countBytesFromStream.Write(buffer, offset, count);

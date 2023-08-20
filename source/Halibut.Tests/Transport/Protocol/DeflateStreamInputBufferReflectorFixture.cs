@@ -1,12 +1,10 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support.TestAttributes;
-using Halibut.Transport;
-using Halibut.Transport.Protocol;
+using Halibut.Transport.Streams;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport.Protocol

@@ -21,6 +21,7 @@ namespace Halibut.ServiceModel
             this.factory = factory;
         }
 
+        [Obsolete]
         public ResponseMessage Invoke(RequestMessage requestMessage)
         {
             using (var lease = factory.CreateService(requestMessage.ServiceName))

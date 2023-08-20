@@ -55,6 +55,7 @@ namespace Halibut.Transport.Protocol
             typeRegistry.AddToMessageContract(types);
         }
         
+        [Obsolete]
         public void WriteMessage<T>(Stream stream, T message)
         {
             using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
@@ -93,6 +94,7 @@ namespace Halibut.Transport.Protocol
             observer.MessageWritten(compressedByteCountingStream.BytesWritten, compressedInMemoryBuffer.BytesWrittenIntoMemory);
         }
         
+        [Obsolete]
         public T ReadMessage<T>(RewindableBufferStream stream)
         {
             using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
@@ -163,6 +165,7 @@ namespace Halibut.Transport.Protocol
             }
         }
         
+        [Obsolete]
         T ReadCompressedMessage<T>(Stream stream, IRewindableBuffer rewindableBuffer)
         {
             rewindableBuffer.StartBuffer();

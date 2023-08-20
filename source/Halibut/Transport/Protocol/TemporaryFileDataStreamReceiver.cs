@@ -16,6 +16,7 @@ namespace Halibut.Transport.Protocol
             this.writerAsync = writerAsync;
         }
 
+        [Obsolete]
         public void SaveTo(string filePath)
         {
             using (var file = new FileStream(filePath, FileMode.Create))
@@ -35,6 +36,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         public void Read(Action<Stream> reader)
         {
             var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());

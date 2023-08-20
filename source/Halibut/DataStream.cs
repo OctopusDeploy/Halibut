@@ -114,11 +114,11 @@ namespace Halibut
         {
             return new DataStream(encoding.GetByteCount(text), 
                 stream =>
-            {
-                var writer = new StreamWriter(stream, encoding);
-                writer.Write(text);
-                writer.Flush();
-            },
+                {
+                    var writer = new StreamWriter(stream, encoding);
+                    writer.Write(text);
+                    writer.Flush();
+                },
                 async (stream, ct) =>
                 {
                     var writer = new StreamWriter(stream, encoding);
@@ -133,11 +133,14 @@ namespace Halibut
         {
             updateProgress ??= (_, _) => Task.CompletedTask;
 
+#pragma warning disable CS0612
             return FromStream(source, 
                 i => updateProgress(i, CancellationToken.None).GetAwaiter().GetResult(),
                 updateProgress);
+#pragma warning restore CS0612
         }
 
+        [Obsolete]
         public static DataStream FromStream(Stream source, Action<int> updateProgress)
         {
             updateProgress ??= _ => { };
@@ -152,12 +155,16 @@ namespace Halibut
         public static DataStream FromStream(Stream source, Action<int> updateProgress, Func<int, CancellationToken, Task> updateProgressAsync)
         {
             var streamer = new StreamingDataStream(source, updateProgress, updateProgressAsync);
+#pragma warning disable CS0612
             return new DataStream(source.Length, streamer.CopyAndReportProgress, streamer.CopyAndReportProgressAsync);
+#pragma warning restore CS0612
         }
-
+        
         public static DataStream FromStream(Stream source)
         {
+#pragma warning disable CS0612
             return FromStream(source, (progress) => { });
+#pragma warning restore CS0612
         }
 
         class StreamingDataStream
@@ -174,6 +181,7 @@ namespace Halibut
                 this.updateProgressAsync = updateProgressAsync;
             }
 
+            [Obsolete]
             public void CopyAndReportProgress(Stream destination)
             {
                 var readBuffer = new byte[BufferSize];
@@ -250,6 +258,7 @@ namespace Halibut
             }
         }
 
+        [Obsolete]
         void IDataStreamInternal.Transmit(Stream stream)
         {
             writer(stream);

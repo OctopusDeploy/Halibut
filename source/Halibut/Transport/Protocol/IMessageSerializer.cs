@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Protocol
 {

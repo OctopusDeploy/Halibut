@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
@@ -6,7 +7,7 @@ namespace Halibut.Transport
 {
     class TcpClientManager
     {
-        readonly Dictionary<string, HashSet<TcpClient>> activeClients = new Dictionary<string, HashSet<TcpClient>>();
+        readonly Dictionary<string, HashSet<TcpClient>> activeClients = new();
 
         public void AddActiveClient(string thumbprint, TcpClient client)
         {
@@ -25,6 +26,7 @@ namespace Halibut.Transport
             }
         }
 
+        // TODO - ASYNC ME UP - Should be obsolete but in use and needs an async chain
         public void Disconnect(string thumbprint)
         {
             lock (activeClients)
@@ -40,7 +42,7 @@ namespace Halibut.Transport
             }
         }
 
-        static readonly TcpClient[] NoClients = new TcpClient[0];
+        static readonly TcpClient[] NoClients = Array.Empty<TcpClient>();
         public IReadOnlyCollection<TcpClient> GetActiveClients(string thumbprint)
         {
             lock (activeClients)

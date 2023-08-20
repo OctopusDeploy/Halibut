@@ -8,8 +8,8 @@ using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
-using Halibut.Transport;
 using Halibut.Transport.Protocol;
+using Halibut.Transport.Streams;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport.Protocol

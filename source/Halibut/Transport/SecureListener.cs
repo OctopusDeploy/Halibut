@@ -28,9 +28,7 @@ namespace Halibut.Transport
     public class SecureListener : IDisposable
     {
         [DllImport("kernel32.dll", SetLastError = true)]
-#pragma warning disable PC003 // Native API not available in UWP
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
-#pragma warning restore PC003 // Native API not available in UWP
 
         readonly IPEndPoint endPoint;
         readonly X509Certificate2 serverCertificate;
@@ -105,6 +103,7 @@ namespace Halibut.Transport
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
 
+        // TODO - ASYNC ME UP - Async Version Needed
         public void Disconnect(string thumbprint)
         {
             tcpClientManager.Disconnect(thumbprint);

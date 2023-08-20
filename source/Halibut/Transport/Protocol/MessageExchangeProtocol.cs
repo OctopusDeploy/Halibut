@@ -381,6 +381,7 @@ namespace Halibut.Transport.Protocol
             return true;
         }
 
+        [Obsolete]
         static ResponseMessage InvokeAndWrapAnyExceptions(RequestMessage request, Func<RequestMessage, ResponseMessage> incomingRequestProcessor)
         {
             try

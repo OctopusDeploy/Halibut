@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
-using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 using NUnit.Framework;
 
