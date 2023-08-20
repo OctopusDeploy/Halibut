@@ -153,7 +153,13 @@ namespace Halibut.Tests.Timeouts
                 Logger.Error(e, "Received error when making the request (as expected)");
 
                 var addControlMessageTimeout = TimeSpan.Zero;
-                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening)
+                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening
+#if !NETFRAMEWORK
+                    // In .NET 6.0, when the `NetworkTimeoutStream` closes the underlying SSL stream due to a timeout, the async dispose path attempts to flush, and the SSL stream cannot be used anymore.
+                    // This is why we don't need to buffer out the timeout for tests in this case
+                    && clientAndServiceTestCase.SyncOrAsync != SyncOrAsync.Async
+#endif
+                    )
                 {
                     // When an error occurs in listening mode, the dispose method in SecureConnection.Dispose
                     // will be called resulting in a END control message being sent over the wire. Since the
