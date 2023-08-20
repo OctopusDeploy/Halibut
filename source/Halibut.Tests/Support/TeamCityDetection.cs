@@ -6,14 +6,19 @@ namespace Halibut.Tests.Support
     {
         public static bool IsRunningInTeamCity()
         {
-            foreach (var tcEnvVar in new string[] { "TEAMCITY_VERSION", "TEAMCITY_BUILD_ID" })
+            return _IsRunningInTeamcity;
+        }
+
+        static readonly bool _IsRunningInTeamcity = ComputeIsRunningInTeamCity();
+
+        static bool ComputeIsRunningInTeamCity()
+        {
+            foreach (var tcEnvVar in new[] {"TEAMCITY_VERSION", "TEAMCITY_BUILD_ID"})
             {
-                string environmentVariableValue = Environment.GetEnvironmentVariable(tcEnvVar);
-                if (!string.IsNullOrEmpty(environmentVariableValue))
-                {
-                    return true;
-                }
+                var environmentVariableValue = Environment.GetEnvironmentVariable(tcEnvVar);
+                if (!string.IsNullOrEmpty(environmentVariableValue)) return true;
             }
+
             return false;
         }
     }

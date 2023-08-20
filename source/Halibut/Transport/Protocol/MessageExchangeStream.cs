@@ -33,7 +33,7 @@ namespace Halibut.Transport.Protocol
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, AsyncHalibutFeature asyncHalibutFeature, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
         {
             this.stream = asyncHalibutFeature.IsEnabled() ? 
-                new RewindableBufferStream(new NetworkTimeoutStream(stream), halibutTimeoutsAndLimits.RewindableBufferStreamSize) : 
+                new RewindableBufferStream(stream, halibutTimeoutsAndLimits.RewindableBufferStreamSize) : 
 #pragma warning disable CS0612
                 new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
 #pragma warning restore CS0612

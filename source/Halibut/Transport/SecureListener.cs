@@ -207,10 +207,15 @@ namespace Halibut.Transport
         async Task ExecuteRequest(TcpClient client)
         {
             var clientName = client.Client.RemoteEndPoint;
-            var stream = client.GetStream();
+            
+            Stream stream = client.GetStream();
+            if (asyncHalibutFeature.IsEnabled())
+            {
+                stream = stream.AsNetworkTimeoutStream();
+            }
 #if !NETFRAMEWORK
             await
-#endif
+#endif            
             using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 try
@@ -301,7 +306,7 @@ namespace Halibut.Transport
             }
         }
 
-        void SafelyCloseStream(NetworkStream stream, EndPoint clientName)
+        void SafelyCloseStream(Stream stream, EndPoint clientName)
         {
             try
             {

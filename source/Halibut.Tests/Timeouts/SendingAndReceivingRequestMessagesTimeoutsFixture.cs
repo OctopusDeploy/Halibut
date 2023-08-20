@@ -145,7 +145,7 @@ namespace Halibut.Tests.Timeouts
                 var sw = Stopwatch.StartNew();
                 var e = (await AssertAsync.Throws<HalibutClientException>(() =>
                 {
-                    var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 100);
+                    var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 20);
                     return echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend);
                 })).And;
                 AssertExceptionLooksLikeAWriteTimeout(e);

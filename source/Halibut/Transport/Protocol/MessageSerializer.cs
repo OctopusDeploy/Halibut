@@ -75,10 +75,11 @@ namespace Halibut.Transport.Protocol
         {
             await using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
             await using var compressedInMemoryBuffer = new WriteIntoMemoryBufferStream(compressedByteCountingStream, writeIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
+            await using var apmToTapStream = new ApmToTapStream(compressedInMemoryBuffer);
 #if !NETFRAMEWORK
             await
 #endif
-            using (var zip = new DeflateStream(compressedInMemoryBuffer, CompressionMode.Compress, true))
+            using (var zip = new DeflateStream(apmToTapStream, CompressionMode.Compress, true))
             using (var bson = new BsonDataWriter(zip) { CloseOutput = false })
             {
                 // for the moment this MUST be object so that the $type property is included
@@ -196,21 +197,32 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task<T> ReadCompressedMessageAsync<T>(Stream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
+        async Task<T> ReadCompressedMessageAsync<T>(ErrorRecordingStream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
         {
             rewindableBuffer.StartBuffer();
             try
             {
                 await using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
 
+                await using var apmToTapStream = new ApmToTapStream(compressedByteCountingStream);
 #if !NETFRAMEWORK
-            await
-#endif
-                using var zip = new DeflateStream(compressedByteCountingStream, CompressionMode.Decompress, true);
+                await
+#endif                
+                using var zip = new DeflateStream(apmToTapStream, CompressionMode.Decompress, true);
                 await using var decompressedByteCountingStream = new ByteCountingStream(zip, OnDispose.LeaveInputStreamOpen);
 
                 await using var deflatedInMemoryStream = new ReadIntoMemoryBufferStream(decompressedByteCountingStream, readIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
                 await deflatedInMemoryStream.BufferIntoMemoryFromSourceStreamUntilLimitReached(cancellationToken);
+                
+                // If the end of stream was found and we read nothing from the streams
+                if (stream.WasTheEndOfStreamEncountered && compressedByteCountingStream.BytesRead == 0 && decompressedByteCountingStream.BytesRead == 0)
+                {
+                    // When this happens we would normally continue to the BsonDataReader which would
+                    // do a sync read(), to find that the stream had ended. We avoid that sync call by
+                    // short circuiting to what would happen which is:  
+                    // The BsonReader would return a non null MessageEnvelope with a null message, which is what we do here.
+                    return new MessageEnvelope<T>().Message; // And hack around we can't return null
+                }
 
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
                 {

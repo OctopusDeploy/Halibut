@@ -132,6 +132,10 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         .WithEnvironmentVariables(settings)
                         .ExecuteAsync(cancellationToken);
                 }
+                catch (OperationCanceledException)
+                {
+                    // Don't throw when we cancel the running of the binary, this is an expected way of killing it.
+                }
                 catch (Exception e)
                 {
                     logger.Error(e, "Error waiting for external process to start");
