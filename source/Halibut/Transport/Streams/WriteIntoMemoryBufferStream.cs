@@ -6,7 +6,7 @@ using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Streams
 {
-    public class WriteIntoMemoryBufferStream : AsyncDisposableStream
+    public class WriteIntoMemoryBufferStream : AsyncStream
     {
         readonly MemoryStream memoryBuffer;
         readonly Stream innerStream;
@@ -55,7 +55,12 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        public override async ValueTask DisposeAsync()
+        protected override Task _FlushAsync(CancellationToken cancellationToken)
+        {
+            return innerStream.FlushAsync(cancellationToken);
+        }
+
+        protected override async ValueTask _DisposeAsync()
         {
             if (usingMemoryBuffer)
             {
@@ -94,7 +99,12 @@ namespace Halibut.Transport.Streams
         public override void SetLength(long value) => throw new NotSupportedException();
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
-        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             if (usingMemoryBuffer)
             {

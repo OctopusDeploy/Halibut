@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace Halibut.Transport.Streams
 {
-    public class ErrorRecordingStream : AsyncDisposableStream
+    public class ErrorRecordingStream : AsyncStream
     {
         readonly Stream innerStream;
         readonly bool closeInner;
 
-        public ErrorRecordingStream(Stream innerStream, bool closeInner) : base()
+        public ErrorRecordingStream(Stream innerStream, bool closeInner)
         {
             this.innerStream = innerStream;
             this.closeInner = closeInner;
@@ -43,7 +43,7 @@ namespace Halibut.Transport.Streams
             
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override async Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             try
             {
@@ -82,11 +82,24 @@ namespace Halibut.Transport.Streams
             }
         }
         
-        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             try
             {
                 await innerStream.WriteAsync(buffer, offset, count, cancellationToken);
+            }
+            catch (Exception e)
+            {
+                WriteExceptions.Add(e);
+                throw;
+            }
+        }
+
+        protected override async Task _FlushAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await innerStream.FlushAsync(cancellationToken);
             }
             catch (Exception e)
             {
@@ -117,7 +130,7 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        public override async ValueTask DisposeAsync()
+        protected override async ValueTask _DisposeAsync()
         {
             if (closeInner)
             {

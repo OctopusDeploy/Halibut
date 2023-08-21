@@ -167,4 +167,9 @@ namespace Halibut.Tests.Transport.Streams
             errorRecordingStream.WriteExceptions[1].Message.Should().Be("Exception number 1");
         }
     }
+    
+    public class ErrorRecordingStreamIsAsyncFixture : StreamWrapperSupportsAsyncIOFixture
+    {
+        protected override AsyncStream WrapStream(Stream stream) => new ErrorRecordingStream(stream, true);
+    }
 }
