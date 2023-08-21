@@ -18,7 +18,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket:false, testPolling:false)]
         public async Task HalibutCanRecoverFromIdleTcpDisconnect(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithEchoService()
                        .WithPortForwarding()

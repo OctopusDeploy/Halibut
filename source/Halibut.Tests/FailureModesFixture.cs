@@ -31,7 +31,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false)]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .NoService()
                        .Build(CancellationToken))
@@ -53,7 +53,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FailWhenServerThrowsAnException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -108,7 +108,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task FailWhenServerThrowsDuringADataStream(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .As<LatestClientAndLatestServiceBuilder>()

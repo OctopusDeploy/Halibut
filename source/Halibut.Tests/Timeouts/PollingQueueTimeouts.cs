@@ -22,7 +22,7 @@ namespace Halibut.Tests.Timeouts
         public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithDataObserver(() =>
                            {

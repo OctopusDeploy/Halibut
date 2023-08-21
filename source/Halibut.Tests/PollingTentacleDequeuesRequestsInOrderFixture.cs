@@ -22,7 +22,7 @@ namespace Halibut.Tests
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             IPendingRequestQueue pendingRequestQueue = null;
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithInstantReconnectPollingRetryPolicy()

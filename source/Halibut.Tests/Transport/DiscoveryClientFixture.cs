@@ -18,7 +18,7 @@ namespace Halibut.Tests.Transport
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task DiscoverMethodReturnsEndpointDetails(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder()
                 .Build(CancellationToken);
 
@@ -52,7 +52,7 @@ namespace Halibut.Tests.Transport
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task OctopusCanDiscoverTentacle(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .Build(CancellationToken))
             {
@@ -73,7 +73,7 @@ namespace Halibut.Tests.Transport
                 .Build();
             var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
 
-            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder()
                 .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                     .WithDataObserver(() => new BiDirectionalDataTransferObserver(dataTransferObserverDoNothing, dataTransferObserverPauser))

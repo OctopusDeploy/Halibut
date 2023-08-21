@@ -11,10 +11,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
-using Halibut.Transport.Proxy;
-using NSubstitute;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Diagnostics
 {
@@ -52,7 +49,7 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
             public async Task WhenTheConnectionTerminatesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithPortForwarding(out var portForwarder)
                            .WithDoSomeActionService(() => portForwarder.Value.EnterKillNewAndExistingConnectionsMode())
@@ -82,7 +79,7 @@ namespace Halibut.Tests.Diagnostics
                 )]
             public async Task WhenTheConnectionPausesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithPortForwarding(out var portForwarder)
                            .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
@@ -110,7 +107,7 @@ namespace Halibut.Tests.Diagnostics
                 var services = new DelegateServiceFactory();
                 services.Register<IEchoService>(() => new EchoService());
 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .NoService()
                            .Build(CancellationToken))
                 {
@@ -127,7 +124,7 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
             public async Task BecauseTheListeningTentacleIsNotResponding(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .NoService()
                            .Build(CancellationToken))
                 {
@@ -144,7 +141,7 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
             public async Task BecauseTheProxyIsNotResponding_TheExceptionShouldBeANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithStandardServices()
                            .WithProxy()
                            .Build(CancellationToken))
@@ -167,7 +164,7 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
             public async Task BecauseOfAInvalidCertificateException_WhenConnectingToListening_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithClientTrustingTheWrongCertificate()
                            .WithEchoService()
@@ -187,7 +184,7 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
             public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithStandardServices()
                            .Build(CancellationToken))
                 {
@@ -214,7 +211,7 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
             public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithStandardServices()
                            .Build(CancellationToken))
                 {
@@ -240,7 +237,7 @@ namespace Halibut.Tests.Diagnostics
             [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
             public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithStandardServices()
                            .Build(CancellationToken))
                 {

@@ -29,7 +29,7 @@ namespace Halibut.Tests
                 {
                     builder = builder.WithForcingClientProxyType(ForceClientProxyType.AsyncClient);
                 }
-                using var clientAndService = await builder.Build(CancellationToken);
+                await using var clientAndService = await builder.Build(CancellationToken);
 
                 var lockService = clientAndService.CreateAsyncClient<ILockService, IAsyncClientLockService>();
 
@@ -83,7 +83,7 @@ namespace Halibut.Tests
                     builder = builder.WithForcingClientProxyType(ForceClientProxyType.AsyncClient);
                 }
                 
-                using var clientAndService = await builder
+                await using var clientAndService = await builder
                     .WithStandardServices()
                     .Build(CancellationToken);
 
@@ -126,7 +126,7 @@ namespace Halibut.Tests
             [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: false)]
             public async Task MultipleRequestsCanBeInFlightInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                     .WithStandardServices()
                     .Build(CancellationToken);
 
@@ -185,7 +185,7 @@ namespace Halibut.Tests
             [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: false)]
             public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                     .WithStandardServices()
                     .Build(CancellationToken);
 

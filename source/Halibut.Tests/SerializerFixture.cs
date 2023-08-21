@@ -15,7 +15,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task HalibutSerializerIsKeptUpToDateWithPollingTentacle(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithHalibutLoggingLevel(LogLevel.Info)
                        .Build(CancellationToken))

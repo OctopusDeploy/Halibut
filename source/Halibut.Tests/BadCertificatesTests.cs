@@ -29,7 +29,7 @@ namespace Halibut.Tests
             var clientTrustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
 
-            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithCountingService(countingService)
                        .WithClientTrustingTheWrongCertificate()
@@ -64,7 +64,7 @@ namespace Halibut.Tests
             var trustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
 
-            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithCountingService(countingService)
                        .RecordingClientLogs(out var serviceLoggers)
@@ -118,7 +118,7 @@ namespace Halibut.Tests
         public async Task FailWhenPollingServiceHasThumbprintRemovedViaTrustOnly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
-            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -156,7 +156,7 @@ namespace Halibut.Tests
         public async Task FailWhenClientPresentsWrongCertificateToListeningService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
-            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithServiceTrustingTheWrongCertificate()
                        .WithCountingService(countingService)
@@ -180,7 +180,7 @@ namespace Halibut.Tests
         public async Task FailWhenClientPresentsWrongCertificateToPollingService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
-            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithServiceTrustingTheWrongCertificate()
                        .WithCountingService(countingService)
@@ -219,7 +219,7 @@ namespace Halibut.Tests
         public async Task FailWhenListeningServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
-            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithClientTrustingTheWrongCertificate()
                        .WithCountingService(countingService)
@@ -239,7 +239,7 @@ namespace Halibut.Tests
         public async Task FailWhenPollingServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new CountingService();
-            using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithClientTrustingTheWrongCertificate()
                        .WithCountingService(countingService)

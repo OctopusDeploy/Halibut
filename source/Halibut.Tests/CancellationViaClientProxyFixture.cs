@@ -43,7 +43,7 @@ namespace Halibut.Tests
 
         async Task CanCancel_ConnectingOrQueuedRequests(ClientAndServiceTestCase clientAndServiceTestCase, CancellationTokenSource tokenSourceToCancel, HalibutProxyRequestOptions halibutRequestOption)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
                        .WithStandardServices()
                        .Build(CancellationToken))
@@ -74,7 +74,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task HalibutProxyRequestOptions_ConnectingCancellationToken_CanNotCancel_InFlightRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
                        .Build(CancellationToken))
@@ -126,7 +126,7 @@ namespace Halibut.Tests
 #endif
         public async Task HalibutProxyRequestOptions_InProgressCancellationToken_CanCancel_InFlightRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -167,7 +167,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task CannotHaveServiceWithHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .NoService()
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
@@ -192,7 +192,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task HalibutProxyRequestOptionsCanBeSentToLatestAndOldServicesThatPreDateHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -209,7 +209,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncClients: false)]
         public async Task HalibutProxyRequestOptions_CanNotCancel_InFlightRequests_ForSyncServiceCalls(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {

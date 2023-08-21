@@ -6,7 +6,7 @@ using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
 {
-    public interface IClientAndService : IDisposable
+    public interface IClientAndService : IAsyncDisposable
     {
         HalibutRuntime Client { get; }
         ServiceEndPoint ServiceEndPoint { get; }
