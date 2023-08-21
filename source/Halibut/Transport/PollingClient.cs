@@ -134,7 +134,7 @@ namespace Halibut.Transport
 
         async Task ExecutePollingLoopAsync(CancellationToken cancellationToken)
         {
-            using var requestCancellationTokens = new RequestCancellationTokens(workingCancellationTokenSource.Token, workingCancellationTokenSource.Token);
+            using var requestCancellationTokens = new RequestCancellationTokens(cancellationToken, cancellationToken);
             var retry = createRetryPolicy();
             var sleepFor = TimeSpan.Zero;
             while (!cancellationToken.IsCancellationRequested)
