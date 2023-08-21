@@ -362,13 +362,20 @@ namespace Halibut.Transport.Streams
 
             return await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(
                 action,
-                OnCancellationAction,
+                onCancellationAction: async() => await SafelyDisposeStream(),
+                onActionTaskExceptionAction: async (exception, operationTimedOut) =>
+                {
+                    if (IsTimeoutException(exception) || operationTimedOut)
+                    {
+                        await SafelyDisposeStream();
+                    }
+                },
                 CreateExceptionOnTimeout,
                 TimeSpan.FromMilliseconds(timeout),
                 methodName,
                 cancellationToken);
-
-            async Task OnCancellationAction()
+            
+            async Task SafelyDisposeStream()
             {
                 try
                 {
@@ -376,7 +383,9 @@ namespace Halibut.Transport.Streams
                     hasTimedOut = true;
                     await inner.DisposeAsync();
                 }
-                catch { }
+                catch
+                {
+                }
             }
 
             Exception CreateExceptionOnTimeout()
