@@ -101,7 +101,7 @@ namespace Halibut.Transport.Streams
 
         protected override Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            return innerStream.ReadAsync(buffer, offset, count, cancellationToken);
+            throw new NotSupportedException();
         }
 
         protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
