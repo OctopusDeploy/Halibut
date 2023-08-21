@@ -23,7 +23,13 @@ namespace Halibut.TestProxy
 
         public async Task Tunnel(CancellationToken cancellationToken)
         {
+#if !NETFRAMEWORK
+            await
+#endif
             using var fromStream = fromClient.GetStream();
+#if !NETFRAMEWORK
+            await
+#endif
             using var toStream = toClient.GetStream();
 
             var fromWriter = PipeWriter.Create(fromStream, new StreamPipeWriterOptions(leaveOpen: true));

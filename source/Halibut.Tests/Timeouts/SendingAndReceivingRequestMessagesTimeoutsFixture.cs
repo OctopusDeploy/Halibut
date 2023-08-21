@@ -141,16 +141,25 @@ namespace Halibut.Tests.Timeouts
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
-
-                var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 20);
+                
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(() => echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend))).And;
+                var e = (await AssertAsync.Throws<HalibutClientException>(() =>
+                {
+                    var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 20);
+                    return echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend);
+                })).And;
                 AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
 
                 var addControlMessageTimeout = TimeSpan.Zero;
-                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening)
+                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening
+#if !NETFRAMEWORK
+                    // In .NET 6.0, when the `NetworkTimeoutStream` closes the underlying SSL stream due to a timeout, the async dispose path attempts to flush, and the SSL stream cannot be used anymore.
+                    // This is why we don't need to buffer out the timeout for tests in this case
+                    && clientAndServiceTestCase.SyncOrAsync != SyncOrAsync.Async
+#endif
+                    )
                 {
                     // When an error occurs in listening mode, the dispose method in SecureConnection.Dispose
                     // will be called resulting in a END control message being sent over the wire. Since the

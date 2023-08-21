@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Streams;
 using Halibut.Util;
-using Nito.Disposables;
 
 namespace Halibut.Transport.Protocol
 {
@@ -29,7 +28,7 @@ namespace Halibut.Transport.Protocol
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new(1, 0);
         readonly ControlMessageReader controlMessageReader;
-        HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
         public MessageExchangeStream(Stream stream, IMessageSerializer serializer, AsyncHalibutFeature asyncHalibutFeature, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
         {
@@ -494,6 +493,9 @@ namespace Halibut.Transport.Protocol
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
             long bytesLeftToRead = length;
+#if !NETFRAMEWORK
+            await
+#endif
             using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
             {
                 var buffer = new byte[65*1024];

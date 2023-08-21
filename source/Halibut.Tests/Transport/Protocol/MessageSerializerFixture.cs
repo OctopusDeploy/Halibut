@@ -28,7 +28,7 @@ namespace Halibut.Tests.Transport.Protocol
             {
                 await WriteMessage(testCase, sut, stream, "Some random test message");
                 stream.Position = 0;
-                using (var rewindableBufferStream = new RewindableBufferStream(stream))
+                await using (var rewindableBufferStream = new RewindableBufferStream(stream))
                 {
                     var result = await ReadMessage<string>(testCase, sut, rewindableBufferStream);
                     Assert.AreEqual("Some random test message", result);
@@ -76,7 +76,7 @@ namespace Halibut.Tests.Transport.Protocol
                 await WriteMessage(testCase, writingSerializer, stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
 
                 stream.Position = 0;
-                using (var rewindableStream = new RewindableBufferStream(stream))
+                await using (var rewindableStream = new RewindableBufferStream(stream))
                 {
                     await ReadMessage<string>(testCase, sut, rewindableStream);
                 }
@@ -101,7 +101,7 @@ namespace Halibut.Tests.Transport.Protocol
             // The test expects that the serializer will ignore the extra field. 
             // This is to show that as extra fields can be added to the ServerError and they will be ignored.
             var base64Bson = "nY6xTgNBDESHDTR8xRakQ1dRICSaRIfSBCHIDyxZk1tpsz6tfQE+mP/AgQVRU7gYe96Mn06A2ZpEwo7Qm3AX+j4SrgCsQk7Pk3abGoqMXLV7qKy85dw9ki2KUCMvffPCpYgzYyVKxIxq5YoP027fOk5NvDDDRdKQsuD2T1P/tqVRkyV3a9KB4z3rHU8lNsMyJyr667rxX0nt2B/LNsfnr/8fCbfIYfgZzC3JAC+8NziVnR++Mf+acvZ0oGqbAwHnlWTKav5P";
-            using (var stream = new RewindableBufferStream(new MemoryStream(Convert.FromBase64String(base64Bson))))
+            await using (var stream = new RewindableBufferStream(new MemoryStream(Convert.FromBase64String(base64Bson))))
             {
                 var result = await ReadMessage<ResponseMessage>(testCase, sut, stream);
                 result.Error.Should().NotBeNull();
@@ -117,7 +117,7 @@ namespace Halibut.Tests.Transport.Protocol
             var sut = new MessageSerializerBuilder(new LogFactory())
                 .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
                 .Build();
-            using (var stream = new RewindableBufferStream(new MemoryStream(new byte[0])))
+            await using (var stream = new RewindableBufferStream(new MemoryStream(new byte[0])))
             {
                 await AssertionExtensions.Should(() => ReadMessage<ResponseMessage>(testCase, sut, stream)).ThrowAsync<EndOfStreamException>();
             }
@@ -132,7 +132,7 @@ namespace Halibut.Tests.Transport.Protocol
                 .Build();
             var completeBytes = CreateBytesFromMessage("Hello this is the message");
             var someOfTheBytes = completeBytes.SubArray(0, completeBytes.Length - 5);
-            using (var stream = new RewindableBufferStream(new MemoryStream(someOfTheBytes)))
+            await using (var stream = new RewindableBufferStream(new MemoryStream(someOfTheBytes)))
             {
                 await AssertionExtensions.Should(() => ReadMessage<ResponseMessage>(testCase, sut, stream)).ThrowAsync<EndOfStreamException>();
             }
@@ -149,7 +149,7 @@ namespace Halibut.Tests.Transport.Protocol
             var badZipStream = new byte[64000];
             Array.Copy(completeBytes, 0, badZipStream, 0, 30);
 
-            using (var stream = new RewindableBufferStream(new MemoryStream(badZipStream)))
+            await using (var stream = new RewindableBufferStream(new MemoryStream(badZipStream)))
             {
                 await AssertionExtensions.Should(() => ReadMessage<ResponseMessage>(testCase, sut, stream)).ThrowAsync<InvalidDataException>();
             }
@@ -164,7 +164,7 @@ namespace Halibut.Tests.Transport.Protocol
                 .Build();
 
             var deflatedString = DeflateString("Some invalid json/bson");
-            using (var stream = new RewindableBufferStream(new MemoryStream(deflatedString)))
+            await using (var stream = new RewindableBufferStream(new MemoryStream(deflatedString)))
             {
                 await AssertionExtensions.Should(() => ReadMessage<ResponseMessage>(testCase, sut, stream)).ThrowAsync<Newtonsoft.Json.JsonSerializationException>();
             }
@@ -175,7 +175,7 @@ namespace Halibut.Tests.Transport.Protocol
         public async Task SendReceiveMessageRewindableShouldRoundTrip(MessageSerializerTestCase testCase)
         {
             using (var stream = new MemoryStream())
-            using (var rewindableStream = new RewindableBufferStream(stream))
+            await using (var rewindableStream = new RewindableBufferStream(stream))
             {
                 var sut = new MessageSerializerBuilder(new LogFactory())
                     .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
@@ -197,7 +197,7 @@ namespace Halibut.Tests.Transport.Protocol
                 .Build();
 
             using (var stream = new MemoryStream())
-            using (var rewindableStream = new RewindableBufferStream(stream))
+            await using (var rewindableStream = new RewindableBufferStream(stream))
             {
                 var writingSerializer = new MessageSerializerBuilder(new LogFactory())
                     .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
@@ -227,7 +227,7 @@ namespace Halibut.Tests.Transport.Protocol
                 .Build();
 
             using (var ms = new MemoryStream())
-            using (var stream = new RewindableBufferStream(ms))
+            await using (var stream = new RewindableBufferStream(ms))
             {
                 await WriteMessage(testCase, sut, stream, "Test");
                 var trailingBytes = Encoding.UTF8.GetBytes(trailingData);
@@ -256,7 +256,7 @@ namespace Halibut.Tests.Transport.Protocol
                 .Build();
 
             using (var stream = new MemoryStream())
-            using (var rewindableStream = new RewindableBufferStream(stream))
+            await using (var rewindableStream = new RewindableBufferStream(stream))
             {
                 var writingSerializer = new MessageSerializerBuilder(new LogFactory())
                     .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)

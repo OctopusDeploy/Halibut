@@ -26,6 +26,9 @@ namespace Halibut.Transport.Protocol
 
         public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
         {
+#if !NETFRAMEWORK
+            await
+#endif
             using (var file = new FileStream(filePath, FileMode.Create))
             {
                 await writerAsync(file, cancellationToken);
@@ -56,6 +59,9 @@ namespace Halibut.Transport.Protocol
             var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             try
             {
+#if !NETFRAMEWORK
+                await
+#endif
                 using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 65536))
                 {
                     await writerAsync(fileStream, cancellationToken);

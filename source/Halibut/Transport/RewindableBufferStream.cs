@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport
 {
@@ -9,7 +10,7 @@ namespace Halibut.Transport
     /// Only supports rewinding the last read of the underlying stream. Which appears to be all
     /// that is required when rewinding from a Deflate stream over read.
     /// </summary>
-    public class RewindableBufferStream : Stream, IRewindableBuffer
+    public class RewindableBufferStream : AsyncDisposableStream, IRewindableBuffer
     {
         readonly Stream baseStream;
         readonly byte[] rewindBuffer;
@@ -22,6 +23,12 @@ namespace Halibut.Transport
         {
             this.baseStream = baseStream;
             rewindBuffer = new byte[rewindBufferSize];
+        }
+        
+        public override async ValueTask DisposeAsync()
+        {
+            await Task.CompletedTask;
+            Dispose();
         }
 
         public override void Flush() => baseStream.Flush();
@@ -69,7 +76,7 @@ namespace Halibut.Transport
             {
                 throw new NotSupportedException("The rewind buffer has not been started.");
             }
-
+            
             ResetRewindBuffer();
             rewindEnabled = false;
         }

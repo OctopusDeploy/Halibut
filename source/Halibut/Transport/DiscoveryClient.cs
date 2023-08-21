@@ -62,6 +62,9 @@ namespace Halibut.Transport
                 {
                     await using (var networkTimeoutStream = client.GetNetworkTimeoutStream())
                     {
+#if !NETFRAMEWORK
+                        await
+#endif                        
                         using (var ssl = new SslStream(networkTimeoutStream, false, ValidateCertificate))
                         {
 #if NETFRAMEWORK
