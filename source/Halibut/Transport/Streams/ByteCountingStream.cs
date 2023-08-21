@@ -45,7 +45,7 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        protected override async ValueTask _DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
             if (onDispose == OnDispose.DisposeInputStream)
             {
@@ -75,9 +75,9 @@ namespace Halibut.Transport.Streams
 
         public override void Flush() => countBytesFromStream.Flush();
 
-        protected override Task _FlushAsync(CancellationToken cancellationToken) => countBytesFromStream.FlushAsync(cancellationToken);
+        public override Task FlushAsync(CancellationToken cancellationToken) => countBytesFromStream.FlushAsync(cancellationToken);
 
-        protected override async Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             var bytesRead = await countBytesFromStream.ReadAsync(buffer, offset, count, cancellationToken);
 
@@ -86,7 +86,7 @@ namespace Halibut.Transport.Streams
             return bytesRead;
         }
 
-        protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             await countBytesFromStream.WriteAsync(buffer, offset, count, cancellationToken);
             BytesWritten += count;

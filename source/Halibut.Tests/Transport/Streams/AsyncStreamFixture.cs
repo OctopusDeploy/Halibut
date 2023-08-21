@@ -64,22 +64,22 @@ namespace Halibut.Tests.Transport.Streams
             set => stream.Position = value;
         }
 
-        protected override Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             return stream.ReadAsync(buffer, offset, count, cancellationToken);
         }
 
-        protected override Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             return stream.WriteAsync(buffer, offset, count, cancellationToken);
         }
 
-        protected override Task _FlushAsync(CancellationToken cancellationToken)
+        public override Task FlushAsync(CancellationToken cancellationToken)
         {
             return stream.FlushAsync(cancellationToken);
         }
 
-        protected override ValueTask _DisposeAsync()
+        public override ValueTask DisposeAsync()
         {
             return stream.DisposeAsync();
         }
