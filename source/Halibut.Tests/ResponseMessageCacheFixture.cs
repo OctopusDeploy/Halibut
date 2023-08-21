@@ -21,7 +21,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatDoesNotSupportCaching_ResponsesShouldNotBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -39,7 +39,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatDoesNotSupportCaching_WithClientInterface_ResponsesShouldNotBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -57,7 +57,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -75,7 +75,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_WithClientInterface_ResponseShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -93,7 +93,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_ResponseForServiceWithInputParametersShouldBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -112,7 +112,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_CachedItemShouldBeInvalidatedAfterTheCacheDurationExpires(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -136,7 +136,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -154,13 +154,13 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentEndpoints(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndServiceOne = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndServiceOne = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
                 var clientOne = clientAndServiceOne.CreateClient<ICachingService, IAsyncClientCachingService>();
 
-                using var clientAndServiceTwo = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using var clientAndServiceTwo = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithCachingService()
                            .Build(CancellationToken);
 
@@ -178,7 +178,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_ResponseShouldBeDifferentForDifferentInputParameters(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -196,7 +196,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_ClientShouldBeAbleToForceSpecificErrorResponsesToBeCached(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {
@@ -220,7 +220,7 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ForAServiceThatSupportsCaching_ErrorResponsesShouldNotBeCachedByDefault(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithCachingService()
                        .Build(CancellationToken))
             {

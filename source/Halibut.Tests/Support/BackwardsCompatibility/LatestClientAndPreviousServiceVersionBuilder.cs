@@ -311,7 +311,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly ForceClientProxyType? forceClientProxyType;
             readonly CancellationTokenSource cancellationTokenSource;
 
-            public ClientAndService(HalibutRuntime client,
+            public ClientAndService(
+                HalibutRuntime client,
                 HalibutTestBinaryRunner.RunningOldHalibutBinary? runningOldHalibutBinary,
                 Uri serviceUri,
                 CertAndThumbprint serviceCertAndThumbprint,
@@ -335,7 +336,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
 
             public HalibutRuntime Client { get; }
-            public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails, Client.TimeoutsAndLimits);
+            public ServiceEndPoint ServiceEndPoint => new(serviceUri, serviceCertAndThumbprint.Thumbprint, proxyDetails, Client.TimeoutsAndLimits);
 
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
@@ -386,7 +387,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
             }
 
-            public void Dispose()
+            public async ValueTask DisposeAsync()
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
                 
@@ -397,10 +398,10 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                 void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
 
-                Try.CatchingError(() => cancellationTokenSource?.Cancel(), LogError);
+                Try.CatchingError(() => cancellationTokenSource.Cancel(), LogError);
                 if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
                 {
-                    Try.DisposingAsync(Client, LogError).GetAwaiter().GetResult();
+                    await Try.DisposingAsync(Client, LogError);
                 }
                 else
                 {
@@ -410,7 +411,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
                 Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
                 Try.CatchingError(() => disposableCollection.Dispose(), LogError);
-                Try.CatchingError(() => cancellationTokenSource?.Dispose(), LogError);
+                Try.CatchingError(() => cancellationTokenSource.Dispose(), LogError);
             }
         }
     }

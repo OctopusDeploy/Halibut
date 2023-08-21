@@ -25,7 +25,7 @@ namespace Halibut.Tests.Tentacle
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FilesCanBeDownloaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
@@ -60,7 +60,7 @@ namespace Halibut.Tests.Tentacle
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FilesCanBeUploaded(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
@@ -110,7 +110,7 @@ namespace Halibut.Tests.Tentacle
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ScriptCanBeExecutedWithScriptServiceV1(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
@@ -151,7 +151,7 @@ namespace Halibut.Tests.Tentacle
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ScriptCanBeExecutedWithScriptServiceV2(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {

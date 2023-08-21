@@ -18,7 +18,7 @@ namespace Halibut.Tests
         // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
         public async Task ClientCanSendMessagesToService_WhenUsingAProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithProxy()
                        .Build(CancellationToken))
@@ -37,7 +37,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
         public async Task ClientTimesOutConnectingToAProxy_WhenTheProxyIsUnavailable(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
                        .WithProxy()
@@ -64,7 +64,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
         public async Task ClientTimesOutConnectingToAProxy_WhenTheProxyHangsDuringConnect(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
                        .WithProxy()

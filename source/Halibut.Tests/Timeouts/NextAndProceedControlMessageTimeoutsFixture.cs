@@ -25,7 +25,7 @@ namespace Halibut.Tests.Timeouts
         {
             var dataSentSizes = new List<long>();
             long? pauseStreamWhenServiceSendsMessageOfSize = null;
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType)
                            .WithPortForwarderServiceSentDataObserver(clientAndServiceTestCase.ServiceConnectionType, (tcpPump, stream) =>

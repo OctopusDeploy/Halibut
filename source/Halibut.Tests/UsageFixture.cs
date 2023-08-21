@@ -20,7 +20,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -38,7 +38,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task LargeMessages(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -60,7 +60,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -79,7 +79,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -101,7 +101,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -139,7 +139,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
@@ -171,7 +171,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase
+            await using (var clientAndService = await clientAndServiceTestCase
                        .CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
@@ -222,7 +222,7 @@ namespace Halibut.Tests
                 new(ComplexEnum.RequestValue3, "ComplexSet #3"),
             };
 
-            using (var clientAndService = await clientAndServiceTestCase
+            await using (var clientAndService = await clientAndServiceTestCase
                        .CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))

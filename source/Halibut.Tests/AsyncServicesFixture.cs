@@ -42,7 +42,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testSyncService: false, testNetworkConditions: false)]
         public async Task AsyncServiceWithNoReturnType_CanBeRegisteredAndResolved(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder()
                 .WithAsyncService<ILockService, IAsyncLockService>(() => new AsyncLockService())
                 .Build(CancellationToken);
@@ -62,7 +62,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testAsyncServicesAsWell: true, testSyncService: false, testNetworkConditions: false)]
         public async Task AsyncServiceWithNoParams_CanBeRegisteredAndResolve(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder()
                 .WithAsyncService<ICountingService, IAsyncCountingService>(() => new AsyncCountingService())
                 .Build(CancellationToken);

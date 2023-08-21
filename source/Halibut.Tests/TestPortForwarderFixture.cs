@@ -17,7 +17,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ClientCanSendMessagesToTentacle_WithEchoService_AndPortForwrding(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .Build(CancellationToken))
@@ -36,7 +36,7 @@ namespace Halibut.Tests
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task ClientCanNotSendMessagesToTentacle_WithEchoService_AndBrokenPortForwarding(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .Build(CancellationToken))
@@ -59,7 +59,7 @@ namespace Halibut.Tests
         // PollingOverWebSockets does not support (or use) ProxyDetails if provided.
         public async Task ClientCanSendMessagesToTentacle_WithEchoService_AndPortForwarding_AndProxy(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .WithProxy()

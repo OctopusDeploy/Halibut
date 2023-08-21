@@ -16,7 +16,7 @@ namespace Halibut.Tests.BackwardsCompatibility
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task OldInvocationExceptionMessages_AreMappedTo_ServiceInvocationHalibutClientException(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {

@@ -24,7 +24,7 @@ namespace Halibut.Tests.Timeouts
         public async Task HalibutTimeoutsAndLimits_AppliesToTcpClientReceiveTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var expectedTimeout = clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync ? HalibutLimits.TcpClientReceiveTimeout : TimeSpan.FromSeconds(10);
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType).Build())
                        .WithPortForwarding(out var portForwarderRef)
@@ -66,7 +66,7 @@ namespace Halibut.Tests.Timeouts
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessage_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
@@ -95,7 +95,7 @@ namespace Halibut.Tests.Timeouts
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessageDataStream_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
@@ -129,7 +129,7 @@ namespace Halibut.Tests.Timeouts
         {
             var numberOfBytesBeforePausingAStream = 1024 * 1024; // 1MB
 
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .PauseSingleStreamAfterANumberOfBytesHaveBeenSet(numberOfBytesBeforePausingAStream)
@@ -187,7 +187,7 @@ namespace Halibut.Tests.Timeouts
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
         public async Task WhenThenNetworkIsPaused_WhileSendingADataStreamAsPartOfARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()

@@ -22,7 +22,7 @@ namespace Halibut.Tests
         {
             var services = new SingleServiceFactory(new object(), typeof(EchoService));
 
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithServiceFactory(services)
                        .Build(CancellationToken))

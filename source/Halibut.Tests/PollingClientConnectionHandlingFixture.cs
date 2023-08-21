@@ -29,7 +29,7 @@ namespace Halibut.Tests
                 calls.Add(DateTime.UtcNow);
             });
 
-            using (clientAndService)
+            await using (clientAndService)
             {
                 await doSomeActionService.ActionAsync();
             }
@@ -50,7 +50,7 @@ namespace Halibut.Tests
                 calls.Add(DateTime.UtcNow);
             });
 
-            using (clientAndService)
+            await using (clientAndService)
             {
                 await doSomeActionService.ActionAsync();
 

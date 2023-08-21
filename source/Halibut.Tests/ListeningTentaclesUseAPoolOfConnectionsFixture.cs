@@ -21,7 +21,7 @@ namespace Halibut.Tests
         public async Task TestOnlyHealthConnectionsAreKeptInThePool(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
                            .Build())

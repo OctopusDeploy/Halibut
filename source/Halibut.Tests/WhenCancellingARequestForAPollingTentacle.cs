@@ -27,7 +27,7 @@ namespace Halibut.Tests
             {
                 var cancellationTokenSource = new CancellationTokenSource();
                 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .NoService()
                            .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, cancellationTokenSource)))
@@ -47,7 +47,7 @@ namespace Halibut.Tests
                 var tokenSourceToCancel = new CancellationTokenSource();
                 var halibutProxyRequestOptions = new HalibutProxyRequestOptions(tokenSourceToCancel.Token, null);
 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .NoService()
                            .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, tokenSourceToCancel)))
@@ -70,7 +70,7 @@ namespace Halibut.Tests
             {
                 var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions(connectingCancellationTokenCancelled, inProgressCancellationTokenCancelled);
 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .NoService()
                            .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, tokenSourcesToCancel)))
@@ -92,7 +92,7 @@ namespace Halibut.Tests
                 var calls = new List<DateTime>();
                 var tokenSourceToCancel = new CancellationTokenSource();
 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithDoSomeActionService(() =>
                            {
@@ -124,7 +124,7 @@ namespace Halibut.Tests
                 var tokenSourceToCancel = new CancellationTokenSource();
                 var halibutProxyRequestOptions = new HalibutProxyRequestOptions(tokenSourceToCancel.Token, null);
 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithDoSomeActionService(() =>
                            {
@@ -157,7 +157,7 @@ namespace Halibut.Tests
                     connectingCancellationTokenCancelled: true, 
                     inProgressCancellationTokenCancelled: false);
 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithDoSomeActionService(() =>
                            {
@@ -192,7 +192,7 @@ namespace Halibut.Tests
                 var calls = new List<DateTime>();
                 var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions(connectingCancellationTokenCancelled, inProgressCancellationTokenCancelled);
 
-                using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithHalibutLoggingLevel(LogLevel.Trace)
                            .WithDoSomeActionService(() =>

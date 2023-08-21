@@ -20,7 +20,7 @@ namespace Halibut.Tests
         public async Task ListeningRetriesAttemptsUpToTheConfiguredValue(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
@@ -54,7 +54,7 @@ namespace Halibut.Tests
         public async Task ListeningRetriesAttemptsUpToTheConfiguredTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
@@ -91,7 +91,7 @@ namespace Halibut.Tests
         public async Task ListeningRetryListeningSleepIntervalWorks(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
@@ -128,7 +128,7 @@ namespace Halibut.Tests
         public async Task ListeningRetriesAttemptsCanEventuallyWork(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {

@@ -37,7 +37,7 @@ namespace Halibut.Tests.Timeouts
                 .Build();
             var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
             
-            using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithDataObserver(() =>
