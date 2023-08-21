@@ -14,6 +14,11 @@ namespace Halibut.Tests.Support
             disposables.Push(disposable);
         }
 
+        public void AddIgnoringDisposalError(IDisposable disposable)
+        {
+            disposables.Push(new SilentDisposable(disposable));
+        }
+
         public void Dispose()
         {
             var exceptions = new List<Exception>();
@@ -28,6 +33,21 @@ namespace Halibut.Tests.Support
                 }
 
             if (exceptions.Any()) throw new AggregateException(exceptions);
+        }
+
+        class SilentDisposable : IDisposable
+        {
+            IDisposable inner;
+
+            public SilentDisposable(IDisposable inner)
+            {
+                this.inner = inner;
+            }
+
+            public void Dispose()
+            {
+                Try.CatchingError(() => inner.Dispose(), _ => { });
+            }
         }
     }
 }

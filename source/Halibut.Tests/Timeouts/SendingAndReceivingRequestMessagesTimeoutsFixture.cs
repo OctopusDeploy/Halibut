@@ -168,16 +168,33 @@ namespace Halibut.Tests.Timeouts
                     addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;
                 }
 
-                var expectedTimeOut = HalibutLimits.TcpClientSendTimeout // What we actually expected. 
-                                     + HalibutLimits.TcpClientSendTimeout // an extra timeout because of the dispose method of the zip stream (see below)
-                                     + addControlMessageTimeout;
-                sw.Elapsed.Should().BeGreaterThan( expectedTimeOut- TimeSpan.FromSeconds(2), 
-                        "We 'should' wait the send timeout amount of time NOT the heart beat timeout, however when an error occurs writing to the zip (deflate)" +
-                                "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.") // -2s give it a little slack to avoid it timed out slightly too early.
-                    .And
-                    .BeLessThan(expectedTimeOut + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, 
-                        "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
+                if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync)
+                {
+                    var expectedTimeOut = HalibutLimits.TcpClientSendTimeout // What we actually expected. 
+                                          + HalibutLimits.TcpClientSendTimeout // an extra timeout because of the dispose method of the zip stream (see below)
+                                          + addControlMessageTimeout;
+
+                    sw.Elapsed.Should().BeGreaterThan(expectedTimeOut - TimeSpan.FromSeconds(2),
+                            "We 'should' wait the send timeout amount of time NOT the heart beat timeout, however when an error occurs writing to the zip (deflate)" +
+                            "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.") // -2s give it a little slack to avoid it timed out slightly too early.
+                        .And
+                        .BeLessThan(expectedTimeOut + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout,
+                            "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
                             "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
+                }
+                else
+                {
+                    
+                    var expectedTimeOut = HalibutLimits.TcpClientSendTimeout;
+
+                    sw.Elapsed.Should().BeGreaterThan(
+                            expectedTimeOut - TimeSpan.FromSeconds(2), 
+                            "Should wait the send timeout amount of time NOT the heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                        .And
+                        .BeLessThan(
+                            expectedTimeOut + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout,
+                            "Should wait the send timeout amount of time");
+                }
 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
@@ -203,9 +220,10 @@ namespace Halibut.Tests.Timeouts
                     firstSend: "hello",
                     andThenRun: portForwarderRef.Value!.PauseExistingConnections,
                     thenSend: "All done" + Some.RandomAsciiStringOfLength(10*1024*1024)
-                ))))
-                    .And;
+                )))).And;
+
                 AssertExceptionLooksLikeAWriteTimeout(e);
+                
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
@@ -234,6 +252,8 @@ namespace Halibut.Tests.Timeouts
             e.Message.Should().ContainAny(
                 "Unable to write data to the transport connection: Connection timed out.",
                 " Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
+
+            e.IsNetworkError().Should().Be(HalibutNetworkExceptionType.IsNetworkError);
         }
 
         static void AssertExceptionMessageLooksLikeAReadTimeout(HalibutClientException? e)
@@ -241,6 +261,8 @@ namespace Halibut.Tests.Timeouts
             e.Message.Should().ContainAny(
                 "Unable to read data from the transport connection: Connection timed out.",
                 "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+            
+            e.IsNetworkError().Should().Be(HalibutNetworkExceptionType.IsNetworkError);
         }
 
         static Action<ServiceEndPoint> IncreasePollingQueueTimeout()

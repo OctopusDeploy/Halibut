@@ -6,17 +6,20 @@ using Halibut.Util;
 
 namespace Halibut.Transport.Streams
 {
+    public delegate Task OnActionTaskException(Exception exception, bool operationTimedOut);
+    public delegate Task OnCancellation(Exception cancellationException);
+
     public class CancellationAndTimeoutTaskWrapper
     {
         public static async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
-            Action onCancellationAction,
+            OnCancellation? onCancellationAction,
+            OnActionTaskException? onActionTaskExceptionAction,
             Func<Exception> getExceptionOnTimeout,
             TimeSpan timeout,
             string methodName,
             CancellationToken cancellationToken)
         {
-            
             using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
             using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellationTokenSource.Token);
 
@@ -31,12 +34,29 @@ namespace Halibut.Transport.Streams
                 {
                     actionTask.IgnoreUnobservedExceptions();
 
-                    onCancellationAction();
+                    var exception = GetMeaningfulException() ?? getExceptionOnTimeout();
 
-                    ThrowMeaningfulException();
+                    if (onCancellationAction != null)
+                    {
+                        await onCancellationAction(exception);
+                    }
+
+                    throw exception;
                 }
 
-                return await actionTask;
+                try
+                {
+                    return await actionTask;
+                }
+                catch (Exception e)
+                {
+                    if (onActionTaskExceptionAction != null)
+                    {
+                        await onActionTaskExceptionAction(e, timeoutCancellationTokenSource.IsCancellationRequested);
+                    }
+
+                    throw;
+                }
             }
             catch (Exception e)
             {
@@ -47,15 +67,27 @@ namespace Halibut.Transport.Streams
 
             void ThrowMeaningfulException(Exception? innerException = null)
             {
-                if (timeoutCancellationTokenSource.IsCancellationRequested)
-                {
-                    throw getExceptionOnTimeout();
-                }
+                var exception = GetMeaningfulException(innerException);
 
+                if (exception != null)
+                {
+                    throw exception;
+                }
+            }
+
+            Exception? GetMeaningfulException(Exception? innerException = null)
+            {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    throw new OperationCanceledException($"The {methodName} operation was cancelled.", innerException);
+                    return new OperationCanceledException($"The {methodName} operation was cancelled.", innerException);
                 }
+
+                if (timeoutCancellationTokenSource.IsCancellationRequested)
+                {
+                    return getExceptionOnTimeout();
+                }
+
+                return null;
             }
         }
     }
