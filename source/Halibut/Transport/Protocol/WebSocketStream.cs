@@ -14,7 +14,7 @@ namespace Halibut.Transport.Protocol
     {
         readonly WebSocket context;
         bool isDisposed;
-        readonly CancellationTokenSource cancel = new CancellationTokenSource();
+        readonly CancellationTokenSource cancel = new();
 
         static readonly TimeSpan SendCancelTimeout = TimeSpan.FromSeconds(1);
 
@@ -114,7 +114,8 @@ namespace Halibut.Transport.Protocol
 
                         return new { Completed = result.EndOfMessage, Successful = true };
                     },
-                    onCancellationAction: async () => { await Task.CompletedTask; },
+                    onCancellationAction: null,
+                    onActionTaskExceptionAction: null,
                     getExceptionOnTimeout: () =>
                     {
                         var socketException = new SocketException(10060);
@@ -154,18 +155,15 @@ namespace Halibut.Transport.Protocol
         }
 
         public override bool CanRead => context.State == WebSocketState.Open;
-        public override bool CanSeek { get; } = false;
+        public override bool CanSeek => false;
         public override bool CanWrite => context.State == WebSocketState.Open;
 
-        public override long Length
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override long Length => throw new NotImplementedException();
 
         public override long Position
         {
-            get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); }
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
         }
 
         void SendCloseMessage()
@@ -180,7 +178,7 @@ namespace Halibut.Transport.Protocol
 
         public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
-            byte[] buffer = new byte[bufferSize];
+            var buffer = new byte[bufferSize];
             var readLength = await ReadAsync(buffer, 0, bufferSize, cancellationToken);
             await destination.WriteAsync(buffer, 0, readLength, cancellationToken);
         }
