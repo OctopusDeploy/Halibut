@@ -107,7 +107,7 @@ namespace Halibut.Transport.Streams
         /// <param name="count"><inheritdoc/></param>
         /// <param name="cancellationToken"><inheritdoc/></param>
         /// <returns><inheritdoc/></returns>
-        protected override async Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             count = ReduceReadCountToBufferSize(count);
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
@@ -136,17 +136,17 @@ namespace Halibut.Transport.Streams
             baseStream.Write(buffer, offset, count);
         }
 
-        protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             await baseStream.WriteAsync(buffer, offset, count, cancellationToken);
         }
         
-        protected override Task _FlushAsync(CancellationToken cancellationToken)
+        public override Task FlushAsync(CancellationToken cancellationToken)
         {
             return baseStream.FlushAsync(cancellationToken);
         }
 
-        protected override ValueTask _DisposeAsync()
+        public override ValueTask DisposeAsync()
         {
             return baseStream.DisposeAsync();
         }

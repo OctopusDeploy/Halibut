@@ -43,7 +43,7 @@ namespace Halibut.Transport.Streams
             
         }
 
-        protected override async Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             try
             {
@@ -82,7 +82,7 @@ namespace Halibut.Transport.Streams
             }
         }
         
-        protected override async Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             try
             {
@@ -95,7 +95,7 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        protected override async Task _FlushAsync(CancellationToken cancellationToken)
+        public override async Task FlushAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -130,7 +130,7 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        protected override async ValueTask _DisposeAsync()
+        public override async ValueTask DisposeAsync()
         {
             if (closeInner)
             {

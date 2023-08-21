@@ -16,36 +16,17 @@ namespace Halibut.Transport.Streams
     /// </summary>
     public abstract class AsyncStream : AsyncDisposableStream
     {
-        public sealed override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            return await _ReadAsync(buffer, offset, count, cancellationToken);
-        }
+        
+        public abstract override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);
 
-        protected abstract Task<int> _ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);
 
-        public sealed override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
-        {
-            await _WriteAsync(buffer, offset, count, cancellationToken);
-        }
+        public abstract override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);
 
-        protected abstract Task _WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);
+        public abstract override Task FlushAsync(CancellationToken cancellationToken);
 
-        public sealed override async Task FlushAsync(CancellationToken cancellationToken)
-        {
-            await _FlushAsync(cancellationToken);
-        }
-
-        protected abstract Task _FlushAsync(CancellationToken cancellationToken);
-
-#if NETFRAMEWORK
-        public sealed override ValueTask DisposeAsync()
-        {
-            return _DisposeAsync();
-        }
-#else
-        public sealed override ValueTask DisposeAsync() => _DisposeAsync();
+#if !NETFRAMEWORK
+        public abstract override ValueTask DisposeAsync();
 #endif
-        protected abstract ValueTask _DisposeAsync();
 
         /**
          * Ensures that calls to old APM-style async methods are redirected
@@ -55,7 +36,7 @@ namespace Halibut.Transport.Streams
         {
             // BeginRead does not respect timeouts. So force it to use ReadAsync, which does.
             // Redirect to ReadAsync to ensure code execution stays async.
-            return _ReadAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
+            return ReadAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
         }
 
         public sealed override int EndRead(IAsyncResult asyncResult)
@@ -74,7 +55,7 @@ namespace Halibut.Transport.Streams
         {
             // BeginWrite does not respect timeouts. So force it to use ReadAsync, which does.
             // Redirect to BeginWrite to ensure code execution stays async.
-            return _WriteAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
+            return WriteAsync(buffer, offset, count, CancellationToken.None).AsAsynchronousProgrammingModel(callback, state);
         }
 
         public sealed override void EndWrite(IAsyncResult asyncResult)
