@@ -45,6 +45,13 @@ namespace Halibut.Tests.Support.TestCases
 
                         foreach (var serviceAsyncHalibutFeatureTestCase in serviceAsyncHalibutFeatureTestCases)
                         {
+#if !OLD_CLIENTS_SUPPORT_POLLINGOVERWEBSOCKETS
+                            if (clientServiceTestVersion.IsPreviousService() && serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
+                            {
+                                continue;
+                            }
+#endif
+
                             if (clientServiceTestVersion.IsPreviousService() && serviceAsyncHalibutFeatureTestCase == AsyncHalibutFeature.Enabled)
                             {
                                 continue;

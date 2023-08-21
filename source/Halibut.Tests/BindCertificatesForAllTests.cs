@@ -11,9 +11,7 @@ namespace Halibut.Tests
             [OneTimeSetUp]
             public void GlobalSetup()
             {
-#if SUPPORTS_WEB_SOCKET_CLIENT
                 WebSocketSslCertificateHelper.AddSslCertToLocalStore();
-#endif
             }
         }
     }

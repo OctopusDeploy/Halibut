@@ -1,4 +1,3 @@
-#if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
 using System.Net;
 using System.Net.WebSockets;
@@ -18,6 +17,7 @@ namespace Halibut.Transport
         readonly X509Certificate2 clientCertificate;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly AsyncHalibutFeature asyncHalibutFeature;
+        readonly ServerCertificateInterceptor serverCertificateInterceptor;
 
         public WebSocketConnectionFactory(X509Certificate2 clientCertificate,
             AsyncHalibutFeature asyncHalibutFeature,
@@ -26,6 +26,7 @@ namespace Halibut.Transport
             this.clientCertificate = clientCertificate;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.asyncHalibutFeature = asyncHalibutFeature;
+            this.serverCertificateInterceptor = new ServerCertificateInterceptor();
         }
 
         [Obsolete]
@@ -82,14 +83,14 @@ namespace Halibut.Transport
 
             try
             {
-                ServerCertificateInterceptor.Expect(connectionId);
+                serverCertificateInterceptor.Expect(connectionId, client);
                 using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
                 {
                     using (cancellationToken.Register(() => cts?.Cancel()))
                         client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token)
                             .ConfigureAwait(false).GetAwaiter().GetResult();
                 }
-                ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
+                serverCertificateInterceptor.Validate(connectionId, serviceEndpoint);
             }
             catch
             {
@@ -103,7 +104,7 @@ namespace Halibut.Transport
             }
             finally
             {
-                ServerCertificateInterceptor.Remove(connectionId);
+                serverCertificateInterceptor.Remove(connectionId);
             }
 
             return client;
@@ -125,7 +126,7 @@ namespace Halibut.Transport
 
             try
             {
-                ServerCertificateInterceptor.Expect(connectionId);
+                serverCertificateInterceptor.Expect(connectionId, client);
                 using (var cts = new CancellationTokenSource(serviceEndpoint.TcpClientConnectTimeout))
                 {
                     using (cancellationToken.Register(() => cts?.Cancel()))
@@ -133,7 +134,7 @@ namespace Halibut.Transport
                         await client.ConnectAsync(serviceEndpoint.BaseUri, cts.Token);
                     }
                 }
-                ServerCertificateInterceptor.Validate(connectionId, serviceEndpoint);
+                serverCertificateInterceptor.Validate(connectionId, serviceEndpoint);
             }
             catch
             {
@@ -147,7 +148,7 @@ namespace Halibut.Transport
             }
             finally
             {
-                ServerCertificateInterceptor.Remove(connectionId);
+                serverCertificateInterceptor.Remove(connectionId);
             }
 
             return client;
@@ -178,4 +179,3 @@ namespace Halibut.Transport
         public ICredentials Credentials { get; set; }
     }
 }
-#endif

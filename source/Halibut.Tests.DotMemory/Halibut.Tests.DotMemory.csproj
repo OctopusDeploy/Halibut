@@ -43,7 +43,11 @@
     </ItemGroup>
 
     <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
-        <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
+        <DefineConstants>$(DefineConstants);DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
+        <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CERTIFICATE_VALIDATION_CALLBACK</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>

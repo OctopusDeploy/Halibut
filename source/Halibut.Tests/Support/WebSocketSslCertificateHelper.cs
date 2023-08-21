@@ -8,7 +8,7 @@ namespace Halibut.Tests.Support
     {
         internal static void AddSslCertToLocalStore()
         {
-            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
             store.Open(OpenFlags.ReadWrite);
 
             store.Add(CertAndThumbprint.Ssl.Certificate2);

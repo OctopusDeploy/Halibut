@@ -52,11 +52,11 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
+    <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CERTIFICATE_VALIDATION_CALLBACK;LIBLOG_PORTABLE</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
-    <DefineConstants>$(DefineConstants);HAS_REAL_PROXY;SUPPORTS_WEB_SOCKET_CLIENT</DefineConstants>
+    <DefineConstants>$(DefineConstants);HAS_REAL_PROXY</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
