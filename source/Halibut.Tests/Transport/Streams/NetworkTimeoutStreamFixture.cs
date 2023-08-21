@@ -536,14 +536,6 @@ namespace Halibut.Tests.Transport.Streams
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.ReadAsync(new Memory<byte>(new byte[1]), CancellationToken.None).AsTask()).ThrowAsync<Exception>()).And);
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.WriteAsync(new ReadOnlyMemory<byte>(new byte[1]), CancellationToken.None).AsTask()).ThrowAsync<Exception>()).And);
 #endif
-
-                AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.Close()).Throw<Exception>().And);
-                AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.Dispose()).Throw<Exception>().And);
-                AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.DisposeAsync().AsTask()).ThrowAsync<Exception>()).And);
-
-                callCountingStream.CloseCallCount.Should().Be(0);
-                callCountingStream.DisposeBoolCallCount.Should().Be(0);
-                callCountingStream.DisposeAsyncCallCount.Should().Be(0);
                 callCountingStream.FlushAsyncCallCount.Should().Be(0);
                 callCountingStream.ReadAsyncCallCount.Should().Be(0);
                 callCountingStream.WriteAsyncCallCount.Should().Be(0);
@@ -566,6 +558,16 @@ namespace Halibut.Tests.Transport.Streams
                 callCountingStream.WriteSpanCallCount.Should().Be(0);
                 callCountingStream.CreateObjRefCallCount.Should().Be(0);
                 callCountingStream.InitializeLifetimeServiceCallCount.Should().Be(0);
+
+                // Close and Dispose should not re-throw on timeout as callers do not expect these to throw 
+                // e.g. if using ... throw it makes the stream difficult to use
+                sut.Close();
+                sut.Dispose();
+                await sut.DisposeAsync();
+
+                callCountingStream.CloseCallCount.Should().Be(2);
+                callCountingStream.DisposeBoolCallCount.Should().Be(0);
+                callCountingStream.DisposeAsyncCallCount.Should().Be(1);
             }
         }
 

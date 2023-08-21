@@ -25,8 +25,6 @@ namespace Halibut.Transport.Streams
 
         public override async ValueTask DisposeAsync()
         {
-            ThrowIfAlreadyTimedOut();
-
             await inner.DisposeAsync();
         }
 
@@ -96,8 +94,6 @@ namespace Halibut.Transport.Streams
 
         public override void Close()
         {
-            ThrowIfAlreadyTimedOut();
-            
             inner.Close();
         }
 
@@ -362,12 +358,12 @@ namespace Halibut.Transport.Streams
 
             return await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(
                 action,
-                onCancellationAction: async() => await SafelyDisposeStream(),
+                onCancellationAction: async cancellationException => await SafelyDisposeStream(cancellationException),
                 onActionTaskExceptionAction: async (exception, operationTimedOut) =>
                 {
                     if (IsTimeoutException(exception) || operationTimedOut)
                     {
-                        await SafelyDisposeStream();
+                        await SafelyDisposeStream(CreateExceptionOnTimeout());
                     }
                 },
                 CreateExceptionOnTimeout,
@@ -375,11 +371,11 @@ namespace Halibut.Transport.Streams
                 methodName,
                 cancellationToken);
             
-            async Task SafelyDisposeStream()
+            async Task SafelyDisposeStream(Exception exception)
             {
                 try
                 {
-                    timeoutException = CreateExceptionOnTimeout();
+                    timeoutException = exception;
                     hasTimedOut = true;
                     await inner.DisposeAsync();
                 }
