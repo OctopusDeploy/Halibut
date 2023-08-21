@@ -123,14 +123,14 @@ namespace Halibut.Tests
         public class SyncParallelRequestsFixture : BaseTest
         {
             [Test]
-            [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: false)]
+            [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
             public async Task MultipleRequestsCanBeInFlightInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                     .WithStandardServices()
                     .Build(CancellationToken);
 
-                var lockService = clientAndService.CreateClient<ILockService>();
+                var lockService = clientAndService.CreateClient<ILockService, IAsyncClientLockService>();
 
                 var threadCount = NumberOfParallelRequests(clientAndServiceTestCase);
                 long threadCompletionCount = 0;
@@ -154,7 +154,7 @@ namespace Halibut.Tests
                         {
                             var requestStartedPath = $"{requestStartedFilePathBase}-{iteration}";
                             requestStartedFilePaths.Add(requestStartedPath);
-                            lockService.WaitForFileToBeDeleted(lockFile, requestStartedPath);
+                            lockService.WaitForFileToBeDeletedAsync(lockFile, requestStartedPath).GetAwaiter().GetResult();
                             Interlocked.Increment(ref threadCompletionCount);
                         }
                         catch (Exception e)
@@ -182,14 +182,14 @@ namespace Halibut.Tests
             }
 
             [Test]
-            [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false, testAsyncAndSyncClients: false)]
+            [LatestAndPreviousClientAndServiceVersionsTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
             public async Task SendMessagesToTentacleInParallel(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                     .WithStandardServices()
                     .Build(CancellationToken);
 
-                var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService>();
+                var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService, IAsyncReadDataStreamService>();
 
                 var dataStreams = CreateDataStreams();
 
@@ -208,7 +208,7 @@ namespace Halibut.Tests
                         try
                         {
                             messagesAreSentTheSameTimeSemaphore.Wait(CancellationToken);
-                            var received = readDataSteamService.SendData(dataStreams);
+                            var received = readDataSteamService.SendDataAsync(dataStreams).GetAwaiter().GetResult();
                             received.Should().Be(5 * dataStreams.Length);
                             Interlocked.Increment(ref threadCompletionCount);
                         }

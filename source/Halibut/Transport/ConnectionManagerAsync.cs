@@ -20,7 +20,6 @@ namespace Halibut.Transport
         //      but use activeConnectionsLock AND connectionsLock when specifically interacting with activeConnections.
         readonly SemaphoreSlim connectionsLock = new(1, 1);
         readonly SemaphoreSlim activeConnectionsLock = new(1, 1);
-        
 
         public bool IsDisposed { get; private set; }
         
@@ -67,22 +66,7 @@ namespace Halibut.Transport
         [Obsolete]
         public IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            Tuple<IConnection, Action> openableConnection;
-            using (connectionsLock.Lock())
-            {
-                var existingConnectionFromPool = pool.Take(serviceEndpoint);
-                openableConnection = existingConnectionFromPool != null
-                    ? Tuple.Create<IConnection, Action>(existingConnectionFromPool, () => { }) // existing connections from the pool are already open
-                    : CreateNewConnection(exchangeProtocolBuilder, connectionFactory, serviceEndpoint, log, cancellationToken);
-
-                using (activeConnectionsLock.Lock())
-                {
-                    AddConnectionToActiveConnections(serviceEndpoint, openableConnection.Item1);
-                }
-            }
-
-            openableConnection.Item2(); // Since this involves IO, this should never be done inside a lock
-            return openableConnection.Item1;
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
@@ -118,13 +102,7 @@ namespace Halibut.Transport
         [Obsolete]
         Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
-            var lazyConnection = new Lazy<IConnection>(() => connectionFactory.EstablishNewConnection(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken));
-            var connection = new DisposableNotifierConnection(lazyConnection, OnConnectionDisposed, OnConnectionDisposedAsync);
-            return Tuple.Create<IConnection, Action>(connection, () =>
-            {
-                // ReSharper disable once UnusedVariable
-                var c = lazyConnection.Value;
-            });
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
         
         async Task<IConnection> CreateNewConnectionWithIoAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
@@ -149,17 +127,7 @@ namespace Halibut.Transport
         [Obsolete]
         public void ReleaseConnection(ServiceEndPoint serviceEndpoint, IConnection connection)
         {
-            using (connectionsLock.Lock())
-            {
-                pool.Return(serviceEndpoint, connection);
-                using (activeConnectionsLock.Lock())
-                {
-                    if (activeConnections.TryGetValue(serviceEndpoint, out var connections))
-                    {
-                        connections.Remove(connection);
-                    }
-                }
-            }
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task ReleaseConnectionAsync(ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
@@ -180,10 +148,7 @@ namespace Halibut.Transport
         [Obsolete]
         public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
         {
-            using (connectionsLock.Lock())
-            {
-                pool.Clear(serviceEndPoint, log);
-            }
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task ClearPooledConnectionsAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
@@ -213,23 +178,7 @@ namespace Halibut.Transport
         [Obsolete]
         public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)
         {
-            using (connectionsLock.Lock())
-            {
-                pool.Clear(serviceEndPoint, log);
-                var toDelete = new List<IConnection>();
-                using (activeConnectionsLock.Lock())
-                {
-                    if (activeConnections.TryGetValue(serviceEndPoint, out var activeConnectionsForEndpoint))
-                    {
-                        toDelete = activeConnectionsForEndpoint.ToList();
-                    }
-                }
-
-                foreach (var connection in toDelete)
-                {
-                    SafelyDisposeConnection(connection, log);
-                }
-            }
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task DisconnectAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)

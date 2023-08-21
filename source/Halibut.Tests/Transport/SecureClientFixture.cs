@@ -64,7 +64,10 @@ namespace Halibut.Tests.Transport
             {
                 var connection = Substitute.For<IConnection>();
                 connection.Protocol.Returns(new MessageExchangeProtocol(stream, log));
-                connectionManager.ReleaseConnection(endpoint, connection);
+
+                syncOrAsync
+                    .WhenSync(() => connectionManager.ReleaseConnection(endpoint, connection))
+                    .WhenAsync(() => connectionManager.ReleaseConnectionAsync(endpoint, connection, CancellationToken.None));
             }
 
             var request = new RequestMessage

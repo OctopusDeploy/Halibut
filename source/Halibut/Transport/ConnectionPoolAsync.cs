@@ -17,20 +17,7 @@ namespace Halibut.Transport
         [Obsolete]
         public TPooledResource Take(TKey endPoint)
         {
-            using (poolLock.Lock())
-            {
-                var connections = GetOrAdd(endPoint);
-
-                while (true)
-                {
-                    var connection = Take(connections);
-
-                    if (connection == null || !connection.HasExpired())
-                        return connection;
-
-                    DestroyConnection(connection, null);
-                }
-            }
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
@@ -54,18 +41,7 @@ namespace Halibut.Transport
         [Obsolete]
         public void Return(TKey endPoint, TPooledResource resource)
         {
-            using (poolLock.Lock())
-            {
-                var connections = GetOrAdd(endPoint);
-                connections.Add(resource);
-                resource.NotifyUsed();
-
-                while (connections.Count > 5)
-                {
-                    var connection = Take(connections);
-                    DestroyConnection(connection, null);
-                }
-            }
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken)
@@ -87,19 +63,7 @@ namespace Halibut.Transport
         [Obsolete]
         public void Clear(TKey key, ILog log = null)
         {
-            using (poolLock.Lock())
-            {
-                if (!pool.TryGetValue(key, out var connections))
-                    return;
-
-                foreach (var connection in connections)
-                {
-                    DestroyConnection(connection, log);
-                }
-
-                connections.Clear();
-                pool.Remove(key);
-            }
+            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task ClearAsync(TKey key, ILog log, CancellationToken cancellationToken)
