@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
@@ -136,7 +137,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -150,11 +152,11 @@ namespace Halibut.Tests
                 var stream = new MemoryStream(data);
 
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-
-
+                
                 var dataStream = await clientAndServiceTestCase.SyncOrAsync
-                    .WhenSync(() => DataStream.FromStream(stream, progressReported.Add))
-                    .WhenAsync(() => Task.FromResult(DataStream.FromStreamAsync(stream, 
+                    .WhenSync(() => DataStream.FromStream(stream, progressReported.Add, (i, token) => throw new Exception("Should be sync")))
+                    .WhenAsync(() => Task.FromResult(DataStream.FromStream(stream,
+                        i => throw new Exception("Wrong path it should be doing async calls"),
                         async (i, token) => { 
                             await Task.CompletedTask;
                             progressReported.Add(i);
