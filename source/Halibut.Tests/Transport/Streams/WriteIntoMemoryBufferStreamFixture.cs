@@ -3,6 +3,8 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.Streams;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
 using Halibut.Transport.Streams;
@@ -160,6 +162,24 @@ namespace Halibut.Tests.Transport.Streams
             // Assert
             memoryStream.Length.Should().Be(bytesToWrite.Length);
             sut.BytesWrittenIntoMemory.Should().Be(writeIntoMemoryLimitBytes);
+        }
+        
+        [Test]
+        public async Task AfterAFailedWriteDisposeShouldNotAttemptToWriteThoseBytesAgain()
+        {
+            using var memoryStream = new MemoryStream();
+            using var actionBeforeWriteStream = new ActionBeforeWriteStream(memoryStream);
+            actionBeforeWriteStream.BeforeWrite = () => throw new Exception("Oh no");
+            var sut = new WriteIntoMemoryBufferStream(actionBeforeWriteStream, 8192, OnDispose.LeaveInputStreamOpen);
+
+            sut.WriteString("Some");
+
+            await AssertAsync.Throws<Exception>(async () => await sut.WriteBufferToUnderlyingStream(CancellationToken));
+            
+            memoryStream.Length.Should().Be(0);
+
+            // This should not throw since it should not attempt to write the same bytes to the stream. 
+            await sut.DisposeAsync();
         }
     }
 }
