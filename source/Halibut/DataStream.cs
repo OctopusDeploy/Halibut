@@ -237,7 +237,7 @@ namespace Halibut
                 }
 
                 if (progress != 100)
-                    updateProgress(100);
+                    await updateProgressAsync(100, cancellationToken);
 
                 await destination.FlushAsync(cancellationToken);
             }
