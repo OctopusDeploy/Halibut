@@ -20,6 +20,7 @@ namespace Halibut.Transport.Protocol
             this.log = log;
         }
 
+        [Obsolete]
         public void SaveTo(string filePath)
         {
             if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
@@ -40,7 +41,9 @@ namespace Halibut.Transport.Protocol
         {
             // TODO - ASYNC ME UP!
             // Can this meaningfully become async? I did not see a async move operation.
+#pragma warning disable CS0612
             SaveTo(filePath);
+#pragma warning restore CS0612
             return Task.CompletedTask;
         }
 
@@ -64,6 +67,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         public void Read(Action<Stream> reader)
         {
             if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
@@ -92,6 +96,7 @@ namespace Halibut.Transport.Protocol
             GC.SuppressFinalize(this);
         }
 
+        [Obsolete]
         static void AttemptToDelete(string fileToDelete)
         {
             for (var i = 1; i <= 3; i++)

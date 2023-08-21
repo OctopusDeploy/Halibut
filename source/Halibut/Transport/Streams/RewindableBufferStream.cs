@@ -2,9 +2,8 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Transport.Streams;
 
-namespace Halibut.Transport
+namespace Halibut.Transport.Streams
 {
     /// <summary>
     /// Only supports rewinding the last read of the underlying stream. Which appears to be all
@@ -86,7 +85,7 @@ namespace Halibut.Transport
         {
             count = ReduceReadCountToBufferSize(count);
             var rewoundCount = ReadFromRewindBuffer(buffer, offset, count);
-            
+
             // Do not attempt to read from the base stream if the buffer has been partially filled
             // from the rewind buffer. This is for safety, so the Halibut protocol doesn't accidentally
             // consume bytes destined for a subsequent operation.
@@ -157,7 +156,7 @@ namespace Halibut.Transport
         public override bool CanWrite => true;
 
         public override bool CanTimeout => baseStream.CanTimeout;
-        
+
         public override int ReadTimeout
         {
             get => baseStream.ReadTimeout;

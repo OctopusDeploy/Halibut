@@ -471,6 +471,7 @@ namespace Halibut.Transport.Protocol
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
 
+        [Obsolete]
         TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));

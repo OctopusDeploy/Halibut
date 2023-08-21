@@ -5,7 +5,7 @@ using System.IO.Compression;
 using System.Reflection;
 using Halibut.Diagnostics;
 
-namespace Halibut.Transport
+namespace Halibut.Transport.Streams
 {
     /// <summary>
     /// Reflects <see cref="DeflateStream"/> to determine the number of bytes available in an instance's input buffer.
@@ -29,7 +29,7 @@ namespace Halibut.Transport
             this.log = log;
             inflaterFieldCached = typeof(DeflateStream).GetField("_inflater", BindingFlags.NonPublic | BindingFlags.Instance);
             if (inflaterFieldCached == null) inflaterFieldCached = typeof(DeflateStream).GetField("inflater", BindingFlags.NonPublic | BindingFlags.Instance);
-            
+
             // Only in net6 will this work
             zlibStreamFieldCached = inflaterFieldCached?.FieldType.GetField("_zlibStream", BindingFlags.NonPublic | BindingFlags.Instance);
             availInPropertyCached = zlibStreamFieldCached?.FieldType.GetProperty("AvailIn");
@@ -60,13 +60,13 @@ namespace Halibut.Transport
             // in Net48 we need to look at the actual inflater object since otherwise we are looking at a interface with no zlibstream.
             var zlibStreamField = zlibStreamFieldCached ?? inflater.GetType().GetField("_zlibStream", BindingFlags.NonPublic | BindingFlags.Instance);
             if (zlibStreamField == null) return false;
-            
+
             var zlibStream = zlibStreamField.GetValue(inflater);
             if (zlibStream is null) return false;
 
             var availInProperty = availInPropertyCached ?? zlibStream.GetType().GetProperty("AvailIn");
             if (availInProperty == null) return false;
-            
+
             var size = (uint?)availInProperty.GetValue(zlibStream);
             if (size is null) return false;
 
