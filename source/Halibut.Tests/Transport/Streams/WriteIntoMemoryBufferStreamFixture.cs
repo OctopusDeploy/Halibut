@@ -165,7 +165,7 @@ namespace Halibut.Tests.Transport.Streams
         }
         
         [Test]
-        public async Task AfterAFailedWriteDisposeShouldNotAttemptToWriteThoseBytesAgain()
+        public async Task AfterAFailed_WriteBufferToUnderlyingStream_DisposeShouldNotAttemptToWriteThoseBytesAgain()
         {
             using var memoryStream = new MemoryStream();
             using var actionBeforeWriteStream = new ActionBeforeWriteStream(memoryStream);
@@ -175,6 +175,26 @@ namespace Halibut.Tests.Transport.Streams
             sut.WriteString("Some");
 
             await AssertAsync.Throws<Exception>(async () => await sut.WriteBufferToUnderlyingStream(CancellationToken));
+            
+            memoryStream.Length.Should().Be(0);
+
+            // This should not throw since it should not attempt to write the same bytes to the stream. 
+            await sut.DisposeAsync();
+        }
+        
+        [Test]
+        [StreamMethodTestCase]
+        public async Task AfterAFailedWriteDisposeShouldNotAttemptToWriteThoseBytesAgain(StreamMethod streamMethod)
+        {
+            using var memoryStream = new MemoryStream();
+            using var actionBeforeWriteStream = new ActionBeforeWriteStream(memoryStream);
+            actionBeforeWriteStream.BeforeWrite = () => throw new Exception("Oh no");
+            var sut = new WriteIntoMemoryBufferStream(actionBeforeWriteStream, 5, OnDispose.LeaveInputStreamOpen);
+
+            var bytes = "Some".GetBytesUtf8();
+            await sut.WriteToStream(streamMethod, bytes, 0, bytes.Length, CancellationToken);
+
+            await AssertAsync.Throws<Exception>(async () => await sut.WriteToStream(streamMethod, bytes, 0, bytes.Length, CancellationToken));
             
             memoryStream.Length.Should().Be(0);
 
