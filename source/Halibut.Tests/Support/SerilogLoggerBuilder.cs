@@ -8,7 +8,6 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Display;
-using Serilog.Sinks.NUnit;
 
 namespace Halibut.Tests.Support
 {

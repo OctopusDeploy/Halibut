@@ -139,7 +139,7 @@ namespace Halibut.Transport
         {
             var retry = createRetryPolicy();
             var sleepFor = TimeSpan.Zero;
-            while (!cancellationToken.IsCancellationRequested)
+            while (!requestCancellationTokens.LinkedCancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -170,7 +170,7 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    await Task.Delay(sleepFor, cancellationToken);
+                    await Task.Delay(sleepFor, requestCancellationTokens.LinkedCancellationToken);
                 }
             }
         }
