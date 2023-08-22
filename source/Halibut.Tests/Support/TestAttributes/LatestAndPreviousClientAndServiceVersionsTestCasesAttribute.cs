@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Halibut.Tests.Support.TestAttributes
 {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
-    public class LatestAndPreviousClientAndServiceVersionsTestCasesAttribute : TestCaseSourceAttribute
+    public class LatestAndPreviousClientAndServiceVersionsTestCasesAttribute : HalibutTestCaseSourceAttribute
     {
         public LatestAndPreviousClientAndServiceVersionsTestCasesAttribute(
             bool testWebSocket = true,
