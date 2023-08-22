@@ -347,9 +347,6 @@ namespace Halibut.Transport.Proxy
             // send the connect request
             await stream.WriteAsync(request, 0, request.Length, cancellationToken);
 
-            // wait for the proxy server to respond
-            await WaitForDataAsync(stream, cancellationToken);
-
             // PROXY SERVER RESPONSE
             // =======================================================================
             //HTTP/1.0 200 Connection Established<CR><LF>
@@ -357,15 +354,23 @@ namespace Halibut.Transport.Proxy
             //ignore all of them]
             //<CR><LF>    // Last Empty Line
 
-            // create an byte response array  
-            var response = new byte[TcpClient.ReceiveBufferSize];
             var sbuilder = new StringBuilder();
 
-            do
+            var existingTimeout = stream.ReadTimeout;
+            stream.ReadTimeout = WAIT_FOR_DATA_TIMEOUT;
+            try
             {
-                var bytes = await stream.ReadAsync(response, 0, TcpClient.ReceiveBufferSize, cancellationToken);
-                sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
-            } while (stream.DataAvailable);
+                var response = new byte[1]; // Read 1 byte at a time to prevent over read. (This is not efficient but this is only done once per stream)
+                while (!sbuilder.ToString().EndsWith("\r\n\r\n"))
+                {
+                    var bytes = await stream.ReadAsync(response, 0, response.Length, cancellationToken);
+                    sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
+                }
+            }
+            finally
+            {
+                stream.ReadTimeout = existingTimeout;
+            }
 
             ParseResponse(sbuilder.ToString());
             
@@ -426,18 +431,6 @@ namespace Halibut.Transport.Proxy
             while (!stream.DataAvailable)
             {
                 Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
-                sleepTime += WAIT_FOR_DATA_INTERVAL;
-                if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
-                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), true);
-            }
-        }
-        
-        async Task WaitForDataAsync(NetworkTimeoutStream stream, CancellationToken cancellationToken)
-        {
-            var sleepTime = 0;
-            while (!stream.DataAvailable)
-            {
-                await Task.Delay(WAIT_FOR_DATA_INTERVAL, cancellationToken);
                 sleepTime += WAIT_FOR_DATA_INTERVAL;
                 if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
                     throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), true);
