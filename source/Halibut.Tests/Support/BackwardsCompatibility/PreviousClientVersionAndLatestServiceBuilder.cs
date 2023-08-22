@@ -32,7 +32,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         Version? version = null;
-        Func<HttpProxyService>? proxyFactory;
+        ProxyFactory? proxyFactory;
         IEchoService echoService = new EchoService();
         ICachingService cachingService = new CachingService();
         IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
@@ -178,13 +178,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public PreviousClientVersionAndLatestServiceBuilder WithProxy()
         {
-            this.proxyFactory = () =>
-            {
-                var options = new HttpProxyOptions();
-                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
-
-                return new HttpProxyService(options, loggerFactory);
-            };
+            this.proxyFactory = new ProxyFactory().WithDelaySendingSectionsOfHttpHeaders(false);
 
             return this;
         }
@@ -274,7 +268,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var disposableCollection = new DisposableCollection();
             ProxyHalibutTestBinaryRunner.RoundTripRunningOldHalibutBinary runningOldHalibutBinary;
             Uri serviceUri;
-            var httpProxy = proxyFactory?.Invoke();
+            var httpProxy = proxyFactory?.Build();
             ProxyDetails? httpProxyDetails = null;
 
             if (httpProxy != null)

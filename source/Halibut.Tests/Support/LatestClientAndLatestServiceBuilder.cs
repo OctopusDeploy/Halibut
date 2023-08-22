@@ -44,7 +44,7 @@ namespace Halibut.Tests.Support
         Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
-        Func<HttpProxyService>? proxyFactory;
+        ProxyFactory? proxyFactory;
         LogLevel halibutLogLevel = LogLevel.Info;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
@@ -243,15 +243,14 @@ namespace Halibut.Tests.Support
 
         public LatestClientAndLatestServiceBuilder WithProxy()
         {
-            this.proxyFactory = () =>
-            {
-                var options = new HttpProxyOptions();
-                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
-
-                return new HttpProxyService(options, loggerFactory);
-            };
-
+            this.proxyFactory = new ProxyFactory();
             return this;
+        }
+
+        private bool ProxyDelaySendingSectionsOfHttpHeaders()
+        {
+            // We can only delay sending sections of the HTTP headers in versions that have the fix, which is only in async.
+            return this.serviceAsyncHalibutFeature == AsyncHalibutFeature.Enabled && this.forceClientProxyType == ForceClientProxyType.AsyncClient;
         }
 
         public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
@@ -381,7 +380,7 @@ namespace Halibut.Tests.Support
 
             var disposableCollection = new DisposableCollection();
             PortForwarder? portForwarder = null;
-            var httpProxy = proxyFactory?.Invoke();
+            var httpProxy = proxyFactory?.WithDelaySendingSectionsOfHttpHeaders(ProxyDelaySendingSectionsOfHttpHeaders()).Build();
             ProxyDetails? httpProxyDetails = null;
 
             if (httpProxy != null)
