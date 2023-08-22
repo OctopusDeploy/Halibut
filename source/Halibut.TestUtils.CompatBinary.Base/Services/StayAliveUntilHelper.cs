@@ -7,10 +7,10 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
 {
     public class StayAliveUntilHelper
     {
-        public static async Task WaitUntilSignaledToDie(CancellationToken cancellationToken)
+        public static async Task WaitUntilSignaledToDie()
         {
             var stayAliveFile = SettingsHelper.CompatBinaryStayAliveLockFile();
-            while (!cancellationToken.IsCancellationRequested)
+            while (true)
             {
                 try
                 {
@@ -42,9 +42,8 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
                     Environment.Exit(0);
                 }
 
-                await Task.Delay(2000, cancellationToken);
+                await Task.Delay(2000);
             }
-            
         }
     }
 }

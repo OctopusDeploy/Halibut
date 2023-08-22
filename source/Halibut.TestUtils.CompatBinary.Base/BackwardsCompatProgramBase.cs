@@ -10,34 +10,27 @@ namespace Halibut.TestUtils.SampleProgram.Base
     {
         public static async Task<int> Main()
         {
-            using var cancellationTokenSource = new CancellationTokenSource();
-            Task actionTask;
+            using var cancellationTokenSource = new CancellationTokenSource(SettingsHelper.GetTestTimeout());
+            using var registration = cancellationTokenSource.Token.Register(() =>
+            {
+                Environment.Exit(-10060);
+            });
 
             var mode = SettingsHelper.GetSetting("mode") ?? string.Empty;
             Console.WriteLine($"Mode is: {mode}");
 
             if (mode.Equals("serviceonly"))
             {
-                actionTask = RunExternalService(cancellationTokenSource.Token);
+                await RunExternalService(cancellationTokenSource.Token);
             }
             else if(mode.Equals("proxy"))
             {
-                actionTask = ProxyServiceForwardingRequestToClient.Run(cancellationTokenSource.Token);
+                await ProxyServiceForwardingRequestToClient.Run(cancellationTokenSource.Token);
             }
             else
             {
                 Console.WriteLine($"Unknown mode: {mode}");
                 throw new Exception($"Unknown mode: {mode}");
-            }
-
-            var timeoutTask = GetTestTimeoutTask(cancellationTokenSource.Token);
-            var completedTask = await Task.WhenAny(actionTask, timeoutTask);
-
-            if (completedTask == timeoutTask)
-            {
-                Console.WriteLine($"Program will exit as the TestTimeout of {SettingsHelper.GetTestTimeout()} has elapsed");
-                cancellationTokenSource.Cancel();
-                return -10060;
             }
 
             return 1;
@@ -91,15 +84,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 await Console.Out.FlushAsync();
 
                 // Run until the Program is terminated
-                await StayAliveUntilHelper.WaitUntilSignaledToDie(cancellationToken);
+                await StayAliveUntilHelper.WaitUntilSignaledToDie();
             }
-        }
-
-        static async Task GetTestTimeoutTask(CancellationToken cancellationToken)
-        {
-            var timeout = SettingsHelper.GetTestTimeout();
-
-            await Task.Delay(timeout,  cancellationToken);
         }
     }
 }
