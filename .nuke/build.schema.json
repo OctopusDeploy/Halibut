@@ -74,6 +74,10 @@
           "type": "string",
           "description": "Root directory during build execution"
         },
+        "RunDotMemoryTests": {
+          "type": "boolean",
+          "description": "True if dot memory tests should be run, otherwise false. Default to True for Windows and False for Linux"
+        },
         "Skip": {
           "type": "array",
           "description": "List of targets to be skipped. Empty list skips all dependencies",
@@ -121,6 +125,10 @@
               "TestWindowsNet60"
             ]
           }
+        },
+        "TestFilter": {
+          "type": "string",
+          "description": "The test Filter passed to dotnet test e.g. TestCategory=Async"
         },
         "Verbosity": {
           "type": "string",

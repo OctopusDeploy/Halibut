@@ -37,6 +37,12 @@ class Build : NukeBuild
     [OctoVersion(UpdateBuildNumber = true, BranchMember = nameof(BranchName), AutoDetectBranchMember = nameof(AutoDetectBranch), Framework = "net6.0")]
     readonly OctoVersionInfo OctoVersionInfo;
 
+    [Parameter("The test Filter passed to dotnet test e.g. TestCategory=Async")]
+    readonly string TestFilter;
+
+    [Parameter("True if dot memory tests should be run, otherwise false. Default to True for Windows and False for Linux")]
+    readonly bool? RunDotMemoryTests;
+
     static AbsolutePath SourceDirectory => RootDirectory / "source";
     static AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
     static AbsolutePath LocalPackagesDirectory => RootDirectory / ".." / "LocalPackages";
@@ -81,7 +87,7 @@ class Build : NukeBuild
     }
 
     [PublicAPI]
-    Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests:true);
+    Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests: true);
 
     [PublicAPI]
     Target TestLinux => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
@@ -98,7 +104,7 @@ class Build : NukeBuild
             .DependsOn(dependsOn)
             .Executes(() =>
             {
-                if (runDotMemoryTests)
+                if (RunDotMemoryTests ?? runDotMemoryTests)
                 {
                     var frameworkOption = framework != null ? $"--framework={framework}" : "";
 
@@ -109,6 +115,7 @@ class Build : NukeBuild
                     .SetProjectFile(Solution.Halibut_Tests)
                     .SetConfiguration(Configuration)
                     .SetFramework(framework)
+                    .SetFilter(TestFilter)
                     .EnableNoBuild()
                     .EnableNoRestore()
                     .EnableBlameCrash()
