@@ -287,7 +287,7 @@ namespace Halibut.Transport
                 finally
                 {
                     SafelyRemoveClientFromTcpClientManager(client, clientName);
-                    SafelyCloseStream(stream, clientName);
+                    await SafelyCloseStreamAsync(stream, clientName);
                     SafelyCloseClient(client, clientName);
                 }
             }
@@ -305,11 +305,24 @@ namespace Halibut.Transport
             }
         }
 
+        [Obsolete]
         void SafelyCloseStream(Stream stream, EndPoint clientName)
         {
             try
             {
                 stream.Close();
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to close stream for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
+            }
+        }
+        
+        async Task SafelyCloseStreamAsync(Stream stream, EndPoint clientName)
+        {
+            try
+            {
+                await stream.DisposeAsync();
             }
             catch (Exception ex)
             {
