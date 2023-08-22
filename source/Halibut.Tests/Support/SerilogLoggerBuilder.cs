@@ -8,33 +8,38 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Display;
-using Serilog.Sinks.NUnit;
 
 namespace Halibut.Tests.Support
 {
     public class SerilogLoggerBuilder
     {
+        static readonly ILogger Logger;
+
+        static SerilogLoggerBuilder()
+        {
+            var outputTemplate = 
+                "{TestName} "
+                + "{Timestamp:HH:mm:ss.fff zzz} "
+                + "{ShortContext} "
+                + "{Message}{NewLine}{Exception}";
+
+            Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(outputTemplate)))
+                .CreateLogger();
+        }
+
         public ILogger Build()
         {
             // In teamcity we need to know what test the log is for, since we can find hung builds and only have a single file containing all log messages.
             var testName = "";
             if (TeamCityDetection.IsRunningInTeamCity())
             {
-                testName = "{TestHash} ";
+                testName = CurrentTestHash();
             }
 
-            var outputTemplate = 
-                testName
-                + "{Timestamp:HH:mm:ss.fff zzz} "
-                + "{ShortContext} "
-                + "{Message}{NewLine}{Exception}";
-
-            var logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(outputTemplate)))
-                .Enrich.WithProperty("TestHash", CurrentTestHash())
-                .CreateLogger();
-
+            var logger = Logger.ForContext("TestName", testName);
+            
             if (TeamCityDetection.IsRunningInTeamCity())
             {
                 if (!HasLoggedTestHash.Contains(TestContext.CurrentContext.Test.Name))
