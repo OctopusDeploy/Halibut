@@ -13,7 +13,7 @@ namespace Halibut.Tests.Support.TestAttributes
     ///     In this case latest means the code as is, rather than some previously built version of halibut.
     /// </summary>
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
-    public class LatestClientAndLatestServiceTestCasesAttribute : TestCaseSourceAttribute
+    public class LatestClientAndLatestServiceTestCasesAttribute : HalibutTestCaseSourceAttribute
     {
         public LatestClientAndLatestServiceTestCasesAttribute(
             bool testWebSocket = true,
