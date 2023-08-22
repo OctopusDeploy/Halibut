@@ -5,7 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using CliWrap;
 using Halibut.Logging;
+using Halibut.Tests.Support.ExtensionMethods;
 using Nito.AsyncEx;
+using NUnit.Framework;
 using Serilog;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
@@ -58,7 +60,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile },
                 { "WithStandardServices", availableServices.HasStandardServices.ToString() },
                 { "WithCachingService", availableServices.HasCachingService.ToString() },
-                { "WithTentacleServices", availableServices.HasTentacleServices.ToString() }
+                { "WithTentacleServices", availableServices.HasTentacleServices.ToString() },
+                { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty }
             };
 
             if (proxyDetails != null)

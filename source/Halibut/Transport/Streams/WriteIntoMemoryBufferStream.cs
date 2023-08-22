@@ -117,8 +117,8 @@ namespace Halibut.Transport.Streams
 
                 // We tried our best, but will no longer fit in memory. Transition over to use the sinkStream.
                 memoryBuffer.Position = 0;
-                await memoryBuffer.CopyToAsync(innerStream, 8192, cancellationToken);
                 usingMemoryBuffer = false;
+                await memoryBuffer.CopyToAsync(innerStream, 8192, cancellationToken);
             }
 
             await innerStream.WriteAsync(buffer, offset, count, cancellationToken);
@@ -138,8 +138,8 @@ namespace Halibut.Transport.Streams
 
                 // We tried our best, but will no longer fit in memory. Transition over to use the sinkStream.
                 memoryBuffer.Position = 0;
-                memoryBuffer.CopyTo(innerStream);
                 usingMemoryBuffer = false;
+                memoryBuffer.CopyTo(innerStream);
             }
 
             innerStream.Write(buffer, offset, count);
@@ -150,9 +150,10 @@ namespace Halibut.Transport.Streams
             if (usingMemoryBuffer)
             {
                 memoryBuffer.Position = 0;
-                await memoryBuffer.CopyToAsync(innerStream, 8192, cancellationToken);
-
+                // Mark we are not using the memory buffer here, since if the write below fails
+                // on dispose we will attempt to write the data again!
                 usingMemoryBuffer = false;
+                await memoryBuffer.CopyToAsync(innerStream, 8192, cancellationToken);
             }
         }
     }

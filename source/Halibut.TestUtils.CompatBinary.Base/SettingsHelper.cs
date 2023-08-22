@@ -136,5 +136,18 @@ namespace Halibut.TestUtils.SampleProgram.Base
         {
             return GetMandatoryBool("WithTentacleServices");
         }
+
+        public static TimeSpan GetTestTimeout()
+        {
+            var timeoutString = GetSetting("TestTimeout");
+
+            if (string.IsNullOrWhiteSpace(timeoutString))
+            {
+                // If a test doesn't have a timeout lets assume we should not run forever.
+                return TimeSpan.FromMinutes(15);
+            }
+
+            return TimeSpan.Parse(timeoutString);
+        }
     }
 }
