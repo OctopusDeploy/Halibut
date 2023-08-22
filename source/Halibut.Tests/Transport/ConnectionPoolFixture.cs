@@ -80,5 +80,21 @@ namespace Halibut.Tests.Transport
             takeResult = await pool.Take_SyncOrAsync(syncOrAsync, "http://foo", CancellationToken);
             takeResult.Should().BeNull();
         }
+
+        [Test]
+        public async Task AsynchronousDisposalCanBeDoneOnSynchronousConnectionPool()
+        {
+            var connectionPool = SyncOrAsync.Sync.CreateConnectionPool<string, TestConnection>();
+
+            await connectionPool.DisposeAsync();
+        }
+
+        [Test]
+        public void SynchronousDisposalCanBeDoneOnAsynchronousConnectionPool()
+        {
+            var connectionPool = SyncOrAsync.Async.CreateConnectionPool<string, TestConnection>();
+
+            connectionPool.Dispose();
+        }
     }
 }
