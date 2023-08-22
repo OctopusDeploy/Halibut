@@ -236,6 +236,22 @@ namespace Halibut.Tests.Transport
             createdTestConnections.Should().AllSatisfy(c => c.Disposed.Should().BeTrue());
         }
 
+        [Test]
+        public async Task AsynchronousDisposalCanBeDoneOnSynchronousConnectionManager()
+        {
+            var connectionManager = SyncOrAsync.Sync.CreateConnectionManager();
+
+            await connectionManager.DisposeAsync();
+        }
+
+        [Test]
+        public void SynchronousDisposalCanBeDoneOnAsynchronousConnectionManager()
+        {
+            var connectionManager = SyncOrAsync.Async.CreateConnectionManager();
+
+            connectionManager.Dispose();
+        }
+
         static IConnectionFactory CreateFactoryThatCreatesTestConnections(SyncOrAsync syncOrAsync, Action<TestConnection>? connectionCreated = null)
         {
             var connectionFactory = Substitute.For<IConnectionFactory>();

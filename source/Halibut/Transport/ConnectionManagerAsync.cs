@@ -99,12 +99,6 @@ namespace Halibut.Transport
             return connection;
         }
         
-        [Obsolete]
-        Tuple<IConnection, Action> CreateNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
-        }
-        
         async Task<IConnection> CreateNewConnectionWithIoAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             var connection = await connectionFactory.EstablishNewConnectionAsync(exchangeProtocolBuilder, serviceEndpoint, log, cancellationToken);

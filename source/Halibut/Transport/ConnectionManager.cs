@@ -143,9 +143,21 @@ namespace Halibut.Transport
             IsDisposed = true;
         }
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
+            await Task.CompletedTask;
+
+            pool.Dispose();
+            lock (activeConnections)
+            {
+                var connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
+                foreach (var connection in connectionsToDispose)
+                {
+                    SafelyDisposeConnection(connection, null);
+                }
+            }
+
+            IsDisposed = true;
         }
 
         void ClearActiveConnections(ServiceEndPoint serviceEndPoint, ILog log)
