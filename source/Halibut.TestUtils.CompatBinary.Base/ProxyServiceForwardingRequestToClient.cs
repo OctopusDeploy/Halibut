@@ -18,7 +18,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
     /// </summary>
     public class ProxyServiceForwardingRequestToClient
     {
-        public static async Task Run()
+        public static async Task Run(CancellationToken cancellationToken)
         {
             var serviceConnectionType = SettingsHelper.GetServiceConnectionType();
             var serviceCert = SettingsHelper.GetServiceCertificate();
@@ -59,9 +59,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
                         realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
                         break;
                     case ServiceConnectionType.PollingOverWebSocket:
-                        using (await TcpPortHelper.WaitForLock(CancellationToken.None))
+                        using (await TcpPortHelper.WaitForLock(cancellationToken))
                         {
-                            var webSocketListeningPort = WebSocketListeningPort(client, out var webSocketListeningUrl);
+                            var webSocketListeningPort = WebSocketListeningPort(client, out var webSocketListeningUrl, cancellationToken);
                             Console.WriteLine($"WebSocket Polling listener is listening on: {webSocketListeningUrl}");
                             // Do not change the log message as it is used by the HalibutTestBinaryRunners
                             Console.WriteLine("Polling listener is listening on port: " + webSocketListeningPort);
@@ -74,6 +74,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 // A Halibut Runtime which will be the Service that proxies requests to the real Service (Tentacle) in the Test CLR
                 // using an old version of Halibut as the Client which is the thing we are trying to test
@@ -111,11 +113,13 @@ namespace Halibut.TestUtils.SampleProgram.Base
             }
         }
 
-        public static int WebSocketListeningPort(HalibutRuntime client, out string webSocketListeningUrl)
+        public static int WebSocketListeningPort(HalibutRuntime client, out string webSocketListeningUrl, CancellationToken cancellationToken)
         {
             webSocketListeningUrl = null;
             for (int i = 0; i < 9; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 try
                 {
                     return WebSocketListeningPortAttemptOnce(client, out webSocketListeningUrl);
@@ -125,6 +129,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     Console.WriteLine($"Failed to listen for websocket, trying again. {e}");
                 }
             }
+
             return WebSocketListeningPortAttemptOnce(client, out webSocketListeningUrl);
         }
         

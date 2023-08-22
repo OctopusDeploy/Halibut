@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 using Halibut.TestUtils.SampleProgram.Base.Services;
@@ -9,16 +10,22 @@ namespace Halibut.TestUtils.SampleProgram.Base
     {
         public static async Task<int> Main()
         {
+            using var cancellationTokenSource = new CancellationTokenSource(SettingsHelper.GetTestTimeout());
+            using var registration = cancellationTokenSource.Token.Register(() =>
+            {
+                Environment.Exit(-10060);
+            });
+
             var mode = SettingsHelper.GetSetting("mode") ?? string.Empty;
             Console.WriteLine($"Mode is: {mode}");
 
             if (mode.Equals("serviceonly"))
             {
-                await RunExternalService();
+                await RunExternalService(cancellationTokenSource.Token);
             }
             else if(mode.Equals("proxy"))
             {
-                await ProxyServiceForwardingRequestToClient.Run();
+                await ProxyServiceForwardingRequestToClient.Run(cancellationTokenSource.Token);
             }
             else
             {
@@ -29,7 +36,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             return 1;
         }
 
-        static async Task RunExternalService()
+        static async Task RunExternalService(CancellationToken cancellationToken)
         {
             var serviceCert = SettingsHelper.GetServiceCertificate();
             var serviceConnectionType = SettingsHelper.GetServiceConnectionType();
