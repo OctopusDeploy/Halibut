@@ -7,8 +7,6 @@ namespace Halibut.Tests
 {
     public class BaseTest
     {
-        static readonly ILogger CommonLogger = new SerilogLoggerBuilder().Build();
-
         CancellationTokenSource? cancellationTokenSource;
         public CancellationToken CancellationToken { get; private set; }
         public ILogger Logger { get; private set; } = null!;
@@ -16,7 +14,7 @@ namespace Halibut.Tests
         [SetUp]
         public void SetUp()
         {
-            Logger = CommonLogger.ForContext(GetType());
+            Logger = new SerilogLoggerBuilder().Build().ForContext(GetType());
             Logger.Information("Test started");
             cancellationTokenSource = new CancellationTokenSource();
             CancellationToken = cancellationTokenSource.Token;
