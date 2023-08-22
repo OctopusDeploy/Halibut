@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
-using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Protocol
 {
@@ -37,14 +36,27 @@ namespace Halibut.Transport.Protocol
             GC.SuppressFinalize(this);
         }
 
-        public Task SaveToAsync(string filePath, CancellationToken cancellationToken)
+        public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
         {
-            // TODO - ASYNC ME UP!
-            // Can this meaningfully become async? I did not see a async move operation.
-#pragma warning disable CS0612
-            SaveTo(filePath);
-#pragma warning restore CS0612
-            return Task.CompletedTask;
+            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+
+            await AttemptToDeleteAsync(filePath);
+            using (FileStream sourceStream = File.Open(path, FileMode.Open))
+            {
+                using (FileStream destinationStream = File.Create(filePath))
+                {
+                    await sourceStream.CopyToAsync(destinationStream);
+                }
+            }
+            await AttemptToDeleteAsync(path);
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                SetFilePermissionsToInheritFromParent(filePath);
+            }
+
+            moved = true;
+            GC.SuppressFinalize(this);
         }
 
         void SetFilePermissionsToInheritFromParent(string filePath)
@@ -116,15 +128,14 @@ namespace Halibut.Transport.Protocol
                 }
             }
         }
-        
+
         static async Task AttemptToDeleteAsync(string fileToDelete)
         {
             for (var i = 1; i <= 3; i++)
             {
                 try
                 {
-                    // TODO - ASYNC ME UP!
-                    // I didn't see any async versions of these operations. 
+                    // dotnet does not have an sync implementation of File.Delete
                     if (File.Exists(fileToDelete))
                     {
                         File.Delete(fileToDelete);
