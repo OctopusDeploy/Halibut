@@ -95,9 +95,19 @@ namespace Halibut.Transport
             }
         }
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            throw new NotSupportedException("Should not be called when async Halibut is not being used.");
+            await Task.CompletedTask;
+
+            lock (pool)
+            {
+                foreach (var connection in pool.SelectMany(kv => kv.Value))
+                {
+                    DestroyConnection(connection, null);
+                }
+
+                pool.Clear();
+            }
         }
 
         private TPooledResource Take(HashSet<TPooledResource> connections)

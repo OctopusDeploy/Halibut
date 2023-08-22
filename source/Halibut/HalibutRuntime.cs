@@ -561,5 +561,11 @@ namespace Halibut
             }
             return result;
         }
+#pragma warning disable DE0009 // API is deprecated
+        // ReSharper disable once InconsistentNaming
+        public static bool OSSupportsWebSockets => Environment.OSVersion.Platform == PlatformID.Win32NT &&
+                                                   Environment.OSVersion.Version >= new Version(6, 2);
+#pragma warning restore DE0009 // API is deprecated
     }
 }
+
