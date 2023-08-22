@@ -353,8 +353,7 @@ namespace Halibut.Transport.Proxy
             //[.... other HTTP header lines ending with <CR><LF>..
             //ignore all of them]
             //<CR><LF>    // Last Empty Line
-  
-            
+
             var sbuilder = new StringBuilder();
 
             var existingTimeout = stream.ReadTimeout;
