@@ -91,6 +91,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             catch (Exception)
             {
                 cts.Cancel();
+                cts.Dispose();
                 throw;
             }
         }
@@ -143,10 +144,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 }
             }, cancellationToken);
 
-            await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(cancellationToken), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
+            var completedTask = await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
 
             // Will throw.
-            if (runningTentacle.IsCompleted) await runningTentacle;
+            if (completedTask == runningTentacle)
+            {
+                await runningTentacle;
+            }
 
             if (!hasTentacleStarted.IsSet)
             {
@@ -184,9 +188,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public void Dispose()
             {
-                compatBinaryStayAlive.Dispose();
                 cts.Cancel();
-                runningOldHalibutTask.GetAwaiter().GetResult();
+                cts.Dispose();
+                compatBinaryStayAlive.Dispose();
                 tmpDirectory.Dispose();
             }
         }
