@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+#if NETFRAMEWORK
+using System.Threading.Tasks;
+using Halibut.Transport.Streams;
+#endif
 
 namespace Halibut.Tests.Support.Streams
 {
