@@ -109,6 +109,11 @@ namespace Halibut.Transport
             tcpClientManager.Disconnect(thumbprint);
         }
 
+        public async Task DisconnectAsync(string thumbprint)
+        {
+            await tcpClientManager.DisconnectAsync(thumbprint);
+        }
+
         void Accept()
         {
             // See: https://github.com/OctopusDeploy/Issues/issues/6035

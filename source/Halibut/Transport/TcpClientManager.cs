@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
@@ -39,6 +40,22 @@ namespace Halibut.Transport
                     }
                 }
                 activeClients.Remove(thumbprint);
+            }
+        }
+
+        public async Task DisconnectAsync(string thumbprint)
+        {
+            HashSet<TcpClient> tcpClients;
+            lock (activeClients)
+            {
+                activeClients.TryGetValue(thumbprint, out tcpClients);
+                activeClients.Remove(thumbprint);
+            }
+
+            if (tcpClients != null)
+            {
+                var closeTasks = tcpClients.Select(c => Task.Run(c.Close));
+                await Task.WhenAll(closeTasks);
             }
         }
 
