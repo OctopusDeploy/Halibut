@@ -27,6 +27,7 @@ using System;
 using System.Net.Sockets;
 using Halibut.Diagnostics;
 using Halibut.Transport.Proxy.Exceptions;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Proxy
 {
@@ -75,6 +76,13 @@ namespace Halibut.Transport.Proxy
     /// </remarks>
     public class ProxyClientFactory
     {
+        readonly IStreamFactory streamFactory;
+
+        public ProxyClientFactory(IStreamFactory streamFactory)
+        {
+            this.streamFactory = streamFactory;
+        }
+
         /// <summary>
         /// Factory method for creating new proxy client objects.  
         /// </summary>
@@ -93,7 +101,7 @@ namespace Halibut.Transport.Proxy
             switch (type)
             {
                 case ProxyType.HTTP:
-                    return new HttpProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword);
+                    return new HttpProxyClient(logger, proxyHost, proxyPort, proxyUsername, proxyPassword, streamFactory);
                 default:
                     throw new ProxyException(string.Format("Unknown proxy type {0}.", type.ToString()), false);
             }

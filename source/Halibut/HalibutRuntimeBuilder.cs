@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
+using Halibut.Transport.Streams;
 using Halibut.Util;
 
 namespace Halibut
@@ -21,7 +22,14 @@ namespace Halibut
         AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
-
+        IStreamFactory streamFactory;
+        
+        internal HalibutRuntimeBuilder WithStreamFactory(IStreamFactory streamFactory)
+        {
+            this.streamFactory = streamFactory;
+            return this;
+        }
+        
         public HalibutRuntimeBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
@@ -116,6 +124,7 @@ namespace Halibut
             var builder = new MessageSerializerBuilder(logFactory);
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
+            var streamFactory = this.streamFactory ?? new StreamFactory(asyncHalibutFeature);
 
             var halibutRuntime = new HalibutRuntime(
                 serviceFactory, 
@@ -127,7 +136,8 @@ namespace Halibut
                 messageSerializer, 
                 pollingReconnectRetryPolicy,
                 asyncHalibutFeature,
-                halibutTimeoutsAndLimits);
+                halibutTimeoutsAndLimits,
+                streamFactory);
 
             if (onUnauthorizedClientConnect is not null)
             {
