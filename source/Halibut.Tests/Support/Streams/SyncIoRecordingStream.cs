@@ -2,17 +2,15 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
-using Halibut.Transport.Streams;
 
 namespace Halibut.Tests.Support.Streams
 {
-    public class NoSyncIoStream : DelegateStreamBase
+    public class SyncIoRecordingStream : DelegateStreamBase
 #if NETFRAMEWORK
         , IAsyncDisposable
 #endif
     {
-        public NoSyncIoStream(Stream inner)
+        public SyncIoRecordingStream(Stream inner)
         {
             Inner = inner;
         }

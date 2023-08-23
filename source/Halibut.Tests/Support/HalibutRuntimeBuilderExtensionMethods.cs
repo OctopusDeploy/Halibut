@@ -1,4 +1,6 @@
-﻿namespace Halibut.Tests.Support
+﻿using Halibut.Transport.Streams;
+
+namespace Halibut.Tests.Support
 {
     public static class HalibutRuntimeBuilderExtensionMethods
     {
@@ -9,6 +11,12 @@
                 return halibutRuntimeBuilder.WithAsyncHalibutFeatureEnabled();
             }
 
+            return halibutRuntimeBuilder;
+        }
+
+        public static HalibutRuntimeBuilder WithStreamFactoryIfNotNull(this HalibutRuntimeBuilder halibutRuntimeBuilder, IStreamFactory? streamFactory)
+        {
+            if (streamFactory != null) halibutRuntimeBuilder.WithStreamFactory(streamFactory);
             return halibutRuntimeBuilder;
         }
     }

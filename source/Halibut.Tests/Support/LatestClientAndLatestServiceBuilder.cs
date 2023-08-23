@@ -14,6 +14,7 @@ using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
+using Halibut.Transport.Streams;
 using Halibut.Util;
 using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
@@ -51,6 +52,8 @@ namespace Halibut.Tests.Support
         ITrustProvider clientTrustProvider;
         Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits? halibutTimeoutsAndLimits;
+
+        IStreamFactory? streamFactory;
 
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
@@ -109,6 +112,12 @@ namespace Halibut.Tests.Support
         IClientAndServiceBuilder IClientAndServiceBuilder.NoService()
         {
             return NoService();
+        }
+
+        public LatestClientAndLatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
+        {
+            this.streamFactory = streamFactory;
+            return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
@@ -358,6 +367,7 @@ namespace Halibut.Tests.Support
                 .WithPendingRequestQueueFactory(factory)
                 .WithTrustProvider(clientTrustProvider)
                 .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
+                .WithStreamFactoryIfNotNull(streamFactory)
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
@@ -372,6 +382,7 @@ namespace Halibut.Tests.Support
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                     .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                    .WithStreamFactoryIfNotNull(streamFactory)
                     .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);

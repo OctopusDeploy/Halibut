@@ -21,9 +21,9 @@ namespace Halibut.Tests.Transport.Streams
             memoryStream.WriteString("Hello");
             memoryStream.Position = 0;
 
-            var noSyncIoStream = new NoSyncIoStream(memoryStream);
+            var syncIoRecordingStream = new SyncIoRecordingStream(memoryStream);
 
-            await using (var sut = WrapStream(noSyncIoStream))
+            await using (var sut = WrapStream(syncIoRecordingStream))
             {
                 var buffer = new byte[100];
                 var read = await Task<int>.Factory.FromAsync(sut.BeginRead, sut.EndRead, buffer, 0, buffer.Length, null);
@@ -35,7 +35,7 @@ namespace Halibut.Tests.Transport.Streams
                     .Be("Hello");
             }
 
-            noSyncIoStream.SyncCalls.Should().BeEmpty();
+            syncIoRecordingStream.SyncCalls.Should().BeEmpty();
         }
 
         [Test]
@@ -43,9 +43,9 @@ namespace Halibut.Tests.Transport.Streams
         {
             var memoryStream = new MemoryStream();
 
-            var noSyncIoStream = new NoSyncIoStream(memoryStream);
+            var syncIoRecordingStream = new SyncIoRecordingStream(memoryStream);
 
-            await using (var sut = WrapStream(noSyncIoStream))
+            await using (var sut = WrapStream(syncIoRecordingStream))
             {
                 var buffer = "Hello".GetBytesUtf8();
                 await Task.Factory.FromAsync(sut.BeginWrite, sut.EndWrite, buffer, 0, buffer.Length, null);
@@ -59,7 +59,7 @@ namespace Halibut.Tests.Transport.Streams
                     .Be("Hello");
             }
 
-            noSyncIoStream.SyncCalls.Should().BeEmpty();
+            syncIoRecordingStream.SyncCalls.Should().BeEmpty();
         }
 
         [Test]
@@ -67,9 +67,9 @@ namespace Halibut.Tests.Transport.Streams
         {
             var memoryStream = new MemoryStream();
 
-            var noSyncIoStream = new NoSyncIoStream(memoryStream);
+            var syncIoRecordingStream = new SyncIoRecordingStream(memoryStream);
 
-            await using (var sut = WrapStream(noSyncIoStream))
+            await using (var sut = WrapStream(syncIoRecordingStream))
             {
                 await sut.WriteByteArrayAsync("Hello".GetBytesUtf8(), CancellationToken);
                 await sut.FlushAsync(CancellationToken);
@@ -81,7 +81,7 @@ namespace Halibut.Tests.Transport.Streams
                     .Be("Hello");
             }
 
-            noSyncIoStream.SyncCalls.Should().BeEmpty();
+            syncIoRecordingStream.SyncCalls.Should().BeEmpty();
         }
 
         [Test]
@@ -91,12 +91,12 @@ namespace Halibut.Tests.Transport.Streams
             from.WriteByteArrayAsync("Hello".GetBytesUtf8(), CancellationToken);
             from.Position = 0;
 
-            var noSyncIoStreamFrom = new NoSyncIoStream(from);
-            await using (var sutFrom = WrapStream(noSyncIoStreamFrom))
+            var syncIoRecordingStreamFrom = new SyncIoRecordingStream(from);
+            await using (var sutFrom = WrapStream(syncIoRecordingStreamFrom))
             {
                 var to = new MemoryStream();
-                var noSyncIoStreamTo = new NoSyncIoStream(to);
-                await using (var sutTo = WrapStream(noSyncIoStreamTo))
+                var syncIoRecordingStreamTo = new SyncIoRecordingStream(to);
+                await using (var sutTo = WrapStream(syncIoRecordingStreamTo))
                 {
                     await sutFrom.CopyToAsync(sutTo);
                 }
@@ -105,10 +105,10 @@ namespace Halibut.Tests.Transport.Streams
                     .Should()
                     .Be("Hello");
 
-                noSyncIoStreamTo.SyncCalls.Should().BeEmpty();
+                syncIoRecordingStreamTo.SyncCalls.Should().BeEmpty();
             }
 
-            noSyncIoStreamFrom.SyncCalls.Should().BeEmpty();
+            syncIoRecordingStreamFrom.SyncCalls.Should().BeEmpty();
         }
     }
 }
