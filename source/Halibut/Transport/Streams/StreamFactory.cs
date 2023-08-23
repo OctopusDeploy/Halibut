@@ -13,7 +13,7 @@ namespace Halibut.Transport.Streams
             AsyncHalibutFeature = asyncHalibutFeature;
         }
 
-        public AsyncHalibutFeature AsyncHalibutFeature { get; }
+        AsyncHalibutFeature AsyncHalibutFeature { get; }
         public Stream CreateStream(TcpClient client)
         {
             var stream = client.GetStream();
