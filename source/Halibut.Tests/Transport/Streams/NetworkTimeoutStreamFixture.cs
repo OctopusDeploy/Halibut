@@ -505,8 +505,6 @@ namespace Halibut.Tests.Transport.Streams
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.WriteTimeout).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.WriteTimeout = 1).Throw<Exception>().And);
 
-                AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.DataAvailable).Throw<Exception>().And);
-
                 var memoryStream = new MemoryStream();
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.ReadByte()).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.Flush()).Throw<Exception>().And);

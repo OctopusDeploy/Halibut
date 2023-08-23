@@ -20,7 +20,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         Version? version = null;
         Func<int, PortForwarder>? portForwarderFactory;
-        Func<HttpProxyService>? proxyFactory;
+        ProxyFactory proxyFactory;
         LogLevel halibutLogLevel = LogLevel.Info;
         OldServiceAvailableServices availableServices = new(false, false);
         bool hasService = true;
@@ -121,13 +121,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public LatestClientAndPreviousServiceVersionBuilder WithProxy()
         {
-            this.proxyFactory = () =>
-            {
-                var options = new HttpProxyOptions();
-                var loggerFactory = new SerilogLoggerFactory(new SerilogLoggerBuilder().Build());
-
-                return new HttpProxyService(options, loggerFactory);
-            };
+            this.proxyFactory = new ProxyFactory().WithDelaySendingSectionsOfHttpHeaders(false);
 
             return this;
         }
@@ -203,7 +197,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var disposableCollection = new DisposableCollection();
             PortForwarder? portForwarder = null;
 
-            var proxy = proxyFactory?.Invoke();
+            var proxy = proxyFactory?.Build();
             ProxyDetails? proxyDetails = null;
 
             if (proxy != null)

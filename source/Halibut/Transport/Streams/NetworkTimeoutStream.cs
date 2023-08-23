@@ -295,21 +295,6 @@ namespace Halibut.Transport.Streams
             }
         }
 
-        public bool DataAvailable
-        {
-            get
-            {
-                ThrowIfAlreadyTimedOut();
-
-                if (inner is NetworkStream networkStream)
-                {
-                    return networkStream.DataAvailable;
-                }
-
-                throw new NotSupportedException($"{nameof(DataAvailable)} is only available when wrapping a {nameof(NetworkStream)}");
-            }
-        }
-
         async Task<T> WrapWithCancellationAndTimeout<T>(
             Func<CancellationToken, Task<T>> action,
             int timeout,

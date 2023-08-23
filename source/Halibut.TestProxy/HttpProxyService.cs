@@ -33,10 +33,21 @@ namespace Halibut.TestProxy
         readonly CancellationTokenSource cancellationTokenSource = new();
         bool pauseNewConnections = false;
         bool started = false;
+        
+        /// <summary>
+        /// Enabling this results in HTTP headers being sent in at
+        /// least more than one block and a delay between sending them e.g. send
+        /// HTTP/1.0 200 Connection Established<CR><LF>
+        /// then wait 100ms
+        /// then send <CR><LF>
+        /// Doing so will trigger a bug in Halibuts older implementation of HTTP proxy client.
+        /// </summary>
+        bool delaySendingSectionsOfHttpHeaders;
 
-        public HttpProxyService(HttpProxyOptions options, ILoggerFactory loggerFactory)
+        public HttpProxyService(HttpProxyOptions options, bool delaySendingSectionsOfHttpHeaders, ILoggerFactory loggerFactory)
         {
             this.options = options;
+            this.delaySendingSectionsOfHttpHeaders = delaySendingSectionsOfHttpHeaders;
             this.proxyConnectionService = new ProxyConnectionService(new ProxyConnectionFactory(loggerFactory), loggerFactory.CreateLogger<ProxyConnectionService>());
             this.logger = loggerFactory.CreateLogger<HttpProxyService>();
         }
@@ -216,9 +227,20 @@ namespace Halibut.TestProxy
 
         async Task SendConnectResponse(ProxyEndpoint endpoint, string httpVersion, int responseCode, string message, PipeWriter writer, CancellationToken cancellationToken)
         {
-            var response = $"HTTP/{httpVersion} {responseCode} {message}\r\n\r\n";
+            var response = $"HTTP/{httpVersion} {responseCode} {message}";
+            var end = "\r\n\r\n";
             logger.LogTrace("Sending {ResponseCode} response to CONNECT request to {SourceEndpoint}: {Message}", responseCode, endpoint, message);
-            await writer.WriteAsync(Encoding.ASCII.GetBytes(response), cancellationToken);
+            if (delaySendingSectionsOfHttpHeaders)
+            {
+                await writer.WriteAsync(Encoding.ASCII.GetBytes(response), cancellationToken);
+                await writer.FlushAsync(cancellationToken);
+                await Task.Delay(100);
+                await writer.WriteAsync(Encoding.ASCII.GetBytes(end), cancellationToken);
+            }
+            else
+            {
+                await writer.WriteAsync(Encoding.ASCII.GetBytes(response + end), cancellationToken);
+            }
         }
 
         async Task<HttpProxyConnectionRequest> ParseConnectionRequest(ProxyEndpoint sourceEndpoint, PipeReader reader, CancellationToken cancellationToken)
