@@ -229,7 +229,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         version?.ToString(),
                         proxyDetails,
                         halibutLogLevel,
-                        availableServices).Run();
+                        availableServices,
+                        logger).Run();
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
@@ -260,7 +261,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         version?.ToString(),
                         proxyDetails,
                         halibutLogLevel,
-                        availableServices).Run();
+                        availableServices,
+                        logger).Run();
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
@@ -276,7 +278,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         version?.ToString(),
                         proxyDetails,
                         halibutLogLevel,
-                        availableServices).Run();
+                        availableServices,
+                        logger).Run();
 
                     listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
 

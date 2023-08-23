@@ -16,6 +16,7 @@ using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
+using Serilog;
 using Serilog.Extensions.Logging;
 using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
@@ -223,6 +224,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
+            var logger = new SerilogLoggerBuilder().Build().ForContext<PreviousClientVersionAndLatestServiceBuilder>();
             CancellationTokenSource cancellationTokenSource = new();
             if (version == null)
             {
@@ -290,7 +292,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     version?.ToString(),
                     httpProxyDetails,
                     null,
-                    halibutLogLevel).Run();
+                    halibutLogLevel,
+                    logger).Run();
 
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
 
@@ -315,7 +318,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     version?.ToString(),
                     httpProxyDetails,
                     webSocketPath,
-                    halibutLogLevel).Run();
+                    halibutLogLevel,
+                    logger).Run();
 
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
 
@@ -352,12 +356,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     version?.ToString(),
                     httpProxyDetails,
                     null,
-                    halibutLogLevel).Run();
+                    halibutLogLevel,
+                    logger).Run();
 
                 serviceUri = new Uri("https://localhost:" + runningOldHalibutBinary.ServiceListenPort);
             }
 
-            return new ClientAndService(proxyClient, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, service, disposableCollection, cancellationTokenSource, portForwarder, httpProxy);
+            return new ClientAndService(proxyClient, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, service, disposableCollection, cancellationTokenSource, portForwarder, httpProxy, logger);
         }
 
         public class ClientAndService : IClientAndService
@@ -368,6 +373,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly HalibutRuntime service;
             readonly DisposableCollection disposableCollection;
             readonly CancellationTokenSource cancellationTokenSource;
+            readonly ILogger logger;
 
             public ClientAndService(
                 HalibutRuntime proxyClient,
@@ -378,7 +384,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 DisposableCollection disposableCollection,
                 CancellationTokenSource cancellationTokenSource,
                 PortForwarder? portForwarder,
-                HttpProxyService? httpProxy)
+                HttpProxyService? httpProxy,
+                ILogger logger)
             {
                 Client = proxyClient;
                 HttpProxy = httpProxy;
@@ -389,6 +396,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 this.service = service;
                 this.disposableCollection = disposableCollection;
                 this.cancellationTokenSource = cancellationTokenSource;
+                this.logger = logger.ForContext<ClientAndService>();;
             }
 
             /// <summary>
@@ -476,8 +484,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public async ValueTask DisposeAsync()
             {
-                var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
-                
                 logger.Information("****** ****** ****** ****** ****** ****** ******");
                 logger.Information("****** CLIENT AND SERVICE DISPOSE CALLED  ******");
                 logger.Information("*     Subsequent errors should be ignored      *");

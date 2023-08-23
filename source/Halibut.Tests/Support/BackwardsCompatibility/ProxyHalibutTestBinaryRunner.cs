@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using CliWrap;
 using Halibut.Logging;
 using Nito.AsyncEx;
+using Serilog;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -20,6 +21,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly ProxyDetails? proxyDetails;
         readonly string? webSocketPath;
         readonly LogLevel halibutLogLevel;
+        readonly ILogger logger;
         readonly Uri? realServiceListenAddress;
 
         public ProxyHalibutTestBinaryRunner(
@@ -31,7 +33,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             string? version,
             ProxyDetails? proxyDetails,
             string? webSocketPath,
-            LogLevel halibutLogLevel)
+            LogLevel halibutLogLevel,
+            ILogger logger)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.proxyClientListeningPort = proxyClientListeningPort;
@@ -40,13 +43,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.version = version;
             this.proxyDetails = proxyDetails;
             this.halibutLogLevel = halibutLogLevel;
+            this.logger = logger;
             this.webSocketPath = webSocketPath;
             this.realServiceListenAddress = realServiceListenAddress;
+            this.logger = logger.ForContext<ProxyHalibutTestBinaryRunner>();
         }
 
         public async Task<RoundTripRunningOldHalibutBinary> Run()
         {
-            var compatBinaryStayAlive = new CompatBinaryStayAlive();
+            var compatBinaryStayAlive = new CompatBinaryStayAlive(logger);
             var settings = new Dictionary<string, string>
             {
                 { "mode", "proxy" },
@@ -91,6 +96,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             catch (Exception)
             {
                 cts.Cancel();
+                cts.Dispose();
                 throw;
             }
         }
@@ -100,7 +106,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var hasTentacleStarted = new AsyncManualResetEvent();
             hasTentacleStarted.Reset();
 
-            var logger = new SerilogLoggerBuilder().Build().ForContext<ProxyHalibutTestBinaryRunner>();
             int? serviceListenPort = null;
             int? proxyClientListenPort = null;
             var runningTentacle = Task.Run(async () =>
@@ -143,10 +148,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 }
             }, cancellationToken);
 
-            await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(cancellationToken), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
+            var completedTask = await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
 
             // Will throw.
-            if (runningTentacle.IsCompleted) await runningTentacle;
+            if (completedTask == runningTentacle)
+            {
+                await runningTentacle;
+            }
 
             if (!hasTentacleStarted.IsSet)
             {
@@ -184,9 +192,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public void Dispose()
             {
-                compatBinaryStayAlive.Dispose();
                 cts.Cancel();
-                runningOldHalibutTask.GetAwaiter().GetResult();
+                cts.Dispose();
+                compatBinaryStayAlive.Dispose();
                 tmpDirectory.Dispose();
             }
         }

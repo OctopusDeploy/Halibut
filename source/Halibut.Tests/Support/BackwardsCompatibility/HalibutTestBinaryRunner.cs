@@ -22,11 +22,19 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly string version;
         readonly ProxyDetails? proxyDetails;
         readonly LogLevel halibutLogLevel;
-        readonly ILogger logger = new SerilogLoggerBuilder().Build().ForContext<HalibutRuntimeBuilder>();
+        readonly ILogger logger;
         readonly Uri webSocketServiceEndpointUri;
         readonly OldServiceAvailableServices availableServices;
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string? version, ProxyDetails? proxyDetails, LogLevel halibutLogLevel, OldServiceAvailableServices availableServices)
+        public HalibutTestBinaryRunner(
+            ServiceConnectionType serviceConnectionType, 
+            CertAndThumbprint clientCertAndThumbprint, 
+            CertAndThumbprint serviceCertAndThumbprint, 
+            string? version, 
+            ProxyDetails? proxyDetails, 
+            LogLevel halibutLogLevel, 
+            OldServiceAvailableServices availableServices,
+            ILogger logger)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
@@ -35,22 +43,41 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.proxyDetails = proxyDetails;
             this.halibutLogLevel = halibutLogLevel;
             this.availableServices = availableServices;
+            this.logger = logger.ForContext<HalibutRuntimeBuilder>();
         }
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, int? clientServicePort, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string? version, ProxyDetails proxyDetails, LogLevel halibutLoggingLevel, OldServiceAvailableServices availableServices) :
-            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel, availableServices)
+        public HalibutTestBinaryRunner(
+            ServiceConnectionType serviceConnectionType, 
+            int? clientServicePort, 
+            CertAndThumbprint clientCertAndThumbprint, 
+            CertAndThumbprint serviceCertAndThumbprint, 
+            string? version, 
+            ProxyDetails proxyDetails, 
+            LogLevel halibutLoggingLevel, 
+            OldServiceAvailableServices availableServices,
+            ILogger logger) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel, availableServices, logger)
         {
             this.clientServicePort = clientServicePort;
         }
 
-        public HalibutTestBinaryRunner(ServiceConnectionType serviceConnectionType, Uri webSocketServiceEndpointUri, CertAndThumbprint clientCertAndThumbprint, CertAndThumbprint serviceCertAndThumbprint, string? version, ProxyDetails? proxyDetails, LogLevel halibutLoggingLevel, OldServiceAvailableServices availableServices) :
-            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel, availableServices)
+        public HalibutTestBinaryRunner(
+            ServiceConnectionType serviceConnectionType,
+            Uri webSocketServiceEndpointUri, 
+            CertAndThumbprint clientCertAndThumbprint, 
+            CertAndThumbprint serviceCertAndThumbprint, 
+            string? version, 
+            ProxyDetails? proxyDetails,
+            LogLevel halibutLoggingLevel, 
+            OldServiceAvailableServices availableServices,
+            ILogger logger) :
+            this(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, version, proxyDetails, halibutLoggingLevel, availableServices, logger)
         {
             this.webSocketServiceEndpointUri = webSocketServiceEndpointUri;
         }
 
         public async Task<RunningOldHalibutBinary> Run()
         {
-            var compatBinaryStayAlive = new CompatBinaryStayAlive(); 
+            var compatBinaryStayAlive = new CompatBinaryStayAlive(logger); 
             var settings = new Dictionary<string, string>
             {
                 { "mode", "serviceonly" },
@@ -98,6 +125,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             catch (Exception)
             {
                 cts.Cancel();
+                cts.Dispose();
                 throw;
             }
         }
@@ -143,10 +171,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 }
             }, cancellationToken);
 
-            await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(cancellationToken), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
+            var completedTask = await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
 
             // Will throw.
-            if (runningTentacle.IsCompleted) await runningTentacle;
+            if (completedTask == runningTentacle)
+            {
+                await runningTentacle;
+            }
 
             if (!hasTentacleStarted.IsSet)
             {
@@ -176,9 +207,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public void Dispose()
             {
-                compatBinaryStayAlive.Dispose();
                 cts.Cancel();
-                runningOldHalibutTask.GetAwaiter().GetResult();
+                cts.Dispose();
+                compatBinaryStayAlive.Dispose();
                 tmpDirectory.Dispose();
             }
         }
