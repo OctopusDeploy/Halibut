@@ -67,7 +67,10 @@ namespace Halibut.Transport
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
                 using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, streamFactory, log, cancellationToken))
                 {
-                    await using (var networkTimeoutStream = streamFactory.CreateStream(client))
+#if !NETFRAMEWORK
+                    await
+#endif
+                    using (var networkTimeoutStream = streamFactory.CreateStream(client))
                     {
 #if !NETFRAMEWORK
                         await
