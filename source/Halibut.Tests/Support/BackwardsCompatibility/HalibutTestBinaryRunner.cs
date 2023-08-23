@@ -176,9 +176,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public void Dispose()
             {
-                compatBinaryStayAlive.Dispose();
                 cts.Cancel();
-                runningOldHalibutTask.GetAwaiter().GetResult();
+                compatBinaryStayAlive.Dispose();
                 tmpDirectory.Dispose();
             }
         }
