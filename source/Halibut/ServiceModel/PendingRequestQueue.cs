@@ -99,12 +99,12 @@ namespace Halibut.ServiceModel
 
         public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
         {
-            var pending = await DequeueNextAsync();
+            var pending = await DequeueNextAsync(cancellationToken);
             if (pending == null) return null;
             return pending.BeginTransfer() ? pending.Request : null;
         }
 
-        async Task<PendingRequest> DequeueNextAsync()
+        async Task<PendingRequest> DequeueNextAsync(CancellationToken cancellationToken)
         {
             var first = TakeFirst();
             if (first != null)
@@ -112,7 +112,13 @@ namespace Halibut.ServiceModel
                 return first;
             }
 
-            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(pollingQueueWaitTimeout));
+            using var cleanupCancellationTokenSource = new CancellationTokenSource();
+            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cleanupCancellationTokenSource.Token);
+            
+            await Task.WhenAny(hasItems.WaitAsync(), Task.Delay(pollingQueueWaitTimeout, linkedCancellationTokenSource.Token));
+
+            cleanupCancellationTokenSource.Cancel();
+
             hasItems.Reset();
             return TakeFirst();
         }
