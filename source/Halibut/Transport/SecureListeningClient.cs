@@ -23,7 +23,7 @@ namespace Halibut.Transport
         readonly ExchangeProtocolBuilder exchangeProtocolBuilder;
         readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
-        IStreamFactory streamFactory;
+        readonly IStreamFactory streamFactory;
 
         public SecureListeningClient(ExchangeProtocolBuilder exchangeProtocolBuilder,
             ServiceEndPoint serviceEndpoint,

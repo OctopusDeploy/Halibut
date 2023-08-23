@@ -165,7 +165,7 @@ namespace Halibut.Transport.Proxy
         /// </summary>
         public TcpClient TcpClient { get; set; }
         
-        IStreamFactory streamFactory;
+        readonly IStreamFactory streamFactory;
 
         Func<TcpClient> tcpClientFactory = () => new TcpClient();
 

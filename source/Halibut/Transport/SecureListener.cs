@@ -43,7 +43,7 @@ namespace Halibut.Transport
         readonly ExchangeActionAsync exchangeAction;
         readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
-        IStreamFactory streamFactory;
+        readonly IStreamFactory streamFactory;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
