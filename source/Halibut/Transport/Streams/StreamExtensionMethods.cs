@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Util;
 
 namespace Halibut.Transport.Streams
 {
@@ -125,5 +126,11 @@ namespace Halibut.Transport.Streams
             }
         }
 #endif
+        public static IDisposable WithTemporaryReadTimeout(this Stream stream, int temporaryReadTimeout)
+        {
+            var currentTimeout = stream.ReadTimeout;
+            stream.ReadTimeout = temporaryReadTimeout;
+            return new ActionDisposable(() => stream.ReadTimeout = currentTimeout);
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -102,6 +103,19 @@ namespace Halibut.Tests.Transport.Streams
             memoryStream.Position = 0;
             
             await AssertAsync.Throws<EndOfStreamException>(async () => await memoryStream.ReadBytesAsync(1000, CancellationToken));
+        }
+
+        [Test]
+        public async Task WithTemporaryReadTimeoutSetsAndRestoresReadTimeout()
+        {
+            var currentTimeOut = TimeSpan.FromMilliseconds(42);
+            using var stream = new SupportsTimeoutsStream(new MemoryStream(), currentTimeOut, TimeSpan.FromMilliseconds(13));
+            using (var _ = stream.WithTemporaryReadTimeout(34))
+            {
+                stream.ReadTimeout.Should().Be(34);
+            }
+
+            stream.ReadTimeout.Should().Be(42);
         }
 
         byte[] BytesFromBinaryWriter(long l)

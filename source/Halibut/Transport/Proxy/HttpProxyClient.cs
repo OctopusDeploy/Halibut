@@ -26,6 +26,7 @@
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -356,20 +357,13 @@ namespace Halibut.Transport.Proxy
 
             var sbuilder = new StringBuilder();
 
-            var existingTimeout = stream.ReadTimeout;
-            stream.ReadTimeout = WAIT_FOR_DATA_TIMEOUT;
-            try
-            {
+            using (var _ = stream.WithTemporaryReadTimeout(WAIT_FOR_DATA_TIMEOUT)) {
                 var response = new byte[1]; // Read 1 byte at a time to prevent over read. (This is not efficient but this is only done once per stream)
                 while (!sbuilder.ToString().EndsWith("\r\n\r\n"))
                 {
                     var bytes = await stream.ReadAsync(response, 0, response.Length, cancellationToken);
                     sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
                 }
-            }
-            finally
-            {
-                stream.ReadTimeout = existingTimeout;
             }
 
             ParseResponse(sbuilder.ToString());
