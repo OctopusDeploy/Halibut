@@ -22,7 +22,7 @@ namespace Halibut
         AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
-        readonly IStreamFactory streamFactory;
+        IStreamFactory streamFactory;
         
         internal HalibutRuntimeBuilder WithStreamFactory(IStreamFactory streamFactory)
         {

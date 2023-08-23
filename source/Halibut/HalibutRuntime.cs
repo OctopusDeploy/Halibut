@@ -38,7 +38,8 @@ namespace Halibut
         readonly Lazy<ResponseCache> responseCache = new();
         readonly Func<RetryPolicy> pollingReconnectRetryPolicy;
         public HalibutTimeoutsAndLimits TimeoutsAndLimits { get; }
-        readonly IStreamFactory streamFactory; 
+        readonly IStreamFactory streamFactory;
+        readonly TcpConnectionFactory tcpConnectionFactory;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -77,7 +78,7 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
 
             connectionManager = new ConnectionManager();
-            
+            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
         }
 
         internal HalibutRuntime(
@@ -119,6 +120,7 @@ namespace Halibut
                 connectionManager = new ConnectionManager();
 #pragma warning restore CS0612
             }
+            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
         }
 
         public ILogFactory Logs => logs;
@@ -220,7 +222,7 @@ namespace Halibut
             }
             else
             {
-                client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, log, connectionManager, streamFactory);
+                client = new SecureClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, log, connectionManager, tcpConnectionFactory);
             }
 
             if (AsyncHalibutFeature.IsEnabled())
@@ -399,7 +401,7 @@ namespace Halibut
         [Obsolete]
         ResponseMessage SendOutgoingHttpsRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, streamFactory);
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, tcpConnectionFactory);
 
             ResponseMessage response = null;
             client.ExecuteTransaction(protocol =>
@@ -411,7 +413,7 @@ namespace Halibut
 
         async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
-            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, streamFactory);
+            var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, tcpConnectionFactory);
 
             ResponseMessage response = null;
 
