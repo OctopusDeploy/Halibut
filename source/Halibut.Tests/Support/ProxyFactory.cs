@@ -18,7 +18,7 @@ namespace Halibut.Tests.Support
 
         public HttpProxyService Build()
         {
-            return new HttpProxyService(options, false, serilogLoggerFactory);
+            return new HttpProxyService(options, delaySendingSectionsOfHttpHeaders, serilogLoggerFactory);
         }
     }
 }
