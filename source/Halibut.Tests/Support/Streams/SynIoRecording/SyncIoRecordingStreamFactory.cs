@@ -8,11 +8,11 @@ using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
 
-namespace Halibut.Tests.Support.Streams
+namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
     public class SyncIoRecordingStreamFactory : IStreamFactory
     {
-        public readonly List<SyncIoRecordingStream> streams = new();
+        public readonly List<IRecordSyncIo> streams = new();
         AsyncHalibutFeature asyncHalibutFeature;
 
         public SyncIoRecordingStreamFactory(AsyncHalibutFeature asyncHalibutFeature)
@@ -22,28 +22,38 @@ namespace Halibut.Tests.Support.Streams
 
         public List<StackTrace> PlacesSyncIoWasUsed()
         {
-            var stackTraces = new List<StackTrace>();
-            foreach (var noSyncIoStream in streams)
+            lock (streams)
             {
-                stackTraces.AddRange(noSyncIoStream.SyncCalls);
+                var stackTraces = new List<StackTrace>();
+                foreach (var noSyncIoStream in streams)
+                {
+                    stackTraces.AddRange(noSyncIoStream.SyncCalls);
+                }
+                
+                return stackTraces;
             }
-
-            return stackTraces;
+        }
+        
+        void AddRecorder(IRecordSyncIo s)
+        {
+            lock (streams)
+            {
+                streams.Add(s);
+            }
         }
 
         public Stream CreateStream(TcpClient stream)
         {
             var s = new SyncIoRecordingStream(new StreamFactory(asyncHalibutFeature).CreateStream(stream));
-            lock (streams)
-            {
-                streams.Add(s);
-            }
+            AddRecorder(s);
             return s;
         }
 
         public WebSocketStream CreateStream(WebSocket webSocket)
         {
-            throw new NotImplementedException();
+            var wss = new SyncIoRecordingWebSocketStream(webSocket);
+            AddRecorder(wss);
+            return wss;
         }
     }
 }

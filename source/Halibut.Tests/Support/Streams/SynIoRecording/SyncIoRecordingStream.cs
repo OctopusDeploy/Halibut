@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-#if NETFRAMEWORK
 using System.Threading.Tasks;
 using Halibut.Transport.Streams;
+#if NETFRAMEWORK
 #endif
 
-namespace Halibut.Tests.Support.Streams
+namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
-    public class SyncIoRecordingStream : DelegateStreamBase
+    public class SyncIoRecordingStream : DelegateStreamBase, IRecordSyncIo
 #if NETFRAMEWORK
         , IAsyncDisposable
 #endif
@@ -19,7 +19,7 @@ namespace Halibut.Tests.Support.Streams
             Inner = inner;
         }
 
-        public List<StackTrace> SyncCalls = new();
+        public List<StackTrace> SyncCalls { get; } = new();
 
         public void NoteSyncCall()
         {

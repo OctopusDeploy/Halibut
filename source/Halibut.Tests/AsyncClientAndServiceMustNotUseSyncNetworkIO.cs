@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Streams;
+using Halibut.Tests.Support.Streams.SynIoRecording;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
@@ -20,9 +21,7 @@ namespace Halibut.Tests
         // We already know a sync service/client does sync IO.
         [LatestClientAndLatestServiceTestCases(testSyncService: false, testAsyncServicesAsWell: true,
             testSyncClients: false, testAsyncClients: true,
-            // TODO: ASYNC ME UP!
-            // WebSockets are not yet supported since they will need a special implementation of WebSocketStream for this to work.
-            testWebSocket: false)]
+            testNetworkConditions: false)]
         public async Task AsyncClientAndServiceMustNotUseSyncNetworkIOTest(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var syncIoRecordingStreamFactory = new SyncIoRecordingStreamFactory(AsyncHalibutFeature.Enabled);
@@ -33,12 +32,25 @@ namespace Halibut.Tests
                        .WithStreamFactory(syncIoRecordingStreamFactory)
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-                (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
+                var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+                var payload1 = "Payload #1";
+                var payload2 = "Payload #2";
 
-                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
+                for (int i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
-                    (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+                    var request = new ComplexObjectMultipleDataStreams
+                    {
+                        Payload1 = DataStream.FromString(payload1),
+                        Payload2 = DataStream.FromString(payload2),
+                    };
+
+                    var response = await service.ProcessAsync(request);
+
+                    response.Payload1.Should().NotBeSameAs(request.Payload1);
+                    response.Payload1.ReadAsString().Should().Be(payload1);
+
+                    response.Payload2.Should().NotBeSameAs(request.Payload2);
+                    response.Payload2.ReadAsString().Should().Be(payload2);
                 }
             }
 
@@ -59,18 +71,32 @@ namespace Halibut.Tests
             foreach (var distinctPlace in distinctPlaces) Logger.Information("Found sync usage: " + distinctPlace);
 
             Logger.Information($"{syncIoRecordingStreamFactory.PlacesSyncIoWasUsed().Count} vs distinct {distinctPlaces.Length}");
-
-            // TODO: ASYNC ME UP!
-            // We should not exclude anything
+            
             var placesWeAssertOn = distinctPlaces
-                // .Where(s => !s.Contains(".Dispose()"))
-                // .Where(s => !s.Contains(".Close()"))
-                // .Where(s => !s.Contains("Halibut.Transport.RewindableBufferStream.Flush()"))
-                // .Where(s => !s.Contains("System.Net.Security.SslStream.Flush()"))
-                // .Where(s => !s.Contains("Flush()")) // In TeamCity we seem to have stackless flush calls!
 #if NETFRAMEWORK
+                // TODO: ASYNC ME UP!
+                // It is not clear why ssl streams continue to have flush called on them, all the time.
+                // On investigation, its almost as if something is just continuously firing Task.Run(() => sslStream.flush()).
                 .Where(s => !s.Contains("System.Net.Security.SslStream.Flush()"))
-                .Where(s => !s.Contains("Halibut.Transport.Streams.ReadIntoMemoryBufferStream.Read"))
+            
+                // TODO: ASYNC ME UP!
+                // All we see in this stack trace is the single call to this method, we see no parent.
+                .Where(s => !s.Contains("SyncIoRecordingWebSocketStream.Flush()"))
+                
+                // TODO: ASYNC ME UP!
+                // We are missing an async dispose on web sockets.
+                .Where(s => !s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Dispose"))
+                
+                // TODO: ASYNC ME UP!
+                // We seem to be using a sync dispose on DisposableNotifierConnection which results in a sync write.
+                .Where(s => !
+                    (s.Contains("Halibut.Transport.ConnectionManagerAsync.DisposableNotifierConnection.Dispose()")
+                     && s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Write")))
+                
+                
+                // The follow can not be fixed up
+                // SslStream in net48 does not have async dispose, 
+                .Where(s => !s.Contains("System.Net.Security.SslStream.Dispose("))
 #endif
                 .ToArray();
 

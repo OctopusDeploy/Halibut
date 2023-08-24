@@ -3,6 +3,7 @@
 // This means we cannot validate the remote is presenting the correct certificate
 // See https://github.com/dotnet/corefx/issues/12038
 
+using Halibut.Transport.Streams;
 using Halibut.Util;
 #if SUPPORTS_WEB_SOCKET_CLIENT
 using System;
@@ -31,7 +32,7 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly IConnectionManager connectionManager;
         readonly ExchangeProtocolBuilder protocolBuilder;
-
+        IStreamFactory streamFactory;
 
         public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, 
             ServiceEndPoint serviceEndpoint,
@@ -39,7 +40,7 @@ namespace Halibut.Transport
             AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             ILog log,
-            IConnectionManager connectionManager)
+            IConnectionManager connectionManager, IStreamFactory streamFactory)
         {
             this.protocolBuilder = protocolBuilder;
             this.serviceEndpoint = serviceEndpoint;
@@ -47,6 +48,7 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.log = log;
             this.connectionManager = connectionManager;
+            this.streamFactory = streamFactory;
             this.asyncHalibutFeature = asyncHalibutFeature;
         }
 
@@ -77,7 +79,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = connectionManager.AcquireConnection(protocolBuilder, new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits), serviceEndpoint, log, cancellationToken);
+                        connection = connectionManager.AcquireConnection(protocolBuilder, new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits, streamFactory), serviceEndpoint, log, cancellationToken);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
@@ -169,7 +171,7 @@ namespace Halibut.Transport
                     {
                         connection = await connectionManager.AcquireConnectionAsync(
                             protocolBuilder,
-                            new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits), 
+                            new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits, streamFactory), 
                             serviceEndpoint,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);

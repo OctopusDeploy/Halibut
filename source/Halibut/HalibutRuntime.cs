@@ -215,7 +215,7 @@ namespace Halibut
             if (endPoint.IsWebSocketEndpoint)
             {
 #if SUPPORTS_WEB_SOCKET_CLIENT
-                client = new SecureWebSocketClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, log, connectionManager);
+                client = new SecureWebSocketClient(ExchangeProtocolBuilder(), endPoint, serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, log, connectionManager, streamFactory);
 #else
                 throw new NotSupportedException("The netstandard build of this library cannot act as the client in a WebSocket polling setup");
 #endif

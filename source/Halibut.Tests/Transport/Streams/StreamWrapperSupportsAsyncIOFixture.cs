@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support.Streams;
+using Halibut.Tests.Support.Streams.SynIoRecording;
 using Halibut.Tests.Util;
 using Halibut.Transport.Streams;
 using NUnit.Framework;
