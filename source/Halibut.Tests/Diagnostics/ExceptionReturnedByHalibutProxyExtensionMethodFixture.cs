@@ -64,14 +64,15 @@ namespace Halibut.Tests.Diagnostics
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
                     
-                        exception.Message.Should().ContainAny(new String[]
+                        exception.Message.Should().ContainAny(new []
                             {
                                 "Attempted to read past the end of the stream.",
                                 "Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host.",
-                                "The I/O operation has been aborted because of either a thread exit or an application request"
+                                "The I/O operation has been aborted because of either a thread exit or an application request",
+                                "The remote party closed the WebSocket connection without completing the close handshake"
                             },
                             because: "This isn't the best message, really the connection was closed before we got the data we were expecting resulting in us reading past the end of the stream");
-                    }
+                }
             }
             
             [LatestClientAndLatestServiceTestCases(testNetworkConditions:false, 
