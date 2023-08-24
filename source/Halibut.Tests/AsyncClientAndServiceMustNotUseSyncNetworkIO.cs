@@ -53,7 +53,23 @@ namespace Halibut.Tests
                 }
             }
 
-            var distinctPlaces = syncIoRecordingStreamFactory.PlacesSyncIoWasUsed()
+            var distinctPlaces = DistinctStackTracesOfSyncIo(syncIoRecordingStreamFactory);
+
+            foreach (var distinctPlace in distinctPlaces) Logger.Information("Found sync usage: " + distinctPlace);
+
+            Logger.Information($"Total occurrences of sync IO {syncIoRecordingStreamFactory.PlacesSyncIoWasUsed().Count}, of which {distinctPlaces.Length} are distinct");
+
+            var placesWeAssertOn = FilterOutPlacesWeKnowAreStillSync(distinctPlaces);
+
+            foreach (var s in placesWeAssertOn) Logger.Error("Regression: " + s);
+
+            placesWeAssertOn.Length.Should().Be(0);
+            syncIoRecordingStreamFactory.streams.Count.Should().BeGreaterOrEqualTo(2, "Since we should wrap a stream on the client and the service.");
+        }
+
+        internal static string[] DistinctStackTracesOfSyncIo(SyncIoRecordingStreamFactory syncIoRecordingStreamFactory)
+        {
+            return syncIoRecordingStreamFactory.PlacesSyncIoWasUsed()
                 .Select(n =>
                 {
                     var lines = n.ToString().Split('\n')
@@ -66,12 +82,11 @@ namespace Halibut.Tests
                 })
                 .Distinct()
                 .ToArray();
+        }
 
-            foreach (var distinctPlace in distinctPlaces) Logger.Information("Found sync usage: " + distinctPlace);
-
-            Logger.Information($"{syncIoRecordingStreamFactory.PlacesSyncIoWasUsed().Count} vs distinct {distinctPlaces.Length}");
-
-            var placesWeAssertOn = distinctPlaces
+        internal static string[] FilterOutPlacesWeKnowAreStillSync(string[] distinctPlaces)
+        {
+            return distinctPlaces
 #if NETFRAMEWORK
                 // TODO: ASYNC ME UP!
                 // It is not clear why ssl streams continue to have flush called on them, all the time.
@@ -85,7 +100,7 @@ namespace Halibut.Tests
                 // TODO: ASYNC ME UP!
                 // We are missing an async dispose on web sockets, and ExecuteRequest in SecureWebSocketListener needs to call the async close.
                 .Where(s => !(s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Dispose")
-                    && s.Contains("ExecuteRequest")))
+                              && s.Contains("ExecuteRequest")))
                 
                 // TODO: ASYNC ME UP!
                 // SecureConnection should dispose websockets async
@@ -102,11 +117,6 @@ namespace Halibut.Tests
                 .Where(s => !s.Contains("System.Net.Security.SslStream.Dispose("))
 #endif
                 .ToArray();
-
-            foreach (var s in placesWeAssertOn) Logger.Error("Regression: " + s);
-
-            placesWeAssertOn.Length.Should().Be(0);
-            syncIoRecordingStreamFactory.streams.Count.Should().BeGreaterOrEqualTo(2, "Since we should wrap a stream on the client and the service.");
         }
     }
 }
