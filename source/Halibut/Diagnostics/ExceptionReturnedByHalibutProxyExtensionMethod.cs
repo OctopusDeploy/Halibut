@@ -65,6 +65,8 @@ namespace Halibut.Diagnostics
                 if (exception.Message.Contains("An existing connection was forcibly closed by the remote host.")) return HalibutNetworkExceptionType.IsNetworkError;
                 if (exception.Message.Contains("The I/O operation has been aborted because of either a thread exit or an application request")) return HalibutNetworkExceptionType.IsNetworkError;
                 if (exception.Message.Contains("A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("The remote party closed the WebSocket connection without completing the close handshake.")) return HalibutNetworkExceptionType.IsNetworkError;
+                
             }
 
             return HalibutNetworkExceptionType.UnknownError;

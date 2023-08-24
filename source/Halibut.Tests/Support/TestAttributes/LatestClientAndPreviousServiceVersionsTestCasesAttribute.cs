@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Util;
-using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
@@ -28,7 +28,7 @@ namespace Halibut.Tests.Support.TestAttributes
         
         static class LatestClientAndPreviousServiceVersionsTestCases
         {
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncClients, bool testSyncClients, bool testAsyncServicesAsWell)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncClients, bool testSyncClients, bool testAsyncServicesAsWell)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -77,7 +77,7 @@ namespace Halibut.Tests.Support.TestAttributes
                     serviceAsyncHalibutFeatureTestCases
                 );
 
-                return builder.Build().GetEnumerator();
+                return builder.Build();
             }
         }
     }

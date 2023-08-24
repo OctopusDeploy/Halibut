@@ -78,7 +78,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         public async Task<RunningOldHalibutBinary> Run()
         {
             var compatBinaryStayAlive = new CompatBinaryStayAlive(logger); 
-            var settings = new Dictionary<string, string>
+            var settings = new Dictionary<string, string?>
             {
                 { "mode", "serviceonly" },
                 { "tentaclecertpath", serviceCertAndThumbprint.CertificatePfxPath },
@@ -111,80 +111,94 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
 
             settings.Add("ServiceConnectionType", serviceConnectionType.ToString());
+            
+            var tmpDirectory = new TmpDirectory();
 
-            var cts = new CancellationTokenSource();
+            var (task, serviceListenPort, runningTentacleCancellationTokenSource) = await StartHalibutTestBinary(version, settings, tmpDirectory);
 
-            try
-            {
-                var tmp = new TmpDirectory();
-
-                var (task, serviceListenPort) = await StartHalibutTestBinary(version, settings, tmp, cts.Token);
-
-                return new RunningOldHalibutBinary(cts, task, tmp, serviceListenPort, compatBinaryStayAlive);
-            }
-            catch (Exception)
-            {
-                cts.Cancel();
-                cts.Dispose();
-                throw;
-            }
+            return new RunningOldHalibutBinary(runningTentacleCancellationTokenSource, task, tmpDirectory, serviceListenPort, compatBinaryStayAlive);
         }
 
-        async Task<(Task, int?)> StartHalibutTestBinary(string version, Dictionary<string, string> settings, TmpDirectory tmp, CancellationToken cancellationToken)
+        async Task<(Task RunningTentacleTask, int? ServiceListenPort, CancellationTokenSource RunningTentacleCancellationTokenSource)> StartHalibutTestBinary(
+            string version, 
+            Dictionary<string, string?> settings, 
+            TmpDirectory tmp)
         {
             var hasTentacleStarted = new AsyncManualResetEvent();
             hasTentacleStarted.Reset();
 
             int? serviceListenPort = null;
-            var runningTentacle = Task.Run(async () =>
+
+            var runningTentacleCancellationTokenSource = new CancellationTokenSource();
+
+            try
             {
-                try
+
+                var runningTentacle = Task.Run(async () =>
                 {
-                    async Task ProcessLogs(string s, CancellationToken ct)
+                    try
                     {
-                        await Task.CompletedTask;
-                        logger.Information(s);
-                        if (s.StartsWith("Listening on port: "))
+                        async Task ProcessLogs(string s, CancellationToken ct)
                         {
-                            serviceListenPort = int.Parse(Regex.Match(s, @"\d+").Value);
+                            await Task.CompletedTask;
+                            logger.Information(s);
+                            if (s.StartsWith("Listening on port: "))
+                            {
+                                serviceListenPort = int.Parse(Regex.Match(s, @"\d+").Value);
+                            }
+
+                            if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                         }
 
-                        if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
+                        await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version))
+                            .WithArguments(new string[0])
+                            .WithWorkingDirectory(tmp.FullPath)
+                            .WithStandardOutputPipe(PipeTarget.ToDelegate(ProcessLogs))
+                            .WithStandardErrorPipe(PipeTarget.ToDelegate(ProcessLogs))
+                            .WithEnvironmentVariables(settings)
+                            .ExecuteAsync(runningTentacleCancellationTokenSource.Token);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        // Don't throw when we cancel the running of the binary, this is an expected way of killing it.
+                    }
+                    catch (Exception e)
+                    {
+                        logger.Information(e, "Error running Halibut Test Binary");
+                        throw;
+                    }
+                }, runningTentacleCancellationTokenSource.Token);
 
-                    await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version))
-                        .WithArguments(new string[0])
-                        .WithWorkingDirectory(tmp.FullPath)
-                        .WithStandardOutputPipe(PipeTarget.ToDelegate(ProcessLogs))
-                        .WithStandardErrorPipe(PipeTarget.ToDelegate(ProcessLogs))
-                        .WithEnvironmentVariables(settings)
-                        .ExecuteAsync(cancellationToken);
-                }
-                catch (OperationCanceledException)
+                using var whenAnyCleanupCancellationTokenSource = new CancellationTokenSource();
+                using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(runningTentacleCancellationTokenSource.Token, whenAnyCleanupCancellationTokenSource.Token);
+
+                var completedTask = await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(), Task.Delay(TimeSpan.FromSeconds(30), linkedCancellationTokenSource.Token));
+                
+                if (completedTask == runningTentacle)
                 {
-                    // Don't throw when we cancel the running of the binary, this is an expected way of killing it.
+                    whenAnyCleanupCancellationTokenSource.Cancel();
+                    runningTentacleCancellationTokenSource.Cancel();
+                    // Will throw the startup exception.
+                    await runningTentacle;
                 }
-                catch (Exception e)
+
+                if (!hasTentacleStarted.IsSet)
                 {
-                    logger.Information(e, "Error running Halibut Test Binary");
-                    throw;
+                    whenAnyCleanupCancellationTokenSource.Cancel();
+                    runningTentacleCancellationTokenSource.Cancel();
+                    throw new Exception("Halibut test binary did not appear to start correctly");
                 }
-            }, cancellationToken);
 
-            var completedTask = await Task.WhenAny(runningTentacle, hasTentacleStarted.WaitAsync(), Task.Delay(TimeSpan.FromMinutes(1), cancellationToken));
+                whenAnyCleanupCancellationTokenSource.Cancel();
 
-            // Will throw.
-            if (completedTask == runningTentacle)
-            {
-                await runningTentacle;
+                return (runningTentacle, serviceListenPort, runningTentacleCancellationTokenSource);
             }
-
-            if (!hasTentacleStarted.IsSet)
+            catch (Exception)
             {
-                throw new Exception("Halibut test binary did not appear to start correctly");
+                runningTentacleCancellationTokenSource.Cancel();
+                runningTentacleCancellationTokenSource.Dispose();
+                throw;
             }
-
-            return (runningTentacle, serviceListenPort);
         }
 
         public class RunningOldHalibutBinary : IDisposable

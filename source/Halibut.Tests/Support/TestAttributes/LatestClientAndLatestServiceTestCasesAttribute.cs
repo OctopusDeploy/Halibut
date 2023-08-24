@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Util;
-using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestAttributes
 {

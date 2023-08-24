@@ -29,6 +29,13 @@ namespace Halibut.Tests.Support.TestCases
 
         public IEnumerable<ClientAndServiceTestCase> Build()
         {
+            return BuildDistinct();
+        }
+
+        List<ClientAndServiceTestCase> BuildDistinct()
+        {
+            var cases = new List<ClientAndServiceTestCase>();
+
             foreach (var clientServiceTestVersion in clientServiceTestVersions)
             {
                 foreach (var serviceConnectionType in serviceConnectionTypes)
@@ -52,19 +59,19 @@ namespace Halibut.Tests.Support.TestCases
                             
                             if (!forceClientProxyTypes.Any())
                             {
-                                yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase);
+                                cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase));
                             }
                             else
                             {
                                 if (clientServiceTestVersion.IsPreviousClient())
                                 {
-                                    yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase);
+                                    cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase));
                                 }
                                 else
                                 {
                                     foreach (var forceClientProxyType in forceClientProxyTypes)
                                     {
-                                        yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType, serviceAsyncHalibutFeatureTestCase);
+                                        cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType, serviceAsyncHalibutFeatureTestCase));
                                     }
                                 }
                             }
@@ -72,6 +79,10 @@ namespace Halibut.Tests.Support.TestCases
                     }
                 }
             }
+
+            var distinct = cases.Distinct().ToList();
+
+            return distinct;
         }
     }
 }
