@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Util;
 
@@ -66,30 +67,52 @@ namespace Halibut.Tests.Support.TestCases
         public override string ToString()
         {
             // This is used as the test parameter name, so make this something someone can understand in teamcity or their IDE.
-            var testParameter = new List<string>();
+            var builder = new StringBuilder();
             
             // These names can be longer than what rider will handle, setting UseShortTestNames=true will help with that.
             bool useShortString = EnvironmentVariableReaderHelper.EnvironmentVariableAsBool("UseShortTestNames", false);
             
-            testParameter.Add(ServiceConnectionType.ToString());
-            testParameter.Add(useShortString ? ClientAndServiceTestVersion.ToShortString(ServiceConnectionType): ClientAndServiceTestVersion.ToString(ServiceConnectionType));
-            testParameter.Add(useShortString ? NetworkConditionTestCase.ToShortString() : NetworkConditionTestCase.ToString());
-            testParameter.Add(useShortString ? $"RecIters:{RecommendedIterations}" : $"RecommendedIters: {RecommendedIterations}");
+            builder.Append(ServiceConnectionType.ToString());
+            builder.Append(", ");
+            builder.Append(useShortString ? ClientAndServiceTestVersion.ToShortString(ServiceConnectionType): ClientAndServiceTestVersion.ToString(ServiceConnectionType));
+            builder.Append(", ");
+            builder.Append(useShortString ? NetworkConditionTestCase.ToShortString() : NetworkConditionTestCase.ToString());
+            builder.Append(", ");
+            builder.Append(useShortString ? $"RecIters:{RecommendedIterations}" : $"RecommendedIters: {RecommendedIterations}");
+            builder.Append(", ");
             if (ForceClientProxyType != null)
             {
-                testParameter.Add(ForceClientProxyType.ToString());
+                builder.Append(ForceClientProxyType.ToString());
+                builder.Append(", ");
             }
 
             if (ServiceAsyncHalibutFeature == AsyncHalibutFeature.Enabled)
             {
-                testParameter.Add("AsyncService");
+                builder.Append("AsyncService");
             }
             else
             {
-                testParameter.Add("SyncService");
+                builder.Append("SyncService");
             }
             
-            return string.Join(", ", testParameter);
+            return builder.ToString();
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as ClientAndServiceTestCase);
+        }
+
+        public bool Equals(ClientAndServiceTestCase? other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return this.ToString().Equals(other.ToString());
+        }
+
+        public override int GetHashCode()
+        {
+            return ToString().GetHashCode();
         }
     }
 }

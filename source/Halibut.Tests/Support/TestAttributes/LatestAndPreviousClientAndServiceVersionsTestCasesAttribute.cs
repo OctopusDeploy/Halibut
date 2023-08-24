@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Util;
-using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
@@ -28,7 +27,7 @@ namespace Halibut.Tests.Support.TestAttributes
         
         static class LatestAndPreviousClientAndServiceVersionsTestCases
         {
-            public static IEnumerator<ClientAndServiceTestCase> GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncAndSyncClients, bool testAsyncServicesAsWell)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncAndSyncClients, bool testAsyncServicesAsWell)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -47,7 +46,7 @@ namespace Halibut.Tests.Support.TestAttributes
                     serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
 
-                ForceClientProxyType[] clientProxyTypesToTest = new ForceClientProxyType[0];
+                var clientProxyTypesToTest = Array.Empty<ForceClientProxyType>();
                 if (testAsyncAndSyncClients)
                 {
                     clientProxyTypesToTest = ForceClientProxyTypeValues.All;
@@ -72,7 +71,7 @@ namespace Halibut.Tests.Support.TestAttributes
                     serviceAsyncHalibutFeatureTestCases
                     );
 
-                return builder.Build().GetEnumerator();
+                return builder.Build();
             }
         }
     }
