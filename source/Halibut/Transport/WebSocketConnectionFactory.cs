@@ -9,6 +9,7 @@ using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Proxy.Exceptions;
+using Halibut.Transport.Streams;
 using Halibut.Util;
 
 namespace Halibut.Transport
@@ -16,15 +17,17 @@ namespace Halibut.Transport
     public class WebSocketConnectionFactory : IConnectionFactory
     {
         readonly X509Certificate2 clientCertificate;
+        IStreamFactory streamFactory;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly AsyncHalibutFeature asyncHalibutFeature;
 
         public WebSocketConnectionFactory(X509Certificate2 clientCertificate,
             AsyncHalibutFeature asyncHalibutFeature,
-            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory)
         {
             this.clientCertificate = clientCertificate;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.streamFactory = streamFactory;
             this.asyncHalibutFeature = asyncHalibutFeature;
         }
 
@@ -55,7 +58,7 @@ namespace Halibut.Transport
 
             log.Write(EventType.Diagnostic, "Connection established");
 
-            var stream = new WebSocketStream(client);
+            var stream = streamFactory.CreateStream(client);
 
             log.Write(EventType.Security, "Performing handshake");
             await stream.WriteTextMessage("MX");

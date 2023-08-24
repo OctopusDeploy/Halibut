@@ -4,20 +4,22 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Halibut.Transport.Streams;
+#if NETFRAMEWORK
+#endif
 
-namespace Halibut.Tests.Support.Streams
+namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
-    public class NoSyncIoStream : DelegateStreamBase
+    public class SyncIoRecordingStream : DelegateStreamBase, IRecordSyncIo
 #if NETFRAMEWORK
         , IAsyncDisposable
 #endif
     {
-        public NoSyncIoStream(Stream inner)
+        public SyncIoRecordingStream(Stream inner)
         {
             Inner = inner;
         }
 
-        public List<StackTrace> SyncCalls = new();
+        public List<StackTrace> SyncCalls { get; } = new();
 
         public void NoteSyncCall()
         {
@@ -92,7 +94,7 @@ namespace Halibut.Tests.Support.Streams
             NoteSyncCall();
             base.Close();
         }
-        
+
 #if NETFRAMEWORK
         public ValueTask DisposeAsync()
         {
