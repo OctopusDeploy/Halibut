@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
+using Halibut.Transport.Streams;
 using Halibut.Util;
 
 namespace Halibut.Transport
@@ -21,24 +22,21 @@ namespace Halibut.Transport
         readonly IConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
         readonly ExchangeProtocolBuilder protocolBuilder;
-        readonly AsyncHalibutFeature asyncHalibutFeature;
-        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly TcpConnectionFactory tcpConnectionFactory;
         
         public SecureClient(ExchangeProtocolBuilder protocolBuilder, 
             ServiceEndPoint serviceEndpoint,
             X509Certificate2 clientCertificate,
-            AsyncHalibutFeature asyncHalibutFeature,
-            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             ILog log,
-            IConnectionManager connectionManager)
+            IConnectionManager connectionManager,
+            TcpConnectionFactory tcpConnectionFactory)
         {
             this.protocolBuilder = protocolBuilder;
             this.ServiceEndpoint = serviceEndpoint;
             this.clientCertificate = clientCertificate;
             this.log = log;
             this.connectionManager = connectionManager;
-            this.asyncHalibutFeature = asyncHalibutFeature;
-            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.tcpConnectionFactory = tcpConnectionFactory;
         }
 
         public ServiceEndPoint ServiceEndpoint { get; }
@@ -68,7 +66,7 @@ namespace Halibut.Transport
                     IConnection connection = null;
                     try
                     {
-                        connection = connectionManager.AcquireConnection(protocolBuilder, new TcpConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits), ServiceEndpoint, log, cancellationToken);
+                        connection = connectionManager.AcquireConnection(protocolBuilder, tcpConnectionFactory, ServiceEndpoint, log, cancellationToken);
 
                         // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
                         retryAllowed = false;
@@ -168,7 +166,7 @@ namespace Halibut.Transport
                     {
                         connection = await connectionManager.AcquireConnectionAsync(
                             protocolBuilder, 
-                            new TcpConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits), 
+                            tcpConnectionFactory, 
                             ServiceEndpoint,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);

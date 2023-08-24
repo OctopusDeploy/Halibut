@@ -12,6 +12,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
+using Halibut.Transport.Streams;
 using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
@@ -78,7 +79,8 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, asyncHalibutFeature, halibutTimeoutsAndLimits, log, connectionManager);
+            var tcpConnectionFactory = new TcpConnectionFactory(Certificates.Octopus, syncOrAsync.ToAsyncHalibutFeature(), halibutTimeoutsAndLimits, new StreamFactory(syncOrAsync.ToAsyncHalibutFeature()));
+            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
 
             using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);

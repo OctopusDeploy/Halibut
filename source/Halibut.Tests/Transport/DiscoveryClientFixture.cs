@@ -7,6 +7,7 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Transport;
+using Halibut.Transport.Streams;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
 
@@ -22,7 +23,7 @@ namespace Halibut.Tests.Transport
                 .AsLatestClientAndLatestServiceBuilder()
                 .Build(CancellationToken);
 
-            var client = new DiscoveryClient();
+            var client = new DiscoveryClient(new StreamFactory(clientAndServiceTestCase.SyncOrAsync.ToAsyncHalibutFeature()));
 
 #pragma warning disable CS0612
             var discovered = await clientAndServiceTestCase.SyncOrAsync
@@ -38,7 +39,7 @@ namespace Halibut.Tests.Transport
         [SyncAndAsync]
         public async Task DiscoveringNonExistentEndpointThrows(SyncOrAsync syncOrAsync)
         {
-            var client = new DiscoveryClient();
+            var client = new DiscoveryClient(new StreamFactory(syncOrAsync.ToAsyncHalibutFeature()));
             var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "");
 
 #pragma warning disable CS0612
@@ -80,7 +81,7 @@ namespace Halibut.Tests.Transport
                     .Build())
                 .Build(CancellationToken);
 
-            var client = new DiscoveryClient();
+            var client = new DiscoveryClient(new StreamFactory(clientAndServiceTestCase.SyncOrAsync.ToAsyncHalibutFeature()));
 
             var sw = Stopwatch.StartNew();
 #pragma warning disable CS0612

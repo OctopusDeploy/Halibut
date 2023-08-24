@@ -15,6 +15,13 @@ namespace Halibut.Transport
         static readonly byte[] HelloLine = Encoding.ASCII.GetBytes("HELLO" + Environment.NewLine + Environment.NewLine);
         readonly LogFactory logs = new ();
 
+        readonly IStreamFactory streamFactory;
+
+        public DiscoveryClient(IStreamFactory streamFactory)
+        {
+            this.streamFactory = streamFactory;
+        }
+
         [Obsolete]
         public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint)
         {
@@ -27,7 +34,7 @@ namespace Halibut.Transport
             try
             {
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
-                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, log, cancellationToken))
+                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, streamFactory, log, cancellationToken))
                 {
                     using (var stream = client.GetStream())
                     {
@@ -58,9 +65,12 @@ namespace Halibut.Transport
             try
             {
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
-                using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, log, cancellationToken))
+                using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, streamFactory, log, cancellationToken))
                 {
-                    await using (var networkTimeoutStream = client.GetNetworkTimeoutStream())
+#if !NETFRAMEWORK
+                    await
+#endif
+                    using (var networkTimeoutStream = streamFactory.CreateStream(client))
                     {
 #if !NETFRAMEWORK
                         await

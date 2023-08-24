@@ -43,6 +43,7 @@ namespace Halibut.Transport
         readonly ExchangeActionAsync exchangeAction;
         readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly IStreamFactory streamFactory;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
@@ -58,7 +59,8 @@ namespace Halibut.Transport
             Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, 
             AsyncHalibutFeature asyncHalibutFeature,
-            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
+            IStreamFactory streamFactory)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -71,6 +73,7 @@ namespace Halibut.Transport
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
             this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.streamFactory = streamFactory;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -207,11 +210,7 @@ namespace Halibut.Transport
         {
             var clientName = client.Client.RemoteEndPoint;
             
-            Stream stream = client.GetStream();
-            if (asyncHalibutFeature.IsEnabled())
-            {
-                stream = stream.AsNetworkTimeoutStream();
-            }
+            Stream stream = streamFactory.CreateStream(client);
 #if !NETFRAMEWORK
             await
 #endif            

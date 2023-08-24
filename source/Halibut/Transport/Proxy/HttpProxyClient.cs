@@ -114,7 +114,7 @@ namespace Halibut.Transport.Proxy
         /// <param name="proxyPort">Port number for the proxy server.</param>
         /// <param name="proxyUserName">Proxy authentication user name.</param>
         /// <param name="proxyPassword">Proxy authentication password.</param>
-        public HttpProxyClient(ILog logger, string proxyHost, int proxyPort, string proxyUserName, string proxyPassword)
+        public HttpProxyClient(ILog logger, string proxyHost, int proxyPort, string proxyUserName, string proxyPassword, IStreamFactory streamFactory)
         {
             log = logger;
             if (string.IsNullOrEmpty(proxyHost))
@@ -127,6 +127,7 @@ namespace Halibut.Transport.Proxy
             ProxyPort = proxyPort;
             ProxyUserName = proxyUserName;
             ProxyPassword = proxyPassword;
+            this.streamFactory = streamFactory;
         }
 
         /// <summary>
@@ -163,6 +164,8 @@ namespace Halibut.Transport.Proxy
         /// This property can be set prior to executing CreateConnection to use an existing TcpClient connection.
         /// </summary>
         public TcpClient TcpClient { get; set; }
+        
+        readonly IStreamFactory streamFactory;
 
         Func<TcpClient> tcpClientFactory = () => new TcpClient();
 
@@ -341,7 +344,7 @@ namespace Halibut.Transport.Proxy
         
         async Task SendConnectionCommandAsync(string host, int port, CancellationToken cancellationToken)
         {
-            var stream = TcpClient.GetNetworkTimeoutStream();
+            var stream = streamFactory.CreateStream(TcpClient);
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 
