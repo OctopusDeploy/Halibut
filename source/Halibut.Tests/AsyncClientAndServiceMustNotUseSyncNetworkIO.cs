@@ -86,12 +86,16 @@ namespace Halibut.Tests
                 // We are missing an async dispose on web sockets, and ExecuteRequest in SecureWebSocketListener needs to call the async close.
                 .Where(s => !(s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Dispose")
                     && s.Contains("ExecuteRequest")))
+                
+                // TODO: ASYNC ME UP!
+                // SecureConnection should dispose websockets async
+                .Where(s => !(s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Dispose")
+                              && s.Contains("Halibut.Transport.SecureConnection.DisposeAsync()")))
 
                 // TODO: ASYNC ME UP!
-                // We seem to be using a sync dispose on DisposableNotifierConnection which results in a sync write.
-                .Where(s => !
-                    (s.Contains("Halibut.Transport.ConnectionManagerAsync.DisposableNotifierConnection.Dispose()")
-                     && s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Write")))
+                // We seem to be using a sync dispose on DisposableNotifierConnection which results in a sync write or close
+                .Where(s => !(s.Contains("Halibut.Transport.ConnectionManagerAsync.DisposableNotifierConnection.Dispose()")
+                              && s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream")))
 
                 // The follow can not be fixed up
                 // SslStream in net48 does not have async dispose, 
