@@ -23,7 +23,7 @@ namespace Halibut.Tests.Support
                 throw new Exception("Only the SSL certificate can be used in websockets see AddSslCertToLocalStore()");
             }
             
-            var proc = new Process
+            using var proc = new Process
             {
                 StartInfo = new ProcessStartInfo("netsh", $"http add sslcert ipport={address} certhash={certAndThumbprint.Thumbprint} appid={{2e282bfb-fce9-40fc-a594-2136043e1c8f}}")
                 {
@@ -46,7 +46,7 @@ namespace Halibut.Tests.Support
 
         internal static void RemoveSslCertBindingFor(string address)
         {
-            var proc = new Process
+            using var proc = new Process
             {
                 StartInfo = new ProcessStartInfo("netsh", $"http delete sslcert ipport={address}")
                 {
