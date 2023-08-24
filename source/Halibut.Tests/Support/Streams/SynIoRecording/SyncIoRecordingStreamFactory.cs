@@ -13,7 +13,7 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
     public class SyncIoRecordingStreamFactory : IStreamFactory
     {
         public readonly List<IRecordSyncIo> streams = new();
-        AsyncHalibutFeature asyncHalibutFeature;
+        readonly AsyncHalibutFeature asyncHalibutFeature;
 
         public SyncIoRecordingStreamFactory(AsyncHalibutFeature asyncHalibutFeature)
         {
@@ -25,15 +25,12 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
             lock (streams)
             {
                 var stackTraces = new List<StackTrace>();
-                foreach (var noSyncIoStream in streams)
-                {
-                    stackTraces.AddRange(noSyncIoStream.SyncCalls);
-                }
-                
+                foreach (var noSyncIoStream in streams) stackTraces.AddRange(noSyncIoStream.SyncCalls);
+
                 return stackTraces;
             }
         }
-        
+
         void AddRecorder(IRecordSyncIo s)
         {
             lock (streams)

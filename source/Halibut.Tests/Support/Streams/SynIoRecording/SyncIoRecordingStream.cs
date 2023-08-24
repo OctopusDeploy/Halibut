@@ -94,7 +94,7 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
             NoteSyncCall();
             base.Close();
         }
-        
+
 #if NETFRAMEWORK
         public ValueTask DisposeAsync()
         {

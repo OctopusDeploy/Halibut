@@ -9,7 +9,6 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
     public class SyncIoRecordingWebSocketStream : WebSocketStream, IRecordSyncIo
     {
-        
         public SyncIoRecordingWebSocketStream(WebSocket context) : base(context)
         {
         }
@@ -23,7 +22,7 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
                 SyncCalls.Add(new StackTrace());
             }
         }
-        
+
         public override void Flush()
         {
             NoteSyncCall();
@@ -36,7 +35,6 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
             return base.Read(buffer, offset, count);
         }
 
-        
         public async Task<string> ReadTextMessageSynchronouslyAsync()
         {
             NoteSyncCall();

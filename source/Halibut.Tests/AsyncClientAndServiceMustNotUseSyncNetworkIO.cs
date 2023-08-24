@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.Streams;
 using Halibut.Tests.Support.Streams.SynIoRecording;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -27,21 +26,21 @@ namespace Halibut.Tests
             var syncIoRecordingStreamFactory = new SyncIoRecordingStreamFactory(AsyncHalibutFeature.Enabled);
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithStandardServices()
-                       .AsLatestClientAndLatestServiceBuilder()
-                       .WithStreamFactory(syncIoRecordingStreamFactory)
-                       .Build(CancellationToken))
+                             .WithStandardServices()
+                             .AsLatestClientAndLatestServiceBuilder()
+                             .WithStreamFactory(syncIoRecordingStreamFactory)
+                             .Build(CancellationToken))
             {
                 var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
                 var payload1 = "Payload #1";
                 var payload2 = "Payload #2";
 
-                for (int i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
+                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     var request = new ComplexObjectMultipleDataStreams
                     {
                         Payload1 = DataStream.FromString(payload1),
-                        Payload2 = DataStream.FromString(payload2),
+                        Payload2 = DataStream.FromString(payload2)
                     };
 
                     var response = await service.ProcessAsync(request);
@@ -71,29 +70,28 @@ namespace Halibut.Tests
             foreach (var distinctPlace in distinctPlaces) Logger.Information("Found sync usage: " + distinctPlace);
 
             Logger.Information($"{syncIoRecordingStreamFactory.PlacesSyncIoWasUsed().Count} vs distinct {distinctPlaces.Length}");
-            
+
             var placesWeAssertOn = distinctPlaces
 #if NETFRAMEWORK
                 // TODO: ASYNC ME UP!
                 // It is not clear why ssl streams continue to have flush called on them, all the time.
                 // On investigation, its almost as if something is just continuously firing Task.Run(() => sslStream.flush()).
                 .Where(s => !s.Contains("System.Net.Security.SslStream.Flush()"))
-            
+
                 // TODO: ASYNC ME UP!
                 // All we see in this stack trace is the single call to this method, we see no parent.
                 .Where(s => !s.Contains("SyncIoRecordingWebSocketStream.Flush()"))
-                
+
                 // TODO: ASYNC ME UP!
                 // We are missing an async dispose on web sockets.
                 .Where(s => !s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Dispose"))
-                
+
                 // TODO: ASYNC ME UP!
                 // We seem to be using a sync dispose on DisposableNotifierConnection which results in a sync write.
                 .Where(s => !
                     (s.Contains("Halibut.Transport.ConnectionManagerAsync.DisposableNotifierConnection.Dispose()")
                      && s.Contains("SynIoRecording.SyncIoRecordingWebSocketStream.Write")))
-                
-                
+
                 // The follow can not be fixed up
                 // SslStream in net48 does not have async dispose, 
                 .Where(s => !s.Contains("System.Net.Security.SslStream.Dispose("))
