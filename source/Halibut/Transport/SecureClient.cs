@@ -180,7 +180,7 @@ namespace Halibut.Transport
                     }
                     catch
                     {
-                        if (connection != null)
+                        if (connection is not null)
                         {
                             await connection.DisposeAsync();
                         }

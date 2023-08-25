@@ -10,7 +10,7 @@ using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Protocol
 {
-    public class WebSocketStream : Stream
+    public class WebSocketStream : AsyncDisposableStream
     {
         readonly WebSocket context;
         bool isDisposed;
@@ -176,6 +176,17 @@ namespace Halibut.Transport.Protocol
                     .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
+        async Task SendCloseMessageAsync()
+        {
+            if (context.State != WebSocketState.Open)
+                return;
+
+            using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+            {
+                await context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", sendCancel.Token).ConfigureAwait(false);
+            }
+        }
+
         public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
             var buffer = new byte[bufferSize];
@@ -201,6 +212,21 @@ namespace Halibut.Transport.Protocol
             }
 
             base.Dispose(disposing);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await SendCloseMessageAsync();
+            }
+            finally
+            {
+                isDisposed = true;
+                cancel.Cancel();
+                context.Dispose();
+                cancel.Dispose();
+            }
         }
     }
 }
