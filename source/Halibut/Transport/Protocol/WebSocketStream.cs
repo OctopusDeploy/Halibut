@@ -166,7 +166,17 @@ namespace Halibut.Transport.Protocol
             set => throw new NotImplementedException();
         }
 
-        async Task SendCloseMessage()
+        void SendCloseMessage()
+        {
+            if (context.State != WebSocketState.Open)
+                return;
+
+            using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
+                context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Closing", sendCancel.Token)
+                    .ConfigureAwait(false).GetAwaiter().GetResult();
+        }
+
+        async Task SendCloseMessageAsync()
         {
             if (context.State != WebSocketState.Open)
                 return;
@@ -190,7 +200,7 @@ namespace Halibut.Transport.Protocol
             {
                 try
                 {
-                    SendCloseMessage().GetAwaiter().GetResult();
+                    SendCloseMessage();
                 }
                 finally
                 {
@@ -208,7 +218,7 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                await SendCloseMessage();
+                await SendCloseMessageAsync();
             }
             finally
             {
