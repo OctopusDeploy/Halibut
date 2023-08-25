@@ -388,6 +388,12 @@ namespace Halibut.Transport
                 return null;
             }
 
+            var cert = stream.RemoteCertificate;
+            if(cert is X509Certificate2 x509Certificate2)
+            {
+                return  x509Certificate2.Thumbprint;
+            }
+
             var thumbprint = new X509Certificate2(stream.RemoteCertificate.Export(X509ContentType.Cert), (string)null!).Thumbprint;
             return thumbprint;
         }

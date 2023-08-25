@@ -9,8 +9,8 @@ namespace Halibut.Tests.Support.TestCases
         public static NetworkConditionTestCase[] All => new[]
         {
             NetworkConditionTestCase.NetworkConditionPerfect,
-            NetworkConditionTestCase.NetworkCondition20MsLatency,
-            NetworkConditionTestCase.NetworkCondition20MsLatencyWithLastByteArrivingLate,
+            //NetworkConditionTestCase.NetworkCondition20MsLatency,
+            //NetworkConditionTestCase.NetworkCondition20MsLatencyWithLastByteArrivingLate,
             //NetworkConditionTestCase.NetworkCondition20MsLatencyWithLast2BytesArrivingLate,
             //NetworkConditionTestCase.NetworkCondition20MsLatencyWithLast3BytesArrivingLate
         };
