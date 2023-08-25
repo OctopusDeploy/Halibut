@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Util;
 using Halibut.Util.AsyncEx;
 
 namespace Halibut.Transport
@@ -80,6 +81,12 @@ namespace Halibut.Transport
                 {
                 }
             }
+        }
+
+        public static void CloseImmediately(this TcpClient client)
+        {
+            Try.CatchingError(() => client.Client.Close(0), _ => { });
+            Try.CatchingError(client.Close, _ => { });
         }
     }
 }
