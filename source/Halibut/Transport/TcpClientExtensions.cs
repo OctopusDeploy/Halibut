@@ -85,8 +85,13 @@ namespace Halibut.Transport
 
         public static void CloseImmediately(this TcpClient client)
         {
-            Try.CatchingError(() => client.Client.Close(0), _ => { });
-            Try.CatchingError(client.Close, _ => { });
+            client.CloseImmediately(_ => { });
+        }
+
+        public static void CloseImmediately(this TcpClient client, Action<Exception> onError)
+        {
+            Try.CatchingError(() => client.Client.Close(0), onError);
+            Try.CatchingError(client.Close, onError);
         }
     }
 }
