@@ -19,7 +19,8 @@ namespace Halibut.Transport
         readonly MessageExchangeProtocol protocol;
         DateTimeOffset lastUsed;
 
-        public SecureConnection(IDisposable client, 
+        public SecureConnection(
+            IDisposable client, 
             Stream stream,
             ExchangeProtocolBuilder exchangeProtocolBuilder,
             AsyncHalibutFeature asyncHalibutFeature,

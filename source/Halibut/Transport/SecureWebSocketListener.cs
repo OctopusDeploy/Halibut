@@ -183,7 +183,7 @@ namespace Halibut.Transport
             finally
             {
                 // Closing an already closed stream or client is safe, better not to leak
-                webSocketStream?.Dispose();
+                if (webSocketStream is not null) await webSocketStream.DisposeAsync();
                 listenerContext.Response.Close();
             }
         }
