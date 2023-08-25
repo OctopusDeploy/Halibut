@@ -287,20 +287,8 @@ namespace Halibut.Transport
                 {
                     SafelyRemoveClientFromTcpClientManager(client, clientName);
                     await SafelyCloseStreamAsync(stream, clientName);
-                    SafelyCloseClient(client, clientName);
+                    client.CloseImmediately(ex => log.Write(EventType.Error, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message));
                 }
-            }
-        }
-
-        void SafelyCloseClient(TcpClient client, EndPoint clientName)
-        {
-            try
-            {
-                client.Close();
-            }
-            catch (Exception ex)
-            {
-                log.Write(EventType.Error, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
             }
         }
 
