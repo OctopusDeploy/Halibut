@@ -35,7 +35,7 @@ namespace Halibut.Transport
                 {
                     foreach (var client in tcpClients)
                     {
-                        client.Close();
+                        client.CloseImmediately();
                     }
                 }
                 activeClients.Remove(thumbprint);
