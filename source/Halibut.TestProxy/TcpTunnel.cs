@@ -53,18 +53,8 @@ namespace Halibut.TestProxy
 
                 Try.CatchingError(() => fromStream.Close(), e => { _logger.LogWarning("Error closing fromStream"); });
                 Try.CatchingError(() => toStream.Close(), e => { _logger.LogWarning("Error closing toStream"); });
-                Try.CatchingError(() =>
-                {
-                    // Close the socket, with no waiting
-                    fromClient.Client.Close(0);
-                    fromClient.Close();
-                }, e => { _logger.LogWarning("Error closing fromClient"); });
-                Try.CatchingError(() =>
-                {
-                    // Close the socket, with no waiting
-                    toClient.Client.Close(0);
-                    toClient.Close();
-                }, e => { _logger.LogWarning("Error closing toClient"); });
+                fromClient.CloseImmediately(_ => { _logger.LogWarning("Error closing fromClient"); });
+                toClient.CloseImmediately(_ => { _logger.LogWarning("Error closing toClient"); });
             }
         }
 
