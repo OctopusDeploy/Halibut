@@ -74,6 +74,7 @@ namespace Halibut
         public TClientService CreateClient<TService, TClientService>(ServiceEndPoint endpoint);
 
         void Trust(string clientThumbprint);
+        [Obsolete]
         void RemoveTrust(string clientThumbprint);
         void TrustOnly(IReadOnlyList<string> thumbprints);
         bool IsTrusted(string remoteThumbprint);
