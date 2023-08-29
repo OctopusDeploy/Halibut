@@ -13,8 +13,8 @@ namespace Halibut.Tests
     public class TrustFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testListening: true, testPolling: false, testWebSocket: false)]
-        public async Task TrustOnlyClosesConnectionsToUntrustedClients(ClientAndServiceTestCase clientAndServiceTestCase)
+        [LatestClientAndLatestServiceTestCases(testListening: true, testPolling: false, testWebSocket: false, testNetworkConditions: false)]
+        public async Task NewRequestsCannotBeMadeByUntrustedClients(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder()

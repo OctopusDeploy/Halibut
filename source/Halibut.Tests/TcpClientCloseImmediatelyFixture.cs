@@ -7,8 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
-using Halibut.Tests.Transport.Streams;
-using Halibut.Tests.Util;
 using Halibut.Transport;
 using NUnit.Framework;
 
@@ -17,7 +15,7 @@ namespace Halibut.Tests
     public class TcpClientCloseImmediatelyFixture : BaseTest
     {
         [Test]
-        public async Task DoesNotWaitNew()
+        public async Task DoesNotWaitForBufferedDataToBeSent()
         {
             var (client, clientStream, serverStream) = await BuildTcpClientAndTcpListener(CancellationToken);
 
@@ -32,7 +30,16 @@ namespace Halibut.Tests
             stopWatch.ElapsedMilliseconds.Should().BeLessThan(10);
 
             byte[] received = new byte[65536];
-            await AssertAsync.Throws<IOException>(async () => _ = await serverStream.ReadAsync(received, 0, received.Length, CancellationToken));
+            // CloseImmediately will result in the buffers on the sender's side being dropped and a TCP RST being sent.
+            // It's hard to see the data in the sender's buffers being dropped, however we can observe a TCP RST is received
+            // by the receiver, so we assert on that.
+            // An ordinary Close will not result in the receiver receiving a TCP RST.
+            await AssertAsync.Throws<IOException>(async () => {
+                while (await serverStream.ReadAsync(received, 0, received.Length, CancellationToken) != 0)
+                {
+                    // If there's more data (i.e. non-zero data was just read), keep reading
+                }
+            });
         }
 
         [Test]
@@ -60,7 +67,7 @@ namespace Halibut.Tests
             var server = new TcpListener(IPAddress.Loopback, 0);
             server.Start();
 
-            using var semaphore = new SemaphoreSlim(0, 1);
+            using var serverStreamIsAvailable = new SemaphoreSlim(0, 1);
             Stream? serverStream = null;
 
             var _ = Task.Run(async () =>
@@ -71,7 +78,7 @@ namespace Halibut.Tests
 
                 using var serviceStream = serviceTcpClient.GetStream();
                 serverStream = serviceStream;
-                semaphore.Release();
+                serverStreamIsAvailable.Release();
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
@@ -86,7 +93,7 @@ namespace Halibut.Tests
             await client.ConnectAsync("localhost", ((IPEndPoint)server.LocalEndpoint).Port);
 
             var clientStream = client.GetStream();
-            await semaphore.WaitAsync(cancellationToken);
+            await serverStreamIsAvailable.WaitAsync(cancellationToken);
 
             return (client, clientStream, serverStream!);
         }
@@ -100,7 +107,7 @@ namespace Halibut.Tests
             while (true)
             {
                 var timeoutTask = Task.Delay(1000, CancellationToken);
-                var writingTask = stream.WriteToStream(StreamWriteMethod.WriteAsync, data, 0, data.Length, CancellationToken);
+                var writingTask = stream.WriteAsync(data, 0, data.Length, CancellationToken);
                 Logger.Information("Start writing");
                 var completedTask = await Task.WhenAny(writingTask, timeoutTask);
                 if (completedTask == timeoutTask)
