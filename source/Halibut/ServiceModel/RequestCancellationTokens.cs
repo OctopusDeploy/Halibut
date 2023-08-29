@@ -11,28 +11,41 @@ namespace Halibut.ServiceModel
         {
             ConnectingCancellationToken = connectingCancellationToken;
             InProgressRequestCancellationToken = inProgressRequestCancellationToken;
+
+            if (ConnectingCancellationToken == CancellationToken.None && InProgressRequestCancellationToken == CancellationToken.None)
+            {
+                LinkedCancellationToken = CancellationToken.None;
+            }
+            else if (InProgressRequestCancellationToken == CancellationToken.None)
+            {
+                LinkedCancellationToken = ConnectingCancellationToken;
+            }
+            else if (ConnectingCancellationToken == CancellationToken.None)
+            {
+                LinkedCancellationToken = InProgressRequestCancellationToken;
+            }
+            else if (ConnectingCancellationToken == InProgressRequestCancellationToken)
+            {
+                LinkedCancellationToken = ConnectingCancellationToken;
+            }
+            else
+            {
+                linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ConnectingCancellationToken, InProgressRequestCancellationToken);
+
+                LinkedCancellationToken = linkedCancellationTokenSource.Token;
+            }
         }
 
         public CancellationToken ConnectingCancellationToken { get; set; }
         public CancellationToken InProgressRequestCancellationToken { get; set; }
 
-        public CancellationToken LinkedCancellationToken => LazyLinkedCancellationToken.Value;
-
-        Lazy<CancellationToken> LazyLinkedCancellationToken => new (() =>
-        {
-            if (ConnectingCancellationToken == CancellationToken.None && InProgressRequestCancellationToken == CancellationToken.None)
-            {
-                return CancellationToken.None;
-            }
-
-            linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ConnectingCancellationToken, InProgressRequestCancellationToken);
-
-            return linkedCancellationTokenSource.Token;
-        });
+        public CancellationToken LinkedCancellationToken { get; private set; }
 
         public void Dispose()
         {
+            LinkedCancellationToken = CancellationToken.None;
             linkedCancellationTokenSource?.Dispose();
+            linkedCancellationTokenSource = null;
         }
 
         public bool CanCancelInProgressRequest()

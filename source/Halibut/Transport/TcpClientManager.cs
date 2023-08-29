@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace Halibut.Transport
 {
-    class TcpClientManager
+    class TcpClientManager : IAsyncDisposable
     {
         readonly Dictionary<string, HashSet<TcpClient>> activeClients = new();
 
@@ -72,6 +73,21 @@ namespace Halibut.Transport
                     .ToArray();
                 foreach (var thumbprint in thumbprintsWithNoClients)
                     activeClients.Remove(thumbprint);
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            var clients = activeClients;
+            activeClients.Clear();
+
+            foreach (var client in clients)
+            {
+                foreach (var tcpClient in client.Value)
+                {
+                    tcpClient.Client.Close(0);
+                    await tcpClient.Dispose();
+                }
             }
         }
     }

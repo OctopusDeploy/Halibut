@@ -20,17 +20,24 @@ namespace Halibut.Transport.Streams
             string methodName,
             CancellationToken cancellationToken)
         {
-            using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
-            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellationTokenSource.Token);
+            using var cleanupCancellationTokenSource = new CancellationTokenSource();
+            using var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cleanupCancellationTokenSource.Token);
 
+            var timedOut = false;
             var actionTask = action(linkedCancellationTokenSource.Token);
-            var cancellationTask = linkedCancellationTokenSource.Token.AsTask<T>();
+            var timeoutTask = Task.Delay(timeout, linkedCancellationTokenSource.Token);
 
             try
             {
-                var completedTask = await Task.WhenAny(actionTask, cancellationTask);
+                var completedTask = await Task.WhenAny(actionTask, timeoutTask);
 
-                if (completedTask == cancellationTask)
+                timedOut = completedTask == timeoutTask && !linkedCancellationTokenSource.IsCancellationRequested;
+
+                // Ensure we stop the Task.Delay if still running and try and stop the 
+                // ActionTask if it supports co-operative cancellation on Timeout
+                cleanupCancellationTokenSource.Cancel();
+                
+                if (completedTask != actionTask)
                 {
                     actionTask.IgnoreUnobservedExceptions();
 
@@ -52,7 +59,7 @@ namespace Halibut.Transport.Streams
                 {
                     if (onActionTaskExceptionAction != null)
                     {
-                        await onActionTaskExceptionAction(e, timeoutCancellationTokenSource.IsCancellationRequested);
+                        await onActionTaskExceptionAction(e, timedOut);
                     }
 
                     throw;
@@ -82,7 +89,7 @@ namespace Halibut.Transport.Streams
                     return new OperationCanceledException($"The {methodName} operation was cancelled.", innerException);
                 }
 
-                if (timeoutCancellationTokenSource.IsCancellationRequested)
+                if (timedOut)
                 {
                     return getExceptionOnTimeout();
                 }
