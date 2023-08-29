@@ -3,10 +3,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Tests.Support;
 using Halibut.Tests.Transport.Streams;
 using Halibut.Tests.Util;
 using Halibut.Transport;
@@ -17,26 +17,33 @@ namespace Halibut.Tests
     public class TcpClientCloseImmediatelyFixture : BaseTest
     {
         [Test]
-        public async Task DoesNotWait()
+        public async Task DoesNotWaitNew()
         {
-            var client = await GetTcpClientInWritingBlockedState();
+            var (client, clientStream, serverStream) = await BuildTcpClientAndTcpListener(CancellationToken);
+
+            await WriteToStreamUntilBlocked(clientStream);
 
             Logger.Information("Writer has blocked, closing...");
             var stopWatch = Stopwatch.StartNew();
             client.CloseImmediately();
             stopWatch.Stop();
             Logger.Information($"Close completed, duration: {stopWatch.Elapsed.TotalMilliseconds}ms");
-
+            
             stopWatch.ElapsedMilliseconds.Should().BeLessThan(10);
+
+            byte[] received = new byte[65536];
+            await AssertAsync.Throws<IOException>(async () => _ = await serverStream.ReadAsync(received, 0, received.Length, CancellationToken));
         }
 
         [Test]
         public async Task CanBeCalledMultipleTimes()
         {
-            var client = await GetTcpClientInWritingBlockedState();
+            var (client, clientStream, _) = await BuildTcpClientAndTcpListener(CancellationToken);
+
+            await WriteToStreamUntilBlocked(clientStream);
 
             Logger.Information("Writer has blocked, closing...");
-            client.CloseImmediately();
+            client.Close();
             Logger.Information($"Close completed");
 
             // Wait a little, to ensure any behind-the-scenes clean up has completed
@@ -48,76 +55,27 @@ namespace Halibut.Tests
             Logger.Information("Close completed");
         }
 
-        async Task<TcpClient> GetTcpClientInWritingBlockedState()
+        async Task<(TcpClient Client, Stream ClientStream, Stream ServerStream)> BuildTcpClientAndTcpListener(CancellationToken cancellationToken)
         {
-            using var writeTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(120));
-            var (sut, client) = await BuildTcpClientAndTcpListener(
-                CancellationToken,
-                onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
+            var server = new TcpListener(IPAddress.Loopback, 0);
+            server.Start();
 
-            // Ensure the timeouts are not used
-            sut.WriteTimeout = (int)TimeSpan.FromSeconds(240).TotalMilliseconds;
-            sut.ReadTimeout = (int)TimeSpan.FromSeconds(240).TotalMilliseconds;
-
-            var data = new byte[655360];
-            var r = new Random();
-            r.NextBytes(data);
-
-            var writerTimedOut = new ManualResetEventSlim(false);
-
-            // Brute force attempt to get the Write to be slow
-            Logger.Information("Start writing");
-            _ = Task.Run(() =>
-            {
-                while (true)
-                {
-                    Logger.Information("WRITER: Start");
-                    var writeCompleted = sut.WriteToStream(StreamWriteMethod.WriteAsync, data, 0, data.Length, writeTokenSource.Token).Wait(TimeSpan.FromSeconds(1));
-                    if (!writeCompleted)
-                    {
-                        Logger.Information("WRITER: Timed out");
-                        writerTimedOut.Set();
-                        return Task.CompletedTask;
-                    }
-
-                    Logger.Information("WRITER: Finished");
-                }
-            }, writeTokenSource.Token);
-
-            Logger.Information("Wait for writer to block...");
-            writerTimedOut.Wait(CancellationToken);
-
-            return client;
-        }
-
-        async Task<(Stream SystemUnderTest, TcpClient Client)> BuildTcpClientAndTcpListener(
-            CancellationToken cancellationToken,
-            Func<string, Task>? onListenerRead = null)
-        {
-            Func<string, Task>? performServiceWriteFunc = null;
-
-            var service = new TcpListener(IPAddress.Loopback, 0);
-            service.Start();
+            using var semaphore = new SemaphoreSlim(0, 1);
+            Stream? serverStream = null;
 
             var _ = Task.Run(async () =>
             {
-                using var serviceTcpClient = await service.AcceptTcpClientAsync();
+                using var serviceTcpClient = await server.AcceptTcpClientAsync();
                 serviceTcpClient.ReceiveBufferSize = 10;
                 serviceTcpClient.SendBufferSize = 10;
 
                 using var serviceStream = serviceTcpClient.GetStream();
-                performServiceWriteFunc = async data => await serviceStream.WriteAsync(Encoding.UTF8.GetBytes(data), 0, data.Length, cancellationToken);
+                serverStream = serviceStream;
+                semaphore.Release();
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    var buffer = new byte[19];
-                    var readBytes = await serviceStream.ReadAsync(buffer, 0, 19, cancellationToken);
-
-                    var readData = Encoding.UTF8.GetString(buffer, 0, readBytes);
-                    if (onListenerRead != null)
-                    {
-                        await onListenerRead(readData);
-                    }
+                    await Task.Delay(100);
                 }
             }, cancellationToken);
 
@@ -125,20 +83,34 @@ namespace Halibut.Tests
             client.ReceiveBufferSize = 10;
             client.SendBufferSize = 10;
 
-            await client.ConnectAsync("localhost", ((IPEndPoint)service.LocalEndpoint).Port);
+            await client.ConnectAsync("localhost", ((IPEndPoint)server.LocalEndpoint).Port);
 
             var clientStream = client.GetStream();
-            while (performServiceWriteFunc == null)
-            {
-                await Task.Delay(10, cancellationToken);
-            }
+            await semaphore.WaitAsync(cancellationToken);
 
-            return (clientStream, client);
+            return (client, clientStream, serverStream!);
         }
-
-        static async Task DelayForeverToTryAndDelayWriting(CancellationToken cancellationToken)
+        
+        async Task WriteToStreamUntilBlocked(Stream stream)
         {
-            await Task.Delay(-1, cancellationToken);
+            var data = new byte[655360];
+            var r = new Random();
+            r.NextBytes(data);
+
+            while (true)
+            {
+                var timeoutTask = Task.Delay(1000, CancellationToken);
+                var writingTask = stream.WriteToStream(StreamWriteMethod.WriteAsync, data, 0, data.Length, CancellationToken);
+                Logger.Information("Start writing");
+                var completedTask = await Task.WhenAny(writingTask, timeoutTask);
+                if (completedTask == timeoutTask)
+                {
+                    Logger.Information("Writing operation timed out");
+                    return;
+                }
+                
+                Logger.Information("Finished writing");
+            }
         }
     }
 }
