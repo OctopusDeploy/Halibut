@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Threading;
@@ -14,17 +15,23 @@ namespace Halibut.Transport.Protocol
     public class MessageSerializer : IMessageSerializer
     {
         readonly ITypeRegistry typeRegistry;
+
+        [Obsolete]
         readonly Func<JsonSerializer> createSerializer;
+        readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
         readonly IMessageSerializerObserver observer;
         readonly long readIntoMemoryLimitBytes;
         readonly long writeIntoMemoryLimitBytes;
         readonly DeflateStreamInputBufferReflector deflateReflector;
-        
+
+        [Obsolete]
         public MessageSerializer(
             ILogFactory logFactory) // kept for backwards compatibility.
         {
             typeRegistry = new TypeRegistry();
+#pragma warning disable CS0612
             createSerializer = () =>
+#pragma warning restore CS0612
             {
                 var settings = MessageSerializerBuilder.CreateSerializer();
                 var binder = new RegisteredSerializationBinder(typeRegistry);
@@ -34,16 +41,21 @@ namespace Halibut.Transport.Protocol
             deflateReflector = new DeflateStreamInputBufferReflector(logFactory.ForPrefix(nameof(MessageSerializer)));
             observer = new NoMessageSerializerObserver();
         }
+
         internal MessageSerializer(
             ITypeRegistry typeRegistry, 
             Func<JsonSerializer> createSerializer,
+            Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer,
             IMessageSerializerObserver observer,
             long readIntoMemoryLimitBytes,
             long writeIntoMemoryLimitBytes,
             ILogFactory logFactory)
         {
             this.typeRegistry = typeRegistry;
+#pragma warning disable CS0612
             this.createSerializer = createSerializer;
+#pragma warning restore CS0612
+            this.createStreamCapturingSerializer = createStreamCapturingSerializer;
             this.observer = observer;
             this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
@@ -72,8 +84,10 @@ namespace Halibut.Transport.Protocol
             observer.MessageWritten(compressedByteCountingStream.BytesWritten, 0);
         }
 
-        public async Task WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
+        public async Task<IReadOnlyList<DataStream>> WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)
         {
+            IReadOnlyList<DataStream> serializedStreams;
+
             using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
             using var compressedInMemoryBuffer = new WriteIntoMemoryBufferStream(compressedByteCountingStream, writeIntoMemoryLimitBytes, OnDispose.LeaveInputStreamOpen);
 
@@ -86,14 +100,19 @@ namespace Halibut.Transport.Protocol
                 // for the moment this MUST be object so that the $type property is included
                 // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
-                createSerializer().Serialize(bson, new MessageEnvelope<object> { Message = message });
+                var streamCapturingSerializer = createStreamCapturingSerializer();
+                streamCapturingSerializer.Serializer.Serialize(bson, new MessageEnvelope<object> { Message = message });
+
+                serializedStreams = streamCapturingSerializer.DataStreams;
             }
 
             await compressedInMemoryBuffer.WriteBufferToUnderlyingStream(cancellationToken);
 
             observer.MessageWritten(compressedByteCountingStream.BytesWritten, compressedInMemoryBuffer.BytesWrittenIntoMemory);
+
+            return serializedStreams;
         }
-        
+
         [Obsolete]
         public T ReadMessage<T>(RewindableBufferStream stream)
         {
@@ -130,7 +149,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task<T> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
+        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
         {
             await using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {
@@ -199,8 +218,8 @@ namespace Halibut.Transport.Protocol
                 throw;
             }
         }
-        
-        async Task<T> ReadCompressedMessageAsync<T>(ErrorRecordingStream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
+
+        async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadCompressedMessageAsync<T>(ErrorRecordingStream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
         {
             rewindableBuffer.StartBuffer();
             try
@@ -223,12 +242,12 @@ namespace Halibut.Transport.Protocol
                     // do a sync read(), to find that the stream had ended. We avoid that sync call by
                     // short circuiting to what would happen which is:  
                     // The BsonReader would return a non null MessageEnvelope with a null message, which is what we do here.
-                    return new MessageEnvelope<T>().Message; // And hack around we can't return null
+                    return (new MessageEnvelope<T>().Message, Array.Empty<DataStream>()); // And hack around we can't return null
                 }
 
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
                 {
-                    var messageEnvelope = DeserializeMessage<T>(bson);
+                    var (messageEnvelope, dataStreams) = DeserializeMessageAndDataStreams<T>(bson);
 
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
@@ -241,7 +260,7 @@ namespace Halibut.Transport.Protocol
                     }
 
                     observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedByteCountingStream.BytesRead, deflatedInMemoryStream.BytesReadIntoMemory);
-                    return messageEnvelope.Message;
+                    return (messageEnvelope.Message, dataStreams);
                 }
             }
             catch
@@ -251,14 +270,29 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        [Obsolete]
         MessageEnvelope<T> DeserializeMessage<T>(JsonReader reader)
         {
-            var result = createSerializer().Deserialize<MessageEnvelope<T>>(reader);
+            var serializer = createSerializer();
+            var result = serializer.Deserialize<MessageEnvelope<T>>(reader);
             if (result == null)
             {
                 throw new Exception("messageEnvelope is null");
             }
             return result;
+        }
+
+        (MessageEnvelope<T> MessageEnvelope, IReadOnlyList<DataStream> DataStreams) DeserializeMessageAndDataStreams<T>(JsonReader reader)
+        {
+            var streamCapturingSerializer = createStreamCapturingSerializer();
+            var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
+            
+            if (result == null)
+            {
+                throw new Exception("messageEnvelope is null");
+            }
+
+            return (result, streamCapturingSerializer.DataStreams);
         }
         
         // By making this a generic type, each message specifies the exact type it sends/expects

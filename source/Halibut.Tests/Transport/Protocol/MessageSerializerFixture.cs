@@ -307,7 +307,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             if (testCase.SyncOrAsync == SyncOrAsync.Async)
             {
-                return await messageSerializer.ReadMessageAsync<T>(rewindableBufferStream, CancellationToken);
+                return (await messageSerializer.ReadMessageAsync<T>(rewindableBufferStream, CancellationToken)).Message;
             }
 
             return messageSerializer.ReadMessage<T>(rewindableBufferStream);

@@ -4,6 +4,7 @@ using System.Threading;
 
 namespace Halibut.Transport.Protocol
 {
+    [Obsolete]
     public class StreamCapture : IDisposable
     {
         readonly HashSet<DataStream> serializedStreams = new();
@@ -20,7 +21,7 @@ namespace Halibut.Transport.Protocol
         public ICollection<DataStream> SerializedStreams => serializedStreams;
 
         public ICollection<DataStream> DeserializedStreams => deserializedStreams;
-
+        
         public static StreamCapture New()
         {
             var capture = new StreamCapture();
