@@ -353,12 +353,9 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendAsync<T>(T message, CancellationToken cancellationToken)
         {
-            using (var capture = StreamCapture.New())
-            {
-                await serializer.WriteMessageAsync(stream, message, cancellationToken);
-                await WriteEachStreamAsync(capture.SerializedStreams, cancellationToken);
-            }
-
+            var serializedStreams = await serializer.WriteMessageAsync(stream, message, cancellationToken);
+            await WriteEachStreamAsync(serializedStreams, cancellationToken);
+            
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
@@ -376,10 +373,8 @@ namespace Halibut.Transport.Protocol
 
         public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
         {
-            using var capture = StreamCapture.New();
-
-            var result = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
-            await ReadStreamsAsync(capture, cancellationToken);
+            var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
+            await ReadStreamsAsync(dataStreams, cancellationToken);
             log.Write(EventType.Diagnostic, "Received: {0}", result);
             return result;
         }
@@ -428,16 +423,6 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task ReadStreamsAsync(StreamCapture capture, CancellationToken cancellationToken)
-        {
-            var expected = capture.DeserializedStreams.Count;
-
-            for (var i = 0; i < expected; i++)
-            {
-                await ReadStreamAsync(capture, cancellationToken);
-            }
-        }
-
         [Obsolete]
         void ReadStream(StreamCapture capture)
         {
@@ -455,12 +440,22 @@ namespace Halibut.Transport.Protocol
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
 
-        async Task ReadStreamAsync(StreamCapture capture, CancellationToken cancellationToken)
+        async Task ReadStreamsAsync(IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
+        {
+            var expected = deserializedStreams.Count;
+
+            for (var i = 0; i < expected; i++)
+            {
+                await ReadStreamAsync(deserializedStreams, cancellationToken);
+            }
+        }
+
+        async Task ReadStreamAsync(IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
         {
             
             var id = new Guid(await stream.ReadBytesAsync(16, cancellationToken));
             var length = await stream.ReadInt64Async(cancellationToken);
-            var dataStream = FindStreamById(capture, id);
+            var dataStream = FindStreamById(deserializedStreams, id);
             var tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
             var lengthAgain = await stream.ReadInt64Async(cancellationToken);
             if (lengthAgain != length)
@@ -511,10 +506,23 @@ namespace Halibut.Transport.Protocol
             return new TemporaryFileStream(path, log);
         }
 
+        [Obsolete]
         static DataStream FindStreamById(StreamCapture capture, Guid id)
         {
             var dataStream = capture.DeserializedStreams.FirstOrDefault(d => d.Id == id);
             if (dataStream == null) throw new Exception("Unexpected stream!");
+            return dataStream;
+        }
+
+        static DataStream FindStreamById(IReadOnlyList<DataStream> deserializedStreams, Guid id)
+        {
+            var dataStream = deserializedStreams.FirstOrDefault(d => d.Id == id);
+            
+            if (dataStream == null)
+            {
+                throw new Exception("Unexpected stream!");
+            }
+
             return dataStream;
         }
 

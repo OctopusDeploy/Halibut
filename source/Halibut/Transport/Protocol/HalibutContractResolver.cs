@@ -38,19 +38,38 @@ namespace Halibut.Transport.Protocol
 
         static void CaptureOnSerialize(object o, StreamingContext context)
         {
-            var capture = StreamCapture.Current;
-            if (capture != null)
+            if (context.Context is StreamCapturingJsonSerializer.StreamCaptureContext contextCapture)
             {
-                capture.SerializedStreams.Add((DataStream)o);
+                contextCapture.AddCapturedStream((DataStream)o);
+            }
+            else
+            {
+#pragma warning disable CS0612
+                var capture = StreamCapture.Current;
+#pragma warning restore CS0612
+
+                if (capture != null)
+                {
+                    capture.SerializedStreams.Add((DataStream)o);
+                }
             }
         }
 
         static void CaptureOnDeserialize(object o, StreamingContext context)
         {
-            var capture = StreamCapture.Current;
-            if (capture != null)
+            if (context.Context is StreamCapturingJsonSerializer.StreamCaptureContext contextCapture)
             {
-                capture.DeserializedStreams.Add((DataStream)o);
+                contextCapture.AddCapturedStream((DataStream)o);
+            }
+            else
+            {
+#pragma warning disable CS0612
+                var capture = StreamCapture.Current;
+#pragma warning restore CS0612
+                if (capture != null)
+                {
+                    capture.DeserializedStreams.Add((DataStream)o);
+                }
             }
         }
     }
