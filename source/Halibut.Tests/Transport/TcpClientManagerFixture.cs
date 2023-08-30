@@ -11,7 +11,7 @@ namespace Halibut.Tests.Transport
         public void ShouldAddActiveClients()
         {
             const string thumbprint = "123";
-            var manager = new TcpClientManager();
+            using var manager = new TcpClientManager();
 
             manager.AddActiveClient(thumbprint, new TcpClient());
 
@@ -22,7 +22,7 @@ namespace Halibut.Tests.Transport
         public void AddShouldRemoveStaleClients()
         {
             const string thumbprint = "123";
-            var manager = new TcpClientManager();
+            using var manager = new TcpClientManager();
 
             manager.AddActiveClient(thumbprint, new TcpClient()); // this client is stale
             manager.AddActiveClient(thumbprint, new TcpClient());
@@ -34,7 +34,7 @@ namespace Halibut.Tests.Transport
         public void ShouldDisconnect()
         {
             const string thumbprint = "123";
-            var manager = new TcpClientManager();
+            using var manager = new TcpClientManager();
 
             manager.AddActiveClient(thumbprint, new TcpClient());
             manager.Disconnect(thumbprint);
@@ -46,7 +46,7 @@ namespace Halibut.Tests.Transport
         public void ShouldRemoveClient()
         {
             const string thumbprint = "123";
-            var manager = new TcpClientManager();
+            using var manager = new TcpClientManager();
             var client = new TcpClient();
 
             manager.AddActiveClient(thumbprint, client);

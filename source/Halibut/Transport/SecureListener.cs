@@ -478,6 +478,7 @@ namespace Halibut.Transport
             cts.Cancel();
             backgroundThread?.Join();
             listener?.Stop();
+            tcpClientManager.Dispose();
             cts.Dispose();
             log?.Write(EventType.ListenerStopped, "Listener stopped");
         }
