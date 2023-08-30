@@ -53,6 +53,11 @@ namespace Halibut.Transport.Caching
 
         bool CanBeCached(MethodInfo methodInfo, ResponseMessage response, OverrideErrorResponseMessageCachingAction overrideErrorResponseMessageCachingAction)
         {
+            if (response == null)
+            {
+                return false;
+            }
+            
             if (!CanBeCached(methodInfo))
             {
                 return false;
