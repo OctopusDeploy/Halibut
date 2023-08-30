@@ -7,18 +7,15 @@ namespace Halibut.Diagnostics
         public LogEvent(EventType type, string message, Exception error, object[] formatArguments)
         {
             Type = type;
-            Message = message;
             Error = error;
             Time = DateTimeOffset.UtcNow;
             FormattedMessage = formatArguments == null || formatArguments.Length == 0
-                ? Message
-                : string.Format(Message, formatArguments);
+                ? message
+                : string.Format(message, formatArguments);
         }
 
         public EventType Type { get; }
-
-        public string Message { get; }
-
+        
         public string FormattedMessage { get; }
 
         public Exception Error { get; }
@@ -27,7 +24,7 @@ namespace Halibut.Diagnostics
 
         public override string ToString()
         {
-            return Type + " " + Message;
+            return Type + " " + FormattedMessage;
         }
     }
 }
