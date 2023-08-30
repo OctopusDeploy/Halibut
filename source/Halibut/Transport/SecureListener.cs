@@ -38,7 +38,8 @@ namespace Halibut.Transport
         readonly ILogFactory logFactory;
         readonly Func<string> getFriendlyHtmlPageContent;
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
-        readonly CancellationTokenSource cts = new();
+        readonly CancellationTokenSource cts;
+        readonly CancellationToken cancellationToken;
         readonly TcpClientManager tcpClientManager = new();
         readonly ExchangeActionAsync exchangeAction;
         readonly AsyncHalibutFeature asyncHalibutFeature;
@@ -74,6 +75,9 @@ namespace Halibut.Transport
             this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
+            this.cts = new CancellationTokenSource();
+            this.cancellationToken = cts.Token;
+
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -124,7 +128,7 @@ namespace Halibut.Transport
 
             const int errorThreshold = 3;
 
-            using (IsWindows() ? cts.Token.Register(listener.Stop) : (IDisposable) null)
+            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable) null)
             {
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cts.IsCancellationRequested)
@@ -246,18 +250,28 @@ namespace Halibut.Transport
 
                     if (Authorize(thumbprint, clientName))
                     {
-                        // The ExchangeMessage call can hang on reading the stream which keeps a thread alive,
-                        // so we dispose the stream which will cause the thread to abort with an exceptions.
-                        var weakSsl = new WeakReference(ssl);
-#if !NETFRAMEWORK
-                        await
-#endif
-                        using (cts.Token.Register(() =>
-                                     {
-                                         if (weakSsl.IsAlive)
-                                             ((IDisposable)weakSsl.Target).Dispose();
-                                     }))
+                        if (asyncHalibutFeature == AsyncHalibutFeature.Disabled)
                         {
+                            // The ExchangeMessage call can hang on reading the stream which keeps a thread alive,
+                            // so we dispose the stream which will cause the thread to abort with an exceptions.
+                            var weakSsl = new WeakReference(ssl);
+#if !NETFRAMEWORK
+                            await
+#endif
+                            using (cancellationToken.Register(() =>
+                                   {
+                                       if (weakSsl.IsAlive)
+                                           ((IDisposable)weakSsl.Target).Dispose();
+                                   }))
+                            {
+                                tcpClientManager.AddActiveClient(thumbprint, client);
+                                await ExchangeMessages(ssl).ConfigureAwait(false);
+                            }
+                        }
+                        else
+                        {
+                            // The stream is wrapped in a NetworkTimeoutStream which handles closing the inner stream on timeout
+                            // so the weakSsl workaround is not required to ensure the stream is Disposed
                             tcpClientManager.AddActiveClient(thumbprint, client);
                             await ExchangeMessages(ssl).ConfigureAwait(false);
                         }
@@ -336,14 +350,14 @@ namespace Halibut.Transport
 
             if (asyncHalibutFeature.IsEnabled())
             {
-                await stream.WriteLineAsync("HTTP/1.0 200 OK", cts.Token);
-                await stream.WriteLineAsync("Content-Type: text/html; charset=utf-8", cts.Token);
-                await stream.WriteLineAsync("Content-Length: " + message.Length, cts.Token);
+                await stream.WriteLineAsync("HTTP/1.0 200 OK", cancellationToken);
+                await stream.WriteLineAsync("Content-Type: text/html; charset=utf-8", cancellationToken);
+                await stream.WriteLineAsync("Content-Length: " + message.Length, cancellationToken);
                 foreach (var header in headers)
-                    await stream.WriteLineAsync($"{header.Key}: {header.Value}", cts.Token);
-                await stream.WriteLineAsync(string.Empty, cts.Token);
-                await stream.WriteLineAsync(message, cts.Token);
-                await stream.WriteLineAsync(string.Empty, cts.Token);
+                    await stream.WriteLineAsync($"{header.Key}: {header.Value}", cancellationToken);
+                await stream.WriteLineAsync(string.Empty, cancellationToken);
+                await stream.WriteLineAsync(message, cancellationToken);
+                await stream.WriteLineAsync(string.Empty, cancellationToken);
                 await stream.FlushAsync();
             }
             else
@@ -405,10 +419,10 @@ namespace Halibut.Transport
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
-            return exchangeAction(exchangeProtocolBuilder(stream, log), cts.Token);
+            return exchangeAction(exchangeProtocolBuilder(stream, log), cancellationToken);
         }
 
-        bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
+        static bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
         {
             return true;
         }
@@ -431,7 +445,7 @@ namespace Halibut.Transport
             while (builder.Length < 20000)
             {
                 var b = asyncHalibutFeature.IsEnabled()
-                    ? await stream.ReadByteAsync(cts.Token)
+                    ? await stream.ReadByteAsync(cancellationToken)
                     : stream.ReadByte();
 
                 if (b == -1) return builder.ToString();
@@ -464,6 +478,7 @@ namespace Halibut.Transport
             cts.Cancel();
             backgroundThread?.Join();
             listener?.Stop();
+            tcpClientManager.Dispose();
             cts.Dispose();
             log?.Write(EventType.ListenerStopped, "Listener stopped");
         }

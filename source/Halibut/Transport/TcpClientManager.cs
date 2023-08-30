@@ -5,7 +5,7 @@ using System.Net.Sockets;
 
 namespace Halibut.Transport
 {
-    class TcpClientManager
+    class TcpClientManager : IDisposable
     {
         readonly Dictionary<string, HashSet<TcpClient>> activeClients = new();
 
@@ -72,6 +72,21 @@ namespace Halibut.Transport
                     .ToArray();
                 foreach (var thumbprint in thumbprintsWithNoClients)
                     activeClients.Remove(thumbprint);
+            }
+        }
+
+        public void Dispose()
+        {
+            var clients = activeClients.ToArray();
+            activeClients.Clear();
+
+            foreach (var client in clients)
+            {
+                foreach (var tcpClient in client.Value)
+                {
+                    tcpClient.CloseImmediately();
+                    tcpClient.Dispose();
+                }
             }
         }
     }
