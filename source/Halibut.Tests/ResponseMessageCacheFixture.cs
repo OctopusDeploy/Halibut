@@ -1,14 +1,17 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.TestServices.SyncClientWithOptions;
+using Halibut.Transport.Caching;
 using NUnit.Framework;
 using ICachingService = Halibut.Tests.TestServices.ICachingService;
 
@@ -233,6 +236,25 @@ namespace Halibut.Tests
                 exception2!.Message.Should().StartWith("Exception");
                 exception1!.Message.Should().NotBe(exception2.Message);
             }
+        }
+
+        [Test]
+        public void NullRequestsAreNotCached()
+        {
+            var cache = new ResponseCache();
+            var serviceEndpoint = new ServiceEndPointBuilder().Build();
+            var request = new RequestMessageBuilder(serviceEndpoint.BaseUri.ToString()).Build();
+            var methodInfo = typeof(IAsyncClientCachingService).GetMethods().First(m => m.Name.Equals("CachableCallAsync"));
+            var response = new ResponseMessageBuilder(serviceEndpoint.BaseUri.ToString()).Build();
+            OverrideErrorResponseMessageCachingAction action = message => false;
+            
+            // Actual test, testing a null response.
+            cache.CacheResponse(serviceEndpoint, request, methodInfo, null, action);
+            cache.GetCachedResponse(serviceEndpoint, request, methodInfo).Should().BeNull();
+            
+            // This just checks we are using the cache correctly, ensuring the above is valid.
+            cache.CacheResponse(serviceEndpoint, request, methodInfo, response, action);
+            cache.GetCachedResponse(serviceEndpoint, request, methodInfo).Should().NotBeNull();
         }
     }
 }
