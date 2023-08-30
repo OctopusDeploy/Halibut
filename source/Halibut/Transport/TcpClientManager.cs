@@ -77,15 +77,23 @@ namespace Halibut.Transport
 
         public void Dispose()
         {
-            var clients = activeClients.ToArray();
-            activeClients.Clear();
+            var clients = activeClients?.ToArray();
+            activeClients?.Clear();
 
+            if (clients == null || !clients.Any())
+            {
+                return;
+            }
+            
             foreach (var client in clients)
             {
-                foreach (var tcpClient in client.Value)
+                if (client.Value?.Any() == true)
                 {
-                    tcpClient.CloseImmediately();
-                    tcpClient.Dispose();
+                    foreach (var tcpClient in client.Value)
+                    {
+                        tcpClient?.CloseImmediately();
+                        tcpClient?.Dispose();
+                    }
                 }
             }
         }
