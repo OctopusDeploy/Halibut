@@ -252,7 +252,7 @@ namespace Halibut.Tests
             cache.CacheResponse(serviceEndpoint, request, methodInfo, null, action);
             cache.GetCachedResponse(serviceEndpoint, request, methodInfo).Should().BeNull();
             
-            // Anc check we are using the cache correctly.
+            // This just checks we are using the cache correctly, ensuring the above is valid.
             cache.CacheResponse(serviceEndpoint, request, methodInfo, response, action);
             cache.GetCachedResponse(serviceEndpoint, request, methodInfo).Should().NotBeNull();
         }
