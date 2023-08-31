@@ -3,10 +3,13 @@ using System.Collections.Generic;
 
 namespace Halibut.Diagnostics.LogWriters
 {
+    /// <summary>
+    /// An ILog which writes the log events to both an inner ILog and to the set of ILogWriters.   
+    /// </summary>
     public class AggregateLogWriterLog : ILog
     {
-        ILog log;
-        ILogWriter[] logWriter;
+        readonly ILog log;
+        readonly ILogWriter[] logWriter;
 
         public AggregateLogWriterLog(ILog log, ILogWriter[] logWriter)
         {
