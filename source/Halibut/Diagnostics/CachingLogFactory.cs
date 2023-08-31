@@ -16,7 +16,7 @@ namespace Halibut.Diagnostics
 
         public ILog ForEndpoint(Uri endpoint)
         {
-            endpoint = LogEndpointNormalizer.NormalizeEndpoint(endpoint);
+            endpoint = LogEndpointNormalizer.NormalizeEndpointForLogging(endpoint);
             return cache.GetOrAdd(endpoint.ToString(), logCreator.CreateNewForPrefix);
         }
 
