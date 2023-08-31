@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
@@ -74,9 +75,9 @@ namespace Halibut.Tests.Diagnostics
             var logs = cachingLogFactory.ForPrefix("poll://foo1/")
                 .GetLogs();
 
-            logs[0].Message.Should().Be("Hello from prefix");
-            logs[1].Message.Should().Be("Hello from endpoint");
-            logs[2].Message.Should().Be("cya");
+            logs[0].FormattedMessage.Should().Be("Hello from prefix");
+            logs[1].FormattedMessage.Should().Be("Hello from endpoint");
+            logs[2].FormattedMessage.Should().Be("cya");
         }
 
         /// <summary>
@@ -99,17 +100,17 @@ namespace Halibut.Tests.Diagnostics
             cachingLogFactory.ForEndpoint(new Uri("poll://foo1/"))
                 .Write(EventType.Diagnostic, "Hello from endpoint");
 
-            var logs = cachingLogFactory.ForPrefix("poll://foo1/")
+            IList<LogEvent>? logs = cachingLogFactory.ForPrefix("poll://foo1/")
                 .GetLogs();
 
-            logs[0].Message.Should().Be("Hello from prefix");
-            logs[1].Message.Should().Be("Hello from endpoint");
+            logs[0].FormattedMessage.Should().Be("Hello from prefix");
+            logs[1].FormattedMessage.Should().Be("Hello from endpoint");
 
             callCount.Should().Be(1, "Since we should be caching the log writer");
 
             var logsFromWriter = logWriter.GetLogs();
-            logsFromWriter[0].Message.Should().Be("Hello from prefix");
-            logsFromWriter[1].Message.Should().Be("Hello from endpoint");
+            logsFromWriter[0].FormattedMessage.Should().Be("Hello from prefix");
+            logsFromWriter[1].FormattedMessage.Should().Be("Hello from endpoint");
         }
     }
 }

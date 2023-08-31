@@ -22,8 +22,8 @@ namespace Halibut.Tests.Diagnostics.LogWriters
 
             log.Write(EventType.Security, "Hello");
 
-            logWriter1.GetLogs()[0].Message.Should().Be("Hello");
-            logWriter2.GetLogs()[0].Message.Should().Be("Hello");
+            logWriter1.GetLogs()[0].FormattedMessage.Should().Be("Hello");
+            logWriter2.GetLogs()[0].FormattedMessage.Should().Be("Hello");
         }
 
         [Test]
