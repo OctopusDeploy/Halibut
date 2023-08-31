@@ -38,7 +38,7 @@ namespace Halibut.Tests.Transport
             {
                 ConnectionErrorRetryTimeout = TimeSpan.MaxValue
             };
-            log = TestContextLogFactory.CreateTestLog("Client", LogLevel.Info).ForEndpoint(endpoint.BaseUri);
+            log = new TestContextLogCreator("Client", LogLevel.Info).ForEndpoint(endpoint.BaseUri);
         }
 
         public void Dispose()
