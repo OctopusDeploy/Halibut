@@ -190,7 +190,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
-                .WithLogFactory(new TestContextLogCreator("Client", halibutLogLevel).WithCaching());
+                .WithLogFactory(new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory());
 
             var client = clientBuilder.Build();
             client.Trust(serviceCertAndThumbprint.Thumbprint);

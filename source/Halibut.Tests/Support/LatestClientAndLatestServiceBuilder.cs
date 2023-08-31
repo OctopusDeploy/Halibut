@@ -502,7 +502,7 @@ namespace Halibut.Tests.Support
         {
             if (clientInMemoryLoggers == null)
             {
-                return new TestContextLogCreator("Client", halibutLogLevel).WithCaching();
+                return new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory();
             }
 
 
@@ -516,14 +516,14 @@ namespace Halibut.Tests.Support
                     return new[] {logger};
                 }
             )
-                .WithCaching();
+                .ToCachingLogFactory();
         }
         
         ILogFactory BuildServiceLogger()
         {
             if (serviceInMemoryLoggers == null)
             {
-                return new TestContextLogCreator("Service", halibutLogLevel).WithCaching();
+                return new TestContextLogCreator("Service", halibutLogLevel).ToCachingLogFactory();
             }
 
             return new AggregateLogWriterLogCreator(
@@ -535,7 +535,7 @@ namespace Halibut.Tests.Support
                         return new[] {logger};
                     }
                 )
-                .WithCaching();
+                .ToCachingLogFactory();
         }
 
         public class ClientAndService : IClientAndService
