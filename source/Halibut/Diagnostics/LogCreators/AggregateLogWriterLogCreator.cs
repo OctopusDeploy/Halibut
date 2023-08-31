@@ -19,4 +19,4 @@ namespace Halibut.Diagnostics.LogCreators
             return new AggregateLogWriterLog(nonCachingLogFactory.CreateNewForPrefix(prefix), logWriterFactoryForPrefix(prefix));
         }
     }
-}
+} 

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
+using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
@@ -38,7 +39,7 @@ namespace Halibut.Tests.Transport
             {
                 ConnectionErrorRetryTimeout = TimeSpan.MaxValue
             };
-            log = new TestContextLogCreator("Client", LogLevel.Info).ForEndpoint(endpoint.BaseUri);
+            log = new TestContextLogCreator("Client", LogLevel.Info).ToCachingLogFactory().ForEndpoint(endpoint.BaseUri);
         }
 
         public void Dispose()
