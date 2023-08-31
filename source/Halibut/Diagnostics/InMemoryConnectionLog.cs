@@ -54,6 +54,7 @@ namespace Halibut.Diagnostics
             switch (logEvent.Type)
             {
                 case EventType.Error:
+                case EventType.ErrorInInitialisation:
                     return LogLevel.Error;
                 case EventType.Diagnostic:
                 case EventType.SecurityNegotiation:

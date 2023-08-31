@@ -107,7 +107,9 @@ namespace Halibut.Transport
                     catch (Exception ex)
                     {
                         if (!cts.IsCancellationRequested)
-                            log.WriteException(EventType.Error, "Error accepting Web Socket client", ex);
+                        {
+                            log.WriteException(EventType.ErrorInInitialisation, "Error accepting Web Socket client", ex);
+                        }
                     }
                 }
             }
@@ -125,7 +127,7 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.Error, "Error initializing TCP client", ex);
+                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client", ex);
             }
         }
 
@@ -134,6 +136,7 @@ namespace Halibut.Transport
             var clientName = listenerContext.Request.RemoteEndPoint;
 
             WebSocketStream webSocketStream = null;
+            bool hasReachedExchangeMessages = false;
             try
             {
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
@@ -167,6 +170,7 @@ namespace Halibut.Transport
 
                 if (authorized)
                 {
+                    hasReachedExchangeMessages = true;
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                     await ExchangeMessages(webSocketStream).ConfigureAwait(false);
                 }
@@ -174,11 +178,15 @@ namespace Halibut.Transport
             catch (TaskCanceledException)
             {
                 if (!cts.Token.IsCancellationRequested)
-                    log.Write(EventType.Error, "A timeout occurred while receiving data");
+                {
+                    var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
+                    log.Write(errorEventType, "A timeout occurred while receiving data");
+                }
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.Error, "Unhandled error when handling request from client: {0}", ex, clientName);
+                var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
+                log.WriteException(errorEventType, "Unhandled error when handling request from client: {0}", ex, clientName);
             }
             finally
             {
