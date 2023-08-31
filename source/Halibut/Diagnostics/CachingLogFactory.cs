@@ -7,22 +7,22 @@ namespace Halibut.Diagnostics
     public class CachingLogFactory : ILogFactory
     {
         readonly ConcurrentDictionary<string, ILog> cache = new();
-        readonly ICreateNewILog logFactory;
+        readonly ICreateNewILog logCreator;
 
-        public CachingLogFactory(ICreateNewILog logFactory)
+        public CachingLogFactory(ICreateNewILog logCreator)
         {
-            this.logFactory = logFactory;
+            this.logCreator = logCreator;
         }
 
         public ILog ForEndpoint(Uri endpoint)
         {
             endpoint = LogEndpointNormalizer.NormalizeEndpoint(endpoint);
-            return cache.GetOrAdd(endpoint.ToString(), logFactory.CreateNewForPrefix);
+            return cache.GetOrAdd(endpoint.ToString(), logCreator.CreateNewForPrefix);
         }
 
         public ILog ForPrefix(string prefix)
         {
-            return cache.GetOrAdd(prefix, logFactory.CreateNewForPrefix);
+            return cache.GetOrAdd(prefix, logCreator.CreateNewForPrefix);
         }
     }
 }

@@ -85,7 +85,7 @@ namespace Halibut.Tests.Diagnostics
         [Test]
         public void CachingWithAggregateLogWriterLogCreatorAndInMemoryConnectionLogCreatorWorksAsExpected()
         {
-            var logWriter = new InMemoryLog();
+            var logWriter = new InMemoryLogWriter();
             int callCount = 0;
 
             var cachingLogFactory = new AggregateLogWriterLogCreator(new InMemoryConnectionLogCreator(), prefix =>

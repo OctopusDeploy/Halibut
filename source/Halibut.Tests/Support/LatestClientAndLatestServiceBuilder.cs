@@ -511,7 +511,7 @@ namespace Halibut.Tests.Support
                     new TestContextLogCreator("Client", halibutLogLevel),
                 s =>
                 {
-                    var logger = new InMemoryLog();
+                    var logger = new InMemoryLogWriter();
                     clientInMemoryLoggers[s] = logger;
                     return new[] {logger};
                 }
@@ -530,7 +530,7 @@ namespace Halibut.Tests.Support
                     new TestContextLogCreator("Service", halibutLogLevel),
                     s =>
                     {
-                        var logger = new InMemoryLog();
+                        var logger = new InMemoryLogWriter();
                         serviceInMemoryLoggers[s] = logger;
                         return new[] {logger};
                     }

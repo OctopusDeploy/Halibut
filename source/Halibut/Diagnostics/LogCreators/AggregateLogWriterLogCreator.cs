@@ -5,18 +5,18 @@ namespace Halibut.Diagnostics.LogCreators
 {
     public class AggregateLogWriterLogCreator : ICreateNewILog
     {
-        readonly ICreateNewILog nonCachingLogFactory;
+        readonly ICreateNewILog logCreator;
         readonly Func<string, ILogWriter[]> logWriterFactoryForPrefix;
 
-        public AggregateLogWriterLogCreator(ICreateNewILog nonCachingLogFactory, Func<string, ILogWriter[]> logWriterFactoryForPrefix)
+        public AggregateLogWriterLogCreator(ICreateNewILog logCreator, Func<string, ILogWriter[]> logWriterFactoryForPrefix)
         {
-            this.nonCachingLogFactory = nonCachingLogFactory;
+            this.logCreator = logCreator;
             this.logWriterFactoryForPrefix = logWriterFactoryForPrefix;
         }
 
         public ILog CreateNewForPrefix(string prefix)
         {
-            return new AggregateLogWriterLog(nonCachingLogFactory.CreateNewForPrefix(prefix), logWriterFactoryForPrefix(prefix));
+            return new AggregateLogWriterLog(logCreator.CreateNewForPrefix(prefix), logWriterFactoryForPrefix(prefix));
         }
     }
 } 

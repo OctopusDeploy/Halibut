@@ -13,8 +13,8 @@ namespace Halibut.Tests.Diagnostics.LogWriters
         [Test]
         public void EachLogWriterShouldBeCalled()
         {
-            var logWriter1 = new InMemoryLog();
-            var logWriter2 = new InMemoryLog();
+            var logWriter1 = new InMemoryLogWriter();
+            var logWriter2 = new InMemoryLogWriter();
 
             var aggregateLogWriterLog = new AggregateLogWriterLogCreator(new InMemoryConnectionLogCreator(), prefix => { return new[] {logWriter1, logWriter2}; });
 
@@ -29,8 +29,8 @@ namespace Halibut.Tests.Diagnostics.LogWriters
         [Test]
         public void EachCallToCreateNewForPrefixShouldReturnANewLog()
         {
-            var logWriter1 = new InMemoryLog();
-            var logWriter2 = new InMemoryLog();
+            var logWriter1 = new InMemoryLogWriter();
+            var logWriter2 = new InMemoryLogWriter();
 
             var prefixesPassedIn = new List<string>();
 
