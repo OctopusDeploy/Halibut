@@ -6,12 +6,12 @@ namespace Halibut.Diagnostics.LogWriters
     /// <summary>
     /// An ILog which writes the log events to both an inner ILog and to the set of ILogWriters.   
     /// </summary>
-    public class AggregateLogWriterLog : ILog
+    public class AggregateLogWriter : ILog
     {
         readonly ILog log;
         readonly ILogWriter[] logWriter;
 
-        public AggregateLogWriterLog(ILog log, ILogWriter[] logWriter)
+        public AggregateLogWriter(ILog log, ILogWriter[] logWriter)
         {
             this.log = log;
             this.logWriter = logWriter;

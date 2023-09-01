@@ -16,7 +16,7 @@ namespace Halibut.Diagnostics.LogCreators
 
         public ILog CreateNewForPrefix(string prefix)
         {
-            return new AggregateLogWriterLog(logCreator.CreateNewForPrefix(prefix), logWriterFactoryForPrefix(prefix));
+            return new AggregateLogWriter(logCreator.CreateNewForPrefix(prefix), logWriterFactoryForPrefix(prefix));
         }
     }
 } 
