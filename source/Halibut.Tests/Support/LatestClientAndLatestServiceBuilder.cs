@@ -15,6 +15,7 @@ using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Streams;
 using Halibut.Util;
@@ -39,8 +40,9 @@ namespace Halibut.Tests.Support
         string serviceTrustsThumbprint;
         ForceClientProxyType? forceClientProxyType;
         AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
-        
-        
+        IRpcObserver? clientRpcObserver;
+
+
         bool hasService = true;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
@@ -348,6 +350,12 @@ namespace Halibut.Tests.Support
             return this;
         }
         
+        public LatestClientAndLatestServiceBuilder WithClientRpcObserver(IRpcObserver? clientRpcObserver)
+        {
+            this.clientRpcObserver = clientRpcObserver;
+            return this;
+        }
+
         async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
             return await Build(cancellationToken);
@@ -372,6 +380,11 @@ namespace Halibut.Tests.Support
                 .WithStreamFactoryIfNotNull(streamFactory)
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
+
+            if (clientRpcObserver is not null)
+            {
+                clientBuilder.WithRpcObserver(clientRpcObserver);
+            }
 
             var client = clientBuilder.Build();
             client.Trust(clientTrustsThumbprint);
