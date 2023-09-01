@@ -12,6 +12,7 @@ using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport;
 using Halibut.Transport.Caching;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
@@ -40,6 +41,7 @@ namespace Halibut
         public HalibutTimeoutsAndLimits TimeoutsAndLimits { get; }
         readonly IStreamFactory streamFactory;
         readonly TcpConnectionFactory tcpConnectionFactory;
+        readonly IConnectionsObserver connectionsObserver;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -79,6 +81,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManager();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            this.connectionsObserver = NoOpConnectionsObserver.Instance();
         }
 
         internal HalibutRuntime(
@@ -92,7 +95,8 @@ namespace Halibut
             Func<RetryPolicy> pollingReconnectRetryPolicy,
             AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
-            IStreamFactory streamFactory)
+            IStreamFactory streamFactory,
+            IConnectionsObserver connectionsObserver)
         {
             AsyncHalibutFeature = asyncHalibutFeature;
             this.serverCertificate = serverCertificate;
@@ -105,6 +109,7 @@ namespace Halibut
             this.streamFactory = streamFactory;
             invoker = new ServiceInvoker(serviceFactory);
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.connectionsObserver = connectionsObserver;
 
             if (asyncHalibutFeature == AsyncHalibutFeature.Enabled)
             {
@@ -150,7 +155,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), connectionsObserver, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -161,7 +166,19 @@ namespace Halibut
 #pragma warning restore CS0612
                 HandleMessageAsync;
 
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            var listener = new SecureListener(endpoint, 
+                serverCertificate, 
+                ExchangeProtocolBuilder(), 
+                exchangeActionAsync, 
+                IsTrusted, 
+                logs, 
+                () => friendlyHtmlPageContent, 
+                () => friendlyHtmlPageHeaders, 
+                HandleUnauthorizedClientConnect, 
+                AsyncHalibutFeature, 
+                TimeoutsAndLimits, 
+                streamFactory,
+                connectionsObserver);
             
             lock (listeners)
             {

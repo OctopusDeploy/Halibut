@@ -11,6 +11,7 @@ using Halibut.Tests.Support.Logging;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
@@ -64,7 +65,7 @@ namespace Halibut.Tests.Transport
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream, log));
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, NoOpConnectionsObserver.Instance(), log));
 
                 syncOrAsync
                     .WhenSync(() => connectionManager.ReleaseConnection(endpoint, connection))
@@ -101,7 +102,8 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger, SyncOrAsync syncOrAsync)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), new HalibutTimeoutsAndLimits(), logger), logger);
+            var messageExchangeStream = new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), new HalibutTimeoutsAndLimits(), logger);
+            return new MessageExchangeProtocol(messageExchangeStream, NoOpConnectionsObserver.Instance(), logger);
         }
     }
 }

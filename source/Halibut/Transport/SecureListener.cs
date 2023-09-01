@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
@@ -45,6 +46,7 @@ namespace Halibut.Transport
         readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
+        readonly IConnectionsObserver connectionsObserver;
         ILog log;
         TcpListener listener;
         Thread backgroundThread;
@@ -61,7 +63,8 @@ namespace Halibut.Transport
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, 
             AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
-            IStreamFactory streamFactory)
+            IStreamFactory streamFactory, 
+            IConnectionsObserver connectionsObserver)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -75,6 +78,7 @@ namespace Halibut.Transport
             this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
+            this.connectionsObserver = connectionsObserver ?? NoOpConnectionsObserver.Instance();
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
@@ -146,6 +150,7 @@ namespace Halibut.Transport
                         }
 
                         var client = listener.AcceptTcpClient();
+                        Try.CatchingError(() => this.connectionsObserver.ListenerAcceptedConnection(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                         Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }
@@ -158,6 +163,7 @@ namespace Halibut.Transport
                     }
                     catch (Exception ex)
                     {
+                        Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionFailedToInitialize(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                         numberOfFailedAttemptsInRow++;
                         log.WriteException(EventType.Error, "Error accepting TCP client", ex);
                         // Slow down the logs in case an exception is immediately encountered after X failed AcceptTcpClient calls
@@ -206,6 +212,7 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
+                Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionFailedToInitialize(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                 log.WriteException(EventType.Error, "Error initializing TCP client", ex);
             }
         }
@@ -299,6 +306,11 @@ namespace Halibut.Transport
                 }
                 finally
                 {
+                    Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionHasBeenDisconnected(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
+                    if ("TODO".Equals("TODO wait for another PR which makes it easy to determine if ExchangeMessages wa reached or not."))
+                    {
+                        Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionFailedToInitialize(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
+                    }
                     SafelyRemoveClientFromTcpClientManager(client, clientName);
                     await SafelyCloseStreamAsync(stream, clientName);
                     client.CloseImmediately(ex => log.Write(EventType.Error, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message));

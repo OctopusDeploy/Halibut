@@ -3,6 +3,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
+using Halibut.Transport.Observability;
 using Halibut.Util;
 using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
@@ -69,6 +70,16 @@ namespace Halibut.Tests.Support
                 action(builder);
             }
             return builder;
+        }
+        
+        public static LatestClientAndLatestServiceBuilder WithConnectionObserverOnTcpServer(this LatestClientAndLatestServiceBuilder builder, IConnectionsObserver connectionsObserver)
+        {
+            if (builder.ServiceConnectionType == ServiceConnectionType.Listening)
+            {
+                return builder.WithServiceConnectionsObserver(connectionsObserver);
+            }
+
+            return builder.WithClientConnectionsObserver(connectionsObserver);
         }
     }
 }

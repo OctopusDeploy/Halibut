@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
@@ -23,6 +24,13 @@ namespace Halibut
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         IStreamFactory streamFactory;
+        IConnectionsObserver connectionsObserver = NoOpConnectionsObserver.Instance();
+        
+        internal HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
+        {
+            this.connectionsObserver = connectionsObserver;
+            return this;
+        }
         
         internal HalibutRuntimeBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
@@ -137,7 +145,8 @@ namespace Halibut
                 pollingReconnectRetryPolicy,
                 asyncHalibutFeature,
                 halibutTimeoutsAndLimits,
-                streamFactory);
+                streamFactory,
+                connectionsObserver);
 
             if (onUnauthorizedClientConnect is not null)
             {

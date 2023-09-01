@@ -9,6 +9,7 @@ using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 using NUnit.Framework;
 
@@ -68,7 +69,8 @@ namespace Halibut.Tests.Transport
                     (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
                     syncOrAsync.ToAsyncHalibutFeature(),
                     new HalibutTimeoutsAndLimits(),
-                    new StreamFactory(syncOrAsync.ToAsyncHalibutFeature())
+                    new StreamFactory(syncOrAsync.ToAsyncHalibutFeature()),
+                    NoOpConnectionsObserver.Instance()
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)

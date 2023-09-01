@@ -13,6 +13,7 @@ using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Streams;
 using Halibut.Util;
@@ -30,7 +31,7 @@ namespace Halibut.Tests.Support
     {
         ServiceFactoryBuilder serviceFactoryBuilder = new();
         IServiceFactory? serviceFactory;
-        readonly ServiceConnectionType serviceConnectionType;
+        public readonly ServiceConnectionType ServiceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         string clientTrustsThumbprint; 
         readonly CertAndThumbprint clientCertAndThumbprint;
@@ -54,13 +55,14 @@ namespace Halibut.Tests.Support
         HalibutTimeoutsAndLimits? halibutTimeoutsAndLimits;
 
         IStreamFactory? streamFactory;
-
+        IConnectionsObserver serviceConnectionsObserver;
+        IConnectionsObserver clientConnectionsObserver;
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint)
         {
-            this.serviceConnectionType = serviceConnectionType;
+            this.ServiceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
@@ -120,6 +122,18 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public LatestClientAndLatestServiceBuilder WithServiceConnectionsObserver(IConnectionsObserver countingServiceObserver)
+        {
+            this.serviceConnectionsObserver = countingServiceObserver;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithClientConnectionsObserver(IConnectionsObserver countingClientObserver)
+        {
+            this.clientConnectionsObserver = countingClientObserver;
+            return this;
+        }
+        
         public LatestClientAndLatestServiceBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
@@ -190,7 +204,7 @@ namespace Halibut.Tests.Support
         {
             if (this.portForwarderFactory != null)
             {
-                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
+                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported.");
             }
 
             this.portForwarderFactory = portForwarderFactory;
@@ -368,6 +382,7 @@ namespace Halibut.Tests.Support
                 .WithTrustProvider(clientTrustProvider)
                 .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
                 .WithStreamFactoryIfNotNull(streamFactory)
+                .WithConnectionsObserver(clientConnectionsObserver)
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
@@ -383,6 +398,7 @@ namespace Halibut.Tests.Support
                     .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                     .WithStreamFactoryIfNotNull(streamFactory)
+                    .WithConnectionsObserver(serviceConnectionsObserver)
                     .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
@@ -402,7 +418,7 @@ namespace Halibut.Tests.Support
 
             Uri serviceUri;
 
-            if (serviceConnectionType == ServiceConnectionType.Polling)
+            if (ServiceConnectionType == ServiceConnectionType.Polling)
             {
                 var clientListenPort = client.Listen();
                 portForwarder = portForwarderFactory?.Invoke(clientListenPort);
@@ -417,7 +433,7 @@ namespace Halibut.Tests.Support
                     service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + clientListenPort), serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
                 }
             }
-            else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
+            else if (ServiceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
                 var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
                 var webSocketListeningPort = webSocketListeningInfo.WebSocketListeningPort;
@@ -441,7 +457,7 @@ namespace Halibut.Tests.Support
                     service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
                 }
             }
-            else if (serviceConnectionType == ServiceConnectionType.Listening)
+            else if (ServiceConnectionType == ServiceConnectionType.Listening)
             {
                 int listenPort;
                 if (service != null)

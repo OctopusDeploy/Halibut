@@ -8,6 +8,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using NSubstitute;
 using NUnit.Framework;
@@ -24,7 +25,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
-            protocol = new MessageExchangeProtocol(stream, Substitute.For<ILog>());
+            protocol = new MessageExchangeProtocol(stream, NoOpConnectionsObserver.Instance(), Substitute.For<ILog>());
         }
 
         // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation

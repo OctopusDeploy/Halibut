@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Transport.Observability;
+using Halibut.Util;
 
 namespace Halibut.Transport.Protocol
 {
@@ -22,11 +24,13 @@ namespace Halibut.Transport.Protocol
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
+        readonly IConnectionsObserver connectionsObserver;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, IConnectionsObserver connectionsObserver, ILog log)
         {
             this.stream = stream;
             this.log = log;
+            this.connectionsObserver = connectionsObserver ?? NoOpConnectionsObserver.Instance();
         }
 
         [Obsolete]
@@ -171,9 +175,11 @@ namespace Halibut.Transport.Protocol
             switch (identity.IdentityType)
             {
                 case RemoteIdentityType.Client:
+                    Try.CatchingError(() => this.connectionsObserver.ClientReachedMessageExchange(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                     ProcessClientRequests(incomingRequestProcessor);
                     break;
                 case RemoteIdentityType.Subscriber:
+                    Try.CatchingError(() => this.connectionsObserver.ClientReachedMessageExchange(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                     await ProcessSubscriberSynchronouslyAsync(pendingRequests(identity));
                     break;
                 default:
@@ -185,14 +191,17 @@ namespace Halibut.Transport.Protocol
         {
             var identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
             await stream.IdentifyAsServerAsync(cancellationToken);
-
+            
             switch (identity.IdentityType)
             {
                 case RemoteIdentityType.Client:
+                    Try.CatchingError(() => this.connectionsObserver.ClientReachedMessageExchange(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                     await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    await ProcessSubscriberAsync(pendingRequests(identity), cancellationToken);
+                    var pendingRequestQueue = pendingRequests(identity);
+                    Try.CatchingError(() => this.connectionsObserver.ClientReachedMessageExchange(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
+                    await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
                     break;
                 default:
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
