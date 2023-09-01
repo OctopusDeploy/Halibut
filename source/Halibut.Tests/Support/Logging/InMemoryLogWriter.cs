@@ -2,11 +2,11 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Halibut.Diagnostics;
-using Serilog;
+using Halibut.Diagnostics.LogWriters;
 
 namespace Halibut.Tests.Support.Logging
 {
-    public class InMemoryLog : ILog
+    public class InMemoryLogWriter : ILog, ILogWriter
     {
         readonly ConcurrentQueue<LogEvent> events = new ConcurrentQueue<LogEvent>();
 

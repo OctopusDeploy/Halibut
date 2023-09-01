@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Diagnostics.LogCreators;
+using Halibut.Diagnostics.LogWriters;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
@@ -477,7 +479,7 @@ namespace Halibut.Tests.Support
             return new ClientAndService(client, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, forceClientProxyType, cancellationTokenSource);
         }
 
-        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(TestContextLogFactory octopusLogFactory)
+        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
         {
             if (pendingRequestQueueFactory != null)
             {
@@ -496,34 +498,44 @@ namespace Halibut.Tests.Support
             return factory;
         }
 
-        TestContextLogFactory BuildClientLogger()
+        ILogFactory BuildClientLogger()
         {
             if (clientInMemoryLoggers == null)
             {
-                return TestContextLogFactory.CreateTestLog("Client", halibutLogLevel);
+                return new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory();
             }
 
-            return TestContextLogFactory.CreateTestLog("Client", halibutLogLevel, s =>
-            {
-                var logger = new InMemoryLog();
-                clientInMemoryLoggers[s] = logger;
-                return logger;
-            });
+
+
+            return new AggregateLogWriterLogCreator(
+                    new TestContextLogCreator("Client", halibutLogLevel),
+                s =>
+                {
+                    var logger = new InMemoryLogWriter();
+                    clientInMemoryLoggers[s] = logger;
+                    return new[] {logger};
+                }
+            )
+                .ToCachingLogFactory();
         }
         
-        TestContextLogFactory BuildServiceLogger()
+        ILogFactory BuildServiceLogger()
         {
             if (serviceInMemoryLoggers == null)
             {
-                return TestContextLogFactory.CreateTestLog("Service", halibutLogLevel);
+                return new TestContextLogCreator("Service", halibutLogLevel).ToCachingLogFactory();
             }
 
-            return TestContextLogFactory.CreateTestLog("Service", halibutLogLevel, s =>
-            {
-                var logger = new InMemoryLog();
-                serviceInMemoryLoggers[s] = logger;
-                return logger;
-            });
+            return new AggregateLogWriterLogCreator(
+                    new TestContextLogCreator("Service", halibutLogLevel),
+                    s =>
+                    {
+                        var logger = new InMemoryLogWriter();
+                        serviceInMemoryLoggers[s] = logger;
+                        return new[] {logger};
+                    }
+                )
+                .ToCachingLogFactory();
         }
 
         public class ClientAndService : IClientAndService
