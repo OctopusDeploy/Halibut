@@ -13,6 +13,8 @@ namespace Halibut.TestUtils.Contracts
         bool Crash();
 
         int CountBytes(DataStream stream);
+
+        void ReturnNothing();
     }
 
     public interface IAsyncEchoService
@@ -24,5 +26,7 @@ namespace Halibut.TestUtils.Contracts
         Task<bool> CrashAsync(CancellationToken cancellationToken);
 
         Task<int> CountBytesAsync(DataStream dataStream, CancellationToken cancellationToken);
+
+        Task ReturnNothing();
     }
 }

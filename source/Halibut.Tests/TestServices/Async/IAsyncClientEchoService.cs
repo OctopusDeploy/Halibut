@@ -11,5 +11,7 @@ namespace Halibut.Tests.TestServices.Async
         Task<bool> CrashAsync();
 
         Task<int> CountBytesAsync(DataStream stream);
+
+        Task ReturnNothingAsync();
     }
 }

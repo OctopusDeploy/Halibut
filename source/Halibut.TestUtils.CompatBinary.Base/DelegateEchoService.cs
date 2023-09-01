@@ -38,5 +38,10 @@ namespace Halibut.TestUtils.SampleProgram.Base
             Console.WriteLine("Forwarding CountBytes() call to delegate");
             return echoService.CountBytes(dataStream);
         }
+
+        public void ReturnNothing()
+        {
+            echoService.ReturnNothing();
+        }
     }
 }

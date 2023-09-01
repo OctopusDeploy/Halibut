@@ -31,6 +31,10 @@ namespace Halibut.TestUtils.Contracts
             File.Delete(tempFile);
             return length;
         }
+
+        public void ReturnNothing()
+        {
+        }
     }
 
     public class AsyncEchoService : IAsyncEchoService
@@ -59,6 +63,11 @@ namespace Halibut.TestUtils.Contracts
         {
             await Task.CompletedTask;
             return service.CountBytes(dataStream);
+        }
+
+        public async Task ReturnNothing()
+        {
+            await Task.CompletedTask;
         }
     }
 }
