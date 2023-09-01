@@ -196,7 +196,19 @@ namespace Halibut
 #pragma warning restore CS0612
                 HandleMessageAsync;
 
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            var listener = new SecureWebSocketListener(endpoint, 
+                serverCertificate, 
+                ExchangeProtocolBuilder(), 
+                exchangeActionAsync, 
+                IsTrusted, 
+                logs, 
+                () => friendlyHtmlPageContent,
+                () => friendlyHtmlPageHeaders,
+                HandleUnauthorizedClientConnect,
+                AsyncHalibutFeature,
+                TimeoutsAndLimits,
+                streamFactory,
+                connectionsObserver);
             
             lock (listeners)
             {

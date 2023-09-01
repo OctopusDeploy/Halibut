@@ -35,7 +35,9 @@ namespace Halibut.Tests.Transport.Observability
                 
                 clientAndService.PortForwarder!.CloseExistingConnections();
                 
+                await Try.CatchingError(() => echo.SayHelloAsync("hello"));
                 await echo.SayHelloAsync("hello");
+                
                 connectionsObserver.ListenerAcceptedConnectionCount.Should().Be(2);
                 connectionsObserver.ClientReachedMessageExchangeCount.Should().Be(2);
                 connectionsObserver.PreviouslyAcceptedConnectionFailedToInitializeCount.Should().Be(0);
