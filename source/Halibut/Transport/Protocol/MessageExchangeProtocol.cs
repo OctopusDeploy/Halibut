@@ -43,9 +43,10 @@ namespace Halibut.Transport.Protocol
 
         public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
         {
+            rcpObserver.StartCall(request);
+
             try
             {
-                rcpObserver.StartCall(request);
                 await PrepareExchangeAsClientAsync(cancellationToken);
                 
                 await stream.SendAsync(request, cancellationToken);
@@ -353,46 +354,56 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                rcpObserver.StartCall(nextRequest);
-                try
+                if (nextRequest != null)
+                {
+                    var response = await SendAndReceiveRequest(nextRequest, cancellationToken);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                }
+                else
                 {
                     await stream.SendAsync(nextRequest, cancellationToken);
-                    if (nextRequest != null)
-                    {
-                        var response = await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
-                        await pendingRequests.ApplyResponse(response, nextRequest.Destination);
-                    }
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                if (nextRequest != null)
                 {
-                    if (nextRequest != null)
-                    {
-                        var response = ResponseMessage.FromException(nextRequest, ex);
-                        await pendingRequests.ApplyResponse(response, nextRequest.Destination);
-                    }
+                    var response = ResponseMessage.FromException(nextRequest, ex);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                }
 
+                return false;
+            }
+
+            try
+            {
+                if (!await stream.ExpectNextOrEndAsync(cancellationToken))
+                {
                     return false;
                 }
+            }
+            catch (Exception ex) when (ex.IsSocketConnectionTimeout())
+            {
+                // We get socket timeout on the server when the network connection to a polling client drops
+                // (in Octopus this is the server for a Polling Tentacle)
+                // In normal operation a client will poll more often than the timeout so we shouldn't see this.
+                log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
 
-                try
-                {
-                    if (!await stream.ExpectNextOrEndAsync(cancellationToken))
-                    {
-                        return false;
-                    }
-                }
-                catch (Exception ex) when (ex.IsSocketConnectionTimeout())
-                {
-                    // We get socket timeout on the server when the network connection to a polling client drops
-                    // (in Octopus this is the server for a Polling Tentacle)
-                    // In normal operation a client will poll more often than the timeout so we shouldn't see this.
-                    log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
+                return false;
+            }
 
-                    return false;
-                }
+            await stream.SendProceedAsync(cancellationToken);
+            return true;
+        }
+        
+        async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
+        {
+            rcpObserver.StartCall(nextRequest);
 
-                await stream.SendProceedAsync(cancellationToken);
-                return true;
+            try
+            {
+                await stream.SendAsync(nextRequest, cancellationToken);
+                return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
             }
             finally
             {
