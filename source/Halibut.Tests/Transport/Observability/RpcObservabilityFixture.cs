@@ -34,28 +34,7 @@ namespace Halibut.Tests.Transport.Observability
                 ThenShouldContainOneCall(rpcObserver.EndCalls, nameof(IEchoService), nameof(IEchoService.SayHello));
             }
         }
-
-        [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false)]
-        public async Task RpcCallsShouldBeObserved_RecordsStartAndEndWhenMethodIsVoid(ClientAndServiceTestCase clientAndServiceTestCase)
-        {
-            var rpcObserver = new TestRpcObserver();
-
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                             .AsLatestClientAndLatestServiceBuilder()
-                             .WithClientRpcObserver(rpcObserver)
-                             .WithStandardServices()
-                             .Build(CancellationToken))
-            {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-                
-                await echo.ReturnNothingAsync();
-
-                ThenShouldContainOneCall(rpcObserver.StartCalls, nameof(IEchoService), nameof(IEchoService.ReturnNothing));
-                ThenShouldContainOneCall(rpcObserver.EndCalls, nameof(IEchoService), nameof(IEchoService.ReturnNothing));
-            }
-        }
-
+        
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false)]
         public async Task RpcCallsShouldBeObserved_RegardlessOfSuccessOrFailure(ClientAndServiceTestCase clientAndServiceTestCase)

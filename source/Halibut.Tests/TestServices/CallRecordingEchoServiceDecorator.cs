@@ -34,10 +34,5 @@ namespace Halibut.Tests.TestServices
         {
             return echoService.CountBytes(stream);
         }
-
-        public void ReturnNothing()
-        {
-            echoService.ReturnNothing();
-        }
     }
 }
