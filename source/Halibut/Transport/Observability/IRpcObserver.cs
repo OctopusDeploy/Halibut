@@ -1,8 +1,10 @@
-﻿namespace Halibut.Transport.Observability
+﻿using Halibut.Transport.Protocol;
+
+namespace Halibut.Transport.Observability
 {
     public interface IRpcObserver
     {
-        void StartCall(string methodName);
-        void StopCall(string methodName);
+        void StartCall(RequestMessage request);
+        void StopCall(RequestMessage request);
     }
 }

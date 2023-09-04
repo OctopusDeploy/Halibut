@@ -154,7 +154,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), rpcObserver, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -332,7 +332,7 @@ namespace Halibut
             var logger = logs.ForEndpoint(endpoint.BaseUri);
 
             var proxy = DispatchProxyAsync.Create<TAsyncClientService, HalibutProxyWithAsync>();
-            (proxy as HalibutProxyWithAsync)!.Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, rpcObserver, logger, CancellationToken.None);
+            (proxy as HalibutProxyWithAsync)!.Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger, CancellationToken.None);
             return proxy;
         }
 

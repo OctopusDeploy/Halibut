@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.Tests.Support;
@@ -6,6 +7,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
+using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport.Observability
@@ -27,9 +29,9 @@ namespace Halibut.Tests.Transport.Observability
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
                 await echo.SayHelloAsync("Hello");
-
-                rpcObserver.StartCalls.Should().BeEquivalentTo(nameof(echo.SayHelloAsync));
-                rpcObserver.EndCalls.Should().BeEquivalentTo(nameof(echo.SayHelloAsync));
+                
+                ThenShouldContainOneCall(rpcObserver.StartCalls, nameof(IEchoService), nameof(IEchoService.SayHello));
+                ThenShouldContainOneCall(rpcObserver.EndCalls, nameof(IEchoService), nameof(IEchoService.SayHello));
             }
         }
 
@@ -49,8 +51,8 @@ namespace Halibut.Tests.Transport.Observability
                 
                 await echo.ReturnNothingAsync();
 
-                rpcObserver.StartCalls.Should().BeEquivalentTo(nameof(echo.ReturnNothingAsync));
-                rpcObserver.EndCalls.Should().BeEquivalentTo(nameof(echo.ReturnNothingAsync));
+                ThenShouldContainOneCall(rpcObserver.StartCalls, nameof(IEchoService), nameof(IEchoService.ReturnNothing));
+                ThenShouldContainOneCall(rpcObserver.EndCalls, nameof(IEchoService), nameof(IEchoService.ReturnNothing));
             }
         }
 
@@ -70,9 +72,17 @@ namespace Halibut.Tests.Transport.Observability
                 
                 await AssertionExtensions.Should(() => echo.CrashAsync()).ThrowAsync<ServiceInvocationHalibutClientException>();
 
-                rpcObserver.StartCalls.Should().BeEquivalentTo(nameof(echo.CrashAsync));
-                rpcObserver.EndCalls.Should().BeEquivalentTo(nameof(echo.CrashAsync));
+                ThenShouldContainOneCall(rpcObserver.StartCalls, nameof(IEchoService), nameof(IEchoService.Crash));
+                ThenShouldContainOneCall(rpcObserver.EndCalls, nameof(IEchoService), nameof(IEchoService.Crash));
             }
+        }
+
+        static void ThenShouldContainOneCall(IReadOnlyList<RequestMessage> calls, string expectedService, string expectedMethodCall)
+        {
+            var call = calls.Should().ContainSingle().Subject;
+
+            call.ServiceName.Should().Be(expectedService);
+            call.MethodName.Should().Be(expectedMethodCall);
         }
     }
 }

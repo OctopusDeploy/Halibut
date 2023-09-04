@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
@@ -19,13 +20,15 @@ namespace Halibut.Transport.Protocol
     public class MessageExchangeProtocol
     {
         readonly IMessageExchangeStream stream;
+        readonly IRpcObserver rcpObserver;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, ILog log)
         {
             this.stream = stream;
+            this.rcpObserver = rcpObserver;
             this.log = log;
         }
 
@@ -40,10 +43,19 @@ namespace Halibut.Transport.Protocol
 
         public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
         {
-            await PrepareExchangeAsClientAsync(cancellationToken);
+            try
+            {
+                rcpObserver.StartCall(request);
+                await PrepareExchangeAsClientAsync(cancellationToken);
 
-            await stream.SendAsync(request, cancellationToken);
-            return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+                //From listening
+                await stream.SendAsync(request, cancellationToken);
+                return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+            }
+            finally
+            {
+                rcpObserver.StopCall(request);
+            }
         }
 
         public void StopAcceptingClientRequests()
@@ -342,43 +354,52 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                await stream.SendAsync(nextRequest, cancellationToken);
-                if (nextRequest != null)
+                rcpObserver.StartCall(nextRequest);
+                try
                 {
-                    var response = await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
-                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    // From Polling
+                    await stream.SendAsync(nextRequest, cancellationToken);
+                    if (nextRequest != null)
+                    {
+                        var response = await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+                        await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                if (nextRequest != null)
+                catch (Exception ex)
                 {
-                    var response = ResponseMessage.FromException(nextRequest, ex);
-                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
-                }
+                    if (nextRequest != null)
+                    {
+                        var response = ResponseMessage.FromException(nextRequest, ex);
+                        await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    }
 
-                return false;
-            }
-
-            try
-            {
-                if (!await stream.ExpectNextOrEndAsync(cancellationToken))
-                {
                     return false;
                 }
+
+                try
+                {
+                    if (!await stream.ExpectNextOrEndAsync(cancellationToken))
+                    {
+                        return false;
+                    }
+                }
+                catch (Exception ex) when (ex.IsSocketConnectionTimeout())
+                {
+                    // We get socket timeout on the server when the network connection to a polling client drops
+                    // (in Octopus this is the server for a Polling Tentacle)
+                    // In normal operation a client will poll more often than the timeout so we shouldn't see this.
+                    log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
+
+                    return false;
+                }
+
+                await stream.SendProceedAsync(cancellationToken);
+                return true;
             }
-            catch (Exception ex) when (ex.IsSocketConnectionTimeout())
+            finally
             {
-                // We get socket timeout on the server when the network connection to a polling client drops
-                // (in Octopus this is the server for a Polling Tentacle)
-                // In normal operation a client will poll more often than the timeout so we shouldn't see this.
-                log.Write(EventType.Diagnostic, "No messages received from client for timeout period. This may be due to network problems. Connection will be re-opened when required.");
-
-                return false;
+                rcpObserver.StopCall(nextRequest);
             }
-
-            await stream.SendProceedAsync(cancellationToken);
-            return true;
         }
 
         [Obsolete]

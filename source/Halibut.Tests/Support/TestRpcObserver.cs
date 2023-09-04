@@ -1,24 +1,25 @@
 ﻿using System.Collections.Generic;
 using Halibut.Transport.Observability;
+using Halibut.Transport.Protocol;
 
 namespace Halibut.Tests.Support
 {
     public class TestRpcObserver : IRpcObserver
     {
-        readonly List<string> startCalls = new();
-        readonly List<string> endCalls = new();
+        readonly List<RequestMessage> startCalls = new();
+        readonly List<RequestMessage> endCalls = new();
 
-        public IReadOnlyList<string> StartCalls => startCalls;
-        public IReadOnlyList<string> EndCalls => endCalls;
+        public IReadOnlyList<RequestMessage> StartCalls => startCalls;
+        public IReadOnlyList<RequestMessage> EndCalls => endCalls;
 
-        public void StartCall(string methodName)
+        public void StartCall(RequestMessage request)
         {
-            startCalls.Add(methodName);
+            startCalls.Add(request);
         }
 
-        public void StopCall(string methodName)
+        public void StopCall(RequestMessage request)
         {
-            endCalls.Add(methodName);
+            endCalls.Add(request);
         }
     }
 }

@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
-using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
@@ -20,14 +19,12 @@ namespace Halibut.ServiceModel
         long callId;
         bool configured;
         CancellationToken globalCancellationToken;
-        IRpcObserver rcpObserver;
         ILog logger;
 
         public void Configure(
             MessageRouter messageRouter, 
             Type contractType, 
             ServiceEndPoint endPoint,
-            IRpcObserver rcpObserver,
             ILog logger, 
             CancellationToken cancellationToken)
         {
@@ -36,7 +33,6 @@ namespace Halibut.ServiceModel
             this.endPoint = endPoint;
             this.globalCancellationToken = cancellationToken;
             this.configured = true;
-            this.rcpObserver = rcpObserver;
             this.logger = logger;
         }
 
@@ -47,38 +43,20 @@ namespace Halibut.ServiceModel
 
         public override async Task InvokeAsync(MethodInfo asyncMethod, object[] args)
         {
-            try
-            {
-                rcpObserver.StartCall(asyncMethod.Name);
-
-                await MakeRpcCall(asyncMethod, args);
-            }
-            finally
-            {
-                rcpObserver.StopCall(asyncMethod.Name);
-            }
+            await MakeRpcCall(asyncMethod, args);
         }
 
         public override async Task<T> InvokeAsyncT<T>(MethodInfo asyncMethod, object[] args)
         {
-            try
+            var (serviceMethod, result) = await MakeRpcCall(asyncMethod, args);
+
+            var returnType = serviceMethod.ReturnType;
+            if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
             {
-                rcpObserver.StartCall(asyncMethod.Name);
-
-                var (serviceMethod, result) = await MakeRpcCall(asyncMethod, args);
-
-                var returnType = serviceMethod.ReturnType;
-                if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
-                {
-                    result = (T)Convert.ChangeType(result, returnType);
-                }
-
-                return (T)result;
+                result = (T)Convert.ChangeType(result, returnType);
             }
-            finally
-            {
-                rcpObserver.StopCall(asyncMethod.Name);
-            }
+
+            return (T)result;
         }
 
         async Task<(MethodInfo, object)> MakeRpcCall(MethodInfo asyncMethod, object[] args)
