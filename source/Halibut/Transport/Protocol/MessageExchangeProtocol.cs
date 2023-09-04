@@ -47,8 +47,7 @@ namespace Halibut.Transport.Protocol
             {
                 rcpObserver.StartCall(request);
                 await PrepareExchangeAsClientAsync(cancellationToken);
-
-                //From listening
+                
                 await stream.SendAsync(request, cancellationToken);
                 return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
             }
@@ -357,7 +356,6 @@ namespace Halibut.Transport.Protocol
                 rcpObserver.StartCall(nextRequest);
                 try
                 {
-                    // From Polling
                     await stream.SendAsync(nextRequest, cancellationToken);
                     if (nextRequest != null)
                     {
