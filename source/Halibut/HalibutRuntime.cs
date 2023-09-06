@@ -12,6 +12,7 @@ using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport;
 using Halibut.Transport.Caching;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
@@ -39,6 +40,7 @@ namespace Halibut
         readonly Func<RetryPolicy> pollingReconnectRetryPolicy;
         public HalibutTimeoutsAndLimits TimeoutsAndLimits { get; }
         readonly IStreamFactory streamFactory;
+        readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
 
         [Obsolete]
@@ -82,17 +84,18 @@ namespace Halibut
         }
 
         internal HalibutRuntime(
-            IServiceFactory serviceFactory, 
-            X509Certificate2 serverCertificate, 
-            ITrustProvider trustProvider, 
-            IPendingRequestQueueFactory queueFactory, 
-            ILogFactory logFactory, 
-            ITypeRegistry typeRegistry, 
-            IMessageSerializer messageSerializer, 
+            IServiceFactory serviceFactory,
+            X509Certificate2 serverCertificate,
+            ITrustProvider trustProvider,
+            IPendingRequestQueueFactory queueFactory,
+            ILogFactory logFactory,
+            ITypeRegistry typeRegistry,
+            IMessageSerializer messageSerializer,
             Func<RetryPolicy> pollingReconnectRetryPolicy,
             AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
-            IStreamFactory streamFactory)
+            IStreamFactory streamFactory, 
+            IRpcObserver rpcObserver)
         {
             AsyncHalibutFeature = asyncHalibutFeature;
             this.serverCertificate = serverCertificate;
@@ -103,6 +106,7 @@ namespace Halibut
             this.messageSerializer = messageSerializer;
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             this.streamFactory = streamFactory;
+            this.rpcObserver = rpcObserver;
             invoker = new ServiceInvoker(serviceFactory);
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
 
@@ -150,7 +154,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), rpcObserver, log);
         }
 
         public int Listen(IPEndPoint endpoint)

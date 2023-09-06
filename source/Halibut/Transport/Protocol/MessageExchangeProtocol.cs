@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
@@ -19,13 +20,15 @@ namespace Halibut.Transport.Protocol
     public class MessageExchangeProtocol
     {
         readonly IMessageExchangeStream stream;
+        readonly IRpcObserver rcpObserver;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, ILog log)
         {
             this.stream = stream;
+            this.rcpObserver = rcpObserver;
             this.log = log;
         }
 
@@ -40,10 +43,19 @@ namespace Halibut.Transport.Protocol
 
         public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
         {
-            await PrepareExchangeAsClientAsync(cancellationToken);
+            rcpObserver.StartCall(request);
 
-            await stream.SendAsync(request, cancellationToken);
-            return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+            try
+            {
+                await PrepareExchangeAsClientAsync(cancellationToken);
+                
+                await stream.SendAsync(request, cancellationToken);
+                return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+            }
+            finally
+            {
+                rcpObserver.StopCall(request);
+            }
         }
 
         public void StopAcceptingClientRequests()
@@ -342,11 +354,14 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                await stream.SendAsync(nextRequest, cancellationToken);
                 if (nextRequest != null)
                 {
-                    var response = await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+                    var response = await SendAndReceiveRequest(nextRequest, cancellationToken);
                     await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                }
+                else
+                {
+                    await stream.SendAsync(nextRequest, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -379,6 +394,21 @@ namespace Halibut.Transport.Protocol
 
             await stream.SendProceedAsync(cancellationToken);
             return true;
+        }
+        
+        async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
+        {
+            rcpObserver.StartCall(nextRequest);
+
+            try
+            {
+                await stream.SendAsync(nextRequest, cancellationToken);
+                return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+            }
+            finally
+            {
+                rcpObserver.StopCall(nextRequest);
+            }
         }
 
         [Obsolete]
