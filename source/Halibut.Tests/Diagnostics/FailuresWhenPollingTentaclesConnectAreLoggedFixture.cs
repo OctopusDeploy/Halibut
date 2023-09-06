@@ -32,17 +32,17 @@ namespace Halibut.Tests.Diagnostics
             {
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
                 // If this task completes and then we likely didn't kill the connect as we intended to.  
-                var checkPollingTentacleDidntConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
+                var checkPollingTentacleDidNotConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
 
                 await Wait.For(async () =>
                 {
                     await Task.CompletedTask;
                     var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
                     if (logs.Any(l => l.Type == EventType.ErrorInInitialisation)) return true;
-                    return checkPollingTentacleDidntConnect.IsCompleted;
+                    return checkPollingTentacleDidNotConnect.IsCompleted;
                 }, CancellationToken);
 
-                checkPollingTentacleDidntConnect.IsCompleted.Should().BeFalse("We should have killed the connection before the request");
+                checkPollingTentacleDidNotConnect.IsCompleted.Should().BeFalse("We should have killed the connection before the request");
 
                 var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
                 logs.Should().Match(logs => logs.Any(l => l.Type == EventType.ErrorInInitialisation));
@@ -74,17 +74,17 @@ namespace Halibut.Tests.Diagnostics
             {
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
                 // If this task completes and then we likely didn't kill the connect as we intended to.  
-                var checkPollingTentacleDidntConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
+                var checkPollingTentacleDidNotConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
 
                 await Wait.For(async () =>
                 {
                     await Task.CompletedTask;
                     var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
                     if (logs.Any(l => l.Type == EventType.ErrorInInitialisation)) return true;
-                    return checkPollingTentacleDidntConnect.IsCompleted;
+                    return checkPollingTentacleDidNotConnect.IsCompleted;
                 }, CancellationToken);
 
-                checkPollingTentacleDidntConnect.IsCompleted.Should().BeFalse("We should have killed the connection before the request");
+                checkPollingTentacleDidNotConnect.IsCompleted.Should().BeFalse("We should have killed the connection before the request");
 
                 var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
                 logs.Should().Match(logs => logs.Any(l => l.Type == EventType.ErrorInInitialisation));

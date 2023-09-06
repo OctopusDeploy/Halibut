@@ -136,7 +136,7 @@ namespace Halibut.Transport
             var clientName = listenerContext.Request.RemoteEndPoint;
 
             WebSocketStream webSocketStream = null;
-            bool hasReachedExchangeMessages = false;
+            var errorEventType = EventType.ErrorInInitialisation;
             try
             {
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
@@ -170,7 +170,7 @@ namespace Halibut.Transport
 
                 if (authorized)
                 {
-                    hasReachedExchangeMessages = true;
+                    errorEventType = EventType.Error;
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                     await ExchangeMessages(webSocketStream).ConfigureAwait(false);
                 }
@@ -179,13 +179,11 @@ namespace Halibut.Transport
             {
                 if (!cts.Token.IsCancellationRequested)
                 {
-                    var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
                     log.Write(errorEventType, "A timeout occurred while receiving data");
                 }
             }
             catch (Exception ex)
             {
-                var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
                 log.WriteException(errorEventType, "Unhandled error when handling request from client: {0}", ex, clientName);
             }
             finally

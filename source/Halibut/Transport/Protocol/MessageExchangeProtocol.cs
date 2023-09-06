@@ -212,6 +212,20 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        async Task<RemoteIdentity> GetRemoteIdentityAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
+                return identity;
+            }
+            catch (Exception e)
+            {
+                log.WriteException(EventType.ErrorInIdentify, "Remote failed to identify itself.", e);
+                throw;
+            }
+        }
+
         async Task IdentifyAsServerAsync(RemoteIdentity identityOfRemote, CancellationToken cancellationToken)
         {
             try
@@ -223,22 +237,6 @@ namespace Halibut.Transport.Protocol
                 log.WriteException(EventType.ErrorInIdentify, $"Failed to identify as server to the previously identified remote {identityOfRemote.SubscriptionId} of type {identityOfRemote.IdentityType}", e);
                 throw;
             }
-        }
-
-        async Task<RemoteIdentity> GetRemoteIdentityAsync(CancellationToken cancellationToken)
-        {
-            RemoteIdentity identity;
-            try
-            {
-                identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
-            }
-            catch (Exception e)
-            {
-                log.WriteException(EventType.ErrorInIdentify, "Remote failed to identify itself.", e);
-                throw;
-            }
-
-            return identity;
         }
 
         [Obsolete]

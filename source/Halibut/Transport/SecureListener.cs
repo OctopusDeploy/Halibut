@@ -220,7 +220,7 @@ namespace Halibut.Transport
 #endif            
             using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
-                bool hasReachedExchangeMessages = false;
+                var errorEventType = EventType.ErrorInInitialisation;
                 try
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
@@ -266,7 +266,7 @@ namespace Halibut.Transport
                                    }))
                             {
                                 tcpClientManager.AddActiveClient(thumbprint, client);
-                                hasReachedExchangeMessages = true;
+                                errorEventType = EventType.Error;
                                 await ExchangeMessages(ssl).ConfigureAwait(false);
                             }
                         }
@@ -275,7 +275,7 @@ namespace Halibut.Transport
                             // The stream is wrapped in a NetworkTimeoutStream which handles closing the inner stream on timeout
                             // so the weakSsl workaround is not required to ensure the stream is Disposed
                             tcpClientManager.AddActiveClient(thumbprint, client);
-                            hasReachedExchangeMessages = true;
+                            errorEventType = EventType.Error;
                             await ExchangeMessages(ssl).ConfigureAwait(false);
                         }
                     }
@@ -286,7 +286,6 @@ namespace Halibut.Transport
                 }
                 catch (IOException ex) when (ex.InnerException is SocketException)
                 {
-                    var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
                     log.WriteException(errorEventType, "Socket IO exception: {0}", ex.InnerException, clientName);
                 }
                 catch (IOException ex) when (ex.InnerException is ObjectDisposedException)
@@ -295,34 +294,18 @@ namespace Halibut.Transport
                 }
                 catch (SocketException ex)
                 {
-                    var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
                     log.WriteException(errorEventType, "Socket exception: {0}", ex, clientName);
                 }
                 catch (Exception ex)
                 {
-                    var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
                     log.WriteException(errorEventType, "Unhandled error when handling request from client: {0}", ex, clientName);
                 }
                 finally
                 {
                     SafelyRemoveClientFromTcpClientManager(client, clientName);
                     await SafelyCloseStreamAsync(stream, clientName);
-                    var errorEventType = hasReachedExchangeMessages ? EventType.Error : EventType.ErrorInInitialisation;
                     client.CloseImmediately(ex => log.Write(errorEventType, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message));
                 }
-            }
-        }
-
-        [Obsolete]
-        void SafelyCloseStream(Stream stream, EndPoint clientName)
-        {
-            try
-            {
-                stream.Close();
-            }
-            catch (Exception ex)
-            {
-                log.Write(EventType.Error, "Failed to close stream for {0}. This may result in a memory leak. {1}", clientName, ex.Message);
             }
         }
         
