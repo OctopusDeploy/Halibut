@@ -139,7 +139,7 @@ namespace Halibut
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
             var streamFactory = this.streamFactory ?? new StreamFactory(asyncHalibutFeature);
-            var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance();
+            var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
 
             var halibutRuntime = new HalibutRuntime(

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Observability;
-using Halibut.Util;
 
 namespace Halibut.Transport.Protocol
 {
@@ -196,9 +195,9 @@ namespace Halibut.Transport.Protocol
 
         public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
         {
-            var identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
-            await stream.IdentifyAsServerAsync(cancellationToken);
-            
+            var identity = await GetRemoteIdentityAsync(cancellationToken);
+            await IdentifyAsServerAsync(identity, cancellationToken);
+
             switch (identity.IdentityType)
             {
                 case RemoteIdentityType.Client:

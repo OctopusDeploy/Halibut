@@ -4,14 +4,7 @@ namespace Halibut.Transport.Observability
     {
         static NoOpConnectionsObserver singleInstance;
 
-        public static NoOpConnectionsObserver Instance()
-        {
-            if (singleInstance == null)
-            {
-                singleInstance = new NoOpConnectionsObserver();
-            }
-            return singleInstance;
-        }
+        public static NoOpConnectionsObserver Instance => singleInstance ??= new NoOpConnectionsObserver();
 
         public void ConnectionAccepted()
         {

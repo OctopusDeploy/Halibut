@@ -78,7 +78,7 @@ namespace Halibut.Transport
             this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
-            this.connectionsObserver = connectionsObserver ?? NoOpConnectionsObserver.Instance();
+            this.connectionsObserver = connectionsObserver;
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 

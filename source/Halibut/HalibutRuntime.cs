@@ -82,7 +82,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManager();
             tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
-            connectionsObserver = NoOpConnectionsObserver.Instance();
+            connectionsObserver = NoOpConnectionsObserver.Instance;
         }
 
         internal HalibutRuntime(

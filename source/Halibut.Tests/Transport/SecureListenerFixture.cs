@@ -70,7 +70,7 @@ namespace Halibut.Tests.Transport
                     syncOrAsync.ToAsyncHalibutFeature(),
                     new HalibutTimeoutsAndLimits(),
                     new StreamFactory(syncOrAsync.ToAsyncHalibutFeature()),
-                    NoOpConnectionsObserver.Instance()
+                    NoOpConnectionsObserver.Instance
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)
