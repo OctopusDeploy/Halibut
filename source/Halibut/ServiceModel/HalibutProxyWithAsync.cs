@@ -24,7 +24,7 @@ namespace Halibut.ServiceModel
         public void Configure(
             MessageRouter messageRouter, 
             Type contractType, 
-            ServiceEndPoint endPoint, 
+            ServiceEndPoint endPoint,
             ILog logger, 
             CancellationToken cancellationToken)
         {
@@ -53,10 +53,10 @@ namespace Halibut.ServiceModel
             var returnType = serviceMethod.ReturnType;
             if (result != null && returnType != typeof(void) && !returnType.IsInstanceOfType(result))
             {
-                result = (T) Convert.ChangeType(result, returnType);
+                result = (T)Convert.ChangeType(result, returnType);
             }
 
-            return (T) result;
+            return (T)result;
         }
 
         async Task<(MethodInfo, object)> MakeRpcCall(MethodInfo asyncMethod, object[] args)

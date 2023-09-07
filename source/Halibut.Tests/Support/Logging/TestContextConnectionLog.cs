@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Threading;
 using Halibut.Diagnostics;
+using Halibut.Diagnostics.LogWriters;
 using Halibut.Logging;
 using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support.Logging
 {
-    public class TestContextConnectionLog : ILog
+    public class TestContextConnectionLog : ILog, ILogWriter
     {
         readonly string endpoint;
         readonly string name;

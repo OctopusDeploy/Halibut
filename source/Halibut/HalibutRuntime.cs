@@ -40,6 +40,7 @@ namespace Halibut
         readonly Func<RetryPolicy> pollingReconnectRetryPolicy;
         public HalibutTimeoutsAndLimits TimeoutsAndLimits { get; }
         readonly IStreamFactory streamFactory;
+        readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
 
@@ -85,17 +86,18 @@ namespace Halibut
         }
 
         internal HalibutRuntime(
-            IServiceFactory serviceFactory, 
-            X509Certificate2 serverCertificate, 
-            ITrustProvider trustProvider, 
-            IPendingRequestQueueFactory queueFactory, 
-            ILogFactory logFactory, 
-            ITypeRegistry typeRegistry, 
-            IMessageSerializer messageSerializer, 
+            IServiceFactory serviceFactory,
+            X509Certificate2 serverCertificate,
+            ITrustProvider trustProvider,
+            IPendingRequestQueueFactory queueFactory,
+            ILogFactory logFactory,
+            ITypeRegistry typeRegistry,
+            IMessageSerializer messageSerializer,
             Func<RetryPolicy> pollingReconnectRetryPolicy,
             AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
+            IRpcObserver rpcObserver,
             IConnectionsObserver connectionsObserver)
         {
             AsyncHalibutFeature = asyncHalibutFeature;
@@ -107,6 +109,7 @@ namespace Halibut
             this.messageSerializer = messageSerializer;
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             this.streamFactory = streamFactory;
+            this.rpcObserver = rpcObserver;
             invoker = new ServiceInvoker(serviceFactory);
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.connectionsObserver = connectionsObserver;
@@ -155,7 +158,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), rpcObserver, log);
         }
 
         public int Listen(IPEndPoint endpoint)

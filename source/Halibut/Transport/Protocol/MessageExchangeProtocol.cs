@@ -21,13 +21,15 @@ namespace Halibut.Transport.Protocol
     public class MessageExchangeProtocol
     {
         readonly IMessageExchangeStream stream;
+        readonly IRpcObserver rcpObserver;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, ILog log)
         {
             this.stream = stream;
+            this.rcpObserver = rcpObserver;
             this.log = log;
         }
 
@@ -42,10 +44,19 @@ namespace Halibut.Transport.Protocol
 
         public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
         {
-            await PrepareExchangeAsClientAsync(cancellationToken);
+            rcpObserver.StartCall(request);
 
-            await stream.SendAsync(request, cancellationToken);
-            return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+            try
+            {
+                await PrepareExchangeAsClientAsync(cancellationToken);
+                
+                await stream.SendAsync(request, cancellationToken);
+                return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+            }
+            finally
+            {
+                rcpObserver.StopCall(request);
+            }
         }
 
         public void StopAcceptingClientRequests()
@@ -198,7 +209,35 @@ namespace Halibut.Transport.Protocol
                     await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
                     break;
                 default:
+                    log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
+            }
+        }
+
+        async Task<RemoteIdentity> GetRemoteIdentityAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
+                return identity;
+            }
+            catch (Exception e)
+            {
+                log.WriteException(EventType.ErrorInIdentify, "Remote failed to identify itself.", e);
+                throw;
+            }
+        }
+
+        async Task IdentifyAsServerAsync(RemoteIdentity identityOfRemote, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await stream.IdentifyAsServerAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                log.WriteException(EventType.ErrorInIdentify, $"Failed to identify as server to the previously identified remote {identityOfRemote.SubscriptionId} of type {identityOfRemote.IdentityType}", e);
+                throw;
             }
         }
 
@@ -345,11 +384,14 @@ namespace Halibut.Transport.Protocol
         {
             try
             {
-                await stream.SendAsync(nextRequest, cancellationToken);
                 if (nextRequest != null)
                 {
-                    var response = await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+                    var response = await SendAndReceiveRequest(nextRequest, cancellationToken);
                     await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                }
+                else
+                {
+                    await stream.SendAsync(nextRequest, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -382,6 +424,21 @@ namespace Halibut.Transport.Protocol
 
             await stream.SendProceedAsync(cancellationToken);
             return true;
+        }
+        
+        async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
+        {
+            rcpObserver.StartCall(nextRequest);
+
+            try
+            {
+                await stream.SendAsync(nextRequest, cancellationToken);
+                return await stream.ReceiveAsync<ResponseMessage>(cancellationToken);
+            }
+            finally
+            {
+                rcpObserver.StopCall(nextRequest);
+            }
         }
 
         [Obsolete]

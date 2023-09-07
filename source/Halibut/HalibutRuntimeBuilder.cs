@@ -24,6 +24,7 @@ namespace Halibut
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         IStreamFactory streamFactory;
+        IRpcObserver rpcObserver;
         IConnectionsObserver connectionsObserver;
         
         internal HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
@@ -108,6 +109,11 @@ namespace Halibut
             this.onUnauthorizedClientConnect = onUnauthorizedClientConnect;
             return this;
         }
+        public HalibutRuntimeBuilder WithRpcObserver(IRpcObserver rpcObserver)
+        {
+            this.rpcObserver = rpcObserver;
+            return this;
+        }
 
         public HalibutRuntime Build()
         {
@@ -134,6 +140,7 @@ namespace Halibut
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
             var streamFactory = this.streamFactory ?? new StreamFactory(asyncHalibutFeature);
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance();
+            var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
 
             var halibutRuntime = new HalibutRuntime(
                 serviceFactory, 
@@ -147,6 +154,7 @@ namespace Halibut
                 asyncHalibutFeature,
                 halibutTimeoutsAndLimits,
                 streamFactory,
+                rpcObserver,
                 connectionsObserver);
 
             if (onUnauthorizedClientConnect is not null)

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
+using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
@@ -39,7 +40,7 @@ namespace Halibut.Tests.Transport
             {
                 ConnectionErrorRetryTimeout = TimeSpan.MaxValue
             };
-            log = TestContextLogFactory.CreateTestLog("Client", LogLevel.Info).ForEndpoint(endpoint.BaseUri);
+            log = new TestContextLogCreator("Client", LogLevel.Info).ToCachingLogFactory().ForEndpoint(endpoint.BaseUri);
         }
 
         public void Dispose()
@@ -65,7 +66,7 @@ namespace Halibut.Tests.Transport
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream, log));
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, new NoRpcObserver(), log));
 
                 syncOrAsync
                     .WhenSync(() => connectionManager.ReleaseConnection(endpoint, connection))
@@ -102,8 +103,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger, SyncOrAsync syncOrAsync)
         {
-            var messageExchangeStream = new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), new HalibutTimeoutsAndLimits(), logger);
-            return new MessageExchangeProtocol(messageExchangeStream, logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), new HalibutTimeoutsAndLimits(), logger), new NoRpcObserver(), logger);
         }
     }
 }

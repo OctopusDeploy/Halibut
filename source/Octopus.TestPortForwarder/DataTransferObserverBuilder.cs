@@ -32,6 +32,23 @@ namespace Octopus.TestPortForwarder
                 }
             });
         }
+        
+        public DataTransferObserverBuilder WithKillConnectionAfterANumberOfWrites(ILogger logger, int writeNumberToKillOn)
+        {
+            var hasKilledConnection = false;
+            var numberOfWritesSeen = 0;
+
+            return WithWritingDataObserver((tcpPump, _) =>
+            {
+                Interlocked.Increment(ref numberOfWritesSeen);
+                if (!hasKilledConnection && (numberOfWritesSeen - 1) == writeNumberToKillOn)
+                {
+                    hasKilledConnection = true;
+                    logger.Information("Killing pump");
+                    tcpPump.Dispose();
+                }
+            });
+        }
 
         public IDataTransferObserver Build()
         {

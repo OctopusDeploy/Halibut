@@ -2,6 +2,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
+using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
@@ -188,7 +190,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
-                .WithLogFactory(new TestContextLogFactory("Client", halibutLogLevel));
+                .WithLogFactory(new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory());
 
             var client = clientBuilder.Build();
             client.Trust(serviceCertAndThumbprint.Thumbprint);

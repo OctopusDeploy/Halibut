@@ -114,7 +114,7 @@ namespace Halibut.Transport
                     {
                         if (!cts.IsCancellationRequested)
                         {
-                            log.WriteException(EventType.Error, "Error accepting Web Socket client", ex);
+                            log.WriteException(EventType.ErrorInInitialisation, "Error accepting Web Socket client", ex);
                         }
                     }
                 }
@@ -133,7 +133,7 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.Error, "Error initializing TCP client", ex);
+                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client", ex);
             }
         }
 
@@ -142,6 +142,7 @@ namespace Halibut.Transport
             var clientName = listenerContext.Request.RemoteEndPoint;
 
             WebSocketStream webSocketStream = null;
+            var errorEventType = EventType.ErrorInInitialisation;
             try
             {
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
@@ -175,6 +176,7 @@ namespace Halibut.Transport
 
                 if (authorized)
                 {
+                    errorEventType = EventType.Error;
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                     await ExchangeMessages(webSocketStream).ConfigureAwait(false);
                 }
@@ -182,11 +184,13 @@ namespace Halibut.Transport
             catch (TaskCanceledException)
             {
                 if (!cts.Token.IsCancellationRequested)
-                    log.Write(EventType.Error, "A timeout occurred while receiving data");
+                {
+                    log.Write(errorEventType, "A timeout occurred while receiving data");
+                }
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.Error, "Unhandled error when handling request from client: {0}", ex, clientName);
+                log.WriteException(errorEventType, "Unhandled error when handling request from client: {0}", ex, clientName);
             }
             finally
             {

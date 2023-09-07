@@ -2,6 +2,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
+using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
@@ -235,7 +237,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             // of Halibut Runtime that will actually talk to the Service (Tentacle) below
             var proxyClient = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
-                .WithLogFactory(new TestContextLogFactory("ProxyClient", halibutLogLevel))
+                .WithLogFactory(new TestContextLogCreator("ProxyClient", halibutLogLevel).ToCachingLogFactory())
                 .WithAsyncHalibutFeatureEnabled()
                 .Build();
             
@@ -263,7 +265,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .WithServiceFactory(serviceFactory)
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                 .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
-                .WithLogFactory(new TestContextLogFactory("Tentacle", halibutLogLevel))
+                .WithLogFactory(new TestContextLogCreator("Tentacle", halibutLogLevel).ToCachingLogFactory())
                 .Build();
 
             PortForwarder? portForwarder = null;

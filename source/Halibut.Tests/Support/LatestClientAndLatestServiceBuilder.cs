@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Diagnostics.LogCreators;
+using Halibut.Diagnostics.LogWriters;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
@@ -37,6 +39,8 @@ namespace Halibut.Tests.Support
         string serviceTrustsThumbprint;
         ForceClientProxyType? forceClientProxyType;
         AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
+        IRpcObserver? clientRpcObserver;
+
 
         bool hasService = true;
         Func<int, PortForwarder>? portForwarderFactory;
@@ -52,7 +56,8 @@ namespace Halibut.Tests.Support
         Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits? halibutTimeoutsAndLimits;
 
-        IStreamFactory? streamFactory;
+        IStreamFactory? clientStreamFactory;
+        IStreamFactory? serviceStreamFactory;
         IConnectionsObserver serviceConnectionsObserver;
         IConnectionsObserver clientConnectionsObserver;
 
@@ -117,7 +122,20 @@ namespace Halibut.Tests.Support
 
         public LatestClientAndLatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
-            this.streamFactory = streamFactory;
+            this.serviceStreamFactory = streamFactory;
+            this.clientStreamFactory = streamFactory;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithClientStreamFactory(IStreamFactory clientStreamFactory)
+        {
+            this.clientStreamFactory = clientStreamFactory;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithServiceStreamFactory(IStreamFactory serviceStreamFactory)
+        {
+            this.serviceStreamFactory = serviceStreamFactory;
             return this;
         }
 
@@ -359,6 +377,12 @@ namespace Halibut.Tests.Support
             return this;
         }
         
+        public LatestClientAndLatestServiceBuilder WithClientRpcObserver(IRpcObserver? clientRpcObserver)
+        {
+            this.clientRpcObserver = clientRpcObserver;
+            return this;
+        }
+
         async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
             return await Build(cancellationToken);
@@ -380,10 +404,15 @@ namespace Halibut.Tests.Support
                 .WithPendingRequestQueueFactory(factory)
                 .WithTrustProvider(clientTrustProvider)
                 .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
-                .WithStreamFactoryIfNotNull(streamFactory)
+                .WithStreamFactoryIfNotNull(clientStreamFactory)
                 .WithConnectionsObserver(clientConnectionsObserver)
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
+
+            if (clientRpcObserver is not null)
+            {
+                clientBuilder.WithRpcObserver(clientRpcObserver);
+            }
 
             var client = clientBuilder.Build();
             client.Trust(clientTrustsThumbprint);
@@ -396,7 +425,7 @@ namespace Halibut.Tests.Support
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                     .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                    .WithStreamFactoryIfNotNull(streamFactory)
+                    .WithStreamFactoryIfNotNull(serviceStreamFactory)
                     .WithConnectionsObserver(serviceConnectionsObserver)
                     .WithLogFactory(BuildServiceLogger());
 
@@ -492,7 +521,7 @@ namespace Halibut.Tests.Support
             return new ClientAndService(client, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, forceClientProxyType, cancellationTokenSource);
         }
 
-        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(TestContextLogFactory octopusLogFactory)
+        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
         {
             if (pendingRequestQueueFactory != null)
             {
@@ -511,34 +540,44 @@ namespace Halibut.Tests.Support
             return factory;
         }
 
-        TestContextLogFactory BuildClientLogger()
+        ILogFactory BuildClientLogger()
         {
             if (clientInMemoryLoggers == null)
             {
-                return TestContextLogFactory.CreateTestLog("Client", halibutLogLevel);
+                return new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory();
             }
 
-            return TestContextLogFactory.CreateTestLog("Client", halibutLogLevel, s =>
-            {
-                var logger = new InMemoryLog();
-                clientInMemoryLoggers[s] = logger;
-                return logger;
-            });
+
+
+            return new AggregateLogWriterLogCreator(
+                    new TestContextLogCreator("Client", halibutLogLevel),
+                s =>
+                {
+                    var logger = new InMemoryLogWriter();
+                    clientInMemoryLoggers[s] = logger;
+                    return new[] {logger};
+                }
+            )
+                .ToCachingLogFactory();
         }
         
-        TestContextLogFactory BuildServiceLogger()
+        ILogFactory BuildServiceLogger()
         {
             if (serviceInMemoryLoggers == null)
             {
-                return TestContextLogFactory.CreateTestLog("Service", halibutLogLevel);
+                return new TestContextLogCreator("Service", halibutLogLevel).ToCachingLogFactory();
             }
 
-            return TestContextLogFactory.CreateTestLog("Service", halibutLogLevel, s =>
-            {
-                var logger = new InMemoryLog();
-                serviceInMemoryLoggers[s] = logger;
-                return logger;
-            });
+            return new AggregateLogWriterLogCreator(
+                    new TestContextLogCreator("Service", halibutLogLevel),
+                    s =>
+                    {
+                        var logger = new InMemoryLogWriter();
+                        serviceInMemoryLoggers[s] = logger;
+                        return new[] {logger};
+                    }
+                )
+                .ToCachingLogFactory();
         }
 
         public class ClientAndService : IClientAndService
