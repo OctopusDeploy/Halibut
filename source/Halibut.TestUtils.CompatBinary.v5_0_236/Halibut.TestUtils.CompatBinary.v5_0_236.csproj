@@ -18,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Halibut" Version="5.0.236" />
+      <PackageReference Include="Halibut" Version="6.0.1393" />
     </ItemGroup>
 
 </Project>
