@@ -195,8 +195,8 @@ namespace Halibut.Transport.Protocol
 
         public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
         {
-            var identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
-            await stream.IdentifyAsServerAsync(cancellationToken);
+            var identity = await GetRemoteIdentityAsync(cancellationToken);
+            await IdentifyAsServerAsync(identity, cancellationToken);
 
             switch (identity.IdentityType)
             {
@@ -207,7 +207,35 @@ namespace Halibut.Transport.Protocol
                     await ProcessSubscriberAsync(pendingRequests(identity), cancellationToken);
                     break;
                 default:
+                    log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
+            }
+        }
+
+        async Task<RemoteIdentity> GetRemoteIdentityAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                var identity = await stream.ReadRemoteIdentityAsync(cancellationToken);
+                return identity;
+            }
+            catch (Exception e)
+            {
+                log.WriteException(EventType.ErrorInIdentify, "Remote failed to identify itself.", e);
+                throw;
+            }
+        }
+
+        async Task IdentifyAsServerAsync(RemoteIdentity identityOfRemote, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await stream.IdentifyAsServerAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                log.WriteException(EventType.ErrorInIdentify, $"Failed to identify as server to the previously identified remote {identityOfRemote.SubscriptionId} of type {identityOfRemote.IdentityType}", e);
+                throw;
             }
         }
 

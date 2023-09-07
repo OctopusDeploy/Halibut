@@ -57,7 +57,8 @@ namespace Halibut.Tests.Support
         Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits? halibutTimeoutsAndLimits;
 
-        IStreamFactory? streamFactory;
+        IStreamFactory? clientStreamFactory;
+        IStreamFactory? serviceStreamFactory;
 
 
         public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
@@ -120,7 +121,20 @@ namespace Halibut.Tests.Support
 
         public LatestClientAndLatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
-            this.streamFactory = streamFactory;
+            this.serviceStreamFactory = streamFactory;
+            this.clientStreamFactory = streamFactory;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithClientStreamFactory(IStreamFactory clientStreamFactory)
+        {
+            this.clientStreamFactory = clientStreamFactory;
+            return this;
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithServiceStreamFactory(IStreamFactory serviceStreamFactory)
+        {
+            this.serviceStreamFactory = serviceStreamFactory;
             return this;
         }
 
@@ -377,7 +391,7 @@ namespace Halibut.Tests.Support
                 .WithPendingRequestQueueFactory(factory)
                 .WithTrustProvider(clientTrustProvider)
                 .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
-                .WithStreamFactoryIfNotNull(streamFactory)
+                .WithStreamFactoryIfNotNull(clientStreamFactory)
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
@@ -397,7 +411,7 @@ namespace Halibut.Tests.Support
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                     .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                    .WithStreamFactoryIfNotNull(streamFactory)
+                    .WithStreamFactoryIfNotNull(serviceStreamFactory)
                     .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
