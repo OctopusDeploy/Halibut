@@ -13,19 +13,11 @@ namespace Halibut.Transport.Observability
             return singleInstance;
         }
 
-        public void ListenerAcceptedConnection()
+        public void ConnectionAccepted()
         {
         }
 
-        public void PreviouslyAcceptedConnectionHasBeenDisconnected()
-        {
-        }
-
-        public void ClientReachedMessageExchange()
-        {
-        }
-
-        public void PreviouslyAcceptedConnectionFailedToInitialize()
+        public void ConnectionClosed()
         {
         }
     }

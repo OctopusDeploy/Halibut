@@ -8,7 +8,6 @@ using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
@@ -21,7 +20,6 @@ using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
-using Serilog.Extensions.Logging;
 using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 using ILog = Halibut.Diagnostics.ILog;
 
@@ -29,17 +27,17 @@ namespace Halibut.Tests.Support
 {
     public class LatestClientAndLatestServiceBuilder : IClientAndServiceBuilder
     {
+        public ServiceConnectionType ServiceConnectionType { get; }
+
         ServiceFactoryBuilder serviceFactoryBuilder = new();
         IServiceFactory? serviceFactory;
-        public readonly ServiceConnectionType ServiceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         string clientTrustsThumbprint; 
         readonly CertAndThumbprint clientCertAndThumbprint;
         string serviceTrustsThumbprint;
         ForceClientProxyType? forceClientProxyType;
         AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
-        
-        
+
         bool hasService = true;
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
@@ -58,7 +56,8 @@ namespace Halibut.Tests.Support
         IConnectionsObserver serviceConnectionsObserver;
         IConnectionsObserver clientConnectionsObserver;
 
-        public LatestClientAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType,
+        public LatestClientAndLatestServiceBuilder(
+            ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint)
         {

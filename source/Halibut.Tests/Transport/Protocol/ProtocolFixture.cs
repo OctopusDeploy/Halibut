@@ -25,7 +25,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
-            protocol = new MessageExchangeProtocol(stream, NoOpConnectionsObserver.Instance(), Substitute.For<ILog>());
+            protocol = new MessageExchangeProtocol(stream, Substitute.For<ILog>());
         }
 
         // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation

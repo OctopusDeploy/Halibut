@@ -150,7 +150,8 @@ namespace Halibut.Transport
                         }
 
                         var client = listener.AcceptTcpClient();
-                        Try.CatchingError(() => this.connectionsObserver.ListenerAcceptedConnection(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
+                        connectionsObserver.ConnectionAccepted();
+
                         Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }
@@ -163,7 +164,6 @@ namespace Halibut.Transport
                     }
                     catch (Exception ex)
                     {
-                        Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionFailedToInitialize(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                         numberOfFailedAttemptsInRow++;
                         log.WriteException(EventType.Error, "Error accepting TCP client", ex);
                         // Slow down the logs in case an exception is immediately encountered after X failed AcceptTcpClient calls
@@ -202,7 +202,7 @@ namespace Halibut.Transport
                     client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 #pragma warning restore CS0612
                 }
-                
+
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
                 await ExecuteRequest(client).ConfigureAwait(false);
@@ -212,7 +212,6 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionFailedToInitialize(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                 log.WriteException(EventType.Error, "Error initializing TCP client", ex);
             }
         }
@@ -306,14 +305,16 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionHasBeenDisconnected(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
-                    if ("TODO".Equals("TODO wait for another PR which makes it easy to determine if ExchangeMessages wa reached or not."))
+                    try
                     {
-                        Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionFailedToInitialize(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
+                        SafelyRemoveClientFromTcpClientManager(client, clientName);
+                        await SafelyCloseStreamAsync(stream, clientName);
+                        client.CloseImmediately(ex => log.Write(EventType.Error, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message));
                     }
-                    SafelyRemoveClientFromTcpClientManager(client, clientName);
-                    await SafelyCloseStreamAsync(stream, clientName);
-                    client.CloseImmediately(ex => log.Write(EventType.Error, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message));
+                    finally
+                    {
+                        connectionsObserver.ConnectionClosed();
+                    }
                 }
             }
         }

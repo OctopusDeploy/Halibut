@@ -80,8 +80,8 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
 
             connectionManager = new ConnectionManager();
-            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
-            this.connectionsObserver = NoOpConnectionsObserver.Instance();
+            tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            connectionsObserver = NoOpConnectionsObserver.Instance();
         }
 
         internal HalibutRuntime(
@@ -155,7 +155,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), connectionsObserver, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, AsyncHalibutFeature, TimeoutsAndLimits, log), log);
         }
 
         public int Listen(IPEndPoint endpoint)

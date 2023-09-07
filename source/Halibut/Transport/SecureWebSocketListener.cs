@@ -53,7 +53,7 @@ namespace Halibut.Transport
             this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
-            this.connectionsObserver = connectionsObserver ?? NoOpConnectionsObserver.Instance();
+            this.connectionsObserver = connectionsObserver;
             EnsureCertificateIsValidForListening(serverCertificate);
         }
 
@@ -88,7 +88,7 @@ namespace Halibut.Transport
                     try
                     {
                         var context = await listener.GetContextAsync().ConfigureAwait(false);
-                        Try.CatchingError(() => this.connectionsObserver.ListenerAcceptedConnection(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
+                        connectionsObserver.ConnectionAccepted();
 
                         if (context.Request.IsWebSocketRequest)
                         {
@@ -102,17 +102,11 @@ namespace Halibut.Transport
                             try
                             {
                                 await SendFriendlyHtmlPage(context.Response);
+                                context.Response.Close();
                             }
                             finally
                             {
-                                try
-                                {
-                                    context.Response.Close();
-                                }
-                                finally
-                                {
-                                    Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionHasBeenDisconnected(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
-                                }
+                                connectionsObserver.ConnectionClosed();
                             }
                         }
                     }
@@ -120,7 +114,6 @@ namespace Halibut.Transport
                     {
                         if (!cts.IsCancellationRequested)
                         {
-                            Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionFailedToInitialize(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
                             log.WriteException(EventType.Error, "Error accepting Web Socket client", ex);
                         }
                     }
@@ -205,7 +198,7 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    Try.CatchingError(() => this.connectionsObserver.PreviouslyAcceptedConnectionHasBeenDisconnected(), e => log.WriteException(EventType.Error, "Error in IConnectionsObserver", e));
+                    connectionsObserver.ConnectionClosed();
                 }
             }
         }

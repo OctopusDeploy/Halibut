@@ -11,29 +11,13 @@ namespace Halibut.Transport.Observability
         /// - When a "server" accepts a connection from a polling service (either websocket or regular)
         /// - When a "server" accepts a connection from a listening client (so in this case the server is the service)
         /// </summary>
-        public void ListenerAcceptedConnection();
-        
+        public void ConnectionAccepted();
+
         /// <summary>
         /// A previously accepted connection has been closed.
         ///
-        /// For every call to ListenerAcceptedConnection() their can be at most one call to this method. 
+        /// For every call to ConnectionClosed() their can be at most one call to this method. 
         /// </summary>
-        public void PreviouslyAcceptedConnectionHasBeenDisconnected();
-
-        /// <summary>
-        /// Called once a polling client is authenticated and we are about to start message exchange
-        /// * For polling this means dequeuing messages from the queue
-        /// * For listening this means processing the incoming request
-        ///
-        /// For every call to ListenerAcceptedConnection() their can be at most one call to this method. 
-        /// </summary>
-        public void ClientReachedMessageExchange();
-
-        /// <summary>
-        /// Something went wrong between accepting the connection and reaching the point of message exchange
-        ///
-        /// For every call to ListenerAcceptedConnection() their can be at most one call to this method. 
-        /// </summary>
-        void PreviouslyAcceptedConnectionFailedToInitialize();
+        public void ConnectionClosed();
     }
 }
