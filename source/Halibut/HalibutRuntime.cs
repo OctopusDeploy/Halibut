@@ -42,6 +42,7 @@ namespace Halibut
         readonly IStreamFactory streamFactory;
         readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
+        readonly IConnectionsObserver connectionsObserver;
 
         [Obsolete]
         public HalibutRuntime(X509Certificate2 serverCertificate) : this(new NullServiceFactory(), serverCertificate, new DefaultTrustProvider())
@@ -80,7 +81,8 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
 
             connectionManager = new ConnectionManager();
-            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            connectionsObserver = NoOpConnectionsObserver.Instance;
         }
 
         internal HalibutRuntime(
@@ -94,8 +96,9 @@ namespace Halibut
             Func<RetryPolicy> pollingReconnectRetryPolicy,
             AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
-            IStreamFactory streamFactory, 
-            IRpcObserver rpcObserver)
+            IStreamFactory streamFactory,
+            IRpcObserver rpcObserver,
+            IConnectionsObserver connectionsObserver)
         {
             AsyncHalibutFeature = asyncHalibutFeature;
             this.serverCertificate = serverCertificate;
@@ -109,6 +112,7 @@ namespace Halibut
             this.rpcObserver = rpcObserver;
             invoker = new ServiceInvoker(serviceFactory);
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.connectionsObserver = connectionsObserver;
 
             if (asyncHalibutFeature == AsyncHalibutFeature.Enabled)
             {
@@ -165,7 +169,19 @@ namespace Halibut
 #pragma warning restore CS0612
                 HandleMessageAsync;
 
-            var listener = new SecureListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            var listener = new SecureListener(endpoint, 
+                serverCertificate, 
+                ExchangeProtocolBuilder(), 
+                exchangeActionAsync, 
+                IsTrusted, 
+                logs, 
+                () => friendlyHtmlPageContent, 
+                () => friendlyHtmlPageHeaders, 
+                HandleUnauthorizedClientConnect, 
+                AsyncHalibutFeature, 
+                TimeoutsAndLimits, 
+                streamFactory,
+                connectionsObserver);
             
             lock (listeners)
             {
@@ -183,7 +199,19 @@ namespace Halibut
 #pragma warning restore CS0612
                 HandleMessageAsync;
 
-            var listener = new SecureWebSocketListener(endpoint, serverCertificate, ExchangeProtocolBuilder(), exchangeActionAsync, IsTrusted, logs, () => friendlyHtmlPageContent, () => friendlyHtmlPageHeaders, HandleUnauthorizedClientConnect, AsyncHalibutFeature, TimeoutsAndLimits, streamFactory);
+            var listener = new SecureWebSocketListener(endpoint, 
+                serverCertificate, 
+                ExchangeProtocolBuilder(), 
+                exchangeActionAsync, 
+                IsTrusted, 
+                logs, 
+                () => friendlyHtmlPageContent,
+                () => friendlyHtmlPageHeaders,
+                HandleUnauthorizedClientConnect,
+                AsyncHalibutFeature,
+                TimeoutsAndLimits,
+                streamFactory,
+                connectionsObserver);
             
             lock (listeners)
             {

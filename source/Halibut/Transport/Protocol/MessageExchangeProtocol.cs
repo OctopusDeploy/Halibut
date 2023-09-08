@@ -204,7 +204,8 @@ namespace Halibut.Transport.Protocol
                     await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    await ProcessSubscriberAsync(pendingRequests(identity), cancellationToken);
+                    var pendingRequestQueue = pendingRequests(identity);
+                    await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
                     break;
                 default:
                     log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
