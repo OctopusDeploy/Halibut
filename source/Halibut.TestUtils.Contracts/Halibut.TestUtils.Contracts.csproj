@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <LangVersion>9.0</LangVersion>
@@ -13,7 +13,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Halibut" Version="4.4.8">
+        <PackageReference Include="Halibut" Version="6.0.1401">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="System.ValueTuple" Version="4.5.0" />

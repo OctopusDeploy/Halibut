@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <LangVersion>9.0</LangVersion>
@@ -21,7 +21,7 @@
             It is probably best to never test versions earlier than this, since those tests will be unreliable.
             4.4.8 is the earliest version with HalibutRuntimeBuilder and without a critical RCE vulnerability.
         -->
-        <PackageReference Include="Halibut" Version="4.4.8" />
+        <PackageReference Include="Halibut" Version="6.0.1401" />
     </ItemGroup>
 
     <ItemGroup>
