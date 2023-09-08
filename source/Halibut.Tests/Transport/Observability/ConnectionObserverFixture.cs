@@ -38,6 +38,13 @@ namespace Halibut.Tests.Transport.Observability
                 connectionsObserver.ConnectionAcceptedCount.Should().Be(2);
                 connectionsObserver.ConnectionClosedCount.Should().Be(1);
             }
+
+            Wait.UntilActionSucceeds(() =>
+            {
+                connectionsObserver.ConnectionAcceptedCount.Should().Be(2);
+                connectionsObserver.ConnectionClosedCount.Should().Be(2);
+            }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
+            
         }
     }
 }
