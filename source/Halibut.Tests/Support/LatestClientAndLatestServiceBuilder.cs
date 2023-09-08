@@ -139,15 +139,15 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public LatestClientAndLatestServiceBuilder WithServiceConnectionsObserver(IConnectionsObserver countingServiceObserver)
+        public LatestClientAndLatestServiceBuilder WithServiceConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
-            this.serviceConnectionsObserver = countingServiceObserver;
+            this.serviceConnectionsObserver = connectionsObserver;
             return this;
         }
         
-        public LatestClientAndLatestServiceBuilder WithClientConnectionsObserver(IConnectionsObserver countingClientObserver)
+        public LatestClientAndLatestServiceBuilder WithClientConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
-            this.clientConnectionsObserver = countingClientObserver;
+            this.clientConnectionsObserver = connectionsObserver;
             return this;
         }
         
