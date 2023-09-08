@@ -27,7 +27,7 @@ namespace Halibut
         IRpcObserver rpcObserver;
         IConnectionsObserver connectionsObserver;
         
-        internal HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
+        public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
             this.connectionsObserver = connectionsObserver;
             return this;
