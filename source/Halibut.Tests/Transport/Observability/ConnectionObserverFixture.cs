@@ -93,13 +93,13 @@ namespace Halibut.Tests.Transport.Observability
                 var echo = clientAndBuilder.CreateClientWithOptions<IEchoService, ISyncClientEchoServiceWithOptions, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
-                var incrementCount = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
+                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 
                 cts.Cancel();
 
-                await AssertionExtensions.Should(() => incrementCount).ThrowAsync<Exception>();
+                await AssertionExtensions.Should(() => sayHelloTask).ThrowAsync<Exception>();
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);
@@ -126,13 +126,13 @@ namespace Halibut.Tests.Transport.Observability
                 var echo = clientAndBuilder.CreateClientWithOptions<IEchoService, ISyncClientEchoServiceWithOptions, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
-                var incrementCount = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
+                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 
                 cts.Cancel();
 
-                await AssertionExtensions.Should(() => incrementCount).ThrowAsync<Exception>();
+                await AssertionExtensions.Should(() => sayHelloTask).ThrowAsync<Exception>();
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);

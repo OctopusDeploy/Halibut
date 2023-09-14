@@ -1,10 +1,5 @@
 namespace Halibut.Transport.Observability
 {
-    public enum AcceptedConnectionState
-    {
-        Start,
-        Authenticated
-    }
     public interface IConnectionsObserver
     {
         /// <summary>
