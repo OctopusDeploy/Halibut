@@ -1,25 +1,30 @@
 using System;
-using System.Threading;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using Halibut.Transport.Observability;
 
 namespace Halibut.Tests.Support
 {
     public class TestConnectionsObserver : IConnectionsObserver
     {
-        long connectionAcceptedCount;
-        long connectionClosedCount;
+        readonly ConcurrentBag<bool> connectionAcceptedAuthorized = new();
+        readonly ConcurrentBag<bool> connectionClosedAuthorized = new();
+        
+        public long ConnectionAcceptedCount => connectionAcceptedAuthorized.Count;
+        public long ConnectionClosedCount => connectionClosedAuthorized.Count;
 
-        public long ConnectionAcceptedCount => Interlocked.Read(ref connectionAcceptedCount);
-        public long ConnectionClosedCount => Interlocked.Read(ref connectionClosedCount);
+        public IReadOnlyList<bool> ConnectionAcceptedAuthorized => connectionAcceptedAuthorized.ToList();
+        public IReadOnlyList<bool> ConnectionClosedAuthorized => connectionClosedAuthorized.ToList();
 
-        public void ConnectionAccepted()
+        public void ConnectionAccepted(bool authorized)
         {
-            Interlocked.Increment(ref connectionAcceptedCount);
+            connectionAcceptedAuthorized.Add(authorized);
         }
 
-        public void ConnectionClosed()
+        public void ConnectionClosed(bool authorized)
         {
-            Interlocked.Increment(ref connectionClosedCount);
+            connectionClosedAuthorized.Add(authorized);
         }
     }
 }

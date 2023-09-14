@@ -88,8 +88,7 @@ namespace Halibut.Transport
                     try
                     {
                         var context = await listener.GetContextAsync().ConfigureAwait(false);
-                        connectionsObserver.ConnectionAccepted();
-
+                        
                         if (context.Request.IsWebSocketRequest)
                         {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -98,6 +97,7 @@ namespace Halibut.Transport
                         }
                         else
                         {
+                            connectionsObserver.ConnectionAccepted(false);
                             log.Write(EventType.Error, $"Rejected connection from {context.Request.RemoteEndPoint} as it is not Web Socket request");
                             try
                             {
@@ -106,7 +106,7 @@ namespace Halibut.Transport
                             }
                             finally
                             {
-                                connectionsObserver.ConnectionClosed();
+                                connectionsObserver.ConnectionClosed(false);
                             }
                         }
                     }
@@ -139,6 +139,7 @@ namespace Halibut.Transport
 
         async Task ExecuteRequest(HttpListenerContext listenerContext)
         {
+            var connectionAuthorizedAndObserved = false;
             var clientName = listenerContext.Request.RemoteEndPoint;
 
             WebSocketStream webSocketStream = null;
@@ -176,7 +177,11 @@ namespace Halibut.Transport
 
                 if (authorized)
                 {
+                    connectionAuthorizedAndObserved = true;
+                    connectionsObserver.ConnectionAccepted(true);
+
                     errorEventType = EventType.Error;
+
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                     await ExchangeMessages(webSocketStream).ConfigureAwait(false);
                 }
@@ -194,6 +199,11 @@ namespace Halibut.Transport
             }
             finally
             {
+                if (!connectionAuthorizedAndObserved)
+                {
+                    connectionsObserver.ConnectionAccepted(false);
+                }
+
                 // Closing an already closed stream or client is safe, better not to leak
                 try
                 {
@@ -202,7 +212,7 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    connectionsObserver.ConnectionClosed();
+                    connectionsObserver.ConnectionClosed(connectionAuthorizedAndObserved);
                 }
             }
         }
