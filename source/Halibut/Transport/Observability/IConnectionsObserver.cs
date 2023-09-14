@@ -11,13 +11,13 @@ namespace Halibut.Transport.Observability
         /// - When a "server" accepts a connection from a polling service (either websocket or regular)
         /// - When a "server" accepts a connection from a listening client (so in this case the server is the service)
         /// </summary>
-        public void ConnectionAccepted();
+        public void ConnectionAccepted(bool authorized);
 
         /// <summary>
         /// A previously accepted connection has been closed.
         ///
         /// For every call to ConnectionClosed() their can be at most one call to this method. 
         /// </summary>
-        public void ConnectionClosed();
+        public void ConnectionClosed(bool authorized);
     }
 }

@@ -150,7 +150,6 @@ namespace Halibut.Transport
                         }
 
                         var client = listener.AcceptTcpClient();
-                        connectionsObserver.ConnectionAccepted();
 
                         Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
@@ -203,7 +202,6 @@ namespace Halibut.Transport
 #pragma warning restore CS0612
                 }
 
-
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
                 await ExecuteRequest(client).ConfigureAwait(false);
             }
@@ -218,9 +216,11 @@ namespace Halibut.Transport
 
         async Task ExecuteRequest(TcpClient client)
         {
+            var connectionAuthorizedAndObserved = false;
+
             var clientName = client.Client.RemoteEndPoint;
             
-            Stream stream = streamFactory.CreateStream(client);
+            var stream = streamFactory.CreateStream(client);
 #if !NETFRAMEWORK
             await
 #endif            
@@ -257,6 +257,9 @@ namespace Halibut.Transport
 
                     if (Authorize(thumbprint, clientName))
                     {
+                        connectionAuthorizedAndObserved = true;
+                        connectionsObserver.ConnectionAccepted(true);
+
                         if (asyncHalibutFeature == AsyncHalibutFeature.Disabled)
                         {
                             // The ExchangeMessage call can hang on reading the stream which keeps a thread alive,
@@ -308,6 +311,11 @@ namespace Halibut.Transport
                 }
                 finally
                 {
+                    if (!connectionAuthorizedAndObserved)
+                    {
+                        connectionsObserver.ConnectionAccepted(false);
+                    }
+
                     try
                     {
                         SafelyRemoveClientFromTcpClientManager(client, clientName);
@@ -316,7 +324,7 @@ namespace Halibut.Transport
                     }
                     finally
                     {
-                        connectionsObserver.ConnectionClosed();
+                        connectionsObserver.ConnectionClosed(connectionAuthorizedAndObserved);
                     }
                 }
             }
@@ -399,9 +407,6 @@ namespace Halibut.Transport
 
         bool Authorize(string thumbprint, EndPoint clientName)
         {
-            if (thumbprint == null)
-                return false;
-
             log.Write(EventType.Diagnostic, "Begin authorization");
 
             var isAuthorized = verifyClientThumbprint(thumbprint);

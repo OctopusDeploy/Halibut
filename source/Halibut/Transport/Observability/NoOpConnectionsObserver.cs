@@ -6,11 +6,11 @@ namespace Halibut.Transport.Observability
 
         public static NoOpConnectionsObserver Instance => singleInstance ??= new NoOpConnectionsObserver();
 
-        public void ConnectionAccepted()
+        public void ConnectionAccepted(bool authorized)
         {
         }
 
-        public void ConnectionClosed()
+        public void ConnectionClosed(bool authorized)
         {
         }
     }
