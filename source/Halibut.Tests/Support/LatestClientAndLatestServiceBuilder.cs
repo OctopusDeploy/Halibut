@@ -45,7 +45,7 @@ namespace Halibut.Tests.Support
 
         bool createService = true;
         bool createClient = true;
-        readonly List<IPollingClient> pollingClients = new();
+        readonly List<ITestPollingClient> pollingClients = new();
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
         Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
@@ -123,7 +123,7 @@ namespace Halibut.Tests.Support
             return NoService();
         }
         
-        public LatestClientAndLatestServiceBuilder WithPollingClients(IEnumerable<IPollingClient> pollingClients)
+        public LatestClientAndLatestServiceBuilder WithPollingClients(IEnumerable<ITestPollingClient> pollingClients)
         {
             createClient = false;
             this.pollingClients.AddRange(pollingClients);
@@ -461,7 +461,7 @@ namespace Halibut.Tests.Support
             }
 
             Uri serviceUri;
-            PollingClient? pollingClient = null;
+            TestPollingClient? pollingClient = null;
             
             if (ServiceConnectionType == ServiceConnectionType.Polling)
             {
@@ -474,7 +474,7 @@ namespace Halibut.Tests.Support
 
                     portForwarder = portForwarderFactory?.Invoke(clientListenPort);
 
-                    pollingClient = PollingClient.FromPolling(client, portForwarder?.ListeningPort ?? clientListenPort);
+                    pollingClient = TestPollingClient.FromPolling(portForwarder?.ListeningPort ?? clientListenPort);
                     clientsToPoll.Add(pollingClient);
                 }
                 
@@ -507,8 +507,7 @@ namespace Halibut.Tests.Support
 
                     portForwarder = portForwarderFactory?.Invoke(webSocketListeningInfo.WebSocketListeningPort);
 
-                    pollingClient = PollingClient.FromPollingOverWebSocket(
-                        client, 
+                    pollingClient = TestPollingClient.FromPollingOverWebSocket(
                         portForwarder?.ListeningPort ?? webSocketListeningInfo.WebSocketListeningPort,
                         webSocketListeningInfo.WebSocketPath);
                     clientsToPoll.Add(pollingClient);
@@ -621,7 +620,7 @@ namespace Halibut.Tests.Support
                 .ToCachingLogFactory();
         }
 
-        public class ClientAndService : IClientAndService, IDisposable
+        public class ClientAndService : IClientAndService
         {
             public Uri ServiceUri { get; }
             readonly string thumbprint;
@@ -631,7 +630,7 @@ namespace Halibut.Tests.Support
             readonly ForceClientProxyType? forceClientProxyType;
 
             public ClientAndService(
-                IPollingClient? pollingClient,
+                ITestPollingClient? pollingClient,
                 HalibutRuntime? client,
                 HalibutRuntime service,
                 Uri serviceUri,
@@ -656,7 +655,7 @@ namespace Halibut.Tests.Support
                 this.forceClientProxyType = forceClientProxyType;
             }
 
-            public IPollingClient? PollingClient { get; }
+            public ITestPollingClient? PollingClient { get; }
             public HalibutRuntime? Client { get; }
             public ServiceEndPoint ServiceEndPoint => GetServiceEndPoint();
 
@@ -757,11 +756,6 @@ namespace Halibut.Tests.Support
                 Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
                 Try.CatchingError(disposableCollection.Dispose, LogError);
                 Try.CatchingError(() => cancellationTokenSource.Dispose(), LogError);
-            }
-
-            public void Dispose()
-            {
-                throw new NotImplementedException();
             }
         }
     }
