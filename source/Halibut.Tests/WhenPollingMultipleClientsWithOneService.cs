@@ -32,13 +32,13 @@ namespace Halibut.Tests
                 {
                     var clients = new[]
                     {
-                        clientOnly1.TestClient,
-                        clientOnly2.TestClient
+                        clientOnly1.PollingClient,
+                        clientOnly2.PollingClient
                     };
 
                     await using (await clientAndServiceTestCase.CreateTestCaseBuilder()
                                      .AsLatestClientAndLatestServiceBuilder()
-                                     .WithClients(clients)
+                                     .WithPollingClients(clients)
                                      .WithCountingService(countingService)
                                      .Build(CancellationToken))
                     {
