@@ -467,7 +467,7 @@ namespace Halibut.Tests.Support
             {
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
 
-                var clientsToPoll = pollingClientUris.ToList();
+                var clientUrisToPoll = pollingClientUris.ToList();
                 if (createClient)
                 {
                     var clientListenPort = client!.Listen();
@@ -475,12 +475,12 @@ namespace Halibut.Tests.Support
                     portForwarder = portForwarderFactory?.Invoke(clientListenPort);
                     
                     clientUri = new Uri($"https://localhost:{portForwarder?.ListeningPort ?? clientListenPort}");
-                    clientsToPoll.Add(clientUri);
+                    clientUrisToPoll.Add(clientUri);
                 }
                 
                 if (service != null)
                 {
-                    foreach (var clientUriToPoll in clientsToPoll)
+                    foreach (var clientUriToPoll in clientUrisToPoll)
                     {
                         service.Poll(
                             serviceUri,
