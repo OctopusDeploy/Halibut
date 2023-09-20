@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
-using Halibut.Diagnostics.LogWriters;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
@@ -42,7 +43,9 @@ namespace Halibut.Tests.Support
         IRpcObserver? clientRpcObserver;
 
 
-        bool hasService = true;
+        bool createService = true;
+        bool createClient = true;
+        readonly List<Uri> pollingClientUris = new();
         Func<int, PortForwarder>? portForwarderFactory;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
         Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
@@ -102,7 +105,7 @@ namespace Halibut.Tests.Support
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
         }
-
+        
         /// <summary>
         ///     Ie no tentacle.
         ///     In the case of listening, a TCPListenerWhichKillsNewConnections will be created. This will cause connections to
@@ -111,13 +114,21 @@ namespace Halibut.Tests.Support
         /// <returns></returns>
         public LatestClientAndLatestServiceBuilder NoService()
         {
-            hasService = false;
+            createService = false;
             return this;
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.NoService()
         {
             return NoService();
+        }
+        
+        public LatestClientAndLatestServiceBuilder WithPollingClients(IEnumerable<Uri> pollingClientUris)
+        {
+            createClient = false;
+            this.pollingClientUris.AddRange(pollingClientUris);
+
+            return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
@@ -168,7 +179,7 @@ namespace Halibut.Tests.Support
             this.serviceFactory = serviceFactory;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
             serviceFactoryBuilder.WithService(implementation);
@@ -398,27 +409,32 @@ namespace Halibut.Tests.Support
 
             var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
 
-            var clientBuilder = new HalibutRuntimeBuilder()
-                .WithServerCertificate(clientCertAndThumbprint.Certificate2)
-                .WithLogFactory(octopusLogFactory)
-                .WithPendingRequestQueueFactory(factory)
-                .WithTrustProvider(clientTrustProvider)
-                .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
-                .WithStreamFactoryIfNotNull(clientStreamFactory)
-                .WithConnectionsObserver(clientConnectionsObserver)
-                .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
-
-            if (clientRpcObserver is not null)
+            HalibutRuntime? client = null;
+            if (createClient)
             {
-                clientBuilder.WithRpcObserver(clientRpcObserver);
-            }
+                var clientBuilder = new HalibutRuntimeBuilder()
+                    .WithServerCertificate(clientCertAndThumbprint.Certificate2)
+                    .WithLogFactory(octopusLogFactory)
+                    .WithPendingRequestQueueFactory(factory)
+                    .WithTrustProvider(clientTrustProvider)
+                    .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
+                    .WithStreamFactoryIfNotNull(clientStreamFactory)
+                    .WithConnectionsObserver(clientConnectionsObserver)
+                    .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                    .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
 
-            var client = clientBuilder.Build();
-            client.Trust(clientTrustsThumbprint);
+                if (clientRpcObserver is not null)
+                {
+                    clientBuilder.WithRpcObserver(clientRpcObserver);
+                }
+
+                client = clientBuilder.Build();
+                client.Trust(clientTrustsThumbprint);
+            }
+            
 
             HalibutRuntime? service = null;
-            if (hasService)
+            if (createService)
             {
                 var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
@@ -445,44 +461,63 @@ namespace Halibut.Tests.Support
             }
 
             Uri serviceUri;
-
+            Uri? clientUri = null;
+            
             if (ServiceConnectionType == ServiceConnectionType.Polling)
             {
-                var clientListenPort = client.Listen();
-                portForwarder = portForwarderFactory?.Invoke(clientListenPort);
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
+
+                var clientUrisToPoll = pollingClientUris.ToList();
+                if (createClient)
+                {
+                    var clientListenPort = client!.Listen();
+
+                    portForwarder = portForwarderFactory?.Invoke(clientListenPort);
+                    
+                    clientUri = new Uri($"https://localhost:{portForwarder?.ListeningPort ?? clientListenPort}");
+                    clientUrisToPoll.Add(clientUri);
+                }
+                
                 if (service != null)
                 {
-                    if (portForwarder != null)
+                    foreach (var clientUriToPoll in clientUrisToPoll)
                     {
-                        clientListenPort = portForwarder.ListeningPort;
+                        service.Poll(
+                            serviceUri,
+                            new ServiceEndPoint(clientUriToPoll, serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits),
+                            CancellationToken.None);
                     }
-
-                    service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + clientListenPort), serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
                 }
             }
             else if (ServiceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
-                var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
-                var webSocketListeningPort = webSocketListeningInfo.WebSocketListeningPort;
-
-                var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketListeningInfo.WebSocketSslCertificateBindingAddress)
-                    .WithCertificate(clientCertAndThumbprint)
-                    .Build();
-                disposableCollection.Add(webSocketSslCertificate);
-
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
-                if (service != null)
+                
+                var clientUrsToPoll = pollingClientUris.ToList();
+                if (createClient)
                 {
+                    var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
+
+                    var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketListeningInfo.WebSocketSslCertificateBindingAddress)
+                        .WithCertificate(clientCertAndThumbprint)
+                        .Build();
+                    disposableCollection.Add(webSocketSslCertificate);
+
                     portForwarder = portForwarderFactory?.Invoke(webSocketListeningInfo.WebSocketListeningPort);
 
-                    if (portForwarder != null)
-                    {
-                        webSocketListeningPort = portForwarder.ListeningPort;
-                    }
+                    clientUri = new Uri($"wss://localhost:{portForwarder?.ListeningPort ?? webSocketListeningInfo.WebSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
+                    clientUrsToPoll.Add(clientUri);
+                }
 
-                    var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
-                    service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
+                if (service != null)
+                {
+                    foreach (var clientUriToPoll in clientUrsToPoll)
+                    {
+                        service.Poll(
+                            serviceUri,
+                            new ServiceEndPoint(clientUriToPoll, serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits),
+                            CancellationToken.None);
+                    }
                 }
             }
             else if (ServiceConnectionType == ServiceConnectionType.Listening)
@@ -518,7 +553,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientAndService(client, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, forceClientProxyType, cancellationTokenSource);
+            return new ClientAndService(client, clientUri, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, forceClientProxyType, cancellationTokenSource);
         }
 
         IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
@@ -590,7 +625,8 @@ namespace Halibut.Tests.Support
             readonly ForceClientProxyType? forceClientProxyType;
 
             public ClientAndService(
-                HalibutRuntime client,
+                HalibutRuntime? client,
+                Uri? clientUri,
                 HalibutRuntime service,
                 Uri serviceUri,
                 string thumbprint,
@@ -602,6 +638,7 @@ namespace Halibut.Tests.Support
                 CancellationTokenSource cancellationTokenSource)
             {
                 Client = client;
+                ClientUri = clientUri;
                 Service = service;
                 ServiceUri = serviceUri;
                 this.thumbprint = thumbprint;
@@ -613,7 +650,8 @@ namespace Halibut.Tests.Support
                 this.forceClientProxyType = forceClientProxyType;
             }
 
-            public HalibutRuntime Client { get; }
+            public HalibutRuntime? Client { get; }
+            public Uri? ClientUri { get; }
             public ServiceEndPoint ServiceEndPoint => GetServiceEndPoint();
 
             public HalibutRuntime? Service { get; }
@@ -685,13 +723,16 @@ namespace Halibut.Tests.Support
 
                 Try.CatchingError(() => cancellationTokenSource.Cancel(), LogError);
 
-                if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+                if (Client is not null)
                 {
-                    await Try.DisposingAsync(Client, LogError);
-                }
-                else
-                {
-                    Try.CatchingError(Client.Dispose, LogError);
+                    if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
+                    {
+                        await Try.DisposingAsync(Client, LogError);
+                    }
+                    else
+                    {
+                        Try.CatchingError(Client.Dispose, LogError);
+                    }
                 }
 
                 if (Service is not null)

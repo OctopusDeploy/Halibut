@@ -302,7 +302,10 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 portForwarder = portForwarderFactory?.Invoke((int) runningOldHalibutBinary.ProxyClientListenPort!);
 
                 var listenPort = portForwarder?.ListeningPort ?? (int)runningOldHalibutBinary.ProxyClientListenPort!;
-                service.Poll(serviceUri, new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint, httpProxyDetails, service.TimeoutsAndLimits));
+                service.Poll(
+                    serviceUri,
+                    new ServiceEndPoint(new Uri("https://localhost:" + listenPort), clientCertAndThumbprint.Thumbprint, httpProxyDetails, service.TimeoutsAndLimits),
+                    CancellationToken.None);
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
@@ -339,7 +342,10 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                 var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketPath}");
 
-                service.Poll(serviceUri, new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, httpProxyDetails, service.TimeoutsAndLimits));
+                service.Poll(
+                    serviceUri,
+                    new ServiceEndPoint(webSocketServiceEndpointUri, Certificates.SslThumbprint, httpProxyDetails, service.TimeoutsAndLimits),
+                    CancellationToken.None);
             }
             else
             {
