@@ -37,8 +37,8 @@ namespace Halibut.Tests.Support.TestAttributes
             var max = 8;
             var min = 2;
             var defaultBasedOnCpu = NUnitTestAssemblyRunner.DefaultLevelOfParallelism;
-
-            return Math.Min(Math.Max(min, defaultBasedOnCpu / 2), max);
+            
+            return Math.Min(Math.Max(min, defaultBasedOnCpu - 2), max);
         }
 
         static int? LevelOfParallelismFromEnvVar()
