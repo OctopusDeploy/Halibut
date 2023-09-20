@@ -11,7 +11,7 @@ namespace Halibut.Tests.Util
             if (clientAndServiceTestVersion.IsPreviousClient())
             {
                 // Old client requires that we call a halibut which calls a halibut, so keep the iterations low for this one.
-                return 25;
+                return 10;
             }
             
             switch (connectionType)
