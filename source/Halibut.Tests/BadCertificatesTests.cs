@@ -28,6 +28,7 @@ namespace Halibut.Tests
             var countingService = new CountingService();
             var clientTrustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
+            var firstCall = true;
 
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
@@ -36,13 +37,17 @@ namespace Halibut.Tests
                        .WithClientTrustProvider(clientTrustProvider)
                        .WithClientOnUnauthorizedClientConnect((_, clientThumbprint) =>
                        {
+                           if (firstCall)
+                           {
+                               clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeFalse();
+                               firstCall = false;
+                           }
+
                            unauthorizedThumbprint = clientThumbprint;
                            return UnauthorizedClientConnectResponse.TrustAndAllowConnection;
                        })
                        .Build(CancellationToken))
             {
-                clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeFalse();
-
                 // Act
                 var clientCountingService = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
                 await clientCountingService.IncrementAsync();
