@@ -259,7 +259,7 @@ namespace Halibut.Tests
                 // We already test latest => latest with 64 concurrent task
                 // So it is likely that an external old client will have no problems running
                 // 64 concurrent task on a latest service.
-                threadCount = 8;
+                threadCount = 4;
             }
 
             return threadCount;
