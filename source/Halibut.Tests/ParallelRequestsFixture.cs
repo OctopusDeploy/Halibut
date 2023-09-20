@@ -33,9 +33,9 @@ namespace Halibut.Tests
 
                 var lockService = clientAndService.CreateAsyncClient<ILockService, IAsyncClientLockService>();
 
-                var threadCount = NumberOfParallelRequests(clientAndServiceTestCase);
+                var numberOfParallelRequests = NumberOfParallelRequests(clientAndServiceTestCase);
                 long threadCompletionCount = 0;
-                var threads = new List<Task>();
+                var tasks = new List<Task>();
 
                 var lockFile = Path.GetTempFileName();
                 var requestStartedFilePathBase = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -43,21 +43,18 @@ namespace Halibut.Tests
                 Logger.Information($"Lock file: {lockFile}");
                 Logger.Information($"Request started files: {requestStartedFilePathBase}");
 
-                for (var i = 0; i < threadCount; i++)
+                for (var i = 0; i < numberOfParallelRequests; i++)
                 {
                     int iteration = i;
-                    var thread = Task.Run(async () =>
+                    var task = Task.Run(async () =>
                         {
-                            // Gotta handle exceptions when running in a 
-                            // Thread, or you're gonna have a bad time.
-
                             var requestStartedPath = $"{requestStartedFilePathBase}-{iteration}";
                             requestStartedFilePaths.Add(requestStartedPath);
                             await lockService.WaitForFileToBeDeletedAsync(lockFile, requestStartedPath);
                             Interlocked.Increment(ref threadCompletionCount);
                         }
                     );
-                    threads.Add(thread);
+                    tasks.Add(task);
                 }
 
                 // Wait for all requests to be started
@@ -68,9 +65,9 @@ namespace Halibut.Tests
                 // Let the remote calls complete
                 File.Delete(lockFile);
 
-                await Task.WhenAll(threads);
+                await Task.WhenAll(tasks);
 
-                Interlocked.Read(ref threadCompletionCount).Should().Be(threadCount);
+                Interlocked.Read(ref threadCompletionCount).Should().Be(numberOfParallelRequests);
             }
 
             [Test]
@@ -253,7 +250,7 @@ namespace Halibut.Tests
         static int NumberOfParallelRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             int threadCount = 64;
-            if (!clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient())
+            if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient())
             {
                 // Reduce this down to reduce thread pool exhaustion.
                 // We already test latest => latest with 64 concurrent task
