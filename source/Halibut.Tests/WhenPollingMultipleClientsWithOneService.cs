@@ -1,14 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Linq;
 using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
-using Halibut.Transport.Streams;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -32,8 +29,8 @@ namespace Halibut.Tests
                 {
                     var clients = new[]
                     {
-                        clientOnly1.PollingClient,
-                        clientOnly2.PollingClient
+                        clientOnly1.ClientUri!,
+                        clientOnly2.ClientUri!
                     };
 
                     await using (await clientAndServiceTestCase.CreateTestCaseBuilder()
