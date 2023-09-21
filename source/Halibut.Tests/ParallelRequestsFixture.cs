@@ -252,17 +252,16 @@ namespace Halibut.Tests
         
         static int NumberOfParallelRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            int threadCount = 64;
             if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient())
             {
                 // Reduce this down to reduce thread pool exhaustion.
                 // We already test latest => latest with 64 concurrent task
                 // So it is likely that an external old client will have no problems running
                 // 64 concurrent task on a latest service.
-                threadCount = 4;
+                return 4;
             }
 
-            return threadCount;
+            return 32;
         }
     }
 }

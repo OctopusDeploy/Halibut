@@ -32,33 +32,29 @@ namespace Halibut.Tests.Support.TestAttributes
             return LevelOfParallelismFromEnvVar() ?? NUnitTestAssemblyRunner.DefaultLevelOfParallelism * 2;
         }
 
+        /// <summary>
+        /// 1 CPU = 2 Parallel Tests
+        /// 2 CPU = 2 Parallel Tests
+        /// 3 CPU = 2 Parallel Tests
+        /// 4 CPU = 2 Parallel Tests
+        /// 5 CPU = 3 Parallel Tests
+        /// 6 CPU = 4 Parallel Tests
+        /// 7 CPU = 5 Parallel Tests
+        /// 8 CPU = 6 Parallel Tests
+        /// 9 CPU = 7 Parallel Tests
+        /// 10 CPU = 8 Parallel Tests
+        /// 11 CPU = 8 Parallel Tests
+        /// 12 CPU = 8 Parallel Tests
+        /// 13 CPU = 8 Parallel Tests
+        /// 14 CPU = 8 Parallel Tests
+        /// </summary>
         static int LevelOfParallelismInTeamCity()
         {
-            if (NUnitTestAssemblyRunner.DefaultLevelOfParallelism <= 8)
-            {
-                // Its unlikely a host with 8 cores is running multiple tests so assume we have access to them all.
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && NUnitTestAssemblyRunner.DefaultLevelOfParallelism > 6)
-                {
-                    return NUnitTestAssemblyRunner.DefaultLevelOfParallelism - 2;
-                }
-
-                return NUnitTestAssemblyRunner.DefaultLevelOfParallelism;
-            }
-
-            // Larger hosts are likely to be kubernetes hosts. In this case the host is shared between multiple tests runs
-            // which means we can quickly overload the host OS resulting in test flakyness or failures. This is made worse
-            // since we are told the CPU limit of the pod which is current set to the number of CPUs on host, meaning
-            // on a 32 core host machine we will run 32 tests in parallel!
-            // Lets reduce the level of parallel tests in that case.
-            // This is probably not needed on linux, where we don't see test failures.
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return 6;
-            }
-
-            return NUnitTestAssemblyRunner.DefaultLevelOfParallelism / 2;
+            var max = 8;
+            var min = 2;
+            var defaultBasedOnCpu = NUnitTestAssemblyRunner.DefaultLevelOfParallelism;
+            
+            return Math.Min(Math.Max(min, defaultBasedOnCpu - 2), max);
         }
 
         static int? LevelOfParallelismFromEnvVar()
