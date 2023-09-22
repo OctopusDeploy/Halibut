@@ -89,7 +89,9 @@ namespace Halibut.Transport
             {
                 if (client.Value?.Any() == true)
                 {
-                    foreach (var tcpClient in client.Value)
+                    var tcpClients = client.Value.ToArray();
+
+                    foreach (var tcpClient in tcpClients)
                     {
                         tcpClient?.CloseImmediately();
                         tcpClient?.Dispose();
