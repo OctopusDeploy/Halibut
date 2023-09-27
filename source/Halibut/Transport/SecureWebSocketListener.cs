@@ -141,7 +141,7 @@ namespace Halibut.Transport
         async Task ExecuteRequest(HttpListenerContext listenerContext)
         {
             var connectionAuthorizedAndObserved = false;
-            var clientName = listenerContext.Request.RemoteEndPoint;
+            var clientName = listenerContext.Request.RemoteEndPoint.ToString();
 
             WebSocketStream webSocketStream = null;
             var errorEventType = EventType.ErrorInInitialisation;
@@ -246,7 +246,7 @@ namespace Halibut.Transport
             }
         }
 
-        async Task<bool> Authorize(HttpListenerContext context, EndPoint clientName)
+        async Task<bool> Authorize(HttpListenerContext context, string clientName)
         {
             log.Write(EventType.Diagnostic, "Begin authorization");
             var certificate = await context.Request.GetClientCertificateAsync().ConfigureAwait(false);
@@ -262,7 +262,7 @@ namespace Halibut.Transport
             if (!isAuthorized)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", clientName, thumbprint);
-                var response = unauthorizedClientConnect(clientName.ToString(), thumbprint);
+                var response = unauthorizedClientConnect(clientName, thumbprint);
                 if (response == UnauthorizedClientConnectResponse.BlockConnection)
                     return false;
             }
