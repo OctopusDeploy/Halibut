@@ -137,6 +137,7 @@ namespace Halibut.Transport
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cts.IsCancellationRequested)
                 {
+                    TcpClient client = null;
                     try
                     {
                         if (!IsWindows())
@@ -149,7 +150,7 @@ namespace Halibut.Transport
                             }
                         }
 
-                        var client = listener.AcceptTcpClient();
+                        client = listener.AcceptTcpClient();
 
                         Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
@@ -164,7 +165,7 @@ namespace Halibut.Transport
                     catch (Exception ex)
                     {
                         numberOfFailedAttemptsInRow++;
-                        log.WriteException(EventType.ErrorInInitialisation, "Error accepting TCP client", ex);
+                        log.WriteException(EventType.ErrorInInitialisation, "Error accepting TCP client: {0}", ex, client?.Client.RemoteEndPoint);
                         // Slow down the logs in case an exception is immediately encountered after X failed AcceptTcpClient calls
                         if (numberOfFailedAttemptsInRow >= errorThreshold)
                         {
@@ -210,7 +211,7 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client", ex);
+                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client: {0}", ex, client.Client.RemoteEndPoint);
             }
         }
 
@@ -224,7 +225,7 @@ namespace Halibut.Transport
 #if !NETFRAMEWORK
             await
 #endif            
-            using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
+                using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 var errorEventType = EventType.ErrorInInitialisation;
                 try
@@ -268,11 +269,11 @@ namespace Halibut.Transport
 #if !NETFRAMEWORK
                             await
 #endif
-                            using (cancellationToken.Register(() =>
-                                   {
-                                       if (weakSsl.IsAlive)
-                                           ((IDisposable)weakSsl.Target).Dispose();
-                                   }))
+                                using (cancellationToken.Register(() =>
+                                {
+                                    if (weakSsl.IsAlive)
+                                        ((IDisposable)weakSsl.Target).Dispose();
+                                }))
                             {
                                 tcpClientManager.AddActiveClient(thumbprint, client);
                                 errorEventType = EventType.Error;
@@ -378,7 +379,7 @@ namespace Halibut.Transport
 #if !NETFRAMEWORK
                 await
 #endif
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
                 {
                     writer.WriteLine("HTTP/1.0 200 OK");
                     writer.WriteLine("Content-Type: text/html; charset=utf-8");
