@@ -7,11 +7,12 @@ namespace Halibut.Transport
 {
     class TcpClientManager : IDisposable
     {
-        readonly Dictionary<string, HashSet<TcpClient>> activeClients = new();
+        Dictionary<string, HashSet<TcpClient>> activeClients = new();
+        readonly object syncLock = new();
 
         public void AddActiveClient(string thumbprint, TcpClient client)
         {
-            lock (activeClients)
+            lock (syncLock)
             {
                 if (activeClients.TryGetValue(thumbprint, out var tcpClients))
                 {
@@ -29,7 +30,7 @@ namespace Halibut.Transport
         // TODO - ASYNC ME UP - Should be obsolete but in use and needs an async chain
         public void Disconnect(string thumbprint)
         {
-            lock (activeClients)
+            lock (syncLock)
             {
                 if (activeClients.TryGetValue(thumbprint, out var tcpClients))
                 {
@@ -38,6 +39,7 @@ namespace Halibut.Transport
                         client.CloseImmediately();
                     }
                 }
+
                 activeClients.Remove(thumbprint);
             }
         }
@@ -45,7 +47,7 @@ namespace Halibut.Transport
         static readonly TcpClient[] NoClients = Array.Empty<TcpClient>();
         public IReadOnlyCollection<TcpClient> GetActiveClients(string thumbprint)
         {
-            lock (activeClients)
+            lock (syncLock)
             {
                 if (activeClients.TryGetValue(thumbprint, out var value))
                 {
@@ -58,37 +60,47 @@ namespace Halibut.Transport
 
         public void RemoveClient(TcpClient client)
         {
-            lock (activeClients)
+            lock (syncLock)
             {
                 foreach(var thumbprintClientsPair in activeClients)
                 {
                     if (thumbprintClientsPair.Value.Contains(client))
+                    {
                         thumbprintClientsPair.Value.Remove(client);
+                    }
                 }
 
                 var thumbprintsWithNoClients = activeClients
                     .Where(x => x.Value.Count == 0)
                     .Select(x => x.Key)
                     .ToArray();
+
                 foreach (var thumbprint in thumbprintsWithNoClients)
+                {
                     activeClients.Remove(thumbprint);
+                }
             }
         }
 
         public void Dispose()
         {
-            var clients = activeClients?.ToArray();
-            activeClients?.Clear();
+            lock (syncLock)
+            {
+                var clients = activeClients?.ToArray();
+                activeClients = null;
 
-            if (clients == null || !clients.Any())
-            {
-                return;
-            }
-            
-            foreach (var client in clients)
-            {
-                if (client.Value?.Any() == true)
+                if (clients == null || !clients.Any())
                 {
+                    return;
+                }
+
+                foreach (var client in clients)
+                {
+                    if (client.Value?.Any() != true)
+                    {
+                        continue;
+                    }
+
                     foreach (var tcpClient in client.Value)
                     {
                         tcpClient?.CloseImmediately();
