@@ -219,7 +219,7 @@ namespace Halibut.Transport
         {
             var connectionAuthorizedAndObserved = false;
 
-            string clientName = client.GetRemoteEndpointString();
+            var clientName = client.GetRemoteEndpointString();
             
             var stream = streamFactory.CreateStream(client);
 #if !NETFRAMEWORK
