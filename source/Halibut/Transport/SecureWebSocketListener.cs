@@ -85,10 +85,11 @@ namespace Halibut.Transport
             {
                 while (!cts.IsCancellationRequested)
                 {
+
+                    HttpListenerContext context = null;
                     try
                     {
-                        var context = await listener.GetContextAsync().ConfigureAwait(false);
-                        
+                        context = await listener.GetContextAsync().ConfigureAwait(false);
                         if (context.Request.IsWebSocketRequest)
                         {
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -114,7 +115,7 @@ namespace Halibut.Transport
                     {
                         if (!cts.IsCancellationRequested)
                         {
-                            log.WriteException(EventType.ErrorInInitialisation, "Error accepting Web Socket client", ex);
+                            log.WriteException(EventType.ErrorInInitialisation, "Error accepting Web Socket client: {0}", ex, context?.Request.RemoteEndPoint);
                         }
                     }
                 }
@@ -133,14 +134,14 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client", ex);
+                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client: {0}", ex, context.Request.RemoteEndPoint);
             }
         }
 
         async Task ExecuteRequest(HttpListenerContext listenerContext)
         {
             var connectionAuthorizedAndObserved = false;
-            var clientName = listenerContext.Request.RemoteEndPoint;
+            var clientName = listenerContext.Request.RemoteEndPoint.ToString();
 
             WebSocketStream webSocketStream = null;
             var errorEventType = EventType.ErrorInInitialisation;
@@ -190,7 +191,7 @@ namespace Halibut.Transport
             {
                 if (!cts.Token.IsCancellationRequested)
                 {
-                    log.Write(errorEventType, "A timeout occurred while receiving data");
+                    log.Write(errorEventType, "A timeout occurred while receiving data: {0}", clientName);
                 }
             }
             catch (Exception ex)
@@ -245,7 +246,7 @@ namespace Halibut.Transport
             }
         }
 
-        async Task<bool> Authorize(HttpListenerContext context, EndPoint clientName)
+        async Task<bool> Authorize(HttpListenerContext context, string clientName)
         {
             log.Write(EventType.Diagnostic, "Begin authorization");
             var certificate = await context.Request.GetClientCertificateAsync().ConfigureAwait(false);
@@ -261,7 +262,7 @@ namespace Halibut.Transport
             if (!isAuthorized)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", clientName, thumbprint);
-                var response = unauthorizedClientConnect(clientName.ToString(), thumbprint);
+                var response = unauthorizedClientConnect(clientName, thumbprint);
                 if (response == UnauthorizedClientConnectResponse.BlockConnection)
                     return false;
             }

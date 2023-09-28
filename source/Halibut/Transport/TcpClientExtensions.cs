@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.ExceptionServices;
 using System.Threading;
@@ -92,6 +93,18 @@ namespace Halibut.Transport
         {
             Try.CatchingError(() => client.Client.Close(0), onError);
             Try.CatchingError(client.Close, onError);
+        }
+
+        public static string GetRemoteEndpointString(this TcpClient client)
+        {
+            try
+            {
+                return client?.Client.RemoteEndPoint?.ToString() ?? "<none>";
+            }
+            catch
+            {
+                return "<error>";
+            }
         }
     }
 }

@@ -137,6 +137,7 @@ namespace Halibut.Transport
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cts.IsCancellationRequested)
                 {
+                    TcpClient client = null;
                     try
                     {
                         if (!IsWindows())
@@ -149,7 +150,7 @@ namespace Halibut.Transport
                             }
                         }
 
-                        var client = listener.AcceptTcpClient();
+                        client = listener.AcceptTcpClient();
 
                         Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
@@ -164,7 +165,7 @@ namespace Halibut.Transport
                     catch (Exception ex)
                     {
                         numberOfFailedAttemptsInRow++;
-                        log.WriteException(EventType.ErrorInInitialisation, "Error accepting TCP client", ex);
+                        log.WriteException(EventType.ErrorInInitialisation, "Error accepting TCP client: {0}", ex, client.GetRemoteEndpointString());
                         // Slow down the logs in case an exception is immediately encountered after X failed AcceptTcpClient calls
                         if (numberOfFailedAttemptsInRow >= errorThreshold)
                         {
@@ -202,7 +203,7 @@ namespace Halibut.Transport
 #pragma warning restore CS0612
                 }
 
-                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.Client.RemoteEndPoint);
+                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.GetRemoteEndpointString());
                 await ExecuteRequest(client).ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
@@ -210,7 +211,7 @@ namespace Halibut.Transport
             }
             catch (Exception ex)
             {
-                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client", ex);
+                log.WriteException(EventType.ErrorInInitialisation, "Error initializing TCP client: {0}", ex, client.GetRemoteEndpointString());
             }
         }
 
@@ -218,13 +219,13 @@ namespace Halibut.Transport
         {
             var connectionAuthorizedAndObserved = false;
 
-            var clientName = client.Client.RemoteEndPoint;
+            var clientName = client.GetRemoteEndpointString();
             
             var stream = streamFactory.CreateStream(client);
 #if !NETFRAMEWORK
             await
 #endif            
-            using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
+                using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
             {
                 var errorEventType = EventType.ErrorInInitialisation;
                 try
@@ -268,11 +269,11 @@ namespace Halibut.Transport
 #if !NETFRAMEWORK
                             await
 #endif
-                            using (cancellationToken.Register(() =>
-                                   {
-                                       if (weakSsl.IsAlive)
-                                           ((IDisposable)weakSsl.Target).Dispose();
-                                   }))
+                                using (cancellationToken.Register(() =>
+                                {
+                                    if (weakSsl.IsAlive)
+                                        ((IDisposable)weakSsl.Target).Dispose();
+                                }))
                             {
                                 tcpClientManager.AddActiveClient(thumbprint, client);
                                 errorEventType = EventType.Error;
@@ -330,7 +331,7 @@ namespace Halibut.Transport
             }
         }
         
-        async Task SafelyCloseStreamAsync(Stream stream, EndPoint clientName)
+        async Task SafelyCloseStreamAsync(Stream stream, string clientName)
         {
             try
             {
@@ -342,7 +343,7 @@ namespace Halibut.Transport
             }
         }
 
-        void SafelyRemoveClientFromTcpClientManager(TcpClient client, EndPoint clientName)
+        void SafelyRemoveClientFromTcpClientManager(TcpClient client, string clientName)
         {
             try
             {
@@ -378,7 +379,7 @@ namespace Halibut.Transport
 #if !NETFRAMEWORK
                 await
 #endif
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
                 {
                     writer.WriteLine("HTTP/1.0 200 OK");
                     writer.WriteLine("Content-Type: text/html; charset=utf-8");
@@ -405,7 +406,7 @@ namespace Halibut.Transport
             return thumbprint;
         }
 
-        bool Authorize(string thumbprint, EndPoint clientName)
+        bool Authorize(string thumbprint, string clientName)
         {
             log.Write(EventType.Diagnostic, "Begin authorization");
 
@@ -414,7 +415,7 @@ namespace Halibut.Transport
             if (!isAuthorized)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", clientName, thumbprint);
-                var response = unauthorizedClientConnect(clientName.ToString(), thumbprint);
+                var response = unauthorizedClientConnect(clientName, thumbprint);
                 if (response == UnauthorizedClientConnectResponse.BlockConnection)
                     return false;
             }
