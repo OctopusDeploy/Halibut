@@ -7,14 +7,14 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
-using NUnit.Framework;
+using Xunit;
 
 namespace Halibut.Tests.ServiceModel
 {
         
-    public class ServiceInvokerFixture : BaseTest
+    public class ServiceInvokerFixture : BaseTestXUnit
     {
-        [Test]
+        [Fact]
         public void InvokeWithParams()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -33,8 +33,8 @@ namespace Halibut.Tests.ServiceModel
             var response = sut.Invoke(request);
             response.Result.Should().Be($"{value}...");
         }
-        
-        [Test]
+
+        [Fact]
         public void InvokeWithNoParams()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -51,8 +51,8 @@ namespace Halibut.Tests.ServiceModel
             var response = sut.Invoke(request);
             response.Result.Should().Be(1);
         }
-        
-        [Test]
+
+        [Fact]
         public async Task AsyncInvokeWithParamsOnAsyncService()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -72,7 +72,7 @@ namespace Halibut.Tests.ServiceModel
             response.Result.Should().Be($"{value}Async...");
         }
 
-        [Test]
+        [Fact]
         public async Task AsyncInvokeWithNoParamsOnAsyncService()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -90,7 +90,7 @@ namespace Halibut.Tests.ServiceModel
             response.Result.Should().Be(1);
         }
 
-        [Test]
+        [Fact]
         public async Task AsyncInvokeWithParamsOnSyncService()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -110,7 +110,7 @@ namespace Halibut.Tests.ServiceModel
             response.Result.Should().Be($"{value}...");
         }
 
-        [Test]
+        [Fact]
         public async Task AsyncInvokeWithNoParamsOnSyncService()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -128,7 +128,7 @@ namespace Halibut.Tests.ServiceModel
             response.Result.Should().Be(1);
         }
 
-        [Test]
+        [Fact]
         public async Task AsyncInvokeWithNoParams_AsyncServiceMissingSuffix()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -146,7 +146,7 @@ namespace Halibut.Tests.ServiceModel
             await AssertAsync.Throws<Exception>(() => sut.InvokeAsync(request));
         }
 
-        [Test]
+        [Fact]
         public async Task AsyncInvokeWithNoParams_AsyncServiceMissingCancellationToken()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -164,7 +164,7 @@ namespace Halibut.Tests.ServiceModel
             await AssertAsync.Throws<Exception>(() => sut.InvokeAsync(request));
         }
 
-        [Test]
+        [Fact]
         public async Task AsyncInvokeWithParams_AsyncServiceMissingSuffix()
         {
             var serviceFactory = new ServiceFactoryBuilder()
@@ -184,7 +184,7 @@ namespace Halibut.Tests.ServiceModel
             await AssertAsync.Throws<Exception>(() => sut.InvokeAsync(request));
         }
 
-        [Test]
+        [Fact]
         public async Task AsyncInvokeWithParams_AsyncServiceMissingCancellationToken()
         {
             var serviceFactory = new ServiceFactoryBuilder()
