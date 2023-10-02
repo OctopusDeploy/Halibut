@@ -11,7 +11,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
-using NUnit.Framework;
+using Xunit;
 
 namespace Halibut.Tests.Diagnostics
 {
@@ -19,7 +19,7 @@ namespace Halibut.Tests.Diagnostics
     {
         public class WhenGivenA
         {
-            [Test]
+            [Fact]
             public void MethodNotFoundHalibutClientException_ItIsNotANetworkError()
             {
                 new MethodNotFoundHalibutClientException("").IsNetworkError()
@@ -27,7 +27,7 @@ namespace Halibut.Tests.Diagnostics
                     .Be(HalibutNetworkExceptionType.NotANetworkError);
             }
 
-            [Test]
+            [Fact]
             public void ServiceNotFoundHalibutClientException_ItIsNotANetworkError()
             {
                 new ServiceNotFoundHalibutClientException("").IsNetworkError()
@@ -35,7 +35,7 @@ namespace Halibut.Tests.Diagnostics
                     .Be(HalibutNetworkExceptionType.NotANetworkError);
             }
 
-            [Test]
+            [Fact]
             public void AmbiguousMethodMatchHalibutClientException_ItIsNotANetworkError()
             {
                 new AmbiguousMethodMatchHalibutClientException("").IsNetworkError()
@@ -44,9 +44,10 @@ namespace Halibut.Tests.Diagnostics
             }
         }
 
-        public class WhenTheHalibutProxyThrowsAnException : BaseTest
+        public class WhenTheHalibutProxyThrowsAnException : BaseTestXUnit
         {
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions:false)]
             public async Task WhenTheConnectionTerminatesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -74,8 +75,9 @@ namespace Halibut.Tests.Diagnostics
                             because: "This isn't the best message, really the connection was closed before we got the data we were expecting resulting in us reading past the end of the stream");
                 }
             }
-            
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false, 
+
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions:false, 
                 testWebSocket:false // Since websockets do not timeout
                 )]
             public async Task WhenTheConnectionPausesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
@@ -101,8 +103,8 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
 
-            [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket: false)]
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions: false, testListening:false, testWebSocket: false)]
             public async Task BecauseThePollingRequestWasNotCollected(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var services = new DelegateServiceFactory();
@@ -121,8 +123,8 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
 
-            [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
             public async Task BecauseTheListeningTentacleIsNotResponding(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -138,8 +140,8 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
 
-            [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
             public async Task BecauseTheProxyIsNotResponding_TheExceptionShouldBeANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -161,8 +163,8 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
 
-            [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
             public async Task BecauseOfAInvalidCertificateException_WhenConnectingToListening_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -181,8 +183,8 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
 
-            [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions: false)]
             public async Task BecauseTheDataStreamHadAnErrorOpeningTheFileWithFileStream_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -208,8 +210,8 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
 
-            [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+            [Theory]
+            [LatestClientAndLatestServiceTestCasesXUnit(testNetworkConditions: false)]
             public async Task BecauseTheDataStreamThrowAFileNotFoundException_WhenSending_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -222,7 +224,7 @@ namespace Halibut.Tests.Diagnostics
                         _ => throw new FileNotFoundException(), 
                         async (_, _) =>
                         {
-                            await Task.CompletedTask.ConfigureAwait(false);
+                            await Task.CompletedTask;
                             throw new FileNotFoundException();
                         });
 
@@ -234,8 +236,8 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
 
-            [Test]
-            [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+            [Theory]
+            [LatestAndPreviousClientAndServiceVersionsTestCasesXUnit(testNetworkConditions: false)]
             public async Task BecauseTheServiceThrowAnException_ItIsNotANetworkError(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
