@@ -12,4 +12,4 @@ using Xunit;
 [assembly: FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
 [assembly: TestTimeout]
 [assembly: CustomLevelOfParallelism]
-//[assembly: CollectionBehavior(CollectionBehavior.CollectionPerAssembly, MaxParallelThreads = -1)]
+[assembly: TestFramework("Halibut.Tests.Util.ParallelTestFramework", "Halibut.Tests")]

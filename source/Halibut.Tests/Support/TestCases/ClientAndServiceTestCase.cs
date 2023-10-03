@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Util;
+using Xunit.Abstractions;
 
 namespace Halibut.Tests.Support.TestCases
 {
-    public class ClientAndServiceTestCase
+    public class ClientAndServiceTestCase : IXunitSerializable
     {
         public ClientAndServiceTestVersion ClientAndServiceTestVersion { get; }
 
@@ -25,6 +26,10 @@ namespace Halibut.Tests.Support.TestCases
 
         public ForceClientProxyType? ForceClientProxyType { get; }
         public SyncOrAsync SyncOrAsync => ForceClientProxyType.ToSyncOrAsync();
+
+        public ClientAndServiceTestCase()
+        {
+        }
 
         public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType,
             NetworkConditionTestCase networkConditionTestCase,
@@ -113,6 +118,14 @@ namespace Halibut.Tests.Support.TestCases
         public override int GetHashCode()
         {
             return ToString().GetHashCode();
+        }
+
+        public void Deserialize(IXunitSerializationInfo info)
+        {
+        }
+
+        public void Serialize(IXunitSerializationInfo info)
+        {
         }
     }
 }
