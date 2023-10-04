@@ -162,6 +162,18 @@ namespace Halibut.Tests.Support.TestAttributes
                         {
                             parms.Properties.Add(PropertyNames.Category, testCase.ServiceConnectionType.ToString());
                             parms.Properties.Add(PropertyNames.Category, testCase.SyncOrAsync.ToString());
+                        } 
+                        else if (item is IEnumerable enumerableItem)
+                        {
+                            foreach (var itemFromEnumerable in enumerableItem)
+                            {
+                                if (itemFromEnumerable is ClientAndServiceTestCase testCaseFromEnumerable)
+                                {
+                                    parms.Properties.Add(PropertyNames.Category, testCaseFromEnumerable.ServiceConnectionType.ToString());
+                                    parms.Properties.Add(PropertyNames.Category, testCaseFromEnumerable.SyncOrAsync.ToString());
+                                    break;
+                                }
+                            }
                         }
 
                         data.Add(parms);
