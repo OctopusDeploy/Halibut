@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using NUnit.Framework;
 using Serilog;
@@ -14,45 +13,58 @@ namespace Halibut.Tests.Support
     public class SerilogLoggerBuilder
     {
         static readonly ILogger Logger;
+        static readonly ConcurrentDictionary<string, TraceLogFileLogger> TraceLoggers = new();
+
+        TraceLogFileLogger? traceFileLogger;
 
         static SerilogLoggerBuilder()
         {
-            var outputTemplate = 
-                "{TestName} "
+            const string teamCityOutputTemplate =
+                "{TestHash} "
                 + "{Timestamp:HH:mm:ss.fff zzz} "
                 + "{ShortContext} "
                 + "{Message}{NewLine}{Exception}";
 
+            const string localOutputTemplate =
+                "{Timestamp:HH:mm:ss.fff zzz} "
+                + "{ShortContext} "
+                + "{Message}{NewLine}{Exception}";
+
+            var nUnitOutputTemplate = TeamCityDetection.IsRunningInTeamCity()
+                ? teamCityOutputTemplate
+                : localOutputTemplate;
+
             Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(outputTemplate)))
+                .MinimumLevel.Verbose()
+                .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(nUnitOutputTemplate)), LogEventLevel.Debug)
+                .WriteTo.Sink(new TraceLogsForFailedTestsSink(new MessageTemplateTextFormatter(localOutputTemplate)))
                 .CreateLogger();
+        }
+
+        public SerilogLoggerBuilder SetTraceLogFileLogger(TraceLogFileLogger logger)
+        {
+            this.traceFileLogger = logger;
+            return this;
         }
 
         public ILogger Build()
         {
             // In teamcity we need to know what test the log is for, since we can find hung builds and only have a single file containing all log messages.
-            var testName = "";
-            if (TeamCityDetection.IsRunningInTeamCity())
-            {
-                testName = CurrentTestHash();
-            }
+            var testName = TestContext.CurrentContext.Test.Name;
+            var testHash = CurrentTestHash();
+            var logger = Logger.ForContext("TestHash", testHash);
 
-            var logger = Logger.ForContext("TestName", testName);
-            
-            if (TeamCityDetection.IsRunningInTeamCity())
+            if (traceFileLogger != null)
             {
-                if (!HasLoggedTestHash.Contains(TestContext.CurrentContext.Test.Name))
-                {
-                    HasLoggedTestHash.Add(TestContext.CurrentContext.Test.Name);
-                    logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {CurrentTestHash()}");
-                }
+                TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
+                logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {testHash}");
+                traceFileLogger.SetTestHash(testHash);
             }
 
             return logger;
         }
 
-        public static string CurrentTestHash()
+        static string CurrentTestHash()
         {
             using (SHA256 mySHA256 = SHA256.Create())
             {
@@ -63,8 +75,6 @@ namespace Halibut.Tests.Support
                     .Substring(0, 10); // 64 ^ 10 is a big number, most likely we wont have collisions.
             }
         }
-
-        public static ConcurrentBag<string> HasLoggedTestHash = new();
 
         public class NonProgressNUnitSink : ILogEventSink
         {
@@ -85,11 +95,10 @@ namespace Halibut.Tests.Support
                 {
                     var context = sourceContext.ToString().Substring(sourceContext.ToString().LastIndexOf('.') + 1).Replace("\"", "");
                     //output.Write("[" + context + "] ");
-                    
+
                     logEvent.AddOrUpdateProperty(new LogEventProperty("ShortContext", new ScalarValue(context)));
                 }
-                
-                
+
                 _formatter.Format(logEvent, output);
                 // This is the change, call this instead of: TestContext.Progress
 
@@ -103,6 +112,36 @@ namespace Halibut.Tests.Support
                 {
                     TestContext.Progress.Write(logLine);
                 }
+            }
+        }
+
+        public class TraceLogsForFailedTestsSink : ILogEventSink
+        {
+            private readonly MessageTemplateTextFormatter _formatter;
+
+            public TraceLogsForFailedTestsSink(MessageTemplateTextFormatter formatter) => _formatter = formatter != null ? formatter : throw new ArgumentNullException(nameof(formatter));
+
+            public void Emit(LogEvent logEvent)
+            {
+                if (logEvent == null)
+                    throw new ArgumentNullException(nameof(logEvent));
+
+                var testName = TestContext.CurrentContext.Test.Name;
+
+                if (!TraceLoggers.TryGetValue(testName, out var traceLogger))
+                    throw new Exception($"Could not find trace logger for test '{testName}'");
+
+                var output = new StringWriter();
+                if (logEvent.Properties.TryGetValue("SourceContext", out var sourceContext))
+                {
+                    var context = sourceContext.ToString().Substring(sourceContext.ToString().LastIndexOf('.') + 1).Replace("\"", "");
+                    logEvent.AddOrUpdateProperty(new LogEventProperty("ShortContext", new ScalarValue(context)));
+                }
+
+                _formatter.Format(logEvent, output);
+
+                var logLine = output.ToString().Trim();
+                traceLogger.WriteLine(logLine);
             }
         }
     }
