@@ -1,18 +1,23 @@
 ﻿using System;
 using Halibut.Tests.Support.BackwardsCompatibility;
+using Xunit.Abstractions;
 
 namespace Halibut.Tests.Support.TestCases
 {
     /// <summary>
     /// Defines what version of the Client and the Service that will be used in a test.
     /// </summary>
-    public class ClientAndServiceTestVersion : IEquatable<ClientAndServiceTestVersion>
+    public class ClientAndServiceTestVersion : IEquatable<ClientAndServiceTestVersion>, IXunitSerializable
     {
         
         // null means latest.
-        public HalibutVersion? ClientVersion { get; }
+        public HalibutVersion? ClientVersion { get; private set; }
         // null means latest.
-        public HalibutVersion? ServiceVersion { get; }
+        public HalibutVersion? ServiceVersion { get; private set; }
+
+        public ClientAndServiceTestVersion()
+        {
+        }
 
         ClientAndServiceTestVersion(HalibutVersion? clientVersion, HalibutVersion? serviceVersion)
         {
@@ -130,6 +135,18 @@ namespace Halibut.Tests.Support.TestCases
                 hashCode = (hashCode * 397) ^ (ServiceVersion != null ? ServiceVersion.GetHashCode() : 0);
                 return hashCode;
             }
+        }
+
+        public void Deserialize(IXunitSerializationInfo info)
+        {
+            ClientVersion = info.GetValue<HalibutVersion>(nameof(ClientVersion));
+            ServiceVersion = info.GetValue<HalibutVersion>(nameof(ServiceVersion));
+        }
+
+        public void Serialize(IXunitSerializationInfo info)
+        {
+            info.AddValue(nameof(ClientVersion), ClientVersion);
+            info.AddValue(nameof(ServiceVersion), ServiceVersion);
         }
     }
 
