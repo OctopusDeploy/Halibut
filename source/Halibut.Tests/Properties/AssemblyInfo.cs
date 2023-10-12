@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Util;
 using NUnit.Framework;
 using Xunit;
 
@@ -12,4 +13,4 @@ using Xunit;
 [assembly: FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
 [assembly: TestTimeout]
 [assembly: CustomLevelOfParallelism]
-[assembly: TestFramework("Halibut.Tests.Util.ParallelTestFramework", "Halibut.Tests")]
+[assembly: TestFramework("Halibut.Tests.Util." + nameof(ParallelTestFramework), "Halibut.Tests")]
