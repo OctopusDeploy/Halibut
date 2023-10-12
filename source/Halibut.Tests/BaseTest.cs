@@ -59,7 +59,7 @@ namespace Halibut.Tests
                 // TODO: Copy file to TeamCity artifacts
                 var dir = Directory.GetCurrentDirectory();
                 Logger.Information($"Current directory is: {dir}");
-                TestContext.AddTestAttachment(traceLogFilePath!, "Trace logs");
+                //TestContext.AddTestAttachment(traceLogFilePath!, "Trace logs");
             }
             
             Logger.Information("Finished Test Tearing Down");
