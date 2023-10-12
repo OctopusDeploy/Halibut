@@ -1,73 +1,67 @@
 using System;
-using System.IO;
 using System.Threading;
 using Halibut.Tests.Support;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
-using Serilog;
 using Xunit;
+using ILogger = Serilog.ILogger;
 
 namespace Halibut.Tests
 {
     public class BaseTest
     {
         CancellationTokenSource? cancellationTokenSource;
-        string? traceLogFilePath;
-        
+        TraceLogFileLogger? traceLogFileLogger;
+
         public CancellationToken CancellationToken { get; private set; }
         public ILogger Logger { get; private set; } = null!;
-        
+
 
         [SetUp]
         public void SetUp()
         {
-            traceLogFilePath = Path.GetTempFileName();
+            traceLogFileLogger = new TraceLogFileLogger();
             Logger = new SerilogLoggerBuilder()
-                .SetTraceLogFilePath(traceLogFilePath)
+                .SetTraceLogFileLogger(traceLogFileLogger)
                 .Build()
                 .ForContext(GetType());
-            
+
             Logger.Information("Test started");
             cancellationTokenSource = new CancellationTokenSource();
             CancellationToken = cancellationTokenSource.Token;
         }
-        
+
         [TearDown]
         public void TearDown()
         {
             Logger.Information("Staring Test Tearing Down");
-            
+
             Logger.Information("Cancelling CancellationTokenSource");
             cancellationTokenSource?.Cancel();
             Logger.Information("Disposing CancellationTokenSource");
             cancellationTokenSource?.Dispose();
 
-            if (TestContext.CurrentContext.Result.Outcome == ResultState.Success)
+            if (TestContext.CurrentContext.Result.Outcome != ResultState.Success)
             {
-                Logger.Information("Deleting trace log file for successful test");
-                try
+                if (traceLogFileLogger?.CopyLogFileToArtifacts() ?? false)
                 {
-                    File.Delete(traceLogFilePath!);
+                    Logger.Information("Copied trace logs to artifacts");
                 }
-                catch
+                else
                 {
-                    Logger.Information("Couldn't delete trace log file /shrug");
+                    Logger.Information("Could not copy trace logs to artifacts");
                 }
             }
-            else
-            {
-                // TODO: Copy file to TeamCity artifacts
-                var dir = Directory.GetCurrentDirectory();
-                Logger.Information($"Current directory is: {dir}");
-                //TestContext.AddTestAttachment(traceLogFilePath!, "Trace logs");
-            }
-            
+
+            Logger.Information("Disposing Trace Log File Logger");
+            traceLogFileLogger?.Dispose();
+
             Logger.Information("Finished Test Tearing Down");
         }
     }
 
     // TODO: @server-at-scale - Merge with above when tests are completely cut over to xUnit.
-    public class BaseTestXUnit : 
+    public class BaseTestXUnit :
         IClassFixture<BindCertificatesForAllTests>,
         IClassFixture<BumpThreadPoolForAllTests>,
         IClassFixture<LowerHalibutLimitsForAllTests>,

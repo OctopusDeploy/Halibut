@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using NUnit.Framework;
 using Serilog;
@@ -15,9 +13,9 @@ namespace Halibut.Tests.Support
     public class SerilogLoggerBuilder
     {
         static readonly ILogger Logger;
-        static readonly ConcurrentDictionary<string, string> TraceLogFiles = new();
+        static readonly ConcurrentDictionary<string, TraceLogFileLogger> TraceLoggers = new();
 
-        string? traceLogFilePath;
+        TraceLogFileLogger? traceFileLogger;
 
         static SerilogLoggerBuilder()
         {
@@ -43,9 +41,9 @@ namespace Halibut.Tests.Support
                 .CreateLogger();
         }
 
-        public SerilogLoggerBuilder SetTraceLogFilePath(string traceLogFilePath)
+        public SerilogLoggerBuilder SetTraceLogFileLogger(TraceLogFileLogger logger)
         {
-            this.traceLogFilePath = traceLogFilePath;
+            this.traceFileLogger = logger;
             return this;
         }
 
@@ -54,24 +52,19 @@ namespace Halibut.Tests.Support
             // In teamcity we need to know what test the log is for, since we can find hung builds and only have a single file containing all log messages.
             var testName = TestContext.CurrentContext.Test.Name;
             var testHash = CurrentTestHash();
-
             var logger = Logger.ForContext("TestHash", testHash);
 
-            if (traceLogFilePath != null)
+            if (traceFileLogger != null)
             {
-                TraceLogFiles.AddOrUpdate(testName, traceLogFilePath, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
-                logger.Information($"Trace log file: {traceLogFilePath}");
-
-                if (TeamCityDetection.IsRunningInTeamCity())
-                {
-                    logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {CurrentTestHash()}");
-                }
+                TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
+                logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {testHash}");
+                traceFileLogger.SetTestHash(testHash);
             }
 
             return logger;
         }
 
-        public static string CurrentTestHash()
+        static string CurrentTestHash()
         {
             using (SHA256 mySHA256 = SHA256.Create())
             {
@@ -135,13 +128,8 @@ namespace Halibut.Tests.Support
 
                 var testName = TestContext.CurrentContext.Test.Name;
 
-                if (!TraceLogFiles.TryGetValue(testName, out var traceLogFilePath))
-                    throw new Exception($"Could not find trace log path for test '{testName}'");
-
-                if (!File.Exists(traceLogFilePath))
-                {
-                    return;
-                }
+                if (!TraceLoggers.TryGetValue(testName, out var traceLogger))
+                    throw new Exception($"Could not find trace logger for test '{testName}'");
 
                 var output = new StringWriter();
                 if (logEvent.Properties.TryGetValue("SourceContext", out var sourceContext))
@@ -153,7 +141,7 @@ namespace Halibut.Tests.Support
                 _formatter.Format(logEvent, output);
 
                 var logLine = output.ToString().Trim();
-                File.AppendAllLines(traceLogFilePath, new[] { logLine });
+                traceLogger.WriteLine(logLine);
             }
         }
     }
