@@ -19,6 +19,26 @@ namespace Halibut.Tests
     {
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
+        public async Task ThisWillAlwaysFail_ShouldKeepTraceLogs(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
+                
+                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
+                {
+                    (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+                }
+            }
+
+            Assert.Fail();
+        }
+        
+        [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
