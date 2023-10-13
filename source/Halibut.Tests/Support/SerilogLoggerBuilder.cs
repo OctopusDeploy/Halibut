@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using NUnit.Framework;
@@ -50,7 +51,7 @@ namespace Halibut.Tests.Support
         public ILogger Build()
         {
             // In teamcity we need to know what test the log is for, since we can find hung builds and only have a single file containing all log messages.
-            var testName = TestContext.CurrentContext.Test.Name;
+            var testName = TestContext.CurrentContext.Test.FullName;
             var testHash = CurrentTestHash();
             var logger = Logger.ForContext("TestHash", testHash);
 
@@ -68,7 +69,7 @@ namespace Halibut.Tests.Support
         {
             using (SHA256 mySHA256 = SHA256.Create())
             {
-                return Convert.ToBase64String(mySHA256.ComputeHash(TestContext.CurrentContext.Test.Name.GetUTF8Bytes()))
+                return Convert.ToBase64String(mySHA256.ComputeHash(TestContext.CurrentContext.Test.FullName.GetUTF8Bytes()))
                     .Replace("=", "")
                     .Replace("+", "")
                     .Replace("/", "")
@@ -126,7 +127,7 @@ namespace Halibut.Tests.Support
                 if (logEvent == null)
                     throw new ArgumentNullException(nameof(logEvent));
 
-                var testName = TestContext.CurrentContext.Test.Name;
+                var testName = TestContext.CurrentContext.Test.FullName;
 
                 if (!TraceLoggers.TryGetValue(testName, out var traceLogger))
                     throw new Exception($"Could not find trace logger for test '{testName}'");
