@@ -14,10 +14,10 @@ namespace Halibut.ServiceModel
         public DelegateServiceFactory Register<TContract>(Func<TContract> implementation)
         {
             var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
+            services.Add(serviceType.GetGenericQualifiedTypeName(), () => implementation());
             lock (serviceTypes)
             {
-                serviceTypes.Add(serviceType);    
+                serviceTypes.Add(serviceType);
             }
 
             return this;
@@ -26,9 +26,9 @@ namespace Halibut.ServiceModel
         public DelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
         {
             AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<TContract, TAsyncContract>();
-            
+
             var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
+            services.Add(serviceType.GetGenericQualifiedTypeName(), () => implementation());
             lock (serviceTypes)
             {
                 serviceTypes.Add(serviceType);
@@ -58,14 +58,14 @@ namespace Halibut.ServiceModel
             var service = serviceBuilder();
             return new Lease(service);
         }
-        
+
         public IReadOnlyList<Type> RegisteredServiceTypes
         {
             get
             {
                 lock (serviceTypes)
                 {
-                    return serviceTypes.ToList();    
+                    return serviceTypes.ToList();
                 }
             }
         }

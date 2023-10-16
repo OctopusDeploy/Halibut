@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Halibut.Util;
 
 namespace Halibut.Transport.Caching
 {
@@ -22,7 +23,7 @@ namespace Halibut.Transport.Caching
         {
             if (!string.IsNullOrWhiteSpace(prefix)) return $"{prefix}{LinkChar}";
 
-            var typeName = methodInfo.DeclaringType?.Name;
+            var typeName = methodInfo.DeclaringType?.GetGenericQualifiedTypeName();
             var methodName = methodInfo.Name;
 
             return $"{typeName}{LinkChar}{methodName}{LinkChar}";

@@ -17,11 +17,11 @@ namespace Halibut.Transport.Protocol
             {
                 foreach (var method in serviceType.GetHalibutServiceMethods())
                 {
-                    RegisterType(method.ReturnType, $"{serviceType.Name}.{method.Name}:{method.ReturnType.Name}", false);
+                    RegisterType(method.ReturnType, $"{serviceType.GetGenericQualifiedTypeName()}.{method.Name}:{method.ReturnType.Name}", false);
 
                     foreach (var param in method.GetParameters())
                     {
-                        RegisterType(param.ParameterType,$"{serviceType.Name}.{method.Name}(){param.Name}:{param.ParameterType.Name}", false);
+                        RegisterType(param.ParameterType,$"{serviceType.GetGenericQualifiedTypeName()}.{method.Name}(){param.Name}:{param.ParameterType.Name}", false);
                     }
                 }
             }
@@ -58,7 +58,7 @@ namespace Halibut.Transport.Protocol
 
             foreach (var sub in SubTypesFor(type))
             {
-                RegisterType(sub, $"{path}<{sub.Name}>", ignoreObject);
+                RegisterType(sub, $"{path}<{sub.GetGenericQualifiedTypeName()}>", ignoreObject);
             }
         }
 
@@ -80,6 +80,18 @@ namespace Halibut.Transport.Protocol
                 {
                     yield return t;
                 }
+            }
+
+            if (type.IsAbstract)
+            {
+                var derivedTypes = AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(asm => !asm.IsDynamic)
+                    .SelectMany(asm => asm.GetExportedTypes())
+                    .Where(t => !t.IsAbstract)
+                    .Where(type.IsAssignableFrom);
+
+                foreach (var derivedType in derivedTypes)
+                    yield return derivedType;
             }
         }
 

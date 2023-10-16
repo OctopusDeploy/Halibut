@@ -37,5 +37,13 @@ namespace Halibut.Util
 
             return true;
         }
+
+        public static string GetGenericQualifiedTypeName(this Type type)
+        {
+            return !type.IsGenericType
+                ? type.Name
+                // MyService`2[string,int] or MyService`2[string,MyType`1[bool]]
+                : $"{type.Name}[{string.Join(",", type.GenericTypeArguments.Select(GetGenericQualifiedTypeName))}]";
+        }
     }
 }
