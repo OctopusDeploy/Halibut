@@ -14,3 +14,4 @@ using Xunit;
 [assembly: TestTimeout]
 [assembly: CustomLevelOfParallelism]
 [assembly: TestFramework("Halibut.Tests.Util." + nameof(ParallelTestFramework), "Halibut.Tests")]
+[assembly: CollectionBehavior(MaxParallelThreads = 2)]
