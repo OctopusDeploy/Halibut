@@ -1,10 +1,11 @@
 using System;
 using Octopus.TestPortForwarder;
 using Serilog;
+using Xunit.Abstractions;
 
 namespace Halibut.Tests.Support.TestCases
 {
-    public class NetworkConditionTestCase
+    public class NetworkConditionTestCase : IXunitSerializable
     {
         public static NetworkConditionTestCase[] All => new[]
         {
@@ -16,17 +17,17 @@ namespace Halibut.Tests.Support.TestCases
         };
 
         public static NetworkConditionTestCase NetworkConditionPerfect = 
-            new (null, 
+            new (0, 
                 "Perfect", 
                 "Perfect");
 
         public static NetworkConditionTestCase NetworkCondition20MsLatency = 
-            new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build(), 
+            new (1, 
                 "20ms SendDelay",
                 "20msLatency");
 
         public static NetworkConditionTestCase NetworkCondition20MsLatencyWithLastByteArrivingLate =
-            new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).WithNumberOfBytesToDelaySending(1).Build(),
+            new (2,
                 "20ms SendDelay last byte arrives late",
                 "20msLatency&LastByteLate");
 
@@ -38,15 +39,36 @@ namespace Halibut.Tests.Support.TestCases
         //    new ((i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).WithNumberOfBytesToDelaySending(3).Build(),
         //        "20ms send delay with last 3 bytes arriving late");
 
-        public Func<int, ILogger, PortForwarder>? PortForwarderFactory { get; }
-
-        public string NetworkConditionDescription { get; }
-        
-        public string ShortNetworkConditionDescription { get; }
-
-        public NetworkConditionTestCase(Func<int, ILogger, PortForwarder>? portForwarderFactory, string networkConditionDescription, string shortNetworkConditionDescription)
+        //TODO: Make nicer.
+        int factory;
+        public Func<int, ILogger, PortForwarder>? PortForwarderFactory
         {
-            PortForwarderFactory = portForwarderFactory;
+            get
+            {
+                switch (factory)
+                {
+                    case 1:
+                        return (i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).Build();
+                    case 2:
+                        return (i, logger) => PortForwarderBuilder.ForwardingToLocalPort(i, logger).WithSendDelay(TimeSpan.FromMilliseconds(20)).WithNumberOfBytesToDelaySending(1).Build();
+                }
+
+                return null;
+            }
+        }
+
+        public string NetworkConditionDescription { get; private set; }
+        
+        public string ShortNetworkConditionDescription { get; private set; }
+
+        public NetworkConditionTestCase()
+        {
+            
+        }
+
+        public NetworkConditionTestCase(int factory, string networkConditionDescription, string shortNetworkConditionDescription)
+        {
+            this.factory = factory;
 
             NetworkConditionDescription = networkConditionDescription;
             ShortNetworkConditionDescription = shortNetworkConditionDescription;
@@ -60,6 +82,20 @@ namespace Halibut.Tests.Support.TestCases
         public string ToShortString()
         {
             return $"Net: '{ShortNetworkConditionDescription}'";
+        }
+
+        public void Deserialize(IXunitSerializationInfo info)
+        {
+            factory = info.GetValue<int>(nameof(factory));
+            NetworkConditionDescription = info.GetValue<string>(nameof(NetworkConditionDescription));
+            ShortNetworkConditionDescription = info.GetValue<string>(nameof(ShortNetworkConditionDescription));
+        }
+
+        public void Serialize(IXunitSerializationInfo info)
+        {
+            info.AddValue(nameof(factory), factory);
+            info.AddValue(nameof(NetworkConditionDescription), NetworkConditionDescription);
+            info.AddValue(nameof(ShortNetworkConditionDescription), ShortNetworkConditionDescription);
         }
     }
 }

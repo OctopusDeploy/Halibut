@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Util;
@@ -26,16 +27,16 @@ namespace Halibut.Tests.Support.TestCases
             this.networkConditionTestCases = networkConditionTestCases.Distinct().ToArray();
             this.forceClientProxyTypes = forceClientProxyTypes.Distinct().ToArray();
         }
-
-        public IEnumerable<ClientAndServiceTestCase> Build()
+        
+        public IEnumerable<object[]> Build()
         {
-            return BuildDistinct();
+            return BuildTestCases()
+                .Distinct()
+                .Select(tc => new object[]{tc});
         }
 
-        List<ClientAndServiceTestCase> BuildDistinct()
+        IEnumerable<ClientAndServiceTestCase> BuildTestCases()
         {
-            var cases = new List<ClientAndServiceTestCase>();
-
             foreach (var clientServiceTestVersion in clientServiceTestVersions)
             {
                 foreach (var serviceConnectionType in serviceConnectionTypes)
@@ -59,19 +60,19 @@ namespace Halibut.Tests.Support.TestCases
                             
                             if (!forceClientProxyTypes.Any())
                             {
-                                cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase));
+                                yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase);
                             }
                             else
                             {
                                 if (clientServiceTestVersion.IsPreviousClient())
                                 {
-                                    cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase));
+                                    yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase);
                                 }
                                 else
                                 {
                                     foreach (var forceClientProxyType in forceClientProxyTypes)
                                     {
-                                        cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType, serviceAsyncHalibutFeatureTestCase));
+                                        yield return new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType, serviceAsyncHalibutFeatureTestCase);
                                     }
                                 }
                             }
@@ -79,10 +80,6 @@ namespace Halibut.Tests.Support.TestCases
                     }
                 }
             }
-
-            var distinct = cases.Distinct().ToList();
-
-            return distinct;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using Xunit.Abstractions;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -22,11 +23,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 #endif
     }
 
-    public class HalibutVersion : IEquatable<HalibutVersion>
+    public class HalibutVersion : IEquatable<HalibutVersion>, IXunitSerializable
     {
-        readonly Version pollingVersion;
-        readonly Version listeningVersion;
-        readonly Version pollingOverWebSocketVersion;
+        Version pollingVersion;
+        Version listeningVersion;
+        Version pollingOverWebSocketVersion;
+
+        public HalibutVersion()
+        {
+        }
 
         internal HalibutVersion(
             Version version,
@@ -76,6 +81,20 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 hashCode = (hashCode * 397) ^ pollingOverWebSocketVersion.GetHashCode();
                 return hashCode;
             }
+        }
+
+        public void Deserialize(IXunitSerializationInfo info)
+        {
+            pollingVersion = Version.Parse(info.GetValue<string>(nameof(pollingVersion)));
+            listeningVersion = Version.Parse(info.GetValue<string>(nameof(listeningVersion)));
+            pollingOverWebSocketVersion = Version.Parse(info.GetValue<string>(nameof(pollingOverWebSocketVersion)));
+        }
+
+        public void Serialize(IXunitSerializationInfo info)
+        {
+            info.AddValue(nameof(pollingVersion), pollingVersion.ToString());
+            info.AddValue(nameof(listeningVersion), listeningVersion.ToString());
+            info.AddValue(nameof(pollingOverWebSocketVersion), pollingOverWebSocketVersion.ToString());
         }
     }
 

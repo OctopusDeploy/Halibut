@@ -1,32 +1,37 @@
 using System;
-using System.Collections.Generic;
 using System.Text;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Util;
+using Xunit.Abstractions;
 
 namespace Halibut.Tests.Support.TestCases
 {
-    public class ClientAndServiceTestCase
+    public class ClientAndServiceTestCase : IXunitSerializable
     {
-        public ClientAndServiceTestVersion ClientAndServiceTestVersion { get; }
+        public ClientAndServiceTestVersion ClientAndServiceTestVersion { get; private set; }
 
-        public NetworkConditionTestCase NetworkConditionTestCase { get; }
+        public NetworkConditionTestCase NetworkConditionTestCase { get; private set; }
 
-        public ServiceConnectionType ServiceConnectionType { get; }
+        public ServiceConnectionType ServiceConnectionType { get; private set; }
 
-        public AsyncHalibutFeature ServiceAsyncHalibutFeature { get; }
+        public AsyncHalibutFeature ServiceAsyncHalibutFeature { get; private set; }
 
         /// <summary>
         ///     If running a test which wants to make the same or similar calls multiple time, this has a "good"
         ///     number of times to do that. It takes care of generally not picking such a high number the tests
         ///     don't take a long time.
         /// </summary>
-        public int RecommendedIterations { get; }
+        public int RecommendedIterations { get; private set; }
 
-        public ForceClientProxyType? ForceClientProxyType { get; }
+        public ForceClientProxyType? ForceClientProxyType { get; private set; }
         public SyncOrAsync SyncOrAsync => ForceClientProxyType.ToSyncOrAsync();
+        
+        public ClientAndServiceTestCase()
+        {
+        }
 
-        public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType,
+        public ClientAndServiceTestCase(
+            ServiceConnectionType serviceConnectionType,
             NetworkConditionTestCase networkConditionTestCase,
             int recommendedIterations,
             ClientAndServiceTestVersion clientAndServiceTestVersion,
@@ -113,6 +118,26 @@ namespace Halibut.Tests.Support.TestCases
         public override int GetHashCode()
         {
             return ToString().GetHashCode();
+        }
+
+        public void Deserialize(IXunitSerializationInfo info)
+        {
+            ClientAndServiceTestVersion = info.GetValue<ClientAndServiceTestVersion>(nameof(ClientAndServiceTestVersion));
+            NetworkConditionTestCase = info.GetValue<NetworkConditionTestCase>(nameof(NetworkConditionTestCase));
+            ServiceConnectionType = info.GetValue<ServiceConnectionType>(nameof(ServiceConnectionType));
+            ServiceAsyncHalibutFeature = info.GetValue<AsyncHalibutFeature>(nameof(ServiceAsyncHalibutFeature));
+            RecommendedIterations = info.GetValue<int>(nameof(RecommendedIterations));
+            ForceClientProxyType = info.GetValue<ForceClientProxyType>(nameof(ForceClientProxyType));
+        }
+
+        public void Serialize(IXunitSerializationInfo info)
+        {
+            info.AddValue(nameof(ClientAndServiceTestVersion), ClientAndServiceTestVersion);
+            info.AddValue(nameof(NetworkConditionTestCase), NetworkConditionTestCase);
+            info.AddValue(nameof(ServiceConnectionType), ServiceConnectionType);
+            info.AddValue(nameof(ServiceAsyncHalibutFeature), ServiceAsyncHalibutFeature);
+            info.AddValue(nameof(RecommendedIterations), RecommendedIterations);
+            info.AddValue(nameof(ForceClientProxyType), ForceClientProxyType);
         }
     }
 }
