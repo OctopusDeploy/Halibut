@@ -25,7 +25,7 @@ class Build : NukeBuild
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
-    [Solution(GenerateProjects = true)] 
+    [Solution(GenerateProjects = true)]
     readonly Solution Solution;
 
     [Parameter("Whether to auto-detect the branch name - this is okay for a local build, but should not be used under CI.")]
@@ -46,6 +46,18 @@ class Build : NukeBuild
     static AbsolutePath SourceDirectory => RootDirectory / "source";
     static AbsolutePath ArtifactsDirectory => RootDirectory / "artifacts";
     static AbsolutePath LocalPackagesDirectory => RootDirectory / ".." / "LocalPackages";
+
+    static readonly string Timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+
+    string FullSemVer =>
+        !IsLocalBuild
+            ? OctoVersionInfo.FullSemVer
+            : $"{OctoVersionInfo.FullSemVer}-{Timestamp}";
+
+    string NuGetVersion =>
+        !IsLocalBuild
+            ? OctoVersionInfo.NuGetVersion
+            : $"{OctoVersionInfo.NuGetVersion}-{Timestamp}";
 
     Target Clean => _ => _
         .Executes(() =>
@@ -80,7 +92,7 @@ class Build : NukeBuild
                     .SetProjectFile(Solution)
                     .SetConfiguration(Configuration)
                     .SetFramework(framework)
-                    .SetVersion(OctoVersionInfo.FullSemVer)
+                    .SetVersion(FullSemVer)
                     .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
                     .EnableNoRestore());
             });
@@ -110,7 +122,7 @@ class Build : NukeBuild
 
                     DotMemoryUnit($"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} {frameworkOption} --no-build");
                 }
-                
+
                 DotNetTest(_ => _
                     .SetProjectFile(Solution.Halibut_Tests)
                     .SetConfiguration(Configuration)
@@ -125,7 +137,7 @@ class Build : NukeBuild
                     // On windows the dump collecting utility appears to be missing and so nothing is collected.
                     // Setting high means we will have time to get in and collect a dump manually.
                     // Note that the teamcity agent timeout still applies, and if set lower than this value will result
-                    // in the build being stopped.  
+                    // in the build being stopped.
                     .SetBlameHangTimeout(TimeSpan.FromHours(3).TotalMilliseconds.ToString())
                     .SetBlameHangDumpType("full"));
 
@@ -138,7 +150,7 @@ class Build : NukeBuild
         {
             DotNetPack(_ => _
                 .SetProject(Solution.Halibut)
-                .SetVersion(OctoVersionInfo.FullSemVer)
+                .SetVersion(FullSemVer)
                 .SetConfiguration(Configuration)
                 .SetOutputDirectory(ArtifactsDirectory)
                 .EnableNoBuild()
@@ -155,7 +167,7 @@ class Build : NukeBuild
             ArtifactsDirectory.GlobFiles("*.nupkg")
                 .ForEach(package => CopyFileToDirectory(package, LocalPackagesDirectory, FileExistsPolicy.Overwrite));
         });
-    
+
     [PublicAPI]
     Target PackTestPortForwarder => _ => _
         .DependsOn(Clean)
@@ -163,7 +175,7 @@ class Build : NukeBuild
         {
             DotNetPack(_ => _
                 .SetProject(Solution.Octopus_TestPortForwarder)
-                .SetVersion(OctoVersionInfo.FullSemVer)
+                .SetVersion(FullSemVer)
                 .SetConfiguration(Configuration)
                 .SetOutputDirectory(ArtifactsDirectory)
                 .SetVerbosity(DotNetVerbosity.Normal));
