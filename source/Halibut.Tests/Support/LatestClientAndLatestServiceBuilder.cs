@@ -35,7 +35,7 @@ namespace Halibut.Tests.Support
         ServiceFactoryBuilder serviceFactoryBuilder = new();
         IServiceFactory? serviceFactory;
         readonly CertAndThumbprint serviceCertAndThumbprint;
-        string clientTrustsThumbprint; 
+        string clientTrustsThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint;
         string serviceTrustsThumbprint;
         ForceClientProxyType? forceClientProxyType;
@@ -105,7 +105,7 @@ namespace Halibut.Tests.Support
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
         }
-        
+
         /// <summary>
         ///     Ie no tentacle.
         ///     In the case of listening, a TCPListenerWhichKillsNewConnections will be created. This will cause connections to
@@ -122,7 +122,7 @@ namespace Halibut.Tests.Support
         {
             return NoService();
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithPollingClients(IEnumerable<Uri> pollingClientUris)
         {
             createClient = false;
@@ -137,13 +137,13 @@ namespace Halibut.Tests.Support
             this.clientStreamFactory = streamFactory;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithClientStreamFactory(IStreamFactory clientStreamFactory)
         {
             this.clientStreamFactory = clientStreamFactory;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithServiceStreamFactory(IStreamFactory serviceStreamFactory)
         {
             this.serviceStreamFactory = serviceStreamFactory;
@@ -155,13 +155,13 @@ namespace Halibut.Tests.Support
             this.serviceConnectionsObserver = connectionsObserver;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithClientConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
             this.clientConnectionsObserver = connectionsObserver;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
@@ -183,7 +183,7 @@ namespace Halibut.Tests.Support
         public LatestClientAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
             serviceFactoryBuilder.WithService(implementation);
-            
+
             if (serviceFactory != null)
             {
                 if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
@@ -202,7 +202,7 @@ namespace Halibut.Tests.Support
         public LatestClientAndLatestServiceBuilder WithAsyncService<TContract, TClientContract>(Func<TClientContract> implementation)
         {
             serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);
-            
+
             if (serviceFactory != null)
             {
                 if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
@@ -281,12 +281,18 @@ namespace Halibut.Tests.Support
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
-        
+
         public LatestClientAndLatestServiceBuilder WithCachingService()
         {
             return this.WithService<ICachingService>(() => new CachingService());
         }
 
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithGenericService<T>() => WithGenericService<T>();
+
+        public LatestClientAndLatestServiceBuilder WithGenericService<T>()
+        {
+            return this.WithService<IGenericService<T>>(() => new GenericService<T>());
+        }
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
         {
             return WithProxy();
@@ -326,23 +332,23 @@ namespace Halibut.Tests.Support
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             this.halibutLogLevel = halibutLogLevel;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder RecordingClientLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
         {
             inMemoryLoggers = new ConcurrentDictionary<string, ILog>();
             this.clientInMemoryLoggers = inMemoryLoggers;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder RecordingServiceLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
         {
-            inMemoryLoggers = new ConcurrentDictionary<string, ILog>(); 
+            inMemoryLoggers = new ConcurrentDictionary<string, ILog>();
             this.serviceInMemoryLoggers = inMemoryLoggers;
             return this;
         }
@@ -352,7 +358,7 @@ namespace Halibut.Tests.Support
             clientOnUnauthorizedClientConnect = onUnauthorizedClientConnect;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithClientTrustProvider(ITrustProvider trustProvider)
         {
             clientTrustProvider = trustProvider;
@@ -364,7 +370,7 @@ namespace Halibut.Tests.Support
             clientTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithServiceTrustingTheWrongCertificate()
         {
             serviceTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
@@ -387,7 +393,7 @@ namespace Halibut.Tests.Support
             this.forceClientProxyType = forceClientProxyType;
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithClientRpcObserver(IRpcObserver? clientRpcObserver)
         {
             this.clientRpcObserver = clientRpcObserver;
@@ -403,7 +409,7 @@ namespace Halibut.Tests.Support
         {
             var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndLatestServiceBuilder>();
             CancellationTokenSource cancellationTokenSource = new();
-            
+
             serviceFactory ??= serviceFactoryBuilder.Build();
             var octopusLogFactory = BuildClientLogger();
 
@@ -431,7 +437,7 @@ namespace Halibut.Tests.Support
                 client = clientBuilder.Build();
                 client.Trust(clientTrustsThumbprint);
             }
-            
+
 
             HalibutRuntime? service = null;
             if (createService)
@@ -462,7 +468,7 @@ namespace Halibut.Tests.Support
 
             Uri serviceUri;
             Uri? clientUri = null;
-            
+
             if (ServiceConnectionType == ServiceConnectionType.Polling)
             {
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
@@ -473,11 +479,11 @@ namespace Halibut.Tests.Support
                     var clientListenPort = client!.Listen();
 
                     portForwarder = portForwarderFactory?.Invoke(clientListenPort);
-                    
+
                     clientUri = new Uri($"https://localhost:{portForwarder?.ListeningPort ?? clientListenPort}");
                     clientUrisToPoll.Add(clientUri);
                 }
-                
+
                 if (service != null)
                 {
                     foreach (var clientUriToPoll in clientUrisToPoll)
@@ -492,7 +498,7 @@ namespace Halibut.Tests.Support
             else if (ServiceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
                 serviceUri = new Uri("poll://SQ-TENTAPOLL");
-                
+
                 var clientUrsToPoll = pollingClientUris.ToList();
                 if (createClient)
                 {
@@ -595,7 +601,7 @@ namespace Halibut.Tests.Support
             )
                 .ToCachingLogFactory();
         }
-        
+
         ILogFactory BuildServiceLogger()
         {
             if (serviceInMemoryLoggers == null)
@@ -692,7 +698,7 @@ namespace Halibut.Tests.Support
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TClientService>(forceClientProxyType, Client, serviceEndpoint);
             }
-            
+
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>()
             {
                 return CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(_ => { });
@@ -704,7 +710,7 @@ namespace Halibut.Tests.Support
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(forceClientProxyType, Client, serviceEndpoint);
             }
-            
+
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
             {
                 return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);

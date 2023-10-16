@@ -146,9 +146,10 @@ class Build : NukeBuild
                 .SetVerbosity(DotNetVerbosity.Normal));
         });
 
+    [PublicAPI]
     Target CopyToLocalPackages => _ => _
         .OnlyWhenStatic(() => IsLocalBuild)
-        .TriggeredBy(Pack)
+        .DependsOn(Pack)
         .Executes(() =>
         {
             EnsureExistingDirectory(LocalPackagesDirectory);

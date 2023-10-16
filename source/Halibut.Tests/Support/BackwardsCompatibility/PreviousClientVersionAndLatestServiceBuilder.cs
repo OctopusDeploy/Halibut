@@ -117,6 +117,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             throw new Exception("Caching service is not supported, when testing on the old Client. Since the old client is on external CLR which does not have the new caching attributes which this service is used to test.");
         }
 
+        public IClientAndServiceBuilder WithGenericService<T>()
+        {
+            throw new NotSupportedException("Generic services are not supported when testing the old client");
+        }
+
         public PreviousClientVersionAndLatestServiceBuilder WithMultipleParametersTestService(IMultipleParametersTestService multipleParametersTestService)
         {
             this.multipleParametersTestService = multipleParametersTestService;
@@ -128,13 +133,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.complexObjectService = complexObjectService;
             return this;
         }
-        
+
         public PreviousClientVersionAndLatestServiceBuilder WithLockService(ILockService lockService)
         {
             this.lockService = lockService;
             return this;
         }
-        
+
         public PreviousClientVersionAndLatestServiceBuilder WithCountingService(ICountingService countingService)
         {
             this.countingService = countingService;
@@ -185,7 +190,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             return this;
         }
-        
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
@@ -202,7 +207,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return await Build(cancellationToken);
         }
-        
+
         public PreviousClientVersionAndLatestServiceBuilder NoService()
         {
             throw new NotImplementedException();
@@ -212,7 +217,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return NoService();
         }
-        
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
         {
             throw new Exception("Not supported");
@@ -240,7 +245,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .WithLogFactory(new TestContextLogCreator("ProxyClient", halibutLogLevel).ToCachingLogFactory())
                 .WithAsyncHalibutFeatureEnabled()
                 .Build();
-            
+
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
 
             var serviceFactory = new DelegateServiceFactory()
@@ -464,9 +469,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 {
                     throw new Exception($"Unsupported, since types within {typeof(TClientService)} would not actually be passed on to the remote process which holds the actual client under test.", e);
                 }
-                
+
                 var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, Client.TimeoutsAndLimits);
-                
+
                 return ProxyClient.CreateAsyncClient<TService, TClientService>(serviceEndpoint);
             }
 
@@ -479,12 +484,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 return CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(_ => { });
             }
-            
+
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 throw new NotSupportedException("Not supported since the options can not be passed to the external binary.");
             }
-            
+
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
             {
                 return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
