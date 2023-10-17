@@ -4,13 +4,13 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
 using Halibut.Tests.Support.Logging;
-using NUnit.Framework;
+using Xunit;
 
 namespace Halibut.Tests.Diagnostics
 {
     public class CachingLogFactoryFixture
     {
-        [Test]
+        [Fact]
         public void TheSameILogIsReturnedForTheSamePrefix()
         {
             var cachingLogFactory = new InMemoryConnectionLogCreator().ToCachingLogFactory();
@@ -20,7 +20,7 @@ namespace Halibut.Tests.Diagnostics
             ReferenceEquals(first, second).Should().BeTrue();
         }
 
-        [Test]
+        [Fact]
         public void TheSameILogIsReturnedForTheSameEndPoint()
         {
             var cachingLogFactory = new InMemoryConnectionLogCreator().ToCachingLogFactory();
@@ -30,7 +30,7 @@ namespace Halibut.Tests.Diagnostics
             ReferenceEquals(first, second).Should().BeTrue();
         }
 
-        [Test]
+        [Fact]
         public void TheSameILogIsReturnedForTheSameEndPointAndPrefix()
         {
             var cachingLogFactory = new InMemoryConnectionLogCreator().ToCachingLogFactory();
@@ -40,7 +40,7 @@ namespace Halibut.Tests.Diagnostics
             ReferenceEquals(first, second).Should().BeTrue();
         }
 
-        [Test]
+        [Fact]
         public void ADifferentILogIsReturnedForTheDifferentPrefixes()
         {
             var cachingLogFactory = new InMemoryConnectionLogCreator().ToCachingLogFactory();
@@ -50,7 +50,7 @@ namespace Halibut.Tests.Diagnostics
             ReferenceEquals(first, second).Should().BeFalse();
         }
 
-        [Test]
+        [Fact]
         public void ADifferentILogIsReturnedForTheDifferentEndPoints()
         {
             var cachingLogFactory = new InMemoryConnectionLogCreator().ToCachingLogFactory();
@@ -60,7 +60,7 @@ namespace Halibut.Tests.Diagnostics
             ReferenceEquals(first, second).Should().BeFalse();
         }
 
-        [Test]
+        [Fact]
         public void CachingAInMemoryConnectionLogMeansTheLogsAreRetained()
         {
             var cachingLogFactory = new InMemoryConnectionLogCreator().ToCachingLogFactory();
@@ -83,7 +83,7 @@ namespace Halibut.Tests.Diagnostics
         /// <summary>
         ///     Something similar to what we actually want to do, so lets test it here.
         /// </summary>
-        [Test]
+        [Fact]
         public void CachingWithAggregateLogWriterLogCreatorAndInMemoryConnectionLogCreatorWorksAsExpected()
         {
             var logWriter = new InMemoryLogWriter();
