@@ -79,9 +79,9 @@ namespace Halibut.Tests.Support
 
         public class NonProgressNUnitSink : ILogEventSink
         {
-            private readonly MessageTemplateTextFormatter _formatter;
+            readonly MessageTemplateTextFormatter formatter;
 
-            public NonProgressNUnitSink(MessageTemplateTextFormatter formatter) => _formatter = formatter != null ? formatter : throw new ArgumentNullException(nameof(formatter));
+            public NonProgressNUnitSink(MessageTemplateTextFormatter formatter) => this.formatter = formatter;
 
             static bool IsForcingContextWrite = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("Force_Test_Context_Write"));
 
@@ -100,7 +100,7 @@ namespace Halibut.Tests.Support
                     logEvent.AddOrUpdateProperty(new LogEventProperty("ShortContext", new ScalarValue(context)));
                 }
 
-                _formatter.Format(logEvent, output);
+                formatter.Format(logEvent, output);
                 // This is the change, call this instead of: TestContext.Progress
 
                 var logLine = output.ToString();
@@ -118,9 +118,9 @@ namespace Halibut.Tests.Support
 
         public class TraceLogsForFailedTestsSink : ILogEventSink
         {
-            private readonly MessageTemplateTextFormatter _formatter;
+            readonly MessageTemplateTextFormatter formatter;
 
-            public TraceLogsForFailedTestsSink(MessageTemplateTextFormatter formatter) => _formatter = formatter != null ? formatter : throw new ArgumentNullException(nameof(formatter));
+            public TraceLogsForFailedTestsSink(MessageTemplateTextFormatter formatter) => this.formatter = formatter;
 
             public void Emit(LogEvent logEvent)
             {
@@ -139,7 +139,7 @@ namespace Halibut.Tests.Support
                     logEvent.AddOrUpdateProperty(new LogEventProperty("ShortContext", new ScalarValue(context)));
                 }
 
-                _formatter.Format(logEvent, output);
+                formatter.Format(logEvent, output);
 
                 var logLine = output.ToString().Trim();
                 traceLogger.WriteLine(logLine);
