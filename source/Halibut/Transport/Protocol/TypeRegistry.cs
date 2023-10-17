@@ -81,6 +81,20 @@ namespace Halibut.Transport.Protocol
                     yield return t;
                 }
             }
+
+            if (type.IsInterface || type.IsAbstract)
+            {
+                var derivedTypes = AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(asm => !asm.IsDynamic)
+                    .SelectMany(asm => asm.GetExportedTypes())
+                    .Where(t => !t.IsAbstract)
+                    .Where(type.IsAssignableFrom);
+
+                foreach (var derivedType in derivedTypes)
+                {
+                    yield return derivedType;
+                }
+            }
         }
 
         public bool IsInAllowedTypes(Type type)
