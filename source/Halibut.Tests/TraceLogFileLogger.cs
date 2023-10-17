@@ -20,8 +20,16 @@ namespace Halibut.Tests
 
         public bool CopyLogFileToArtifacts()
         {
+            // The current directory is expected to have the following structure
+            // (w/ variance depending on Debug/Release and dotnet framework used (net6.0, net48 etc):
+            //
+            // <REPO ROOT>\source\Halibut.Tests\bin\Debug\net6.0
+            //
+            // Therefore we go up 5 levels to get to the <REPO ROOT> directory,
+            // from which point we can navigate to the artifacts directory.
             var currentDirectory = Directory.GetCurrentDirectory();
             var rootDirectory = new DirectoryInfo(currentDirectory).Parent.Parent.Parent.Parent.Parent;
+            
             var traceLogsDirectory = rootDirectory.CreateSubdirectory("artifacts").CreateSubdirectory("trace-logs");
             var fileName = $"{testHash}.tracelog";
 
