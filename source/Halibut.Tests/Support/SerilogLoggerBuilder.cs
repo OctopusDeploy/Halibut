@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using NUnit.Framework;
 using Serilog;
@@ -15,6 +16,7 @@ namespace Halibut.Tests.Support
     {
         static readonly ILogger Logger;
         static readonly ConcurrentDictionary<string, TraceLogFileLogger> TraceLoggers = new();
+        static readonly ConcurrentBag<string> HasLoggedTestHash = new();
 
         TraceLogFileLogger? traceFileLogger;
 
@@ -55,10 +57,15 @@ namespace Halibut.Tests.Support
             var testHash = CurrentTestHash();
             var logger = Logger.ForContext("TestHash", testHash);
 
+            if (!HasLoggedTestHash.Contains(testName))
+            {
+                HasLoggedTestHash.Add(testName);
+                logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {testHash}");
+            }
+
             if (traceFileLogger != null)
             {
                 TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
-                logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {testHash}");
                 traceFileLogger.SetTestHash(testHash);
             }
 
