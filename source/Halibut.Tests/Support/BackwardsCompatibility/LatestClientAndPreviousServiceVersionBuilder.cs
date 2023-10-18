@@ -109,10 +109,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
-        
+
+
         public IClientAndServiceBuilder WithCachingService()
         {
             availableServices.HasCachingService = true;
+            return this;
+        }
+
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithGenericService<T>() => WithGenericService<T>();
+        public IClientAndServiceBuilder WithGenericService<T>()
+        {
+            availableServices.HasGenericService = true;
             return this;
         }
 
@@ -156,7 +164,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return NoService();
         }
-        
+
         IClientAndServiceBuilder IClientAndServiceBuilder.WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
         {
             return WithForcingClientProxyType(forceClientProxyType);
@@ -177,7 +185,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return await Build(cancellationToken);
         }
-        
+
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndPreviousServiceVersionBuilder>();
@@ -368,12 +376,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 modifyServiceEndpoint(serviceEndpoint);
                 return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TClientService>(forceClientProxyType, Client, serviceEndpoint);
             }
-            
+
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>()
             {
                 return CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(_ => { });
             }
-            
+
             public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = ServiceEndPoint;
@@ -389,7 +397,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public async ValueTask DisposeAsync()
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
-                
+
                 logger.Information("****** ****** ****** ****** ****** ****** ******");
                 logger.Information("****** CLIENT AND SERVICE DISPOSE CALLED  ******");
                 logger.Information("*     Subsequent errors should be ignored      *");

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Util;
 
 namespace Halibut.Tests.Util
 {
@@ -16,7 +17,7 @@ namespace Halibut.Tests.Util
         public NoSanityCheckingDelegateServiceFactory Register<TContract>(Func<TContract> implementation)
         {
             var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
+            services.Add(serviceType.GetGenericQualifiedTypeName(), () => implementation());
             lock (serviceTypes)
             {
                 serviceTypes.Add(serviceType);
@@ -28,7 +29,7 @@ namespace Halibut.Tests.Util
         public NoSanityCheckingDelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
         {
             var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
+            services.Add(serviceType.GetGenericQualifiedTypeName(), () => implementation());
             lock (serviceTypes)
             {
                 serviceTypes.Add(serviceType);

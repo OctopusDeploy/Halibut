@@ -5,6 +5,7 @@ using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut.ServiceModel
 {
@@ -72,13 +73,14 @@ namespace Halibut.ServiceModel
             var activityId = Guid.NewGuid();
 
             var method = ((MethodInfo) methodCall.MethodBase);
+            var contractTypeName = contractType.GetGenericQualifiedTypeName();
             var request = new RequestMessage
             {
-                Id = contractType.Name + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                Id = contractTypeName + "::" + method.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
                 ActivityId = activityId,
                 Destination = endPoint,
                 MethodName = method.Name,
-                ServiceName = contractType.Name,
+                ServiceName = contractTypeName,
                 Params = args
             };
             return request;
@@ -140,13 +142,14 @@ namespace Halibut.ServiceModel
         {
             var activityId = Guid.NewGuid();
 
+            var contractTypeName = contractType.GetGenericQualifiedTypeName();
             var request = new RequestMessage
             {
-                Id = contractType.Name + "::" + targetMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                Id = contractTypeName + "::" + targetMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
                 ActivityId = activityId,
                 Destination = endPoint,
                 MethodName = targetMethod.Name,
-                ServiceName = contractType.Name,
+                ServiceName = contractTypeName,
                 Params = args
             };
             return request;

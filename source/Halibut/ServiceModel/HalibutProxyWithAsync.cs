@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 
 namespace Halibut.ServiceModel
 {
@@ -22,10 +23,10 @@ namespace Halibut.ServiceModel
         ILog logger;
 
         public void Configure(
-            MessageRouter messageRouter, 
-            Type contractType, 
+            MessageRouter messageRouter,
+            Type contractType,
             ServiceEndPoint endPoint,
-            ILog logger, 
+            ILog logger,
             CancellationToken cancellationToken)
         {
             this.messageRouter = messageRouter;
@@ -77,12 +78,12 @@ namespace Halibut.ServiceModel
             var response = await messageRouter(request, serviceMethod, requestCancellationTokens);
 
             EnsureNotError(response);
-            
+
             return (serviceMethod, response.Result);
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="asyncMethod">The async client method called, used in the call id.</param>
         /// <param name="targetMethod">The method to actually invoke</param>
@@ -92,13 +93,14 @@ namespace Halibut.ServiceModel
         {
             var activityId = Guid.NewGuid();
 
+            var contractTypeName = contractType.GetGenericQualifiedTypeName();
             var request = new RequestMessage
             {
-                Id = contractType.Name + "::" + asyncMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
+                Id = contractTypeName + "::" + asyncMethod.Name + "[" + Interlocked.Increment(ref callId) + "] / " + activityId,
                 ActivityId = activityId,
                 Destination = endPoint,
                 MethodName = targetMethod.Name,
-                ServiceName = contractType.Name,
+                ServiceName = contractTypeName,
                 Params = args
             };
             return request;
