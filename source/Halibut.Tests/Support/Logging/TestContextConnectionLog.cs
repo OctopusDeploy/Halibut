@@ -4,7 +4,9 @@ using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogWriters;
 using Halibut.Logging;
+using Serilog.Events;
 using ILog = Halibut.Diagnostics.ILog;
+using LogEvent = Halibut.Diagnostics.LogEvent;
 
 namespace Halibut.Tests.Support.Logging
 {
@@ -44,7 +46,7 @@ namespace Halibut.Tests.Support.Logging
             {
                 new SerilogLoggerBuilder().Build()
                     .ForContext<TestContextConnectionLog>()
-                    .Information(string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logEventLogLevel, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name));
+                    .Write(GetSerilogLevel(logEvent), string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logEventLogLevel, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name));
             }
         }
 
@@ -62,6 +64,23 @@ namespace Halibut.Tests.Support.Logging
                     return LogLevel.Debug;
                 default:
                     return LogLevel.Info;
+            }
+        }
+
+        static LogEventLevel GetSerilogLevel(LogEvent logEvent)
+        {
+            switch (logEvent.Type)
+            {
+                case EventType.Error:
+                    return LogEventLevel.Error;
+                case EventType.Diagnostic:
+                case EventType.SecurityNegotiation:
+                case EventType.MessageExchange:
+                    return LogEventLevel.Verbose;
+                case EventType.OpeningNewConnection:
+                    return LogEventLevel.Debug;
+                default:
+                    return LogEventLevel.Information;
             }
         }
     }

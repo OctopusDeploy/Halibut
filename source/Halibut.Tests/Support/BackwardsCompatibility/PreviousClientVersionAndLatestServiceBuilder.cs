@@ -42,7 +42,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         IComplexObjectService complexObjectService = new ComplexObjectService();
         IReadDataStreamService readDataStreamService = new ReadDataStreamService();
         Func<int, PortForwarder>? portForwarderFactory;
-        LogLevel halibutLogLevel = LogLevel.Info;
+        LogLevel halibutLogLevel = LogLevel.Trace;
         bool withTentacleServices = false;
         ILockService lockService;
         ICountingService countingService;
