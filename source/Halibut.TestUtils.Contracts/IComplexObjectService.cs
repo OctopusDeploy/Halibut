@@ -8,6 +8,7 @@ namespace Halibut.TestUtils.Contracts
     {
         ComplexObjectMultipleDataStreams Process(ComplexObjectMultipleDataStreams request);
         ComplexObjectMultipleChildren Process(ComplexObjectMultipleChildren request);
+        ComplexObjectWithInheritance Process(ComplexObjectWithInheritance request);
     }
 
     public class ComplexObjectMultipleDataStreams
@@ -20,6 +21,13 @@ namespace Halibut.TestUtils.Contracts
     {
         public ComplexChild1 Child1;
         public ComplexChild2 Child2;
+    }
+
+    public class ComplexObjectWithInheritance
+    {
+        public IComplexChild Child1;
+        public ComplexChildBase Child2;
+
     }
 
     public class ComplexChild1
@@ -35,7 +43,37 @@ namespace Halibut.TestUtils.Contracts
         public ComplexEnum EnumPayload;
         public ISet<ComplexPair<DataStream>> ComplexPayloadSet;
     }
-    
+
+    public interface IComplexChild
+    {
+        string Name { get; }
+    }
+
+    public abstract class ComplexChildBase
+    {
+        public abstract string Description { get; }
+    }
+
+    public class ComplexInheritedChild1 : IComplexChild
+    {
+        public ComplexInheritedChild1(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+    }
+
+    public class ComplexInheritedChild2 : ComplexChildBase
+    {
+        public ComplexInheritedChild2(string description)
+        {
+            Description = description;
+        }
+
+        public override string Description { get; }
+    }
+
     public enum ComplexEnum
     {
         RequestValue1,
@@ -105,6 +143,15 @@ namespace Halibut.TestUtils.Contracts
                     EnumPayload = request.Child2.EnumPayload,
                     ComplexPayloadSet = request.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, ReadIntoNewDataStream(x.Payload))).ToHashSet()
                 }
+            };
+        }
+
+        public ComplexObjectWithInheritance Process(ComplexObjectWithInheritance request)
+        {
+            return new ComplexObjectWithInheritance
+            {
+                Child1 = new ComplexInheritedChild1(request.Child1.Name),
+                Child2 = new ComplexInheritedChild2(request.Child2.Description)
             };
         }
 

@@ -7,5 +7,6 @@ namespace Halibut.Tests.TestServices.Async
     {
         Task<ComplexObjectMultipleDataStreams> ProcessAsync(ComplexObjectMultipleDataStreams request);
         Task<ComplexObjectMultipleChildren> ProcessAsync(ComplexObjectMultipleChildren request);
+        Task<ComplexObjectWithInheritance> ProcessAsync(ComplexObjectWithInheritance request);
     }
 }

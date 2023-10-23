@@ -27,14 +27,14 @@ namespace Halibut.Tests
             {
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
                 (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
-                
+
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
                 }
             }
         }
-        
+
         [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task LargeMessages(ClientAndServiceTestCase clientAndServiceTestCase)
@@ -84,7 +84,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                
+
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
 
                 var data = new byte[1024 * 1024 + 15];
@@ -152,12 +152,12 @@ namespace Halibut.Tests
                 var stream = new MemoryStream(data);
 
                 var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-                
+
                 var dataStream = await clientAndServiceTestCase.SyncOrAsync
                     .WhenSync(() => DataStream.FromStream(stream, progressReported.Add, (i, token) => throw new Exception("Should be sync")))
                     .WhenAsync(() => Task.FromResult(DataStream.FromStream(stream,
                         i => throw new Exception("Wrong path it should be doing async calls"),
-                        async (i, token) => { 
+                        async (i, token) => {
                             await Task.CompletedTask;
                             progressReported.Add(i);
                         })
@@ -257,12 +257,42 @@ namespace Halibut.Tests
                 response.Child1.ListOfStreams.Select(x => x.ReadAsString()).ToList().Should().BeEquivalentTo(list);
                 response.Child1.DictionaryPayload.Should().NotBeSameAs(request.Child1.DictionaryPayload);
                 response.Child1.DictionaryPayload.Should().BeEquivalentTo(dictionary);
-                
+
                 response.Child2.Should().NotBeSameAs(request.Child2);
                 response.Child2.EnumPayload.Should().Be(enumValue);
                 response.Child2.ComplexPayloadSet.Should().NotBeSameAs(request.Child2.ComplexPayloadSet);
                 response.Child2.ComplexPayloadSet.Select(x => new ComplexPair<string>(x.EnumValue, x.Payload.ReadAsString())).ToHashSet().Should().BeEquivalentTo(set);
             }
+        }
+
+        [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        public async Task OctopusCanSendAndReceiveComplexObjects_WithInheritedChildren(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            const string childPayload1 = "Child Payload #1";
+            const string childPayload2 = "Child Payload #2";
+
+            await using var clientAndService = await clientAndServiceTestCase
+                .CreateTestCaseBuilder()
+                .WithStandardServices()
+                .Build(CancellationToken);
+
+            var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+            var request = new ComplexObjectWithInheritance
+            {
+                Child1 = new ComplexInheritedChild1(childPayload1),
+                Child2 = new ComplexInheritedChild2(childPayload2)
+            };
+
+            var response = await service.ProcessAsync(request);
+
+            response.Child1.Should().NotBeSameAs(request.Child1);
+            response.Child1.Name.Should().Be(childPayload1);
+            response.Child1.Name.Should().Be(request.Child1.Name);
+
+            response.Child2.Should().NotBeSameAs(request.Child2);
+            response.Child2.Description.Should().Be(childPayload2);
+            response.Child2.Description.Should().Be(request.Child2.Description);
         }
     }
 }
