@@ -8,8 +8,14 @@ namespace Halibut.Transport.Protocol
 {
     class TypeRegistry : ITypeRegistry
     {
+        readonly IEnumerable<Assembly> typeAssemblies;
         readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
         readonly HashSet<Type> allowedTypes = new HashSet<Type>();
+
+        public TypeRegistry(IEnumerable<Assembly> typeAssemblies = null)
+        {
+            this.typeAssemblies = typeAssemblies ?? Array.Empty<Assembly>();
+        }
 
         public void Register(params Type[] registeredServiceTypes)
         {
@@ -21,7 +27,7 @@ namespace Halibut.Transport.Protocol
 
                     foreach (var param in method.GetParameters())
                     {
-                        RegisterType(param.ParameterType,$"{serviceType.Name}.{method.Name}(){param.Name}:{param.ParameterType.Name}", false);
+                        RegisterType(param.ParameterType, $"{serviceType.Name}.{method.Name}(){param.Name}:{param.ParameterType.Name}", false);
                     }
                 }
             }
@@ -80,6 +86,19 @@ namespace Halibut.Transport.Protocol
                 {
                     yield return t;
                 }
+            }
+
+            if (type.IsInterface || type.IsAbstract)
+            {
+                var derivedTypes = typeAssemblies
+                    .Concat(new[] { type.Assembly })
+                    .Where(asm => !asm.IsDynamic)
+                    .SelectMany(asm => asm.GetExportedTypes())
+                    .Where(t => !t.IsAbstract && !t.IsInterface)
+                    .Where(type.IsAssignableFrom);
+
+                foreach (var derivedType in derivedTypes)
+                    yield return derivedType;
             }
         }
 

@@ -19,6 +19,7 @@ namespace Halibut
         ITrustProvider trustProvider;
         Action<MessageSerializerBuilder> configureMessageSerializerBuilder;
         ITypeRegistry typeRegistry;
+        Action<TypeRegistryBuilder> configureTypeRegisterBuilder;
         Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
         AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
@@ -26,25 +27,25 @@ namespace Halibut
         IStreamFactory streamFactory;
         IRpcObserver rpcObserver;
         IConnectionsObserver connectionsObserver;
-        
+
         public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
             this.connectionsObserver = connectionsObserver;
             return this;
         }
-        
+
         internal HalibutRuntimeBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
             this.streamFactory = streamFactory;
             return this;
         }
-        
+
         public HalibutRuntimeBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             return this;
         }
-        
+
         public HalibutRuntimeBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
             this.serviceFactory = serviceFactory;
@@ -83,7 +84,20 @@ namespace Halibut
 
         public HalibutRuntimeBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
         {
+            if (configureTypeRegisterBuilder != null)
+                throw new InvalidOperationException("A TypeRegistryBuilder configuration has already been provided.");
+
             this.typeRegistry = typeRegistry;
+
+            return this;
+        }
+
+        public HalibutRuntimeBuilder WithTypeRegistry(Action<TypeRegistryBuilder> configureBuilder)
+        {
+            if (typeRegistry != null)
+                throw new InvalidOperationException("A custom ITypeRegistry has already been provided.");
+
+            configureTypeRegisterBuilder = configureBuilder;
             return this;
         }
 
@@ -91,7 +105,7 @@ namespace Halibut
         {
             return WithAsyncHalibutFeature(AsyncHalibutFeature.Enabled);
         }
-        
+
         public HalibutRuntimeBuilder WithAsyncHalibutFeature(AsyncHalibutFeature asyncHalibutFeature)
         {
             this.asyncHalibutFeature = asyncHalibutFeature;
@@ -109,6 +123,7 @@ namespace Halibut
             this.onUnauthorizedClientConnect = onUnauthorizedClientConnect;
             return this;
         }
+
         public HalibutRuntimeBuilder WithRpcObserver(IRpcObserver rpcObserver)
         {
             this.rpcObserver = rpcObserver;
@@ -122,7 +137,7 @@ namespace Halibut
             {
                 halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
             }
-            
+
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
             var logFactory = this.logFactory ?? new LogFactory();
@@ -130,7 +145,17 @@ namespace Halibut
             var queueFactory = this.queueFactory ?? (asyncHalibutFeature.IsEnabled() ? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory) : new DefaultPendingRequestQueueFactory(logFactory));
 #pragma warning restore CS0612
             var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
-            var typeRegistry = this.typeRegistry ?? new TypeRegistry();
+
+            //use either the supplied type registry, or configure the default one
+            ITypeRegistry typeRegistry;
+            if (this.typeRegistry != null)
+                typeRegistry = this.typeRegistry;
+            else
+            {
+                var typeRegistryBuilder = new TypeRegistryBuilder();
+                configureTypeRegisterBuilder?.Invoke(typeRegistryBuilder);
+                typeRegistry = typeRegistryBuilder.Build();
+            }
 
             var messageContracts = serviceFactory.RegisteredServiceTypes.ToArray();
             typeRegistry.AddToMessageContract(messageContracts);
@@ -143,13 +168,13 @@ namespace Halibut
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
 
             var halibutRuntime = new HalibutRuntime(
-                serviceFactory, 
+                serviceFactory,
                 serverCertificate,
-                trustProvider, 
-                queueFactory, 
-                logFactory, 
+                trustProvider,
+                queueFactory,
+                logFactory,
                 typeRegistry,
-                messageSerializer, 
+                messageSerializer,
                 pollingReconnectRetryPolicy,
                 asyncHalibutFeature,
                 halibutTimeoutsAndLimits,

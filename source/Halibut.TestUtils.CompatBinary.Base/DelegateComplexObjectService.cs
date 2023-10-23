@@ -12,7 +12,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
         {
             this.service = service;
         }
-        
+
         public ComplexObjectMultipleDataStreams Process(ComplexObjectMultipleDataStreams request)
         {
             return FixDataStreams(service.Process(FixDataStreams(request)));
@@ -28,6 +28,11 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public ComplexObjectMultipleChildren Process(ComplexObjectMultipleChildren request)
         {
             return FixDataStreams(service.Process(FixDataStreams(request)));
+        }
+
+        public ComplexObjectWithInheritance Process(ComplexObjectWithInheritance request)
+        {
+            return service.Process(request);
         }
 
         ComplexObjectMultipleChildren FixDataStreams(ComplexObjectMultipleChildren complexObject)
