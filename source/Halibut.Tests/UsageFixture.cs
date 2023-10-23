@@ -278,6 +278,7 @@ namespace Halibut.Tests
                 .Build(CancellationToken);
 
             var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+
             var request = new ComplexObjectWithInheritance
             {
                 Child1 = new ComplexInheritedChild1(childPayload1),

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Halibut.TestUtils.Contracts
 {
@@ -25,9 +26,8 @@ namespace Halibut.TestUtils.Contracts
 
     public class ComplexObjectWithInheritance
     {
-        public IComplexChild Child1;
-        public ComplexChildBase Child2;
-
+        public IComplexChild Child1 { get; set; }
+        public ComplexChildBase Child2 { get; set; }
     }
 
     public class ComplexChild1
@@ -56,6 +56,7 @@ namespace Halibut.TestUtils.Contracts
 
     public class ComplexInheritedChild1 : IComplexChild
     {
+        [JsonConstructor]
         public ComplexInheritedChild1(string name)
         {
             Name = name;
@@ -66,6 +67,7 @@ namespace Halibut.TestUtils.Contracts
 
     public class ComplexInheritedChild2 : ComplexChildBase
     {
+        [JsonConstructor]
         public ComplexInheritedChild2(string description)
         {
             Description = description;
