@@ -266,7 +266,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithInheritedChildren(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             const string childPayload1 = "Child Payload #1";
