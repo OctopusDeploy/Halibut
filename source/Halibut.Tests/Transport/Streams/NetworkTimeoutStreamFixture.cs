@@ -31,7 +31,7 @@ namespace Halibut.Tests.Transport.Streams
                 if (streamReadMethod == StreamReadMethod.ReadByte)
                 {
                     var readByte = sut.ReadByte();
-
+                
                     Assert.AreEqual("Test".GetBytesUtf8()[0], readByte);
                 }
                 else
@@ -60,14 +60,14 @@ namespace Halibut.Tests.Transport.Streams
                 var stopWatch = Stopwatch.StartNew();
 
                 var actualException = await Try.CatchingError(async () => await sut.ReadFromStream(streamReadMethod, new byte[19], 0, 19, CancellationToken));
-
+                
                 stopWatch.Stop();
 
                 actualException.Should().NotBeNull().And.BeOfType<IOException>();
                 actualException!.Message.Should().ContainAny(
                     "Unable to read data from the transport connection: Connection timed out.",
                     "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
-
+                
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
 
                 AssertStreamWasClosed(streamReadMethod, callCountingStream);
@@ -101,13 +101,13 @@ namespace Halibut.Tests.Transport.Streams
                 }
             }
         }
-
+        
         [Test]
         [StreamWriteMethodTestCase]
         public async Task WriteCalls_ShouldPassThrough(StreamWriteMethod streamWriteMethod)
         {
             string? readData = null;
-
+            
             var (disposables, sut, _, _, _) = await BuildTcpClientAndTcpListener(
                 CancellationToken,
                 onListenerRead: async data =>
@@ -128,7 +128,7 @@ namespace Halibut.Tests.Transport.Streams
                         await Task.Delay(10, CancellationToken);
                     }
 
-                    Assert.AreEqual("Test"[0], readData.ToCharArray()[0]);
+                    Assert.AreEqual("Test"[0], readData.ToCharArray()[0]);  
                 }
                 else
                 {
@@ -137,11 +137,11 @@ namespace Halibut.Tests.Transport.Streams
                         await Task.Delay(10, CancellationToken);
                     }
 
-                    Assert.AreEqual("Test", readData);
+                    Assert.AreEqual("Test", readData);   
                 }
             }
         }
-
+        
         [Test]
         [StreamWriteMethodTestCase]
         public async Task WriteCalls_ShouldTimeout_AndCloseTheStream_AndThrowExceptionThatLooksLikeANetworkTimeoutException(StreamWriteMethod streamWriteMethod)
@@ -152,7 +152,7 @@ namespace Halibut.Tests.Transport.Streams
             }
 
             var (disposables, sut, callCountingStream, _, _) = await BuildTcpClientAndTcpListener(
-                CancellationToken,
+                CancellationToken, 
                 onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
 
             using (disposables)
@@ -169,7 +169,7 @@ namespace Halibut.Tests.Transport.Streams
 
                 // Brute force attempt to get the Write to be slow
                 var actualException = await Try.RunTillExceptionOrCancellation(
-                    async () => await sut.WriteToStream(streamWriteMethod, data, 0, data.Length, CancellationToken),
+                    async () => await sut.WriteToStream(streamWriteMethod, data, 0, data.Length, CancellationToken), 
                     CancellationToken);
 
                 stopWatch.Stop();
@@ -180,11 +180,11 @@ namespace Halibut.Tests.Transport.Streams
                     "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
 
                 stopWatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
-
+                
                 AssertStreamWasClosed(streamWriteMethod, callCountingStream);
             }
         }
-
+        
         [Test]
         [StreamWriteMethodTestCase(testSync: false)]
         public async Task WriteAsyncCalls_ShouldCancel(StreamWriteMethod streamWriteMethod)
@@ -293,7 +293,7 @@ namespace Halibut.Tests.Transport.Streams
         public async Task FlushOrFlushAsync_ShouldTimeout_AndCloseTheStream_AndThrowExceptionThatLooksLikeANetworkTimeoutException(SyncOrAsync syncOrAsync)
         {
             var (disposables, sut, callCountingStream, pausingStream, _) = await BuildTcpClientAndTcpListener(
-                CancellationToken,
+                CancellationToken, 
                 onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
 
             using (disposables)
@@ -306,21 +306,21 @@ namespace Halibut.Tests.Transport.Streams
                 pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
 
                 (await AssertAsync.Throws<IOException>(async () =>
-                {
-                    switch (syncOrAsync)
                     {
-                        case SyncOrAsync.Async:
-                            await sut.FlushAsync(CancellationToken);
-                            return;
-                        case SyncOrAsync.Sync:
-                            sut.Flush();
-                            return;
-                    }
-                }))
+                        switch (syncOrAsync)
+                        {
+                            case SyncOrAsync.Async:
+                                await sut.FlushAsync(CancellationToken);
+                                return;
+                            case SyncOrAsync.Sync:
+                                sut.Flush();
+                                return;
+                        }
+                    }))
                     .And.Message.Should().ContainAny(
                     "Unable to write data to the transport connection: Connection timed out.",
                     "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
-
+                                
                 AssertStreamWasClosed(syncOrAsync, callCountingStream);
             }
         }
@@ -381,7 +381,7 @@ namespace Halibut.Tests.Transport.Streams
         {
             using var source = new MemoryStream();
             await using var sut = new NetworkTimeoutStream(source);
-
+            
             var buffer = Encoding.UTF8.GetBytes("Test");
             await source.WriteAsync(buffer, 0, buffer.Length, CancellationToken);
             source.Position = 0;
@@ -405,7 +405,7 @@ namespace Halibut.Tests.Transport.Streams
             await using var pausableStream = new PausingStream(supportsTimeoutsStream);
             await using var callCountingStream = new CallCountingStream(pausableStream);
             var sut = new NetworkTimeoutStream(callCountingStream);
-
+            
             sut.ReadTimeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
             // Ensure the correct timeout is used
             sut.WriteTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
@@ -415,9 +415,9 @@ namespace Halibut.Tests.Transport.Streams
             source.Position = 0;
 
             var destinationStream = new MemoryStream();
-
+            
             var stopWatch = Stopwatch.StartNew();
-
+            
             pausableStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
 
             var actualException = await Try.CatchingError(async () => await sut.CopyToStream(streamCopyToMethod, destinationStream, buffer.Length, CancellationToken));
@@ -452,7 +452,7 @@ namespace Halibut.Tests.Transport.Streams
                 await using var pausableStream = new PausingStream(supportsTimeoutsStream);
                 await using var callCountingStream = new CallCountingStream(pausableStream);
                 var sut = new NetworkTimeoutStream(callCountingStream);
-
+            
                 sut.ReadTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
                 sut.WriteTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
 
@@ -461,9 +461,9 @@ namespace Halibut.Tests.Transport.Streams
                 source.Position = 0;
 
                 var destinationStream = new MemoryStream();
-
+            
                 var stopWatch = Stopwatch.StartNew();
-
+            
                 pausableStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
 
                 var actualException = await Try.CatchingError(async () => await sut.CopyToStream(streamCopyToMethod, destinationStream, buffer.Length, timeoutTokenSource.Token));
@@ -487,9 +487,9 @@ namespace Halibut.Tests.Transport.Streams
             {
                 sut.WriteTimeout = (int)TimeSpan.FromSeconds(1).TotalMilliseconds;
                 sut.ReadTimeout = (int)TimeSpan.FromSeconds(1).TotalMilliseconds;
-
+                
                 var exception = await Try.CatchingError(async () => await sut.ReadFromStream(streamMethod, new byte[19], 0, 19, CancellationToken));
-
+                
                 callCountingStream.Reset();
 
                 exception.Should().NotBeNull();
@@ -524,12 +524,12 @@ namespace Halibut.Tests.Transport.Streams
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.CreateObjRef(typeof(NetworkTimeoutStream))).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.InitializeLifetimeService()).Throw<Exception>().And);
 #endif
-
+                
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.CopyToAsync(memoryStream, 0, CancellationToken.None)).ThrowAsync<Exception>()).And);
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.FlushAsync()).ThrowAsync<Exception>()).And);
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.ReadAsync(new byte[1], 0, 1, CancellationToken.None)).ThrowAsync<Exception>()).And);
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.WriteAsync(new byte[1], 0, 1, CancellationToken.None)).ThrowAsync<Exception>()).And);
-
+                
 #if !NETFRAMEWORK
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.ReadAsync(new Memory<byte>(new byte[1]), CancellationToken.None).AsTask()).ThrowAsync<Exception>()).And);
                 AssertExceptionsAreEqual(exception, (await AssertionExtensions.Should(() => sut.WriteAsync(new ReadOnlyMemory<byte>(new byte[1]), CancellationToken.None).AsTask()).ThrowAsync<Exception>()).And);
@@ -590,12 +590,12 @@ namespace Halibut.Tests.Transport.Streams
         {
             switch (streamReadMethod)
             {
-                case StreamReadMethod.ReadAsync:
+                case StreamReadMethod.ReadAsync: 
 #if !NETFRAMEWORK
                 case StreamReadMethod.ReadAsyncForMemoryByteArray:
 #endif
-                case StreamReadMethod.BeginReadEndOutsideCallback:
-                case StreamReadMethod.BeginReadEndWithinCallback:
+                case StreamReadMethod.BeginReadEndOutsideCallback: 
+                case StreamReadMethod.BeginReadEndWithinCallback: 
                     AssertStreamWasClosed(SyncOrAsync.Async, callCountingStream);
                     break;
                 default:
@@ -608,12 +608,12 @@ namespace Halibut.Tests.Transport.Streams
         {
             switch (streamWriteMethod)
             {
-                case StreamWriteMethod.WriteAsync:
+                case StreamWriteMethod.WriteAsync: 
 #if !NETFRAMEWORK
                 case StreamWriteMethod.WriteAsyncForMemoryByteArray:
 #endif
-                case StreamWriteMethod.BeginWriteEndOutsideCallback:
-                case StreamWriteMethod.BeginWriteEndWithinCallback:
+                case StreamWriteMethod.BeginWriteEndOutsideCallback: 
+                case StreamWriteMethod.BeginWriteEndWithinCallback: 
                     AssertStreamWasClosed(SyncOrAsync.Async, callCountingStream);
                     break;
                 default:
@@ -648,13 +648,13 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         async Task<(IDisposable Disposables, NetworkTimeoutStream SystemUnderTest, CallCountingStream callCountingStream, PausingStream pausingStream, Func<string, Task> PerformServiceWriteFunc)> BuildTcpClientAndTcpListener(
-            CancellationToken cancellationToken,
+            CancellationToken cancellationToken, 
             Func<string, Task>? onListenerRead = null)
         {
             Func<string, Task>? performServiceWriteFunc = null;
             var disposableCollection = new DisposableCollection();
 
-            var service = new TcpListener(IPAddress.Loopback, 0);
+            var service = new TcpListener(IPAddress.Loopback, 0); 
             service.Start();
 
             var _ = Task.Run(async () =>
@@ -662,15 +662,15 @@ namespace Halibut.Tests.Transport.Streams
                 using var serviceTcpClient = await service.AcceptTcpClientAsync();
                 serviceTcpClient.ReceiveBufferSize = 10;
                 serviceTcpClient.SendBufferSize = 10;
-
+                
                 using var serviceStream = serviceTcpClient.GetStream();
                 performServiceWriteFunc = async data => await serviceStream.WriteAsync(Encoding.UTF8.GetBytes(data), 0, data.Length, cancellationToken);
-
+                
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     var buffer = new byte[19];
                     var readBytes = await serviceStream.ReadAsync(buffer, 0, 19, cancellationToken);
-
+                    
                     var readData = Encoding.UTF8.GetString(buffer, 0, readBytes);
                     if (onListenerRead != null)
                     {
@@ -678,13 +678,13 @@ namespace Halibut.Tests.Transport.Streams
                     }
                 }
             }, cancellationToken);
-
+            
             var client = new TcpClient();
             client.ReceiveBufferSize = 10;
             client.SendBufferSize = 10;
 
             await client.ConnectAsync("localhost", ((IPEndPoint)service.LocalEndpoint).Port);
-
+            
             var clientStream = client.GetStream();
             var pausableStream = new PausingStream(clientStream);
             var callCountingStream = new CallCountingStream(pausableStream);
@@ -693,7 +693,7 @@ namespace Halibut.Tests.Transport.Streams
             disposableCollection.AddIgnoringDisposalError(sut);
 
             while (performServiceWriteFunc == null)
-            {
+            { 
                 await Task.Delay(10, cancellationToken);
             }
 
