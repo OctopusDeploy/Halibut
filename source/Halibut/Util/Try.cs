@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace Halibut.Util
 {
@@ -14,6 +15,11 @@ namespace Halibut.Util
             {
                 onFailure(e);
             }
+        }
+
+        public static SilentStreamDisposer CatchingErrorOnDisposal(Stream streamToDispose, Action<Exception> onFailure)
+        {
+            return new SilentStreamDisposer(streamToDispose, onFailure);
         }
     }
     

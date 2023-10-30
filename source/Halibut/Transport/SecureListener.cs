@@ -220,15 +220,13 @@ namespace Halibut.Transport
             var connectionAuthorizedAndObserved = false;
 
             var clientName = client.GetRemoteEndpointString();
-            
+
             var stream = streamFactory.CreateStream(client);
-#if !NETFRAMEWORK
-            await
-#endif            
-                using (var ssl = new SslStream(stream, true, AcceptAnySslCertificate))
+            var errorEventType = EventType.ErrorInInitialisation;
+            try
             {
-                var errorEventType = EventType.ErrorInInitialisation;
-                try
+                var ssl = new SslStream(stream, true, AcceptAnySslCertificate);
+                await using (Try.CatchingErrorOnDisposal(ssl, ex => log.WriteException(EventType.Diagnostic, "Could not dispose SSL stream", ex)))
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
                     await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
@@ -270,10 +268,10 @@ namespace Halibut.Transport
                             await
 #endif
                                 using (cancellationToken.Register(() =>
-                                {
-                                    if (weakSsl.IsAlive)
-                                        ((IDisposable)weakSsl.Target).Dispose();
-                                }))
+                                       {
+                                           if (weakSsl.IsAlive)
+                                               ((IDisposable)weakSsl.Target).Dispose();
+                                       }))
                             {
                                 tcpClientManager.AddActiveClient(thumbprint, client);
                                 errorEventType = EventType.Error;
@@ -290,47 +288,47 @@ namespace Halibut.Transport
                         }
                     }
                 }
-                catch (AuthenticationException ex)
+            }
+            catch (AuthenticationException ex)
+            {
+                log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
+            }
+            catch (IOException ex) when (ex.InnerException is SocketException)
+            {
+                log.WriteException(errorEventType, "Socket IO exception: {0}", ex.InnerException, clientName);
+            }
+            catch (IOException ex) when (ex.InnerException is ObjectDisposedException)
+            {
+                log.WriteException(EventType.ListenerStopped, "Socket IO exception: {0}", ex.InnerException, clientName);
+            }
+            catch (SocketException ex)
+            {
+                log.WriteException(errorEventType, "Socket exception: {0}", ex, clientName);
+            }
+            catch (Exception ex)
+            {
+                log.WriteException(errorEventType, "Unhandled error when handling request from client: {0}", ex, clientName);
+            }
+            finally
+            {
+                if (!connectionAuthorizedAndObserved)
                 {
-                    log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
+                    connectionsObserver.ConnectionAccepted(false);
                 }
-                catch (IOException ex) when (ex.InnerException is SocketException)
+
+                try
                 {
-                    log.WriteException(errorEventType, "Socket IO exception: {0}", ex.InnerException, clientName);
-                }
-                catch (IOException ex) when (ex.InnerException is ObjectDisposedException)
-                {
-                    log.WriteException(EventType.ListenerStopped, "Socket IO exception: {0}", ex.InnerException, clientName);
-                }
-                catch (SocketException ex)
-                {
-                    log.WriteException(errorEventType, "Socket exception: {0}", ex, clientName);
-                }
-                catch (Exception ex)
-                {
-                    log.WriteException(errorEventType, "Unhandled error when handling request from client: {0}", ex, clientName);
+                    SafelyRemoveClientFromTcpClientManager(client, clientName);
+                    await SafelyCloseStreamAsync(stream, clientName);
+                    client.CloseImmediately(ex => log.Write(errorEventType, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message));
                 }
                 finally
                 {
-                    if (!connectionAuthorizedAndObserved)
-                    {
-                        connectionsObserver.ConnectionAccepted(false);
-                    }
-
-                    try
-                    {
-                        SafelyRemoveClientFromTcpClientManager(client, clientName);
-                        await SafelyCloseStreamAsync(stream, clientName);
-                        client.CloseImmediately(ex => log.Write(errorEventType, "Failed to close TcpClient for {0}. This may result in a memory leak. {1}", clientName, ex.Message));
-                    }
-                    finally
-                    {
-                        connectionsObserver.ConnectionClosed(connectionAuthorizedAndObserved);
-                    }
+                    connectionsObserver.ConnectionClosed(connectionAuthorizedAndObserved);
                 }
             }
         }
-        
+
         async Task SafelyCloseStreamAsync(Stream stream, string clientName)
         {
             try
