@@ -168,7 +168,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
-                .WithLogFactory(new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory());
+                .WithLogFactory(new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory())
+                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
 
             var client = clientBuilder.Build();
             client.Trust(serviceCertAndThumbprint.Thumbprint);

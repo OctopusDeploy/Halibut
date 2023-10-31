@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
@@ -54,7 +53,7 @@ namespace Halibut.Tests
                 
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(2, "Since the last connection should not have been put back into the pool.");
 
-                sw.Elapsed.Should().BeLessThan(HalibutLimits.TcpClientHeartbeatReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
+                sw.Elapsed.Should().BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
                                                                                                "then pulling it out detecting it is bad and then attempting to create a new connection");
             }
         }

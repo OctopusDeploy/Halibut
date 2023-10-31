@@ -283,13 +283,20 @@ namespace Halibut.Tests
             var services = GetDelegateServiceFactory();
             // The correct certificate would be Certificates.Octopus
             var wrongCertificate = Certificates.TentaclePolling;
-            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(wrongCertificate).Build())
-            await using (var tentacleListening = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.TentacleListening).WithServiceFactory(services).Build())
+            await using (var octopus = new HalibutRuntimeBuilder()
+                             .WithServerCertificate(wrongCertificate)
+                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                             .Build())
+            await using (var tentacleListening = new HalibutRuntimeBuilder()
+                             .WithServerCertificate(Certificates.TentacleListening)
+                             .WithServiceFactory(services)
+                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                             .Build())
             {
                 var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
-                var serviceEndpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                var serviceEndpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits);
                 var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(serviceEndpoint);
 
                 Assert.ThrowsAsync<HalibutClientException>(async () => await echo.SayHelloAsync("World"));
@@ -303,8 +310,15 @@ namespace Halibut.Tests
         public async Task FailWhenListeningServerPresentsWrongCertificate()
         {
             var services = GetDelegateServiceFactory();
-            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.Octopus).Build())
-            await using (var tentacleListening = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.TentacleListening).WithServiceFactory(services).Build())
+            await using (var octopus = new HalibutRuntimeBuilder()
+                             .WithServerCertificate(Certificates.Octopus)
+                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                             .Build())
+            await using (var tentacleListening = new HalibutRuntimeBuilder()
+                             .WithServerCertificate(Certificates.TentacleListening)
+                             .WithServiceFactory(services)
+                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                             .Build())
             {
                 var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
@@ -312,7 +326,7 @@ namespace Halibut.Tests
                 // The correct one is Certificates.TentacleListeningPublicThumbprint
                 var wrongThumbPrint = Certificates.TentaclePollingPublicThumbprint;
 
-                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://localhost:" + tentaclePort, wrongThumbPrint));
+                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://localhost:" + tentaclePort, wrongThumbPrint, octopus.TimeoutsAndLimits));
 
                 Assert.ThrowsAsync<HalibutClientException>(async () => await echo.SayHelloAsync("World"));
             }

@@ -31,10 +31,14 @@ namespace Halibut.Tests.Transport
         {
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
-            tentacle = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.TentacleListening).WithServiceFactory(services).Build();
+            tentacle = new HalibutRuntimeBuilder()
+                .WithServerCertificate(Certificates.TentacleListening)
+                .WithServiceFactory(services)
+                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                .Build();
             var tentaclePort = tentacle.Listen();
             tentacle.Trust(Certificates.OctopusPublicThumbprint);
-            endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint)
+            endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint, tentacle.TimeoutsAndLimits)
             {
                 ConnectionErrorRetryTimeout = TimeSpan.MaxValue
             };
@@ -49,13 +53,13 @@ namespace Halibut.Tests.Transport
         [Test]
         public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
 
             await using var connectionManager = new ConnectionManagerAsync();
             var stream = Substitute.For<IMessageExchangeStream>();
             stream.IdentifyAsClientAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException(new ConnectionInitializationFailedException("")));
             
-            for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
+            for (int i = 0; i < halibutTimeoutsAndLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
                 connection.Protocol.Returns(new MessageExchangeProtocol(stream, new NoRpcObserver(), log));
@@ -87,7 +91,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimits(), logger), new NoRpcObserver(), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger), new NoRpcObserver(), logger);
         }
     }
 }

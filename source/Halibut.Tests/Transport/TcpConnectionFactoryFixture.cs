@@ -13,7 +13,7 @@ namespace Halibut.Tests.Transport
         [Test]
         public void ShouldCreateDualModeIpv6Socket_WhenIPv6Enabled()
         {
-            var client = TcpConnectionFactory.CreateTcpClientAsync(AddressFamily.InterNetworkV6, new HalibutTimeoutsAndLimits());
+            var client = TcpConnectionFactory.CreateTcpClientAsync(AddressFamily.InterNetworkV6, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             client.Client.AddressFamily.Should().Be(AddressFamily.InterNetworkV6);
             client.Client.DualMode.Should().BeTrue();
         }
@@ -21,7 +21,7 @@ namespace Halibut.Tests.Transport
         [Test]
         public void ShouldCreateIpv4Socket_WhenIPv6Disabled()
         {
-            var client = TcpConnectionFactory.CreateTcpClientAsync(AddressFamily.InterNetwork, new HalibutTimeoutsAndLimits());
+            var client = TcpConnectionFactory.CreateTcpClientAsync(AddressFamily.InterNetwork, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             client.Client.AddressFamily.Should().Be(AddressFamily.InterNetwork);
 
 #if NETFRAMEWORK

@@ -31,7 +31,7 @@ namespace Halibut.Tests.Builders
         public IPendingRequestQueue Build()
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
-            var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? HalibutLimits.PollingQueueWaitTimeout;
+            var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? new HalibutTimeoutsAndLimitsForTestsBuilder().Build().PollingQueueWaitTimeout;
             var log = this.log ?? new InMemoryConnectionLog(endpoint);
 
             return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout);

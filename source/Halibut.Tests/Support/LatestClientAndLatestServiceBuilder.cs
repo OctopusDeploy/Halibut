@@ -54,7 +54,7 @@ namespace Halibut.Tests.Support
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
         ITrustProvider clientTrustProvider;
         Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
-        HalibutTimeoutsAndLimits? halibutTimeoutsAndLimits;
+        HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
 
         IStreamFactory? clientStreamFactory;
         IStreamFactory? serviceStreamFactory;

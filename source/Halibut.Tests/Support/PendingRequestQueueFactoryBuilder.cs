@@ -22,7 +22,7 @@ namespace Halibut.Tests.Support
 
         public IPendingRequestQueueFactory Build()
         {
-            IPendingRequestQueueFactory factory = new PendingRequestQueueFactoryAsync(new HalibutTimeoutsAndLimits(), logFactory);
+            IPendingRequestQueueFactory factory = new PendingRequestQueueFactoryAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logFactory);
             if (createDecorator is not null)
             {
                 factory = createDecorator(logFactory, factory);

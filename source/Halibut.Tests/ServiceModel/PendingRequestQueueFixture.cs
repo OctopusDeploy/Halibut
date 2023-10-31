@@ -108,7 +108,6 @@ namespace Halibut.Tests.ServiceModel
             const string endpoint = "poll://endpoint001";
 
             var sut = new PendingRequestQueueBuilder()
-                
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -139,7 +138,6 @@ namespace Halibut.Tests.ServiceModel
             const string endpoint = "poll://endpoint001";
 
             var sut = new PendingRequestQueueBuilder()
-                
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -365,7 +363,6 @@ namespace Halibut.Tests.ServiceModel
             const string endpoint = "poll://endpoint001";
 
             var sut = new PendingRequestQueueBuilder()
-                
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -542,7 +539,6 @@ namespace Halibut.Tests.ServiceModel
             const string endpoint = "poll://endpoint001";
 
             var sut = new PendingRequestQueueBuilder()
-                
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();

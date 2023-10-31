@@ -150,7 +150,7 @@ namespace Halibut.Tests.DotMemory
         {
             await using (var runtime = new HalibutRuntimeBuilder().WithServerCertificate(clientCertificate).Build())
             {
-                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(new ServiceEndPoint($"https://localhost:{port}/", remoteThumbprint));
+                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(new ServiceEndPoint($"https://localhost:{port}/", remoteThumbprint, runtime.TimeoutsAndLimits));
                 await MakeRequest(calculator, "listening", expectSuccess);
             }
         }
@@ -166,13 +166,13 @@ namespace Halibut.Tests.DotMemory
                 runtime.Trust(Certificates.OctopusPublicThumbprint);
 
                 //setup polling
-                var serverEndpoint = new ServiceEndPoint(new Uri("https://localhost:8433"), Certificates.TentaclePollingPublicThumbprint)
+                var serverEndpoint = new ServiceEndPoint(new Uri("https://localhost:8433"), Certificates.TentaclePollingPublicThumbprint, runtime.TimeoutsAndLimits)
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
                 server.Poll(new Uri("poll://SQ-TENTAPOLL"), serverEndpoint, CancellationToken.None);
 
-                var clientEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint);
+                var clientEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint, runtime.TimeoutsAndLimits);
 
                 var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(clientEndpoint);
 
@@ -197,13 +197,13 @@ namespace Halibut.Tests.DotMemory
                 runtime.ListenWebSocket("https://+:8434/Halibut");
                 runtime.Trust(trustedCertificate);
 
-                var serverEndpoint = new ServiceEndPoint(new Uri("wss://localhost:8434/Halibut"), Certificates.SslThumbprint)
+                var serverEndpoint = new ServiceEndPoint(new Uri("wss://localhost:8434/Halibut"), Certificates.SslThumbprint, runtime.TimeoutsAndLimits)
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
                 server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint, CancellationToken.None);
 
-                var clientEndpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint);
+                var clientEndpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint, runtime.TimeoutsAndLimits);
                 var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(clientEndpoint);
 
                 await MakeRequest(calculator, "websocket polling", expectSuccess);
