@@ -30,6 +30,8 @@ namespace Halibut.Transport.Streams
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
+            ThrowIfAlreadyTimedOut();
+
             await WrapWithCancellationAndTimeout(
                 async ct =>
                 {
@@ -44,6 +46,8 @@ namespace Halibut.Transport.Streams
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            ThrowIfAlreadyTimedOut();
+
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, offset, count, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
@@ -54,6 +58,8 @@ namespace Halibut.Transport.Streams
 
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
+            ThrowIfAlreadyTimedOut();
+
             await WrapWithCancellationAndTimeout(
                 async ct =>
                 {
@@ -69,6 +75,8 @@ namespace Halibut.Transport.Streams
 #if !NETFRAMEWORK
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
+            ThrowIfAlreadyTimedOut();
+
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, ct),
                 CanTimeout ? ReadTimeout : int.MaxValue,
@@ -79,6 +87,8 @@ namespace Halibut.Transport.Streams
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
+            ThrowIfAlreadyTimedOut();
+
             await WrapWithCancellationAndTimeout(
                 async ct =>
                 {
@@ -100,7 +110,7 @@ namespace Halibut.Transport.Streams
         public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
             ThrowIfAlreadyTimedOut();
-            
+
             await base.CopyToAsync(destination, bufferSize, cancellationToken);
         }
 
@@ -122,14 +132,14 @@ namespace Halibut.Transport.Streams
         public override long Seek(long offset, SeekOrigin origin)
         {
             ThrowIfAlreadyTimedOut();
-            
+
             return inner.Seek(offset, origin);
         }
 
         public override void SetLength(long value)
         {
             ThrowIfAlreadyTimedOut();
-            
+
             inner.SetLength(value);
         }
 
@@ -142,15 +152,15 @@ namespace Halibut.Transport.Streams
         {
             TryCloseOnTimeout(() => inner.WriteByte(value));
         }
-        
+
 #if !NETFRAMEWORK
         public override void CopyTo(Stream destination, int bufferSize)
         {
             ThrowIfAlreadyTimedOut();
-            
+
             base.CopyTo(destination, bufferSize);
         }
-        
+
         public override int Read(Span<byte> buffer)
         {
             ThrowIfAlreadyTimedOut();
@@ -302,8 +312,6 @@ namespace Halibut.Transport.Streams
             string methodName,
             CancellationToken cancellationToken)
         {
-            ThrowIfAlreadyTimedOut();
-
             return await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(
                 action,
                 onCancellationAction: async cancellationException => await SafelyDisposeStream(cancellationException),
@@ -318,7 +326,7 @@ namespace Halibut.Transport.Streams
                 TimeSpan.FromMilliseconds(timeout),
                 methodName,
                 cancellationToken);
-            
+
             async Task SafelyDisposeStream(Exception exception)
             {
                 try
