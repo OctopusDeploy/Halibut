@@ -31,12 +31,12 @@ namespace Halibut.Tests
                        .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {
-                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     // This test should never need to make use of this since no bad connections should be in the pool
                     point.RetryListeningSleepInterval = TimeSpan.FromMinutes(10);
                 });
-                var pauseCurrentTcpConnections = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
+                var pauseCurrentTcpConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                 await echoService.SayHelloAsync("This should make one connection");
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1);

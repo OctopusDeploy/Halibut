@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
@@ -25,7 +24,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
 
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
@@ -44,7 +43,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var random = new Random();
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 for (var i = 1; i < 5; i++)
                 {
                     {
@@ -65,7 +64,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var svc = clientAndService.CreateClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
+                var svc = clientAndService.CreateAsyncClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
                 for (var i = 1; i < clientAndServiceTestCase.RecommendedIterations; i++)
                 {
                     {
@@ -85,7 +84,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
 
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
@@ -99,14 +98,14 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task SupportsDifferentServiceContractMethods(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
+                var echo = clientAndService.CreateAsyncClient<IMultipleParametersTestService, IAsyncClientMultipleParametersTestService>();
                 await echo.MethodReturningVoidAsync(12, 14);
 
                 (await echo.HelloAsync()).Should().Be("Hello");
@@ -151,17 +150,15 @@ namespace Halibut.Tests
                 new Random().NextBytes(data);
                 var stream = new MemoryStream(data);
 
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
-                var dataStream = await clientAndServiceTestCase.SyncOrAsync
-                    .WhenSync(() => DataStream.FromStream(stream, progressReported.Add, (i, token) => throw new Exception("Should be sync")))
-                    .WhenAsync(() => Task.FromResult(DataStream.FromStream(stream,
+                var dataStream = await Task.FromResult(DataStream.FromStream(stream,
                         i => throw new Exception("Wrong path it should be doing async calls"),
                         async (i, token) => {
                             await Task.CompletedTask;
                             progressReported.Add(i);
                         })
-                    ));
+                    );
                 var count = await echo.CountBytesAsync(dataStream);
                 count.Should().Be(1024 * 1024 * 16 + 15);
 
@@ -170,7 +167,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task OctopusCanSendAndReceiveComplexObjects_WithMultipleDataStreams(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase
@@ -178,7 +175,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+                var service = clientAndService.CreateAsyncClient<IComplexObjectService, IAsyncClientComplexObjectService>();
                 var payload1 = "Payload #1";
                 var payload2 = "Payload #2";
 
@@ -229,7 +226,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+                var service = clientAndService.CreateAsyncClient<IComplexObjectService, IAsyncClientComplexObjectService>();
                 var request = new ComplexObjectMultipleChildren
                 {
                     Child1 = new ComplexChild1
@@ -277,7 +274,7 @@ namespace Halibut.Tests
                 .WithStandardServices()
                 .Build(CancellationToken);
 
-            var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+            var service = clientAndService.CreateAsyncClient<IComplexObjectService, IAsyncClientComplexObjectService>();
 
             var request = new ComplexObjectWithInheritance
             {

@@ -22,7 +22,7 @@ namespace Halibut.Tests
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
 
                 for (var i = 0; i < 5; i++)
@@ -44,8 +44,8 @@ namespace Halibut.Tests
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
                 var echo = clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient() ? 
-                                clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>() : 
-                                clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint =>
+                                clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>() : 
+                                clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint =>
                                 {
                                     serviceEndPoint.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
                                 });
@@ -65,7 +65,7 @@ namespace Halibut.Tests
                        .WithProxy()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
 
                 for (var i = 0; i < 5; i++)

@@ -1,8 +1,6 @@
 ﻿using System;
-using System.IO;
-using Halibut.ServiceModel;
 using Halibut.Diagnostics;
-using Halibut.Tests.Support.TestAttributes;
+using Halibut.ServiceModel;
 
 namespace Halibut.Tests.Builders
 {
@@ -11,7 +9,6 @@ namespace Halibut.Tests.Builders
         ILog? log;
         string? endpoint;
         TimeSpan? pollingQueueWaitTimeout;
-        SyncOrAsync syncOrAsync;
 
         public PendingRequestQueueBuilder WithEndpoint(string endpoint)
         {
@@ -30,12 +27,6 @@ namespace Halibut.Tests.Builders
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
             return this;
         }
-
-        public PendingRequestQueueBuilder WithSyncOrAsync(SyncOrAsync syncOrAsync)
-        {
-            this.syncOrAsync = syncOrAsync;
-            return this;
-        }
         
         public IPendingRequestQueue Build()
         {
@@ -43,15 +34,7 @@ namespace Halibut.Tests.Builders
             var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? HalibutLimits.PollingQueueWaitTimeout;
             var log = this.log ?? new InMemoryConnectionLog(endpoint);
 
-            switch (syncOrAsync)
-            {
-                case SyncOrAsync.Async:
-                    return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout);
-                case SyncOrAsync.Sync:
-                    return new PendingRequestQueue(log, pollingQueueWaitTimeout);
-                default:
-                    throw new InvalidDataException($"Unknown {nameof(SyncOrAsync)} {syncOrAsync}");
-            }
+            return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout);
         }
     }
 }

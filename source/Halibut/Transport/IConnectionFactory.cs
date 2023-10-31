@@ -8,9 +8,6 @@ namespace Halibut.Transport
 {
     public interface IConnectionFactory
     {
-        [Obsolete]
-        IConnection EstablishNewConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken);
-        
         Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken);
     }
 }

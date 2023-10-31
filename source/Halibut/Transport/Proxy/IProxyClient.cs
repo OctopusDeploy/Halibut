@@ -57,43 +57,6 @@ namespace Halibut.Transport.Proxy
 
         IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory);
 
-        /// <summary>
-        /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
-        /// </summary>
-        /// <param name="destinationHost">Destination host name or IP address.</param>
-        /// <param name="destinationPort">Port number to connect to on the destination host.</param>
-        /// <param name="timeout">Timeout duration for the Connect attempt.</param>
-        /// <returns>
-        /// Returns an open TcpClient object that can be used normally to communicate
-        /// with the destination server
-        /// </returns>
-        /// <remarks>
-        /// This method creates a connection to the proxy server and instructs the proxy server
-        /// to make a pass through connection to the specified destination host on the specified
-        /// port.  
-        /// </remarks>
-        [Obsolete]
-        TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout);
-
-        /// <summary>
-        /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
-        /// </summary>
-        /// <param name="destinationHost">Destination host name or IP address.</param>
-        /// <param name="destinationPort">Port number to connect to on the destination host.</param>
-        /// <param name="timeout">Timeout duration for the Connect attempt.</param>
-        /// <param name="cancellationToken">Cancelation token to cancel connection requests</param>
-        /// <returns>
-        /// Returns an open TcpClient object that can be used normally to communicate
-        /// with the destination server
-        /// </returns>
-        /// <remarks>
-        /// This method creates a connection to the proxy server and instructs the proxy server
-        /// to make a pass through connection to the specified destination host on the specified
-        /// port.  
-        /// </remarks>
-        [Obsolete]
-        TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken);
-        
         Task<TcpClient> CreateConnectionAsync(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken);
     }
 }

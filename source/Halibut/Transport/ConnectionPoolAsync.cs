@@ -13,13 +13,7 @@ namespace Halibut.Transport
     {
         readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new();
         readonly SemaphoreSlim poolLock = new(1, 1);
-
-        [Obsolete]
-        public TPooledResource Take(TKey endPoint)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
-        }
-
+        
         public async Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
         {
             using (await poolLock.LockAsync(cancellationToken))
@@ -38,12 +32,6 @@ namespace Halibut.Transport
             }
         }
 
-        [Obsolete]
-        public void Return(TKey endPoint, TPooledResource resource)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
-        }
-
         public async Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken)
         {
             using (await poolLock.LockAsync(cancellationToken))
@@ -60,12 +48,6 @@ namespace Halibut.Transport
             }
         }
 
-        [Obsolete]
-        public void Clear(TKey key, ILog log = null)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
-        }
-
         public async Task ClearAsync(TKey key, ILog log, CancellationToken cancellationToken)
         {
             using (await poolLock.LockAsync(cancellationToken))
@@ -80,19 +62,6 @@ namespace Halibut.Transport
 
                 connections.Clear();
                 pool.Remove(key);
-            }
-        }
-        
-        public void Dispose()
-        {
-            using (poolLock.Lock())
-            {
-                foreach (var connection in pool.SelectMany(kv => kv.Value))
-                {
-                    DestroyConnection(connection, null);
-                }
-
-                pool.Clear();
             }
         }
 
@@ -129,19 +98,7 @@ namespace Halibut.Transport
 
             return connections;
         }
-
-        static void DestroyConnection(TPooledResource connection, ILog log)
-        {
-            try
-            {
-                connection?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                log?.WriteException(EventType.Error, "Exception disposing connection from pool", ex);
-            }
-        }
-
+        
         static async Task DestroyConnectionAsync(TPooledResource connection, ILog log)
         {
             try

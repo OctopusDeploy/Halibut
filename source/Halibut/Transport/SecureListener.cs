@@ -60,8 +60,7 @@ namespace Halibut.Transport
             ILogFactory logFactory, 
             Func<string> getFriendlyHtmlPageContent, 
             Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
-            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, 
-            AsyncHalibutFeature asyncHalibutFeature,
+            Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory, 
             IConnectionsObserver connectionsObserver)
@@ -190,18 +189,8 @@ namespace Halibut.Transport
         {
             try
             {
-                if (asyncHalibutFeature.IsEnabled())
-                {
-                    client.SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds;
-                    client.ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds;
-                }
-                else
-                {
-#pragma warning disable CS0612
-                    client.SendTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-                    client.ReceiveTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
-#pragma warning restore CS0612
-                }
+                client.SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.GetRemoteEndpointString());
                 await ExecuteRequest(client).ConfigureAwait(false);
@@ -258,34 +247,9 @@ namespace Halibut.Transport
                     {
                         connectionAuthorizedAndObserved = true;
                         connectionsObserver.ConnectionAccepted(true);
-
-                        if (asyncHalibutFeature == AsyncHalibutFeature.Disabled)
-                        {
-                            // The ExchangeMessage call can hang on reading the stream which keeps a thread alive,
-                            // so we dispose the stream which will cause the thread to abort with an exceptions.
-                            var weakSsl = new WeakReference(ssl);
-#if !NETFRAMEWORK
-                            await
-#endif
-                                using (cancellationToken.Register(() =>
-                                       {
-                                           if (weakSsl.IsAlive)
-                                               ((IDisposable)weakSsl.Target).Dispose();
-                                       }))
-                            {
-                                tcpClientManager.AddActiveClient(thumbprint, client);
-                                errorEventType = EventType.Error;
-                                await ExchangeMessages(ssl).ConfigureAwait(false);
-                            }
-                        }
-                        else
-                        {
-                            // The stream is wrapped in a NetworkTimeoutStream which handles closing the inner stream on timeout
-                            // so the weakSsl workaround is not required to ensure the stream is Disposed
-                            tcpClientManager.AddActiveClient(thumbprint, client);
-                            errorEventType = EventType.Error;
-                            await ExchangeMessages(ssl).ConfigureAwait(false);
-                        }
+                        tcpClientManager.AddActiveClient(thumbprint, client);
+                        errorEventType = EventType.Error;
+                        await ExchangeMessages(ssl).ConfigureAwait(false);
                     }
                 }
             }
@@ -358,39 +322,19 @@ namespace Halibut.Transport
             var message = getFriendlyHtmlPageContent();
             var headers = getFriendlyHtmlPageHeaders();
 
-            if (asyncHalibutFeature.IsEnabled())
+            await stream.WriteLineAsync("HTTP/1.0 200 OK", cancellationToken);
+            await stream.WriteLineAsync("Content-Type: text/html; charset=utf-8", cancellationToken);
+            await stream.WriteLineAsync("Content-Length: " + message.Length, cancellationToken);
+
+            foreach (var header in headers)
             {
-                await stream.WriteLineAsync("HTTP/1.0 200 OK", cancellationToken);
-                await stream.WriteLineAsync("Content-Type: text/html; charset=utf-8", cancellationToken);
-                await stream.WriteLineAsync("Content-Length: " + message.Length, cancellationToken);
-                foreach (var header in headers)
-                    await stream.WriteLineAsync($"{header.Key}: {header.Value}", cancellationToken);
-                await stream.WriteLineAsync(string.Empty, cancellationToken);
-                await stream.WriteLineAsync(message, cancellationToken);
-                await stream.WriteLineAsync(string.Empty, cancellationToken);
-                await stream.FlushAsync();
+                await stream.WriteLineAsync($"{header.Key}: {header.Value}", cancellationToken);
             }
-            else
-            {
-                // This could fail if the client terminates the connection and we attempt to write to it
-                // Disposing the StreamWriter will close the stream - it owns the stream
-#if !NETFRAMEWORK
-                await
-#endif
-                    using (var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\r\n" })
-                {
-                    writer.WriteLine("HTTP/1.0 200 OK");
-                    writer.WriteLine("Content-Type: text/html; charset=utf-8");
-                    writer.WriteLine("Content-Length: " + message.Length);
-                    foreach (var header in headers)
-                        writer.WriteLine($"{header.Key}: {header.Value}");
-                    writer.WriteLine();
-                    writer.WriteLine(message);
-                    writer.WriteLine();
-                    writer.Flush();
-                    stream.Flush();
-                }
-            }
+
+            await stream.WriteLineAsync(string.Empty, cancellationToken);
+            await stream.WriteLineAsync(message, cancellationToken);
+            await stream.WriteLineAsync(string.Empty, cancellationToken);
+            await stream.FlushAsync();
         }
 
         static string GetThumbprint(SslStream stream)
@@ -451,9 +395,7 @@ namespace Halibut.Transport
             var lastWasNewline = false;
             while (builder.Length < 20000)
             {
-                var b = asyncHalibutFeature.IsEnabled()
-                    ? await stream.ReadByteAsync(cancellationToken)
-                    : stream.ReadByte();
+                var b = await stream.ReadByteAsync(cancellationToken);
 
                 if (b == -1) return builder.ToString();
 

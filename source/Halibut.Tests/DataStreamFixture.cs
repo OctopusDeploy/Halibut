@@ -25,7 +25,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                 var data = new byte[1337];
                 new Random().NextBytes(data);
@@ -40,13 +40,12 @@ namespace Halibut.Tests
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncClients: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task AsyncDataStreamsAreUsedWhenInAsync(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithForcingClientProxyType(ForceClientProxyType.AsyncClient)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.Client.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(clientAndService.GetServiceEndPoint());
@@ -66,30 +65,6 @@ namespace Halibut.Tests
             }
         }
         
-        [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        public async Task AsyncDataStreamsCanBeUsedInSyncAndAsync(ClientAndServiceTestCase clientAndServiceTestCase)
-        {
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithStandardServices()
-                       .Build(CancellationToken))
-            {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
-
-                var data = new byte[1337];
-                new Random().NextBytes(data);
-
-                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
-                {
-                    // Note this only has a async writer.
-                    var count = await echo.CountBytesAsync(new DataStream(data.Length,
-                            async (stream, ct) => await stream.WriteByteArrayAsync(data, ct))
-                    );
-                    count.Should().Be(data.Length);
-                }
-            }
-        }
-
         [Test]
         public async Task ASyncDataStreamWriter_CanBeUsedInAsync()
         {

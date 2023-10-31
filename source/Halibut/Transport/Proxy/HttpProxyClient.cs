@@ -24,9 +24,7 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -174,90 +172,6 @@ namespace Halibut.Transport.Proxy
             tcpClientFactory = tcpClientfactory;
             return this;
         }
-
-        /// <summary>
-        /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
-        /// </summary>
-        /// <param name="destinationHost">Destination host name or IP address.</param>
-        /// <param name="destinationPort">Port number to connect to on the destination host.</param>
-        /// <param name="timeout">Timeout duration for the Connect attempt.</param>
-        /// <returns>
-        /// Returns an open TcpClient object that can be used normally to communicate
-        /// with the destination server
-        /// </returns>
-        /// <remarks>
-        /// This method creates a connection to the proxy server and instructs the proxy server
-        /// to make a pass through connection to the specified destination host on the specified
-        /// port.  
-        /// </remarks>
-        [Obsolete]
-        public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout)
-        {
-            return CreateConnection(destinationHost, destinationPort, timeout, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// Creates a remote TCP connection through a proxy server to the destination host on the destination port.
-        /// </summary>
-        /// <param name="destinationHost">Destination host name or IP address.</param>
-        /// <param name="destinationPort">Port number to connect to on the destination host.</param>
-        /// <param name="timeout">Timeout duration for the Connect attempt.</param>
-        /// <param name="cancellationToken">Cancelation token to cancel connection requests</param>
-        /// <returns>
-        /// Returns an open TcpClient object that can be used normally to communicate
-        /// with the destination server
-        /// </returns>
-        /// <remarks>
-        /// This method creates a connection to the proxy server and instructs the proxy server
-        /// to make a pass through connection to the specified destination host on the specified
-        /// port.  
-        /// </remarks>
-        [Obsolete]
-        public TcpClient CreateConnection(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            try
-            {
-                // if we have no connection, create one
-                if (TcpClient == null)
-                {
-                    if (string.IsNullOrEmpty(ProxyHost))
-                        throw new ProxyException("ProxyHost property must contain a value", false);
-
-                    if (ProxyPort <= 0 || ProxyPort > 65535)
-                        throw new ProxyException("ProxyPort value must be greater than zero and less than 65535", false);
-
-                    if(ProxyHost.Contains("://"))
-                        throw new ProxyException("The proxy's hostname cannot contain a protocol prefix (eg http://)", false);
-
-
-                    //  create new tcp client object to the proxy server
-                    TcpClient = tcpClientFactory();
-
-                    // attempt to open the connection
-                    log.Write(EventType.Diagnostic, "Connecting to proxy at {0}:{1}", ProxyHost, ProxyPort);
-                    TcpClient.ConnectWithTimeout(ProxyHost, ProxyPort, timeout, cancellationToken);
-                    log.Write(EventType.Diagnostic, "Connected to proxy at {0}:{1}", ProxyHost, ProxyPort);
-                }
-
-                //  send connection command to proxy host for the specified destination host and port
-                SendConnectionCommand(destinationHost, destinationPort);
-
-                // return the open proxied tcp client object to the caller for normal use
-                return TcpClient;
-            }
-            catch (AggregateException ae)
-            {
-                var se = ae.InnerExceptions.OfType<SocketException>().FirstOrDefault();
-                if (se != null)
-                    throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {se.Message}", se, true);
-
-                throw;
-            }
-            catch (SocketException ex)
-            {
-                throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {ex.Message}", ex, true);
-            }
-        }
         
         public async Task<TcpClient> CreateConnectionAsync(string destinationHost, int destinationPort, TimeSpan timeout, CancellationToken cancellationToken)
         {
@@ -303,43 +217,6 @@ namespace Halibut.Transport.Proxy
             {
                 throw new ProxyException($"Connection to proxy host {ProxyHost} on port {ProxyPort} failed: {ex.Message}", ex, true);
             }
-        }
-
-        [Obsolete]
-        void SendConnectionCommand(string host, int port)
-        {
-            var stream = TcpClient.GetStream();
-            var connectCmd = GetConnectCmd(host, port);
-            var request = Encoding.ASCII.GetBytes(connectCmd);
-
-            // send the connect request
-            stream.Write(request, 0, request.Length);
-
-            // wait for the proxy server to respond
-            WaitForData(stream);
-
-            // PROXY SERVER RESPONSE
-            // =======================================================================
-            //HTTP/1.0 200 Connection Established<CR><LF>
-            //[.... other HTTP header lines ending with <CR><LF>..
-            //ignore all of them]
-            //<CR><LF>    // Last Empty Line
-
-            // create an byte response array  
-            var response = new byte[TcpClient.ReceiveBufferSize];
-            var sbuilder = new StringBuilder();
-
-            do
-            {
-                var bytes = stream.Read(response, 0, TcpClient.ReceiveBufferSize);
-                sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
-            } while (stream.DataAvailable);
-
-            ParseResponse(sbuilder.ToString());
-            
-            //  evaluate the reply code for an error condition
-            if (_respCode != HttpResponseCodes.OK)
-                HandleProxyCommandError(host, port);
         }
         
         async Task SendConnectionCommandAsync(string host, int port, CancellationToken cancellationToken)
@@ -419,19 +296,6 @@ namespace Halibut.Transport.Proxy
 
             //  throw a new application exception 
             throw new ProxyException(msg, false);
-        }
-
-        [Obsolete]
-        void WaitForData(NetworkStream stream)
-        {
-            var sleepTime = 0;
-            while (!stream.DataAvailable)
-            {
-                Thread.Sleep(WAIT_FOR_DATA_INTERVAL);
-                sleepTime += WAIT_FOR_DATA_INTERVAL;
-                if (sleepTime > WAIT_FOR_DATA_TIMEOUT)
-                    throw new ProxyException(string.Format("A timeout while waiting for the proxy server at {0} on port {1} to respond.", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient)), true);
-            }
         }
 
         void ParseResponse(string response)

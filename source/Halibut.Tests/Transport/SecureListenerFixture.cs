@@ -49,8 +49,7 @@ namespace Halibut.Tests.Transport
 
         [Test]
         [WindowsTest]
-        [SyncAndAsync]
-        public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows(SyncOrAsync syncOrAsync)
+        public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows()
         {
             var logger = new SerilogLoggerBuilder().Build();
             const int secondsToSample = 5;
@@ -67,9 +66,8 @@ namespace Halibut.Tests.Transport
                     () => "",
                     () => new Dictionary<string, string>(),
                     (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
-                    syncOrAsync.ToAsyncHalibutFeature(),
                     new HalibutTimeoutsAndLimits(),
-                    new StreamFactory(syncOrAsync.ToAsyncHalibutFeature()),
+                    new StreamFactory(),
                     NoOpConnectionsObserver.Instance
                 );
 

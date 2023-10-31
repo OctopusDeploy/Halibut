@@ -26,11 +26,11 @@ namespace Halibut.Tests.Diagnostics
                              .AsLatestClientAndLatestServiceBuilder()
                              .RecordingClientLogs(out var clientLogs)
                              .WithPortForwarding(out var portForwarder)
-                             .WithClientStreamFactory(new ActionBeforeCreateStreamFactory(new StreamFactory(clientAndServiceTestCase.ServiceAsyncHalibutFeature),
+                             .WithClientStreamFactory(new ActionBeforeCreateStreamFactory(new StreamFactory(),
                                  () => { portForwarder.Value.CloseExistingConnections(); }))
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 // If this task completes and then we likely didn't kill the connect as we intended to.  
                 var checkPollingTentacleDidNotConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
 
@@ -72,7 +72,7 @@ namespace Halibut.Tests.Diagnostics
                                  .Build())
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 // If this task completes and then we likely didn't kill the connect as we intended to.  
                 var checkPollingTentacleDidNotConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
 

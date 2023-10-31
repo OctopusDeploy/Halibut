@@ -23,11 +23,9 @@ namespace Halibut.Transport
 {
     public class SecureWebSocketClient : ISecureClient
     {
-        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ServiceEndPoint serviceEndpoint;
         readonly X509Certificate2 clientCertificate;
 
-        readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly ILog log;
         readonly IConnectionManager connectionManager;
@@ -37,7 +35,6 @@ namespace Halibut.Transport
         public SecureWebSocketClient(ExchangeProtocolBuilder protocolBuilder, 
             ServiceEndPoint serviceEndpoint,
             X509Certificate2 clientCertificate,
-            AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             ILog log,
             IConnectionManager connectionManager, IStreamFactory streamFactory)
@@ -49,101 +46,9 @@ namespace Halibut.Transport
             this.log = log;
             this.connectionManager = connectionManager;
             this.streamFactory = streamFactory;
-            this.asyncHalibutFeature = asyncHalibutFeature;
         }
 
         public ServiceEndPoint ServiceEndpoint => serviceEndpoint;
-
-        [Obsolete]
-        public void ExecuteTransaction(ExchangeAction protocolHandler, CancellationToken cancellationToken)
-        {
-            var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
-
-            Exception lastError = null;
-
-            // retryAllowed is also used to indicate if the error occurred before or after the connection was made
-            var retryAllowed = true;
-            var watch = Stopwatch.StartNew();
-            for (var i = 0; i < ServiceEndpoint.RetryCountLimit && retryAllowed && watch.Elapsed < ServiceEndpoint.ConnectionErrorRetryTimeout; i++)
-            {
-                if (i > 0)
-                {
-                    Thread.Sleep(retryInterval);
-                    log.Write(EventType.OpeningNewConnection, $"Retrying connection to {serviceEndpoint.Format()} - attempt #{i}.");
-                }
-
-                try
-                {
-                    lastError = null;
-
-                    IConnection connection = null;
-                    try
-                    {
-                        connection = connectionManager.AcquireConnection(protocolBuilder, new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits, streamFactory), serviceEndpoint, log, cancellationToken);
-
-                        // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
-                        retryAllowed = false;
-
-                        protocolHandler(connection.Protocol);
-                    }
-                    catch
-                    {
-                        // TODO - ASYNC ME UP!
-                        connection?.Dispose();
-                        throw;
-                    }
-
-                    // Only return the connection to the pool if all went well
-                    connectionManager.ReleaseConnection(serviceEndpoint, connection);
-                }
-                catch (AuthenticationException aex)
-                {
-                    lastError = aex;
-                    retryAllowed = false;
-                }
-                catch (WebSocketException wse) when (wse.Message == "Unable to connect to the remote server")
-                {
-                    lastError = wse;
-                    retryAllowed = false;
-                }
-                catch (WebSocketException wse)
-                {
-                    lastError = wse;
-                    // When the host is not found or reset the connection an immediate retry isn't going to help
-                    if ((wse.InnerException?.Message.StartsWith("The remote name could not be resolved:") ?? false) ||
-                        (wse.InnerException?.IsSocketConnectionReset() ?? false) ||
-                        wse.IsSocketConnectionReset())
-                    {
-                        retryAllowed = false;
-                    }
-                    else
-                    {
-                        log.Write(EventType.Error, $"Socket communication error while connecting to {serviceEndpoint.Format()}");
-                    }
-                }
-                catch (ConnectionInitializationFailedException cex)
-                {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to {serviceEndpoint.Format()}", cex);
-                    lastError = cex;
-                    retryAllowed = true;
-
-                    // If this is the second failure, clear the pooled connections as a precaution 
-                    // against all connections in the pool being bad
-                    if (i == 1)
-                    {
-                        connectionManager.ClearPooledConnections(serviceEndpoint, log);
-                    }
-
-                }
-                catch (Exception ex)
-                {
-                    log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
-                    lastError = ex;
-                }
-            }
-
-            HandleError(lastError, retryAllowed);
-        }
 
         public async Task ExecuteTransactionAsync(ExchangeActionAsync protocolHandler, RequestCancellationTokens requestCancellationTokens)
         {
@@ -171,7 +76,7 @@ namespace Halibut.Transport
                     {
                         connection = await connectionManager.AcquireConnectionAsync(
                             protocolBuilder,
-                            new WebSocketConnectionFactory(clientCertificate, asyncHalibutFeature, halibutTimeoutsAndLimits, streamFactory), 
+                            new WebSocketConnectionFactory(clientCertificate, halibutTimeoutsAndLimits, streamFactory), 
                             serviceEndpoint,
                             log, 
                             requestCancellationTokens.LinkedCancellationToken).ConfigureAwait(false);

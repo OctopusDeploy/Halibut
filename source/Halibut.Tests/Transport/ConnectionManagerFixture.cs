@@ -7,10 +7,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
-using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 
@@ -20,68 +18,64 @@ namespace Halibut.Tests.Transport
     public class ConnectionManagerFixture : BaseTest
     {
         [Test]
-        [SyncAndAsync]
-        public async Task DisposedConnectionsAreRemovedFromActive_WhenMultipleConnectionsAreActive(SyncOrAsync syncOrAsync)
+        public async Task DisposedConnectionsAreRemovedFromActive_WhenMultipleConnectionsAreActive()
         {
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections();
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
             //do it twice because this bug only triggers on multiple enumeration, having 1 in the collection doesn't trigger the bug
-            await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
-            await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
 
-            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
+            await connectionManager.DisconnectAsync(serviceEndpoint, null, CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task ReleasedConnectionsAreNotActive(SyncOrAsync syncOrAsync)
+        public async Task ReleasedConnectionsAreNotActive()
         {
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections();
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
-            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
+            await connectionManager.ReleaseConnectionAsync(serviceEndpoint, activeConnection, CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task DisposedConnectionsAreRemovedFromActive(SyncOrAsync syncOrAsync)
+        public async Task DisposedConnectionsAreRemovedFromActive()
         {
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections();
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
-            activeConnection.Dispose();
+            await activeConnection.DisposeAsync();
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task DisconnectDisposesActiveConnections(SyncOrAsync syncOrAsync)
+        public async Task DisconnectDisposesActiveConnections()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
 
-            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
+            await connectionManager.DisconnectAsync(serviceEndpoint, null, CancellationToken);
             connectionManager.GetActiveConnections(serviceEndpoint).Should().BeNullOrEmpty();
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
@@ -89,36 +83,34 @@ namespace Halibut.Tests.Transport
         }
         
         [Test]
-        [SyncAndAsync]
-        public async Task DisconnectDisposesReleasedConnections(SyncOrAsync syncOrAsync)
+        public async Task DisconnectDisposesReleasedConnections()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
 
-            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
+            await connectionManager.ReleaseConnectionAsync(serviceEndpoint, activeConnection, CancellationToken);
 
-            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
+            await connectionManager.DisconnectAsync(serviceEndpoint, null, CancellationToken);
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
             createdTestConnection.Disposed.Should().BeTrue();
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task DisposingConnectionManagerDisposesActiveConnections(SyncOrAsync syncOrAsync)
+        public async Task DisposingConnectionManagerDisposesActiveConnections()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using (var connectionManager = syncOrAsync.CreateConnectionManager())
+            await using (var connectionManager = new ConnectionManagerAsync())
             {
-                var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+                var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
                 connectionManager.GetActiveConnections(serviceEndpoint).Should().OnlyContain(c => c == activeConnection);
             }
 
@@ -127,17 +119,16 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task DisposingConnectionManagerDisposesConnectionsInConnectionPool(SyncOrAsync syncOrAsync)
+        public async Task DisposingConnectionManagerDisposesConnectionsInConnectionPool()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using (var connectionManager = syncOrAsync.CreateConnectionManager())
+            await using (var connectionManager = new ConnectionManagerAsync())
             {
-                var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
-                await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
+                var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+                await connectionManager.ReleaseConnectionAsync(serviceEndpoint, activeConnection, CancellationToken);
             }
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
@@ -145,22 +136,21 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task AcquireConnection_WhenConnectionInPoolHasExpired_CreatesNewConnectionAndDisposesExpiredConnection(SyncOrAsync syncOrAsync)
+        public async Task AcquireConnection_WhenConnectionInPoolHasExpired_CreatesNewConnectionAndDisposesExpiredConnection()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
             
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
-            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
+            var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            await connectionManager.ReleaseConnectionAsync(serviceEndpoint, activeConnection, CancellationToken);
 
             var testConnection = createdTestConnections.Should().ContainSingle().Subject;
             testConnection.Expire();
 
-            var newActiveConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+            var newActiveConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
 
             createdTestConnections.Should().HaveCount(2);
             newActiveConnection.Should().NotBe(activeConnection);
@@ -169,25 +159,24 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task ReleaseConnection_WillKeep5ConnectionsInPool_AndDisposeOldConnections(SyncOrAsync syncOrAsync)
+        public async Task ReleaseConnection_WillKeep5ConnectionsInPool_AndDisposeOldConnections()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
             var connections = new List<IConnection>();
             for (int i = 0; i < 10; i++)
             {
-                var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
+                var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
                 connections.Add(activeConnection);
             }
 
             foreach (var connection in connections)
             {
-                await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, connection, CancellationToken);
+                await connectionManager.ReleaseConnectionAsync(serviceEndpoint, connection, CancellationToken);
             }
 
             createdTestConnections.Where(c => c.Disposed).Should().HaveCount(5);
@@ -195,86 +184,55 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task ClearPooledConnectionsDisposesAllConnectionsInPool(SyncOrAsync syncOrAsync)
+        public async Task ClearPooledConnectionsDisposesAllConnectionsInPool()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
             var inMemoryConnectionLog = new InMemoryConnectionLog(serviceEndpoint.ToString());
-            var activeConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
+            var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
 
-            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, activeConnection, CancellationToken);
+            await connectionManager.ReleaseConnectionAsync(serviceEndpoint, activeConnection, CancellationToken);
 
-            await connectionManager.ClearPooledConnections_SyncOrAsync(syncOrAsync, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
+            await connectionManager.ClearPooledConnectionsAsync(serviceEndpoint, inMemoryConnectionLog, CancellationToken);
 
             var createdTestConnection = createdTestConnections.Should().ContainSingle().Subject;
             createdTestConnection.Disposed.Should().BeTrue();
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task DisconnectClearsPoolAndActiveConnection(SyncOrAsync syncOrAsync)
+        public async Task DisconnectClearsPoolAndActiveConnection()
         {
             var createdTestConnections = new List<TestConnection>();
-            var connectionFactory = CreateFactoryThatCreatesTestConnections(syncOrAsync, createdTestConnections.Add);
+            var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
             var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
 
             var inMemoryConnectionLog = new InMemoryConnectionLog(serviceEndpoint.ToString());
-            await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
-            var returnedConnection = await connectionManager.AcquireConnection_SyncOrAsync(syncOrAsync, GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
-            await connectionManager.ReleaseConnection_SyncOrAsync(syncOrAsync, serviceEndpoint, returnedConnection, CancellationToken);
+            await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
+            var returnedConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, inMemoryConnectionLog, CancellationToken);
+            await connectionManager.ReleaseConnectionAsync(serviceEndpoint, returnedConnection, CancellationToken);
             
-            await connectionManager.Disconnect_SyncOrAsync(syncOrAsync, serviceEndpoint, null, CancellationToken);
+            await connectionManager.DisconnectAsync(serviceEndpoint, null, CancellationToken);
 
             createdTestConnections.Should().HaveCount(2);
             createdTestConnections.Should().AllSatisfy(c => c.Disposed.Should().BeTrue());
         }
-
-        [Test]
-        public async Task AsynchronousDisposalCanBeDoneOnSynchronousConnectionManager()
-        {
-            var connectionManager = SyncOrAsync.Sync.CreateConnectionManager();
-
-            await connectionManager.DisposeAsync();
-        }
-
-        [Test]
-        public void SynchronousDisposalCanBeDoneOnAsynchronousConnectionManager()
-        {
-            var connectionManager = SyncOrAsync.Async.CreateConnectionManager();
-
-            connectionManager.Dispose();
-        }
-
-        static IConnectionFactory CreateFactoryThatCreatesTestConnections(SyncOrAsync syncOrAsync, Action<TestConnection>? connectionCreated = null)
+        
+        static IConnectionFactory CreateFactoryThatCreatesTestConnections(Action<TestConnection>? connectionCreated = null)
         {
             var connectionFactory = Substitute.For<IConnectionFactory>();
-            syncOrAsync
-                .WhenSync(() =>
-                    {
-                        connectionFactory.EstablishNewConnection(GetProtocol, Arg.Any<ServiceEndPoint>(), Arg.Any<ILog>(), Arg.Any<CancellationToken>())
-                            .Returns(_ =>
-                            {
-                                var testConnection = new TestConnection();
-                                connectionCreated?.Invoke(testConnection);
-                                return testConnection;
-                            });
-                    }
-                ).WhenAsync(() =>
+            
+            connectionFactory.EstablishNewConnectionAsync(GetProtocol, Arg.Any<ServiceEndPoint>(), Arg.Any<ILog>(), Arg.Any<CancellationToken>())
+                .Returns(_ =>
                 {
-                    connectionFactory.EstablishNewConnectionAsync(GetProtocol, Arg.Any<ServiceEndPoint>(), Arg.Any<ILog>(), Arg.Any<CancellationToken>())
-                        .Returns(_ =>
-                        {
-                            var testConnection = new TestConnection();
-                            connectionCreated?.Invoke(testConnection);
-                            return testConnection;
-                        });
+                    var testConnection = new TestConnection();
+                    connectionCreated?.Invoke(testConnection);
+                    return testConnection;
                 });
 
             return connectionFactory;

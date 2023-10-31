@@ -17,7 +17,7 @@ namespace Halibut.Tests
     public class WhenCallingAMethodThatDoesNotExist : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncServicesAsWell: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var services = new SingleServiceFactory(new object(), typeof(EchoService));
@@ -27,7 +27,7 @@ namespace Halibut.Tests
                        .WithServiceFactory(services)
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 
                 await AssertAsync.Throws<MethodNotFoundHalibutClientException>(() => echo.SayHelloAsync("Say hello to a service that does not exist."));
             }

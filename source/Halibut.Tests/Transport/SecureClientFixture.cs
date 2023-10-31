@@ -9,20 +9,18 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
-using Halibut.Util;
 using NSubstitute;
 using NUnit.Framework;
 using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Transport
 {
-    public class SecureClientFixture : IDisposable
+    public class SecureClientFixture : IAsyncDisposable
     {
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
@@ -33,7 +31,7 @@ namespace Halibut.Tests.Transport
         {
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
-            tentacle = new HalibutRuntime(services, Certificates.TentacleListening);
+            tentacle = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.TentacleListening).WithServiceFactory(services).Build();
             var tentaclePort = tentacle.Listen();
             tentacle.Trust(Certificates.OctopusPublicThumbprint);
             endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint)
@@ -43,34 +41,26 @@ namespace Halibut.Tests.Transport
             log = new TestContextLogCreator("Client", LogLevel.Info).ToCachingLogFactory().ForEndpoint(endpoint.BaseUri);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            tentacle.Dispose();
+            await tentacle.DisposeAsync();
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt(SyncOrAsync syncOrAsync)
+        public async Task SecureClientClearsPoolWhenAllConnectionsCorrupt()
         {
-            AsyncHalibutFeature asyncHalibutFeature = syncOrAsync == SyncOrAsync.Sync ? AsyncHalibutFeature.Disabled : AsyncHalibutFeature.Enabled;
-            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = null;
-            if (asyncHalibutFeature.IsEnabled()) halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
 
-            using var connectionManager = syncOrAsync.CreateConnectionManager();
+            await using var connectionManager = new ConnectionManagerAsync();
             var stream = Substitute.For<IMessageExchangeStream>();
-
-            syncOrAsync
-                .WhenSync(() => stream.When(x => x.IdentifyAsClient()).Do(x => throw new ConnectionInitializationFailedException("")))
-                .WhenAsync(() => stream.IdentifyAsClientAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException(new ConnectionInitializationFailedException(""))));
+            stream.IdentifyAsClientAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException(new ConnectionInitializationFailedException("")));
             
             for (int i = 0; i < HalibutLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
                 connection.Protocol.Returns(new MessageExchangeProtocol(stream, new NoRpcObserver(), log));
 
-                syncOrAsync
-                    .WhenSync(() => connectionManager.ReleaseConnection(endpoint, connection))
-                    .WhenAsync(() => connectionManager.ReleaseConnectionAsync(endpoint, connection, CancellationToken.None));
+                await connectionManager.ReleaseConnectionAsync(endpoint, connection, CancellationToken.None);
             }
 
             var request = new RequestMessage
@@ -81,29 +71,23 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var tcpConnectionFactory = new TcpConnectionFactory(Certificates.Octopus, syncOrAsync.ToAsyncHalibutFeature(), halibutTimeoutsAndLimits, new StreamFactory(syncOrAsync.ToAsyncHalibutFeature()));
-            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l, syncOrAsync), endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
+            var tcpConnectionFactory = new TcpConnectionFactory(Certificates.Octopus, halibutTimeoutsAndLimits, new StreamFactory());
+            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l), endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
 
             using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);
 
-#pragma warning disable CS0612
-            await syncOrAsync
-                .WhenSync(() => secureClient.ExecuteTransaction((mep) => response = mep.ExchangeAsClient(request), CancellationToken.None))
-                .WhenAsync(async () => await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), requestCancellationTokens));
-#pragma warning restore CS0612
+            await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), requestCancellationTokens);
 
             // The pool should be cleared after the second failure
-            await syncOrAsync
-                .WhenSync(() => stream.Received(2).IdentifyAsClient())
-                .WhenAsync(async () => await stream.Received(2).IdentifyAsClientAsync(Arg.Any<CancellationToken>()));
+            await stream.Received(2).IdentifyAsClientAsync(Arg.Any<CancellationToken>());
             // And a new valid connection should then be made
             response.Result.Should().Be("Fred...");
         }
 
-        public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger, SyncOrAsync syncOrAsync)
+        public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), syncOrAsync.ToAsyncHalibutFeature(), new HalibutTimeoutsAndLimits(), logger), new NoRpcObserver(), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimits(), logger), new NoRpcObserver(), logger);
         }
     }
 }

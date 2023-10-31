@@ -40,8 +40,8 @@ namespace Halibut.Tests
                                      .Build(CancellationToken))
                     {
 
-                        var clientCountingService1 = clientOnly1.CreateClient<ICountingService, IAsyncClientCountingService>();
-                        var clientCountingService2 = clientOnly2.CreateClient<ICountingService, IAsyncClientCountingService>();
+                        var clientCountingService1 = clientOnly1.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
+                        var clientCountingService2 = clientOnly2.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
 
                         await clientCountingService1.IncrementAsync();
 

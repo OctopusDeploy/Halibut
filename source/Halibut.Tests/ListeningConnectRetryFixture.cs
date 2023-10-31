@@ -36,7 +36,7 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.Zero;
                     point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
@@ -70,7 +70,7 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.FromSeconds(1);
                     point.ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(15);
@@ -107,7 +107,7 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.FromSeconds(10);
                     point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;
@@ -144,7 +144,7 @@ namespace Halibut.Tests
             {
                 clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
 
-                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.RetryListeningSleepInterval = TimeSpan.FromSeconds(1);
                     point.ConnectionErrorRetryTimeout = TimeSpan.MaxValue;

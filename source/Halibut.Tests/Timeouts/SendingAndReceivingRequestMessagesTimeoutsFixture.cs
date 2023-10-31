@@ -4,26 +4,25 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
-using NUnit.Framework;
-using System.Runtime.InteropServices;
-using Halibut.Tests.Support.PortForwarding;
-using Halibut.Tests.Support.TestCases;
-using Halibut.Tests.TestServices.Async;
 using Halibut.Util;
+using NUnit.Framework;
 
 namespace Halibut.Tests.Timeouts
 {
     public class SendingAndReceivingRequestMessagesTimeoutsFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testAsyncServicesAsWell: true, testSyncService : false, testSyncClients: false, testAsyncClients: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
         public async Task HalibutTimeoutsAndLimits_AppliesToTcpClientReceiveTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var expectedTimeout = clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync ? HalibutLimits.TcpClientReceiveTimeout : TimeSpan.FromSeconds(10);
+            var expectedTimeout = TimeSpan.FromSeconds(10);
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType).Build())
@@ -39,10 +38,10 @@ namespace Halibut.Tests.Timeouts
                        .WithInstantReconnectPollingRetryPolicy()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var pauseConnections = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
+                var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
                 var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
@@ -73,10 +72,10 @@ namespace Halibut.Tests.Timeouts
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var pauseConnections = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
+                var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
                 var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
@@ -105,10 +104,10 @@ namespace Halibut.Tests.Timeouts
                            thenSend: "All done"))
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var pauseConnections = clientAndService.CreateClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
+                var pauseConnections = clientAndService.CreateAsyncClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
                 var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
@@ -137,10 +136,10 @@ namespace Halibut.Tests.Timeouts
                        .WithEchoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
+                var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
                 var e = (await AssertAsync.Throws<HalibutClientException>(() =>
@@ -151,51 +150,17 @@ namespace Halibut.Tests.Timeouts
                 AssertExceptionLooksLikeAWriteTimeout(e);
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
+                
+                var expectedTimeOut = HalibutLimits.TcpClientSendTimeout;
 
-                var addControlMessageTimeout = TimeSpan.Zero;
-                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening
-#if !NETFRAMEWORK
-                    // In .NET 6.0, when the `NetworkTimeoutStream` closes the underlying SSL stream due to a timeout, the async dispose path attempts to flush, and the SSL stream cannot be used anymore.
-                    // This is why we don't need to buffer out the timeout for tests in this case
-                    && clientAndServiceTestCase.SyncOrAsync != SyncOrAsync.Async
-#endif
-                    )
-                {
-                    // When an error occurs in listening mode, the dispose method in SecureConnection.Dispose
-                    // will be called resulting in a END control message being sent over the wire. Since the
-                    // connection is paused we must additionally wait HalibutLimits.TcpClientHeartbeatSendTimeout 
-                    // for that to complete.
-                    addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;
-                }
-
-                if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync)
-                {
-                    var expectedTimeOut = HalibutLimits.TcpClientSendTimeout // What we actually expected. 
-                                          + HalibutLimits.TcpClientSendTimeout // an extra timeout because of the dispose method of the zip stream (see below)
-                                          + addControlMessageTimeout;
-
-                    sw.Elapsed.Should().BeGreaterThan(expectedTimeOut - TimeSpan.FromSeconds(2),
-                            "We 'should' wait the send timeout amount of time NOT the heart beat timeout, however when an error occurs writing to the zip (deflate)" +
-                            "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.") // -2s give it a little slack to avoid it timed out slightly too early.
-                        .And
-                        .BeLessThan(expectedTimeOut + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout,
-                            "We 'should' wait the send timeout amount of time, however when an error occurs writing to the zip (deflate)" +
-                            "stream we also call dispose which again attempts to write to the stream. Thus we wait 2 times the TcpClientSendTimeout.");
-                }
-                else
-                {
-                    
-                    var expectedTimeOut = HalibutLimits.TcpClientSendTimeout;
-
-                    sw.Elapsed.Should().BeGreaterThan(
-                            expectedTimeOut - TimeSpan.FromSeconds(2), 
-                            "Should wait the send timeout amount of time NOT the heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
-                        .And
-                        .BeLessThan(
-                            expectedTimeOut + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout,
-                            "Should wait the send timeout amount of time");
-                }
-
+                sw.Elapsed.Should().BeGreaterThan(
+                        expectedTimeOut - TimeSpan.FromSeconds(2), 
+                        "Should wait the send timeout amount of time NOT the heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                    .And
+                    .BeLessThan(
+                        expectedTimeOut + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout,
+                        "Should wait the send timeout amount of time");
+                
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
         }
@@ -210,10 +175,10 @@ namespace Halibut.Tests.Timeouts
                        .WithEchoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
-                var echoServiceTheErrorWillHappenOn = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
+                var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
                 var e = (await AssertAsync.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
@@ -227,18 +192,7 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
-                // It is not clear why listening doesn't seem to wait to send a control message here.
-                var addControlMessageTimeout = TimeSpan.Zero;
-                if (clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening && clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync)
-                {
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        // It is not clear why windows appears to add this timeout.
-                        addControlMessageTimeout += HalibutLimits.TcpClientHeartbeatSendTimeout;                        
-                    }
-                }
-
-                var expectedTimeout = HalibutLimits.TcpClientSendTimeout + addControlMessageTimeout;
+                var expectedTimeout = HalibutLimits.TcpClientSendTimeout;
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(expectedTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");

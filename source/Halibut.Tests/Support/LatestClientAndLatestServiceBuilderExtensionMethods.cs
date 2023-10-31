@@ -1,11 +1,9 @@
 ﻿using System;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Observability;
 using Halibut.Util;
-using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
 namespace Halibut.Tests.Support
 {
@@ -65,10 +63,7 @@ namespace Halibut.Tests.Support
         public static LatestClientAndLatestServiceBuilder WhenTestingAsyncClient(this LatestClientAndLatestServiceBuilder builder, ClientAndServiceTestCase clientAndServiceTestCase, Action<LatestClientAndLatestServiceBuilder> action)
         {
 
-            if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Async)
-            {
-                action(builder);
-            }
+            action(builder);
             return builder;
         }
         

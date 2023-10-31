@@ -289,8 +289,7 @@ namespace Halibut.Tests.Transport.Streams
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task FlushOrFlushAsync_ShouldTimeout_AndCloseTheStream_AndThrowExceptionThatLooksLikeANetworkTimeoutException(SyncOrAsync syncOrAsync)
+        public async Task FlushAsync_ShouldTimeout_AndCloseTheStream_AndThrowExceptionThatLooksLikeANetworkTimeoutException()
         {
             var (disposables, sut, callCountingStream, pausingStream, _) = await BuildTcpClientAndTcpListener(
                 CancellationToken,
@@ -305,23 +304,37 @@ namespace Halibut.Tests.Transport.Streams
                 // NetworkStream implementation of Flush and FlushAsync is a NoOp so pause to make sure our wrapper is working
                 pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
 
-                (await AssertAsync.Throws<IOException>(async () =>
-                {
-                    switch (syncOrAsync)
-                    {
-                        case SyncOrAsync.Async:
-                            await sut.FlushAsync(CancellationToken);
-                            return;
-                        case SyncOrAsync.Sync:
-                            sut.Flush();
-                            return;
-                    }
-                }))
+                (await AssertAsync.Throws<IOException>(async () => await sut.FlushAsync(CancellationToken)))
                     .And.Message.Should().ContainAny(
                     "Unable to write data to the transport connection: Connection timed out.",
                     "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+                                
+                AssertStreamWasClosed(StreamMethod.Async, callCountingStream);
+            }
+        }
 
-                AssertStreamWasClosed(syncOrAsync, callCountingStream);
+        [Test]
+        public async Task Flush_ShouldTimeout_AndCloseTheStream_AndThrowExceptionThatLooksLikeANetworkTimeoutException()
+        {
+            var (disposables, sut, callCountingStream, pausingStream, _) = await BuildTcpClientAndTcpListener(
+                CancellationToken, 
+                onListenerRead: async _ => await DelayForeverToTryAndDelayWriting(CancellationToken));
+
+            using (disposables)
+            {
+                sut.WriteTimeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds;
+                // Ensure the correct timeout is used
+                sut.ReadTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds;
+
+                // NetworkStream implementation of Flush and FlushAsync is a NoOp so pause to make sure our wrapper is working
+                pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
+
+                (await AssertAsync.Throws<IOException>(async () => sut.Flush()))
+                    .And.Message.Should().ContainAny(
+                        "Unable to write data to the transport connection: Connection timed out.",
+                        "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
+                                
+                AssertStreamWasClosed(StreamMethod.Sync, callCountingStream);
             }
         }
 
@@ -568,10 +581,10 @@ namespace Halibut.Tests.Transport.Streams
                 callCountingStream.DisposeAsyncCallCount.Should().Be(1);
             }
         }
-
-        static void AssertStreamWasClosed(SyncOrAsync syncOrAsync, CallCountingStream callCountingStream)
+        
+        static void AssertStreamWasClosed(StreamMethod streamMethod, CallCountingStream callCountingStream)
         {
-            if (syncOrAsync == SyncOrAsync.Sync)
+            if (streamMethod == StreamMethod.Sync)
             {
                 callCountingStream.CloseCallCount.Should().Be(1, "The Stream should have been Closed on Timeout");
             }
@@ -594,12 +607,12 @@ namespace Halibut.Tests.Transport.Streams
 #if !NETFRAMEWORK
                 case StreamReadMethod.ReadAsyncForMemoryByteArray:
 #endif
-                case StreamReadMethod.BeginReadEndOutsideCallback:
-                case StreamReadMethod.BeginReadEndWithinCallback:
-                    AssertStreamWasClosed(SyncOrAsync.Async, callCountingStream);
+                case StreamReadMethod.BeginReadEndOutsideCallback: 
+                case StreamReadMethod.BeginReadEndWithinCallback: 
+                    AssertStreamWasClosed(StreamMethod.Async, callCountingStream);
                     break;
                 default:
-                    AssertStreamWasClosed(SyncOrAsync.Sync, callCountingStream);
+                    AssertStreamWasClosed(StreamMethod.Sync, callCountingStream);
                     break;
             }
         }
@@ -614,10 +627,10 @@ namespace Halibut.Tests.Transport.Streams
 #endif
                 case StreamWriteMethod.BeginWriteEndOutsideCallback:
                 case StreamWriteMethod.BeginWriteEndWithinCallback:
-                    AssertStreamWasClosed(SyncOrAsync.Async, callCountingStream);
+                    AssertStreamWasClosed(StreamMethod.Async, callCountingStream);
                     break;
                 default:
-                    AssertStreamWasClosed(SyncOrAsync.Sync, callCountingStream);
+                    AssertStreamWasClosed(StreamMethod.Sync, callCountingStream);
                     break;
             }
         }
@@ -628,10 +641,10 @@ namespace Halibut.Tests.Transport.Streams
             {
                 case StreamCopyToMethod.CopyToAsync:
                 case StreamCopyToMethod.CopyToAsyncWithBufferSize:
-                    AssertStreamWasClosed(SyncOrAsync.Async, callCountingStream);
+                    AssertStreamWasClosed(StreamMethod.Async, callCountingStream);
                     break;
                 default:
-                    AssertStreamWasClosed(SyncOrAsync.Sync, callCountingStream);
+                    AssertStreamWasClosed(StreamMethod.Sync, callCountingStream);
                     break;
             }
         }

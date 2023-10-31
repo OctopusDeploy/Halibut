@@ -22,7 +22,7 @@ namespace Halibut.Tests
                        .WithDoSomeActionService(() => portForwarder.Value.Dispose())
                        .Build(CancellationToken))
             {
-                var svc = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
+                var svc = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                 // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
                 var killPortForwarderTask = Task.Run(async () => await svc.ActionAsync());

@@ -42,12 +42,11 @@ namespace Halibut.Tests.Timeouts
                        .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
                            .WithLog(logFactory.ForEndpoint(uri))
                            .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                           .WithSyncOrAsync(clientAndServiceTestCase.SyncOrAsync)
                            .Build()))
                        .WithEchoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
 
                 timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();

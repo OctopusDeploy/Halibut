@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Streams;
-using Halibut.Util;
 
 namespace Halibut.Transport.Protocol
 {
@@ -23,51 +22,23 @@ namespace Halibut.Transport.Protocol
 
         readonly RewindableBufferStream stream;
         readonly ILog log;
-        [Obsolete]
-        readonly StreamWriter streamWriter = null;
         readonly IMessageSerializer serializer;
         readonly Version currentVersion = new(1, 0);
         readonly ControlMessageReader controlMessageReader;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, AsyncHalibutFeature asyncHalibutFeature, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
+        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
         {
-            this.stream = asyncHalibutFeature.IsEnabled() ? 
-                new RewindableBufferStream(stream, halibutTimeoutsAndLimits.RewindableBufferStreamSize) : 
-#pragma warning disable CS0612
-                new RewindableBufferStream(stream, HalibutLimits.RewindableBufferStreamSize);
-#pragma warning restore CS0612
+            this.stream = new RewindableBufferStream(stream, halibutTimeoutsAndLimits.RewindableBufferStreamSize);
             
             this.log = log;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.controlMessageReader = new ControlMessageReader(halibutTimeoutsAndLimits);
             this.serializer = serializer;
-
-#pragma warning disable CS0612 // Type or member is obsolete
-            streamWriter = new StreamWriter(this.stream, new UTF8Encoding(false)) { NewLine = "\r\n" };
-#pragma warning restore CS0612 // Type or member is obsolete
-            
-            if (asyncHalibutFeature.IsEnabled())
-            {
-                SetNormalTimeoutsAsync();
-            }
-            else
-            {
-#pragma warning disable CS0612
-                SetNormalTimeouts();
-#pragma warning restore CS0612
-            }
+            SetNormalTimeoutsAsync();
         }
 
         static int streamCount;
-
-        [Obsolete]
-        public void IdentifyAsClient()
-        {
-            log.Write(EventType.Diagnostic, "Identifying as a client");
-            SendIdentityMessage($"{MxClient} {currentVersion}");
-            ExpectServerIdentity();
-        }
 
         public async Task IdentifyAsClientAsync(CancellationToken cancellationToken)
         {
@@ -76,32 +47,10 @@ namespace Halibut.Transport.Protocol
             await ExpectServerIdentityAsync(cancellationToken);
         }
 
-        [Obsolete]
-        void SendControlMessage(string message)
-        {
-            streamWriter.WriteLine(message);
-            streamWriter.Flush();
-        }
-
-        [Obsolete]
-        async Task SendControlMessageAsync(string message)
-        {
-            await streamWriter.WriteLineAsync(message).ConfigureAwait(false);
-            await streamWriter.FlushAsync().ConfigureAwait(false);
-        }
-
         async Task SendControlMessageAsync(string message, CancellationToken cancellationToken)
         {
             await stream.WriteControlLineAsync(message, cancellationToken);
             await stream.FlushAsync(cancellationToken);
-        }
-
-        [Obsolete]
-        void SendIdentityMessage(string identityLine)
-        {
-            streamWriter.WriteLine(identityLine);
-            streamWriter.WriteLine();
-            streamWriter.Flush();
         }
 
         async Task SendIdentityMessageAsync(string identityLine, CancellationToken cancellationToken)
@@ -112,14 +61,6 @@ namespace Halibut.Transport.Protocol
             await stream.FlushAsync(cancellationToken);
         }
 
-        [Obsolete]
-        public void SendNext()
-        {
-            SetShortTimeouts();
-            SendControlMessage(Next);
-            SetNormalTimeouts();
-        }
-
         public async Task SendNextAsync(CancellationToken cancellationToken)
         {
             SetShortTimeoutsAsync();
@@ -127,29 +68,9 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeoutsAsync();
         }
 
-        [Obsolete]
-        public void SendProceed()
-        {
-            SendControlMessage(Proceed);
-        }
-
-        [Obsolete]
-        public async Task SendProceedAsync()
-        {
-            await SendControlMessageAsync(Proceed).ConfigureAwait(false);
-        }
-
         public async Task SendProceedAsync(CancellationToken cancellationToken)
         {
             await SendControlMessageAsync(Proceed, cancellationToken);
-        }
-
-        [Obsolete]
-        public void SendEnd()
-        {
-            SetShortTimeouts();
-            SendControlMessage(End);
-            SetNormalTimeouts();
         }
 
         public async Task SendEndAsync(CancellationToken cancellationToken)
@@ -157,38 +78,6 @@ namespace Halibut.Transport.Protocol
             SetShortTimeoutsAsync(); 
             await SendControlMessageAsync(End, cancellationToken);
             SetNormalTimeoutsAsync();
-        }
-
-        [Obsolete]
-        public bool ExpectNextOrEnd()
-        {
-            var line = controlMessageReader.ReadUntilNonEmptyControlMessage(stream);
-            switch (line)
-            {
-                case Next:
-                    return true;
-                case null:
-                case End:
-                    return false;
-                default:
-                    throw new ProtocolException($"Expected {Next} or {End}, got: " + line);
-            }
-        }
-
-        [Obsolete]
-        public async Task<bool> ExpectNextOrEndAsync()
-        {
-            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream).ConfigureAwait(false);
-            switch (line)
-            {
-                case Next:
-                    return true;
-                case null:
-                case End:
-                    return false;
-                default:
-                    throw new ProtocolException($"Expected {Next} or {End}, got: " + line);
-            }
         }
 
         public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
@@ -202,18 +91,6 @@ namespace Halibut.Transport.Protocol
                 End => false,
                 _ => throw new ProtocolException($"Expected {Next} or {End}, got: " + line)
             };
-        }
-
-        [Obsolete]
-        public void ExpectProceeed()
-        {
-            SetShortTimeouts();
-            var line = controlMessageReader.ReadUntilNonEmptyControlMessage(stream);
-            if (line == null)
-                throw new AuthenticationException("XYZ");
-            if (line != Proceed)
-                throw new ProtocolException($"Expected {Proceed}, got: " + line);
-            SetNormalTimeouts();
         }
 
         public async Task ExpectProceedAsync(CancellationToken cancellationToken)
@@ -235,64 +112,15 @@ namespace Halibut.Transport.Protocol
             SetNormalTimeoutsAsync();
         }
 
-        [Obsolete]
-        public void IdentifyAsSubscriber(string subscriptionId)
-        {
-            SendIdentityMessage($"{MxSubscriber} {currentVersion} {subscriptionId}");
-            ExpectServerIdentity();
-        }
-
         public async Task IdentifyAsSubscriberAsync(string subscriptionId, CancellationToken cancellationToken)
         {
             await SendIdentityMessageAsync($"{MxSubscriber} {currentVersion} {subscriptionId}", cancellationToken);
             await ExpectServerIdentityAsync(cancellationToken);
         }
 
-        [Obsolete]
-        public void IdentifyAsServer()
-        {
-            SendIdentityMessage($"{MxServer} {currentVersion}");
-        }
-
         public async Task IdentifyAsServerAsync(CancellationToken cancellationToken)
         {
             await SendIdentityMessageAsync($"{MxServer} {currentVersion}", cancellationToken);
-        }
-
-        [Obsolete]
-        public RemoteIdentity ReadRemoteIdentity()
-        {
-            var line = controlMessageReader.ReadControlMessage(stream);
-            
-            
-            if (string.IsNullOrEmpty(line)) throw new ProtocolException("Unable to receive the remote identity; the identity line was empty.");
-            
-            var emptyLine = controlMessageReader.ReadControlMessage(stream);
-            if (emptyLine.Length != 0)
-            {
-                throw new ProtocolException("Unable to receive the remote identity; the following line was not empty.");
-            }
-            
-            var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-            try
-            {
-                var identityType = ParseIdentityType(parts[0]);
-                if (identityType == RemoteIdentityType.Subscriber)
-                {
-                    if (parts.Length < 3) throw new ProtocolException("Unable to receive the remote identity; the client identified as a subscriber, but did not supply a subscription ID.");
-                    var subscriptionId = new Uri(parts[2]);
-                    return new RemoteIdentity(identityType, subscriptionId);
-                }
-                return new RemoteIdentity(identityType);
-            }
-            catch (ProtocolException)
-            {
-                log.Write(EventType.Error, "Response:");
-                log.Write(EventType.Error, line);
-                log.Write(EventType.Error, new StreamReader(stream, new UTF8Encoding(false)).ReadToEnd());
-
-                throw;
-            }
         }
 
         public async Task<RemoteIdentity> ReadRemoteIdentityAsync(CancellationToken cancellationToken)
@@ -339,36 +167,12 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        [Obsolete]
-        public void Send<T>(T message)
-        {
-            using (var capture = StreamCapture.New())
-            {
-                serializer.WriteMessage(stream, message);
-                WriteEachStream(capture.SerializedStreams);
-            }
-
-            log.Write(EventType.Diagnostic, "Sent: {0}", message);
-        }
-
         public async Task SendAsync<T>(T message, CancellationToken cancellationToken)
         {
             var serializedStreams = await serializer.WriteMessageAsync(stream, message, cancellationToken);
             await WriteEachStreamAsync(serializedStreams, cancellationToken);
             
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
-        }
-
-        [Obsolete]
-        public T Receive<T>()
-        {
-            using (var capture = StreamCapture.New())
-            {
-                var result = serializer.ReadMessage<T>(stream);
-                ReadStreams(capture);
-                log.Write(EventType.Diagnostic, "Received: {0}", result);
-                return result;
-            }
         }
 
         public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
@@ -394,14 +198,6 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        [Obsolete]
-        void ExpectServerIdentity()
-        {
-            var identity = ReadRemoteIdentity();
-            if (identity.IdentityType != RemoteIdentityType.Server)
-                throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
-        }
-
         async Task ExpectServerIdentityAsync(CancellationToken cancellationToken)
         {
             var identity = await ReadRemoteIdentityAsync(cancellationToken);
@@ -410,34 +206,6 @@ namespace Halibut.Transport.Protocol
             {
                 throw new ProtocolException("Expected the remote endpoint to identity as a server. Instead, it identified as: " + identity.IdentityType);
             }
-        }
-
-        [Obsolete]
-        void ReadStreams(StreamCapture capture)
-        {
-            var expected = capture.DeserializedStreams.Count;
-
-            for (var i = 0; i < expected; i++)
-            {
-                ReadStream(capture);
-            }
-        }
-
-        [Obsolete]
-        void ReadStream(StreamCapture capture)
-        {
-            var reader = new BinaryReader(stream);
-            var id = new Guid(reader.ReadBytes(16));
-            var length = reader.ReadInt64();
-            var dataStream = FindStreamById(capture, id);
-            var tempFile = CopyStreamToFile(id, length, reader);
-            var lengthAgain = reader.ReadInt64();
-            if (lengthAgain != length)
-            {
-                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
-            }
-
-            ((IDataStreamInternal)dataStream).Received(tempFile);
         }
 
         async Task ReadStreamsAsync(IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
@@ -465,25 +233,6 @@ namespace Halibut.Transport.Protocol
 
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
-
-        [Obsolete]
-        TemporaryFileStream CopyStreamToFile(Guid id, long length, BinaryReader reader)
-        {
-            var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
-            long bytesLeftToRead = length;
-            using (var fileStream = new FileStream(path, FileMode.Create, FileAccess.Write))
-            {
-                var buffer = new byte[1024 * 128];
-                while (bytesLeftToRead > 0)
-                {
-                    var read = reader.Read(buffer, 0, (int)Math.Min(buffer.Length, bytesLeftToRead));
-                    if (read == 0) throw new ProtocolException($"Stream with length {length} was closed after only reading {length - bytesLeftToRead} bytes.");
-                    bytesLeftToRead -= read;
-                    fileStream.Write(buffer, 0, read);
-                }
-            }
-            return new TemporaryFileStream(path, log);
-        }
         
         async Task<TemporaryFileStream> CopyStreamToFileAsync(Guid id, long length, Stream stream, CancellationToken cancellationToken)
         {
@@ -506,14 +255,6 @@ namespace Halibut.Transport.Protocol
             return new TemporaryFileStream(path, log);
         }
 
-        [Obsolete]
-        static DataStream FindStreamById(StreamCapture capture, Guid id)
-        {
-            var dataStream = capture.DeserializedStreams.FirstOrDefault(d => d.Id == id);
-            if (dataStream == null) throw new Exception("Unexpected stream!");
-            return dataStream;
-        }
-
         static DataStream FindStreamById(IReadOnlyList<DataStream> deserializedStreams, Guid id)
         {
             var dataStream = deserializedStreams.FirstOrDefault(d => d.Id == id);
@@ -524,24 +265,6 @@ namespace Halibut.Transport.Protocol
             }
 
             return dataStream;
-        }
-
-        [Obsolete]
-        void WriteEachStream(IEnumerable<DataStream> streams)
-        {
-            foreach (var dataStream in streams)
-            {
-                var writer = new BinaryWriter(stream);
-                writer.Write(dataStream.Id.ToByteArray());
-                writer.Write(dataStream.Length);
-                writer.Flush();
-
-                ((IDataStreamInternal)dataStream).Transmit(stream);
-                stream.Flush();
-
-                writer.Write(dataStream.Length);
-                writer.Flush();
-            }
         }
 
         async Task WriteEachStreamAsync(IEnumerable<DataStream> streams, CancellationToken cancellationToken)
@@ -558,26 +281,6 @@ namespace Halibut.Transport.Protocol
                 await stream.WriteLongAsync(dataStream.Length, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
             }
-        }
-
-        [Obsolete]
-        void SetNormalTimeouts()
-        {
-            if (!stream.CanTimeout)
-                return;
-
-            stream.WriteTimeout = (int)HalibutLimits.TcpClientSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)HalibutLimits.TcpClientReceiveTimeout.TotalMilliseconds;
-        }
-
-        [Obsolete]
-        void SetShortTimeouts()
-        {
-            if (!stream.CanTimeout)
-                return;
-
-            stream.WriteTimeout = (int)HalibutLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)HalibutLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
         }
         
         void SetNormalTimeoutsAsync()

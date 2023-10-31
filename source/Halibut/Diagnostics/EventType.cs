@@ -5,8 +5,6 @@ namespace Halibut.Diagnostics
     public enum EventType
     {
         OpeningNewConnection,
-        [Obsolete]
-        UsingExistingConnectionFromPool,
         Security,
         MessageExchange,
         Diagnostic,
@@ -31,8 +29,6 @@ namespace Halibut.Diagnostics
         ListenerAcceptedClient,
         ListenerStopped,
         SecurityNegotiation,
-        [Obsolete]
-        FileTransfer,
         
         /// <summary>
         /// Used when an error occurs identifying the remote or identify

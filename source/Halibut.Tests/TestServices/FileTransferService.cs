@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using Octopus.Tentacle.Contracts;
 
 namespace Halibut.Tests.TestServices
@@ -8,7 +9,7 @@ namespace Halibut.Tests.TestServices
     {
         public UploadResult UploadFile(string remotePath, DataStream upload)
         {
-            upload.Receiver().SaveTo(remotePath);
+            upload.Receiver().SaveToAsync(remotePath, CancellationToken.None).GetAwaiter().GetResult();
 
             return new UploadResult(remotePath, Guid.NewGuid().ToString(), upload.Length);
         }

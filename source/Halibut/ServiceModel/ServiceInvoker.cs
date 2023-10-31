@@ -21,24 +21,6 @@ namespace Halibut.ServiceModel
             this.factory = factory;
         }
 
-        [Obsolete]
-        public ResponseMessage Invoke(RequestMessage requestMessage)
-        {
-            using (var lease = factory.CreateService(requestMessage.ServiceName))
-            {
-                var methods = lease.Service.GetType().GetHalibutServiceMethods().Where(m => string.Equals(m.Name, requestMessage.MethodName, StringComparison.OrdinalIgnoreCase)).ToList();
-                if (methods.Count == 0)
-                {
-                    throw new MethodNotFoundHalibutClientException(string.Format("Method {0}::{1} not found", lease.Service.GetType().FullName, requestMessage.MethodName));
-                }
-
-                var method = SelectMethod(methods, requestMessage);
-                var args = GetArguments(requestMessage, method);
-                var result = method.Invoke(lease.Service, args);
-                return ResponseMessage.FromResult(requestMessage, result);
-            }
-        }
-
         public async Task<ResponseMessage> InvokeAsync(RequestMessage requestMessage)
         {
             using var lease = factory.CreateService(requestMessage.ServiceName);

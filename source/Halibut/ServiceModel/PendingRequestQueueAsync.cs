@@ -29,14 +29,6 @@ namespace Halibut.ServiceModel
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
         }
 
-        [Obsolete]
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken queuedRequestCancellationToken)
-        {
-            await Task.CompletedTask;
-
-            throw new NotSupportedException($"Use {nameof(QueueAndWaitAsync)} with {nameof(RequestCancellationTokens)}");
-        }
-
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
             using var pending = new PendingRequest(request, log);

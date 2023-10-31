@@ -2,7 +2,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.ServiceModel;
@@ -10,17 +9,14 @@ using Halibut.TestProxy;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
-using Halibut.Util;
 using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
 using Serilog;
-using Serilog.Extensions.Logging;
 using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
@@ -44,7 +40,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         LogLevel halibutLogLevel = LogLevel.Trace;
         ILockService lockService;
         ICountingService countingService;
-        AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
 
         PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
@@ -216,17 +211,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return NoService();
         }
         
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
-        {
-            throw new Exception("Not supported");
-        }
-
-        public IClientAndServiceBuilder WithServiceAsyncHalibutFeatureEnabled()
-        {
-            this.serviceAsyncHalibutFeature = AsyncHalibutFeature.Enabled;
-            return this;
-        }
-
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             var logger = new SerilogLoggerBuilder().Build().ForContext<PreviousClientVersionAndLatestServiceBuilder>();
@@ -241,7 +225,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var proxyClient = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogCreator("ProxyClient", halibutLogLevel).ToCachingLogFactory())
-                .WithAsyncHalibutFeatureEnabled()
                 .Build();
             
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
@@ -252,7 +235,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var service = new HalibutRuntimeBuilder()
                 .WithServiceFactory(serviceFactory)
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                 .WithLogFactory(new TestContextLogCreator("Tentacle", halibutLogLevel).ToCachingLogFactory())
                 .Build();
 
@@ -405,70 +387,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             public HalibutRuntime ProxyClient => Client;
             public PortForwarder? PortForwarder { get; }
             public HttpProxyService? HttpProxy { get; }
-
-            /// <summary>
-            /// Creates a client, which forwards RPC calls on to a proxy in a external process which will make those calls back
-            /// to service in the this process.
-            /// </summary>
-            /// <typeparam name="TService"></typeparam>
-            /// <returns></returns>
-            public TService CreateClient<TService>(CancellationToken? cancellationToken = null)
-            {
-                if (cancellationToken != null && cancellationToken != CancellationToken.None)
-                {
-                    throw new Exception("Setting the connect cancellation token to anything other than none is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
-                }
-
-                var serviceEndpoint = ServiceEndPoint;
-                return ProxyClient.CreateClient<TService>(serviceEndpoint, cancellationToken??CancellationToken.None);
-            }
-
-            /// <summary>
-            /// This probably never makes sense to be called, since this modifies the client to the proxy client. If a test
-            /// wanted to set these it is probably setting them on the wrong client
-            /// </summary>
-            /// <param name="modifyServiceEndpoint"></param>
-            /// <param name="cancellationToken"></param>
-            /// <param name="remoteThumbprint"></param>
-            /// <typeparam name="TService"></typeparam>
-            /// <returns></returns>
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
-            {
-                throw new Exception("Modifying the service endpoint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
-            }
-
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                return CreateClient<TService>(s => { }, CancellationToken.None);
-            }
-
-            public TClientService CreateClient<TService, TClientService>()
-            {
-                try
-                {
-                    new ServiceInterfaceInspector().EnsureServiceTypeAndClientServiceTypeHaveMatchingMethods<TService, TClientService>();
-                }
-                catch (Exception e)
-                {
-                    throw new Exception($"Unsupported, since types within {typeof(TClientService)} would not actually be passed on to the remote process which holds the actual client under test.", e);
-                }
-                
-                var serviceEndpoint = new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, Client.TimeoutsAndLimits);
-                
-                return ProxyClient.CreateAsyncClient<TService, TClientService>(serviceEndpoint);
-            }
-
-            public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                throw new Exception("Modifying the service endpoint is unsupported, since it would not actually be passed on to the remote process which holds the actual client under test.");
-            }
-
-            public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>()
-            {
-                return CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(_ => { });
-            }
             
-            public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
+            public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 throw new NotSupportedException("Not supported since the options can not be passed to the external binary.");
             }
@@ -488,23 +408,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
 
                 Try.CatchingError(() => cancellationTokenSource.Cancel(), LogError);
-                if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
-                {
-                    await Try.DisposingAsync(Client, LogError);
-                }
-                else
-                {
-                    Try.CatchingError(Client.Dispose, LogError);
-                }
+                await Try.DisposingAsync(Client, LogError);
                 Try.CatchingError(runningOldHalibutBinary.Dispose, LogError);
-                if (service.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
-                {
-                    await Try.DisposingAsync(service, LogError);
-                }
-                else
-                {
-                    Try.CatchingError(service.Dispose, LogError);
-                }
+                await Try.DisposingAsync(service, LogError);
                 Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
                 Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
                 Try.CatchingError(disposableCollection.Dispose, LogError); ;

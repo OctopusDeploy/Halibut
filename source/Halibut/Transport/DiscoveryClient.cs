@@ -22,44 +22,6 @@ namespace Halibut.Transport
             this.streamFactory = streamFactory;
         }
 
-        [Obsolete]
-        public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint)
-        {
-            return Discover(serviceEndpoint, CancellationToken.None);
-        }
-
-        [Obsolete]
-        public ServiceEndPoint Discover(ServiceEndPoint serviceEndpoint, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
-                using (var client = TcpConnectionFactory.CreateConnectedTcpClient(serviceEndpoint, streamFactory, log, cancellationToken))
-                {
-                    using (var stream = client.GetStream())
-                    {
-                        using (var ssl = new SslStream(stream, false, ValidateCertificate))
-                        {
-                            ssl.AuthenticateAsClient(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
-                            ssl.Write(HelloLine, 0, HelloLine.Length);
-                            ssl.Flush();
-
-                            if (ssl.RemoteCertificate == null)
-                                throw new Exception("The server did not provide an SSL certificate");
-
-#pragma warning disable PC001 // API not supported on all platforms - X509Certificate2 not supported on macOS
-                            return new ServiceEndPoint(serviceEndpoint.BaseUri, new X509Certificate2(ssl.RemoteCertificate.Export(X509ContentType.Cert), (string)null!).Thumbprint);
-#pragma warning restore PC001 // API not supported on all platforms - X509Certificate2 not supported on macOS
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new HalibutClientException(ex.Message, ex);
-            }
-        }
-
         public async Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint serviceEndpoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, CancellationToken cancellationToken)
         {
             try

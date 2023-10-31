@@ -12,7 +12,6 @@ using Halibut.TestProxy;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.TestServices.AsyncSyncCompat;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Observability;
@@ -38,8 +37,6 @@ namespace Halibut.Tests.Support
         string clientTrustsThumbprint; 
         readonly CertAndThumbprint clientCertAndThumbprint;
         string serviceTrustsThumbprint;
-        ForceClientProxyType? forceClientProxyType;
-        AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
         IRpcObserver? clientRpcObserver;
 
 
@@ -298,12 +295,6 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        private bool ProxyDelaySendingSectionsOfHttpHeaders()
-        {
-            // We can only delay sending sections of the HTTP headers in versions that have the fix, which is only in async.
-            return this.serviceAsyncHalibutFeature == AsyncHalibutFeature.Enabled && this.forceClientProxyType == ForceClientProxyType.AsyncClient;
-        }
-
         public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
             this.pendingRequestQueueFactory = pendingRequestQueueFactory;
@@ -370,23 +361,6 @@ namespace Halibut.Tests.Support
             serviceTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
             return this;
         }
-
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
-        {
-            return WithForcingClientProxyType(forceClientProxyType);
-        }
-
-        public IClientAndServiceBuilder WithServiceAsyncHalibutFeatureEnabled()
-        {
-            serviceAsyncHalibutFeature = AsyncHalibutFeature.Enabled;
-            return this;
-        }
-
-        public LatestClientAndLatestServiceBuilder WithForcingClientProxyType(ForceClientProxyType forceClientProxyType)
-        {
-            this.forceClientProxyType = forceClientProxyType;
-            return this;
-        }
         
         public LatestClientAndLatestServiceBuilder WithClientRpcObserver(IRpcObserver? clientRpcObserver)
         {
@@ -417,7 +391,6 @@ namespace Halibut.Tests.Support
                     .WithLogFactory(octopusLogFactory)
                     .WithPendingRequestQueueFactory(factory)
                     .WithTrustProvider(clientTrustProvider)
-                    .WithAsyncHalibutFeatureEnabledIfForcingAsync(forceClientProxyType)
                     .WithStreamFactoryIfNotNull(clientStreamFactory)
                     .WithConnectionsObserver(clientConnectionsObserver)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
@@ -439,7 +412,6 @@ namespace Halibut.Tests.Support
                 var serviceBuilder = new HalibutRuntimeBuilder()
                     .WithServiceFactory(serviceFactory)
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                    .WithAsyncHalibutFeature(serviceAsyncHalibutFeature)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                     .WithStreamFactoryIfNotNull(serviceStreamFactory)
                     .WithConnectionsObserver(serviceConnectionsObserver)
@@ -451,7 +423,7 @@ namespace Halibut.Tests.Support
 
             var disposableCollection = new DisposableCollection();
             PortForwarder? portForwarder = null;
-            var httpProxy = proxyFactory?.WithDelaySendingSectionsOfHttpHeaders(ProxyDelaySendingSectionsOfHttpHeaders()).Build();
+            var httpProxy = proxyFactory?.WithDelaySendingSectionsOfHttpHeaders(true).Build();
             ProxyDetails? httpProxyDetails = null;
 
             if (httpProxy != null)
@@ -553,7 +525,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientAndService(client, clientUri, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, forceClientProxyType, cancellationTokenSource);
+            return new ClientAndService(client, clientUri, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, cancellationTokenSource);
         }
 
         IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
@@ -563,8 +535,7 @@ namespace Halibut.Tests.Support
                 return pendingRequestQueueFactory(octopusLogFactory);
             }
 
-            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory)
-                .WithSyncOrAsync(forceClientProxyType.ToSyncOrAsync());
+            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory);
 
             if (this.pendingRequestQueueFactoryBuilder != null)
             {
@@ -622,7 +593,6 @@ namespace Halibut.Tests.Support
             readonly DisposableCollection disposableCollection;
             readonly ProxyDetails? proxyDetails;
             readonly CancellationTokenSource cancellationTokenSource;
-            readonly ForceClientProxyType? forceClientProxyType;
 
             public ClientAndService(
                 HalibutRuntime? client,
@@ -634,7 +604,6 @@ namespace Halibut.Tests.Support
                 DisposableCollection disposableCollection,
                 HttpProxyService? proxy,
                 ProxyDetails? proxyDetails,
-                ForceClientProxyType? forceClientProxyType,
                 CancellationTokenSource cancellationTokenSource)
             {
                 Client = client;
@@ -647,7 +616,6 @@ namespace Halibut.Tests.Support
                 this.disposableCollection = disposableCollection;
                 this.proxyDetails = proxyDetails;
                 this.cancellationTokenSource = cancellationTokenSource;
-                this.forceClientProxyType = forceClientProxyType;
             }
 
             public HalibutRuntime? Client { get; }
@@ -662,47 +630,12 @@ namespace Halibut.Tests.Support
             {
                 return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails, Client.TimeoutsAndLimits);
             }
-
-            public TService CreateClient<TService>(CancellationToken? cancellationToken = null)
-            {
-                return CreateClient<TService>(_ => { }, cancellationToken ?? CancellationToken.None);
-            }
-
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                return CreateClient<TService>(modifyServiceEndpoint, CancellationToken.None);
-            }
-
-            public TService CreateClient<TService>(Action<ServiceEndPoint> modifyServiceEndpoint, CancellationToken cancellationToken)
-            {
-                var serviceEndpoint = GetServiceEndPoint();
-                modifyServiceEndpoint(serviceEndpoint);
-
-                return new AdaptToSyncOrAsyncTestCase().Adapt<TService>(forceClientProxyType, Client, serviceEndpoint, cancellationToken);
-            }
-
-            public TClientService CreateClient<TService, TClientService>()
-            {
-                return CreateClient<TService, TClientService>(_ => { });
-            }
-
-            public TClientService CreateClient<TService, TClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                var serviceEndpoint = GetServiceEndPoint();
-                modifyServiceEndpoint(serviceEndpoint);
-                return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TClientService>(forceClientProxyType, Client, serviceEndpoint);
-            }
             
-            public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>()
-            {
-                return CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(_ => { });
-            }
-
-            public TAsyncClientWithOptions CreateClientWithOptions<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(Action<ServiceEndPoint> modifyServiceEndpoint)
+            public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = GetServiceEndPoint();
                 modifyServiceEndpoint(serviceEndpoint);
-                return new AdaptToSyncOrAsyncTestCase().Adapt<TService, TSyncClientWithOptions, TAsyncClientWithOptions>(forceClientProxyType, Client, serviceEndpoint);
+                return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndpoint);
             }
             
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
@@ -725,26 +658,12 @@ namespace Halibut.Tests.Support
 
                 if (Client is not null)
                 {
-                    if (Client.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
-                    {
-                        await Try.DisposingAsync(Client, LogError);
-                    }
-                    else
-                    {
-                        Try.CatchingError(Client.Dispose, LogError);
-                    }
+                    await Try.DisposingAsync(Client, LogError);
                 }
 
                 if (Service is not null)
                 {
-                    if (Service.AsyncHalibutFeature == AsyncHalibutFeature.Enabled)
-                    {
-                        await Try.DisposingAsync(Service, LogError);
-                    }
-                    else
-                    {
-                        Try.CatchingError(Service.Dispose, LogError);
-                    }
+                    await Try.DisposingAsync(Service, LogError);
                 }
 
                 Try.CatchingError(() => HttpProxy?.Dispose(), LogError);

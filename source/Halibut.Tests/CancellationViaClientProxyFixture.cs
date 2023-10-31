@@ -10,7 +10,6 @@ using Halibut.Tests.Support.ExtensionMethods;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -31,8 +30,8 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testSyncClients: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task HalibutProxyRequestOptions_InProgressCancellationToken_CanCancel_ConnectingOrQueuedRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var tokenSourceToCancel = new CancellationTokenSource();
@@ -52,7 +51,7 @@ namespace Halibut.Tests
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
-                var echo = clientAndService.CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(
+                var echo = clientAndService.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(
                     point => point.TryAndConnectForALongTime());
                 
                 tokenSourceToCancel.CancelAfter(TimeSpan.FromMilliseconds(100));
@@ -79,7 +78,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var lockService = clientAndService.CreateClientWithOptions<ILockService, ISyncClientLockServiceWithOptions, IAsyncClientLockServiceWithOptions>();
+                var lockService = clientAndService.CreateAsyncClient<ILockService, IAsyncClientLockServiceWithOptions>();
 
                 var tokenSourceToCancel = new CancellationTokenSource();
                 using var tmpDir = new TemporaryDirectory();
@@ -118,11 +117,11 @@ namespace Halibut.Tests
 // TODO: ASYNC ME UP!
 // net48 does not support cancellation of the request as the DeflateStream ends up using Begin and End methods which don't get passed the cancellation token
 #if NETFRAMEWORK
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testSyncClients: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening:false, testSyncClients: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening:false)]
 #else
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testSyncClients: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
 #endif
         public async Task HalibutProxyRequestOptions_InProgressCancellationToken_CanCancel_InFlightRequests(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -130,7 +129,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var lockService = clientAndService.CreateClientWithOptions<ILockService, ISyncClientLockServiceWithOptions, IAsyncClientLockServiceWithOptions>();
+                var lockService = clientAndService.CreateAsyncClient<ILockService, IAsyncClientLockServiceWithOptions>();
 
                 var tokenSourceToCancel = new CancellationTokenSource();
                 using var tmpDir = new TemporaryDirectory();
@@ -173,17 +172,10 @@ namespace Halibut.Tests
                        .WithService<IAmNotAllowed>(() => new AmNotAllowed())
                        .Build(CancellationToken))
             {
-                if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Async)
+                Assert.Throws<TypeNotAllowedException>(() =>
                 {
-                    Assert.Throws<TypeNotAllowedException>(() =>
-                    {
-                        clientAndService.Client.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.GetServiceEndPoint());
-                    });
-                }
-                if (clientAndServiceTestCase.SyncOrAsync == SyncOrAsync.Sync)
-                {
-                    Assert.Throws<TypeNotAllowedException>(() => clientAndService.Client.CreateClient<IAmNotAllowed>(clientAndService.GetServiceEndPoint()));
-                }
+                    clientAndService.Client.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.GetServiceEndPoint());
+                });
             }
         }
 
@@ -196,27 +188,11 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClientWithOptions<IEchoService, ISyncClientEchoServiceWithOptions, IAsyncClientEchoServiceWithOptions>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
                 (await echo.SayHelloAsync("Hello!!", new HalibutProxyRequestOptions(CancellationToken, null)))
                     .Should()
                     .Be("Hello!!...");
-            }
-        }
-
-        [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testAsyncClients: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testAsyncClients: false)]
-        public async Task HalibutProxyRequestOptions_CanNotCancel_InFlightRequests_ForSyncServiceCalls(ClientAndServiceTestCase clientAndServiceTestCase)
-        {
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithStandardServices()
-                       .Build(CancellationToken))
-            {
-                var echo = clientAndService.CreateClient<IEchoService, ISyncClientEchoServiceWithOptions>();
-
-                AssertionExtensions.Should(() => echo.SayHello("Hello!!", new HalibutProxyRequestOptions(CancellationToken, CancellationToken))).Throw<ArgumentException>()
-                    .And.Message.Should().Be("HalibutProxyRequestOptions.InProgressRequestCancellationToken is not supported by HalibutProxy");
             }
         }
     }

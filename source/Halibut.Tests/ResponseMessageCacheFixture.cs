@@ -28,7 +28,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var result1 = await client.NonCachableCallAsync();
                 var result2 = await client.NonCachableCallAsync();
@@ -46,7 +46,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClientWithOptions<ICachingService, IClientCachingService, IAsyncClientCachingServiceWithOptions>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingServiceWithOptions>();
 
                 var result1 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
                 var result2 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
@@ -64,7 +64,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var result1 = await client.CachableCallAsync();
                 var result2 = await client.CachableCallAsync();
@@ -82,7 +82,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClientWithOptions<ICachingService, IClientCachingService, IAsyncClientCachingServiceWithOptions>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingServiceWithOptions>();
 
                 var result1 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
                 var result2 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
@@ -100,7 +100,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var guid = Guid.NewGuid();
                 var result1 = await client.CachableCallAsync(guid);
@@ -119,7 +119,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var result1 = await client.TwoSecondCachableCallAsync();
                 var result2 = await client.TwoSecondCachableCallAsync();
@@ -143,7 +143,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var result1 = await client.CachableCallAsync();
                 var result2 = await client.AnotherCachableCallAsync();
@@ -161,13 +161,13 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var clientOne = clientAndServiceOne.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var clientOne = clientAndServiceOne.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 await using var clientAndServiceTwo = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithCachingService()
                            .Build(CancellationToken);
 
-                    var clientTwo = clientAndServiceTwo.CreateClient<ICachingService, IAsyncClientCachingService>();
+                    var clientTwo = clientAndServiceTwo.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var result1 = clientOne.CachableCallAsync();
                 var result2 = clientTwo.CachableCallAsync();
@@ -185,7 +185,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var result1 = await client.CachableCallAsync(Guid.NewGuid());
                 var result2 = await client.CachableCallAsync(Guid.NewGuid());
@@ -205,7 +205,7 @@ namespace Halibut.Tests
             {
                 clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
 
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var exception1 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"UNCACHED"))).And;
                 var exception2 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"UNCACHED"))).And;
@@ -227,7 +227,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClient<ICachingService, IAsyncClientCachingService>();
+                var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
                 var exception1 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;
                 var exception2 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;

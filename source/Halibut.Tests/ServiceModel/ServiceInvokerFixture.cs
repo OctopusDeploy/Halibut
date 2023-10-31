@@ -15,44 +15,6 @@ namespace Halibut.Tests.ServiceModel
     public class ServiceInvokerFixture : BaseTest
     {
         [Test]
-        public void InvokeWithParams()
-        {
-            var serviceFactory = new ServiceFactoryBuilder()
-                .WithService<IEchoService>(() => new EchoService())
-                .Build();
-
-            var value = Some.RandomAsciiStringOfLength(8);
-            var sut = new ServiceInvoker(serviceFactory);
-            var request = new RequestMessage
-            {
-                ServiceName = nameof(IEchoService),
-                MethodName = nameof(IEchoService.SayHello),
-                Params = new[] { value }
-            };
-
-            var response = sut.Invoke(request);
-            response.Result.Should().Be($"{value}...");
-        }
-        
-        [Test]
-        public void InvokeWithNoParams()
-        {
-            var serviceFactory = new ServiceFactoryBuilder()
-                .WithService<ICountingService>(() => new CountingService())
-                .Build();
-
-            var sut = new ServiceInvoker(serviceFactory);
-            var request = new RequestMessage
-            {
-                ServiceName = nameof(ICountingService),
-                MethodName = nameof(ICountingService.Increment)
-            };
-
-            var response = sut.Invoke(request);
-            response.Result.Should().Be(1);
-        }
-        
-        [Test]
         public async Task AsyncInvokeWithParamsOnAsyncService()
         {
             var serviceFactory = new ServiceFactoryBuilder()

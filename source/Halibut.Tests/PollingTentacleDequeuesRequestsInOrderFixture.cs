@@ -33,14 +33,13 @@ namespace Halibut.Tests
                                pendingRequestQueue = new PendingRequestQueueBuilder()
                                    .WithLog(logFactory.ForEndpoint(uri))
                                    .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                                   .WithSyncOrAsync(clientAndServiceTestCase.SyncOrAsync)
                                    .Build();
                                return pendingRequestQueue;
                            });
                        })
                        .Build(CancellationToken))
             {
-                var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echoService.SayHelloAsync("Make sure the pending request queue exists");
                 pendingRequestQueue.Should().NotBeNull();
 
@@ -48,7 +47,7 @@ namespace Halibut.Tests
                 var fileStoppingNewRequests = tmpDir.CreateRandomFile();
 
                 // Send a request to polling tentacle that wont complete, until we let it complete.
-                var lockService = clientAndService.CreateClient<ILockService, IAsyncClientLockService>();
+                var lockService = clientAndService.CreateAsyncClient<ILockService, IAsyncClientLockService>();
                 var fileThatLetsUsKnowThePollingTentacleIsBusy = tmpDir.RandomFileName();
                 var pollingTentacleKeptBusyRequest = Task.Run(async () => await lockService.WaitForFileToBeDeletedAsync(fileStoppingNewRequests, fileThatLetsUsKnowThePollingTentacleIsBusy));
                 await Wait.For(async () =>
@@ -58,7 +57,7 @@ namespace Halibut.Tests
                 }, CancellationToken);
 
 
-                var countingService = clientAndService.CreateClient<ICountingService, IAsyncClientCountingService>();
+                var countingService = clientAndService.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
 
                 var tasks = new List<Task<int>>();
                 for (int i = 0; i < 10; i++)

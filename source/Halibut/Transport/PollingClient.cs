@@ -16,18 +16,15 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly ISecureClient secureClient;
         readonly Uri subscription;
-        Thread? pollingClientLoopThread;
-        bool working;
 
         Task? pollingClientLoopTask;
         readonly CancellationTokenSource workingCancellationTokenSource;
         readonly CancellationToken cancellationToken;
         
         readonly Func<RetryPolicy> createRetryPolicy;
-        readonly AsyncHalibutFeature asyncHalibutFeature;
         RequestCancellationTokens? requestCancellationTokens;
 
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy, AsyncHalibutFeature asyncHalibutFeature)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;
@@ -36,10 +33,9 @@ namespace Halibut.Transport
             this.cancellationToken = cancellationToken;
             workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             this.createRetryPolicy = createRetryPolicy;
-            this.asyncHalibutFeature = asyncHalibutFeature;
         }
         
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequestAsync, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy, AsyncHalibutFeature asyncHalibutFeature)
+        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequestAsync, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy)
         {
             this.subscription = subscription;
             this.secureClient = secureClient;
@@ -48,75 +44,19 @@ namespace Halibut.Transport
             this.cancellationToken = cancellationToken;
             workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             this.createRetryPolicy = createRetryPolicy;
-            this.asyncHalibutFeature = asyncHalibutFeature;
         }
 
         public void Start()
         {
-            working = true;
-
-            if (asyncHalibutFeature == AsyncHalibutFeature.Disabled)
-            {
-                pollingClientLoopThread = new Thread(ExecutePollingLoop!);
-                pollingClientLoopThread.Name = "Polling client for " + secureClient.ServiceEndpoint + " for subscription " + subscription;
-                pollingClientLoopThread.IsBackground = true;
-                pollingClientLoopThread.Start();
-            }
-            else
-            {
-                requestCancellationTokens = new RequestCancellationTokens(workingCancellationTokenSource.Token, workingCancellationTokenSource.Token);
-                pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions(requestCancellationTokens));
-            }
+            requestCancellationTokens = new RequestCancellationTokens(workingCancellationTokenSource.Token, workingCancellationTokenSource.Token);
+            pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions(requestCancellationTokens));
         }
 
         public void Dispose()
         {
-            working = false;
             Try.CatchingError(workingCancellationTokenSource.Cancel, _ => { });
             Try.CatchingError(workingCancellationTokenSource.Dispose, _ => { });
             Try.CatchingError(() => requestCancellationTokens?.Dispose(), _ => { });
-        }
-
-        void ExecutePollingLoop(object ignored)
-        {
-            var retry = createRetryPolicy();
-            var sleepFor = TimeSpan.Zero;
-            while (working)
-            {
-                try
-                {
-                    try
-                    {
-                        retry.Try();
-#pragma warning disable CS0612 // Type or member is obsolete
-                        secureClient.ExecuteTransaction(protocol =>
-                        {
-                            // We have successfully connected at this point so reset the retry policy
-                            // Subsequent connection issues will try and reconnect quickly and then back-off
-                            retry.Success();
-                            protocol.ExchangeAsSubscriber(subscription, handleIncomingRequest);
-                        }, cancellationToken);
-#pragma warning restore CS0612
-                        retry.Success();
-                    }
-                    finally
-                    {
-                        sleepFor = retry.GetSleepPeriod();
-                    }
-                }
-                catch (HalibutClientException ex)
-                {
-                    log?.WriteException(EventType.Error, $"Halibut client exception: {ex.Message?.TrimEnd('.')}. Retrying in {sleepFor.TotalSeconds:n1} seconds", ex);
-                }
-                catch (Exception ex)
-                {
-                    log?.WriteException(EventType.Error, $"Exception in the polling loop. Retrying in {sleepFor.TotalSeconds:n1} seconds. This may be cause by a network error and usually rectifies itself. Disregard this message unless you are having communication problems.", ex);
-                }
-                finally
-                {
-                    Thread.Sleep(sleepFor);
-                }
-            }
         }
 
         /// <summary>
