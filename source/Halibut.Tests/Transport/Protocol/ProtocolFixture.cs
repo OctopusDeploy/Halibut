@@ -32,9 +32,7 @@ namespace Halibut.Tests.Transport.Protocol
         [Test]
         public async Task ShouldExchangeAsClient()
         {
-#pragma warning disable CS0612
             await protocol.ExchangeAsClientAsync(new RequestMessage(), CancellationToken.None);
-#pragma warning restore CS0612
 
             AssertOutput(@"
 --> MX-CLIENT
@@ -293,63 +291,32 @@ namespace Halibut.Tests.Transport.Protocol
 
                 IdentifyAsClient();
             }
-
-            [Obsolete]
-            public void SendNext()
-            {
-                output.AppendLine("--> NEXT");
-            }
-
+            
             public async Task SendNextAsync(CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 
-#pragma warning disable CS0612
-                SendNext();
-#pragma warning restore CS0612
+                output.AppendLine("--> NEXT");
             }
-
-            [Obsolete]
-            public void SendProceed()
-            {
-                output.AppendLine("--> PROCEED");
-            }
-
-            [Obsolete]
-            public async Task SendProceedAsync()
-            {
-                await Task.CompletedTask;
-
-                SendProceed();
-            }
-
+            
             public async Task SendProceedAsync(CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 
-#pragma warning disable CS0612
-                SendProceed();
-#pragma warning restore CS0612
-            }
-
-            [Obsolete]
-            public void SendEnd()
-            {
-                output.AppendLine("--> END");
+                output.AppendLine("--> PROCEED");
             }
 
             public async Task SendEndAsync(CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 
-#pragma warning disable CS0612
-                SendEnd();
-#pragma warning restore CS0612
+                output.AppendLine("--> END");
             }
 
-            [Obsolete]
-            public bool ExpectNextOrEnd()
+            public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
             {
+                await Task.CompletedTask;
+
                 if (--numberOfReads == 0)
                 {
                     output.AppendLine("<-- END");
@@ -359,52 +326,19 @@ namespace Halibut.Tests.Transport.Protocol
                 return true;
             }
 
-            [Obsolete]
-            public async Task<bool> ExpectNextOrEndAsync()
-            {
-                await Task.CompletedTask;
-
-                return ExpectNextOrEnd();
-            }
-
-            public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
-            {
-                await Task.CompletedTask;
-
-#pragma warning disable CS0612
-                return ExpectNextOrEnd();
-#pragma warning restore CS0612
-            }
-
-            [Obsolete]
-            public void ExpectProceeed()
-            {
-                output.AppendLine("<-- PROCEED");
-            }
-
             public async Task ExpectProceedAsync(CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 
-#pragma warning disable CS0612
-                ExpectProceeed();
-#pragma warning restore CS0612
+                output.AppendLine("<-- PROCEED");
             }
-
-            [Obsolete]
-            public void IdentifyAsSubscriber(string subscriptionId)
-            {
-                output.AppendLine("--> MX-SUBSCRIBE subscriptionId");
-                output.AppendLine("<-- MX-SERVER");
-            }
-
+            
             public async Task IdentifyAsSubscriberAsync(string subscriptionId, CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 
-#pragma warning disable CS0612
-                IdentifyAsSubscriber(subscriptionId);
-#pragma warning restore CS0612
+                output.AppendLine("--> MX-SUBSCRIBE subscriptionId");
+                output.AppendLine("<-- MX-SERVER");
             }
             
             public async Task IdentifyAsServerAsync(CancellationToken cancellationToken)

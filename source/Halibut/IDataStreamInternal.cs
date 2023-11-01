@@ -5,10 +5,9 @@ using System.Threading.Tasks;
 
 namespace Halibut
 {
-    internal interface IDataStreamInternal
+    interface IDataStreamInternal
     {
         void Received(IDataStreamReceiver receiver);
-        void Transmit(Stream stream);
         Task TransmitAsync(Stream stream, CancellationToken cancellationToken);
     }
 }

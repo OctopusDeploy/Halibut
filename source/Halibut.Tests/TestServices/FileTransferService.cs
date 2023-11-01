@@ -18,14 +18,6 @@ namespace Halibut.Tests.TestServices
         {
             return new DataStream(
                 new FileInfo(remotePath).Length,
-                writer =>
-                {
-                    using (var stream = new FileStream(remotePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                    {
-                        stream.CopyTo(writer);
-                        writer.Flush();
-                    }
-                },
                 async (writer, ct) =>
                 {
 #if !NETFRAMEWORK

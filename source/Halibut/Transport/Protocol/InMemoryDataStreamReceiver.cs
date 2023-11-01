@@ -1,5 +1,4 @@
-﻿using Halibut.Transport.Streams;
-using System;
+﻿using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,24 +7,13 @@ namespace Halibut.Transport.Protocol
 {
     public class InMemoryDataStreamReceiver : IDataStreamReceiver
     {
-        readonly Action<Stream> writer;
         readonly Func<Stream, CancellationToken, Task> writerAsync;
 
-        public InMemoryDataStreamReceiver(Action<Stream> writer, Func<Stream, CancellationToken, Task> writerAsync)
+        public InMemoryDataStreamReceiver(Func<Stream, CancellationToken, Task> writerAsync)
         {
-            this.writer = writer;
             this.writerAsync = writerAsync;
         }
 
-        [Obsolete]
-        public void SaveTo(string filePath)
-        {
-            using (var file = new FileStream(filePath, FileMode.Create))
-            {
-                writer(file);
-            }
-        }
-        
         public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
         {
 #if !NETFRAMEWORK
@@ -34,17 +22,6 @@ namespace Halibut.Transport.Protocol
                 using (var file = new FileStream(filePath, FileMode.Create))
             {
                 await writerAsync(file, cancellationToken);
-            }
-        }
-
-        [Obsolete]
-        public void Read(Action<Stream> reader)
-        {
-            using (var stream = new MemoryStream())
-            {
-                writer(stream);
-                stream.Seek(0, SeekOrigin.Begin);
-                reader(stream);
             }
         }
         

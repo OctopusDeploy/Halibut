@@ -163,7 +163,6 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                 {
                     await AssertAsync.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(
                         new DataStream(10000, 
-                            stream => throw new Exception("Oh noes"), 
                             async (_, _) =>
                                 {
                                     await Task.CompletedTask;

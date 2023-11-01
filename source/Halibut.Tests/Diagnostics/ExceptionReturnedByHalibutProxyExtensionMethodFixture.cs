@@ -192,7 +192,6 @@ namespace Halibut.Tests.Diagnostics
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                     var dataStream = new DataStream(10, 
-                        _ => new FileStream("DoesNotExist2497546", FileMode.Open).Dispose(), 
                         async (_, _) =>
                             {
                                 await Task.CompletedTask;
@@ -219,7 +218,6 @@ namespace Halibut.Tests.Diagnostics
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                     var dataStream = new DataStream(10, 
-                        _ => throw new FileNotFoundException(), 
                         async (_, _) =>
                         {
                             await Task.CompletedTask.ConfigureAwait(false);
