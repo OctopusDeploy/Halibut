@@ -221,7 +221,14 @@ namespace Halibut.ServiceModel
             }
 
             var task = (Task)method.Invoke(obj, parameters);
-            await task.ConfigureAwait(false);
+            try
+            {
+                await task.ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                throw new TargetInvocationException(e);
+            }
 
             if (returnType == typeof(Task))
             {

@@ -63,6 +63,39 @@ namespace Halibut.Tests
             }
         }
 
+        /// <summary>
+        /// InvocationServiceException is how clients know that the failure occured within the service, so we check this is returned in the ResponseMessage
+        /// </summary>
+        /// <param name="clientAndServiceTestCase"></param>
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false, testAsyncClients: true, testSyncService: false, testAsyncServicesAsWell: true)]
+        [PreviousClientAndLatestServiceVersionsTestCases(testNetworkConditions: false, testSyncClients: false, testAsyncClients: true, testSyncService: false, testAsyncServicesAsWell: true)]
+        public async Task FailsWithInvocationServiceExceptionWhenAsyncServiceCrashes(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             //.AsPreviousClientVersionAndLatestServiceBuilder()
+                             .WithAsyncService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService())
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
+                ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
+
+                if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient())
+                {
+                    // This here verifies that the client actually did see something that looks like a service invocation exception.
+                    ex.Message.Replace("\r", "")
+                        .Should()
+                        .Contain(@"Received Exception: START:
+Attempted to divide by zero.
+
+Server exception: 
+System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.
+ ---> System.DivideByZeroException: Attempted to divide by zero".Replace("\r", ""));
+                }
+            }
+        }
+
         [Test]
         public void FailOnInvalidHostname()
         {
