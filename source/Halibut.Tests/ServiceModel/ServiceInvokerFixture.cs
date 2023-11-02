@@ -4,6 +4,7 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
@@ -31,7 +32,7 @@ namespace Halibut.Tests.ServiceModel
             };
 
             var response = await sut.InvokeAsync(request);
-            response.Result.Should().Be($"{value}Async...");
+            response.Result.Should().Be($"{value}...");
         }
 
         [Test]
@@ -51,7 +52,7 @@ namespace Halibut.Tests.ServiceModel
             var response = await sut.InvokeAsync(request);
             response.Result.Should().Be(1);
         }
-
+        
         [Test]
         public async Task AsyncInvokeWithParamsOnSyncService()
         {
@@ -76,7 +77,7 @@ namespace Halibut.Tests.ServiceModel
         public async Task AsyncInvokeWithNoParamsOnSyncService()
         {
             var serviceFactory = new ServiceFactoryBuilder()
-                .WithService<ICountingService, IAsyncCountingService>(() => new AsyncCountingService())
+                .WithService<ICountingService>(() => new CountingService())
                 .Build();
 
             var sut = new ServiceInvoker(serviceFactory);

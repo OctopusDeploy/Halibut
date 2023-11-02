@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Halibut.ServiceModel;
 using Halibut.Tests.Util;
 
@@ -9,7 +10,8 @@ namespace Halibut.Tests.Builders
         bool _conventionVerificationDisabled;
         DelegateServiceFactory factoryWithConventionVerification = new();
         NoSanityCheckingDelegateServiceFactory factoryWithNoConventionVerification = new();
-        
+
+        List<Exception> conventionExceptions = new List<Exception>();
 
         public ServiceFactoryBuilder WithService<TContract>(Func<TContract> factoryFunc)
         {
@@ -27,8 +29,9 @@ namespace Halibut.Tests.Builders
             }
             // Convention verification may throw, but that just means we're probably going to use
             // the other factory anyway, so we don't care!
-            catch
+            catch (Exception e)
             {
+                conventionExceptions.Add(e);
             }
 
             factoryWithNoConventionVerification.Register<TContract, TClientContract>(factoryFunc);
@@ -49,6 +52,7 @@ namespace Halibut.Tests.Builders
             }
             else
             {
+                if (conventionExceptions.Count > 0) throw new AggregateException(conventionExceptions);
                 return factoryWithConventionVerification;
             }
         }

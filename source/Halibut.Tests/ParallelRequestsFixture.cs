@@ -79,7 +79,7 @@ namespace Halibut.Tests
                     .WithStandardServices()
                     .Build(CancellationToken);
 
-                var readDataSteamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncReadDataStreamService>();
+                var readDataSteamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncClientReadDataStreamService>();
 
                 var dataStreams = CreateDataStreams();
 

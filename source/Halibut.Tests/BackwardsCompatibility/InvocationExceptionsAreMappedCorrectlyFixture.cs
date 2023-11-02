@@ -20,11 +20,7 @@ namespace Halibut.Tests.BackwardsCompatibility
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(se =>
-                {
-                    se.PollingRequestQueueTimeout = TimeSpan.FromSeconds(20);
-                    se.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(20);
-                });
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                 await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await echo.CrashAsync());
             }

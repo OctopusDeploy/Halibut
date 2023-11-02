@@ -2,8 +2,9 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.TestUtils.Contracts;
 
-namespace Halibut.TestUtils.Contracts
+namespace Halibut.TestUtils.SampleProgram.Base.Services
 {
     public class EchoService : IEchoService
     {

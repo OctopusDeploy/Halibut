@@ -9,6 +9,7 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Observability;
@@ -30,7 +31,7 @@ namespace Halibut.Tests.Transport
         public void SetUp()
         {
             var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
+            services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
             tentacle = new HalibutRuntimeBuilder()
                 .WithServerCertificate(Certificates.TentacleListening)
                 .WithServiceFactory(services)

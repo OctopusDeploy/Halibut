@@ -4,6 +4,7 @@ using FluentAssertions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
@@ -26,7 +27,7 @@ namespace Halibut.Tests
             var echoServiceClient = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
             var result = await echoServiceClient.SayHelloAsync(value);
 
-            result.Should().Be($"{value}Async...");
+            result.Should().Be($"{value}...");
         }
 
         [Test]

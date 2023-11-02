@@ -106,7 +106,7 @@ namespace Halibut.Tests.Diagnostics
             public async Task BecauseThePollingRequestWasNotCollected(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
+                services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
 
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .NoService()

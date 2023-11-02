@@ -11,7 +11,7 @@ namespace Halibut.Tests.Support
     {
         public static LatestClientAndLatestServiceBuilder WithEchoService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IEchoService>(() => new EchoService());
+            return builder.WithAsyncService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
         }
 
         public static LatestClientAndLatestServiceBuilder WithMultipleParametersTestService(this LatestClientAndLatestServiceBuilder builder)
@@ -21,7 +21,7 @@ namespace Halibut.Tests.Support
 
         public static LatestClientAndLatestServiceBuilder WithComplexObjectService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IComplexObjectService>(() => new ComplexObjectService());
+            return builder.WithAsyncService<IComplexObjectService, IAsyncComplexObjectService>(() => new AsyncComplexObjectService());
         }
         
         public static LatestClientAndLatestServiceBuilder WithLockService(this LatestClientAndLatestServiceBuilder builder)
@@ -52,7 +52,7 @@ namespace Halibut.Tests.Support
 
         public static LatestClientAndLatestServiceBuilder WithReadDataStreamService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IReadDataStreamService>(() => new ReadDataStreamService());
+            return builder.WithAsyncService<IReadDataStreamService, IAsyncReadDataStreamService>(() => new AsyncReadDataStreamService());
         }
 
         public static LatestClientAndLatestServiceBuilder WithInstantReconnectPollingRetryPolicy(this LatestClientAndLatestServiceBuilder builder)

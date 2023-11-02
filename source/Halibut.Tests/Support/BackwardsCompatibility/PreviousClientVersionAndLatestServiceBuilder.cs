@@ -102,7 +102,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         public PreviousClientVersionAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
             serviceFactoryBuilder.WithService(implementation);
-            
+
             if (serviceFactory != null)
             {
                 if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
@@ -117,7 +117,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             return this;
         }
-        
+
         public PreviousClientVersionAndLatestServiceBuilder WithAsyncService<TContract, TClientContract>(Func<TClientContract> implementation)
         {
             serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);

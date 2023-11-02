@@ -10,6 +10,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
@@ -335,7 +336,7 @@ namespace Halibut.Tests
         static DelegateServiceFactory GetDelegateServiceFactory()
         {
             var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
+            services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
             return services;
         }
 

@@ -44,13 +44,19 @@ namespace Halibut.Util
                     syncMethod.Name + Async,
                     syncMethod.GetParameters().Select(p => p.ParameterType).Append(typeof(CancellationToken)).ToArray());
 
-                if (asyncMethod != null && ReturnTypesMatch(syncMethod, asyncMethod))
+                if (asyncMethod == null)
                 {
-                    continue;
+                    throw new NoMatchingServiceOrMethodHalibutClientException(
+                        $"The service '{asyncService.Name} does not follow the conventions for providing an async implementation of '{syncService.Name}. Could not find matching method for: " +
+                        $"{syncMethod} searching by name and parameters (with a cancellation token at the end).");
                 }
 
-                throw new NoMatchingServiceOrMethodHalibutClientException(
-                    $"The service '{asyncService.Name} does not follow the conventions for providing an async implementation of '{syncService.Name}.");
+                if (!ReturnTypesMatch(syncMethod, asyncMethod))
+                {
+                    throw new NoMatchingServiceOrMethodHalibutClientException(
+                        $"The service '{asyncService.Name} does not follow the conventions for providing an async implementation of '{syncService.Name}. Find matching method for: " +
+                        $"{syncMethod} but the return types did not match");
+                }
             }
         }
     }

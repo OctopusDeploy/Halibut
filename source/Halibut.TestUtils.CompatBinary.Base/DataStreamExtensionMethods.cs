@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace Halibut.TestUtils.Contracts
+namespace Halibut.TestUtils.SampleProgram.Base
 {
     public static class DataStreamExtensionMethods
     {

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -145,7 +146,7 @@ namespace Halibut.Tests
         HalibutRuntime GetHalibutRuntime()
         {
             var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
+            services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
 
             var builder = new HalibutRuntimeBuilder()
                 .WithServiceFactory(services)

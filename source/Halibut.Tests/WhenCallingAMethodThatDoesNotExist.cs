@@ -8,6 +8,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
@@ -20,7 +21,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task AMethodNotFoundHalibutClientExceptionShouldBeRaisedByTheClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var services = new SingleServiceFactory(new object(), typeof(EchoService));
+            var services = new SingleServiceFactory(new object(), typeof(IEchoService));
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()

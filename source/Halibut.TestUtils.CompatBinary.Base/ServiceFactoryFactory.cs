@@ -1,6 +1,7 @@
 using System;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
+using Halibut.TestUtils.SampleProgram.Base.Services;
 using Octopus.Tentacle.Contracts;
 using Octopus.Tentacle.Contracts.Capabilities;
 using Octopus.Tentacle.Contracts.ScriptServiceV2;
