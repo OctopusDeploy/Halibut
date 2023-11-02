@@ -67,15 +67,15 @@ namespace Halibut.Tests
         /// </summary>
         /// <param name="clientAndServiceTestCase"></param>
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false, testAsyncClients: true, testSyncService: false, testAsyncServicesAsWell: true)]
-        [PreviousClientAndLatestServiceVersionsTestCases(testNetworkConditions: false, testSyncClients: false, testAsyncClients: true, testSyncService: false, testAsyncServicesAsWell: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [PreviousClientAndLatestServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FailsWithInvocationServiceExceptionWhenAsyncServiceCrashes(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithAsyncService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService())
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
 

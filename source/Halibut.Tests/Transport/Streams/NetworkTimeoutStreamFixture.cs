@@ -594,11 +594,6 @@ namespace Halibut.Tests.Transport.Streams
             }
         }
 
-        static void AssertStreamWasClosed(StreamMethod streamMethod, CallCountingStream callCountingStream)
-        {
-            AssertStreamWasClosed(streamMethod == StreamMethod.Sync ? SyncOrAsync.Sync : SyncOrAsync.Async, callCountingStream);
-        }
-
         static void AssertStreamWasClosed(StreamReadMethod streamReadMethod, CallCountingStream callCountingStream)
         {
             switch (streamReadMethod)

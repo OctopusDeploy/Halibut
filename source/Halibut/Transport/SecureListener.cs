@@ -43,7 +43,6 @@ namespace Halibut.Transport
         readonly CancellationToken cancellationToken;
         readonly TcpClientManager tcpClientManager = new();
         readonly ExchangeActionAsync exchangeAction;
-        readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
@@ -74,7 +73,6 @@ namespace Halibut.Transport
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
-            this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
