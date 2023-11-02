@@ -73,7 +73,6 @@ namespace Halibut.Tests
         public async Task FailsWithInvocationServiceExceptionWhenAsyncServiceCrashes(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                             //.AsPreviousClientVersionAndLatestServiceBuilder()
                              .WithAsyncService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService())
                              .Build(CancellationToken))
             {
@@ -85,13 +84,14 @@ namespace Halibut.Tests
                 {
                     // This here verifies that the client actually did see something that looks like a service invocation exception.
                     ex.Message.Replace("\r", "")
+                        .Replace("\n", "")
                         .Should()
                         .Contain(@"Received Exception: START:
 Attempted to divide by zero.
 
 Server exception: 
 System.Reflection.TargetInvocationException: Exception has been thrown by the target of an invocation.
- ---> System.DivideByZeroException: Attempted to divide by zero".Replace("\r", ""));
+ ---> System.DivideByZeroException: Attempted to divide by zero".Replace("\r", "").Replace("\n", ""));
                 }
             }
         }
