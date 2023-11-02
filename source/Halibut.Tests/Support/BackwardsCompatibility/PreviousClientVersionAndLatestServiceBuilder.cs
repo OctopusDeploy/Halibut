@@ -7,6 +7,7 @@ using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.AsyncSyncCompat;
@@ -32,18 +33,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     public class PreviousClientVersionAndLatestServiceBuilder: IClientAndServiceBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
+        
+        ServiceFactoryBuilder serviceFactoryBuilder = new();
+        IServiceFactory? serviceFactory;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         Version? version = null;
         ProxyFactory? proxyFactory;
-        IEchoService echoService = new EchoService();
-        ICachingService cachingService = new CachingService();
-        IMultipleParametersTestService multipleParametersTestService = new MultipleParametersTestService();
-        IComplexObjectService complexObjectService = new ComplexObjectService();
-        IReadDataStreamService readDataStreamService = new ReadDataStreamService();
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel = LogLevel.Trace;
-        bool withTentacleServices = false;
         ILockService lockService;
         ICountingService countingService;
         AsyncHalibutFeature serviceAsyncHalibutFeature = AsyncHalibutFeature.Disabled;
@@ -106,45 +104,47 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithEchoServiceService(IEchoService echoService)
+        public PreviousClientVersionAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
         {
-            this.echoService = echoService;
+            serviceFactoryBuilder.WithService(implementation);
+            
+            if (serviceFactory != null)
+            {
+                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
+                {
+                    delegateServiceFactory.Register(implementation);
+                }
+                else
+                {
+                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
+                }
+            }
+
+            return this;
+        }
+        
+        public PreviousClientVersionAndLatestServiceBuilder WithAsyncService<TContract, TClientContract>(Func<TClientContract> implementation)
+        {
+            serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);
+            
+            if (serviceFactory != null)
+            {
+                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
+                {
+                    delegateServiceFactory.Register<TContract, TClientContract>(implementation);
+                }
+                else
+                {
+                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
+                }
+            }
+
             return this;
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService()
         {
             throw new Exception("Caching service is not supported, when testing on the old Client. Since the old client is on external CLR which does not have the new caching attributes which this service is used to test.");
-        }
-
-        public PreviousClientVersionAndLatestServiceBuilder WithMultipleParametersTestService(IMultipleParametersTestService multipleParametersTestService)
-        {
-            this.multipleParametersTestService = multipleParametersTestService;
-            return this;
-        }
-
-        public PreviousClientVersionAndLatestServiceBuilder WithComplexObjectService(IComplexObjectService complexObjectService)
-        {
-            this.complexObjectService = complexObjectService;
-            return this;
-        }
-        
-        public PreviousClientVersionAndLatestServiceBuilder WithLockService(ILockService lockService)
-        {
-            this.lockService = lockService;
-            return this;
-        }
-        
-        public PreviousClientVersionAndLatestServiceBuilder WithCountingService(ICountingService countingService)
-        {
-            this.countingService = countingService;
-            return this;
-        }
-
-        public PreviousClientVersionAndLatestServiceBuilder WithReadDataStreamService(IReadDataStreamService readDataStreamService)
-        {
-            this.readDataStreamService = readDataStreamService;
-            return this;
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
@@ -154,12 +154,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public PreviousClientVersionAndLatestServiceBuilder WithStandardServices()
         {
-            return WithEchoServiceService(new EchoService())
-                .WithMultipleParametersTestService(new MultipleParametersTestService())
-                .WithComplexObjectService(new ComplexObjectService())
-                .WithReadDataStreamService(new ReadDataStreamService())
-                .WithLockService(new LockService())
-                .WithCountingService(new CountingService());
+            return this
+                .WithEchoService()
+                .WithMultipleParametersTestService()
+                .WithComplexObjectService()
+                .WithLockService()
+                .WithCountingService()
+                .WithReadDataStreamService();
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithTentacleServices()
@@ -169,9 +170,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public PreviousClientVersionAndLatestServiceBuilder WithTenancyServices()
         {
-            withTentacleServices = true;
-
-            return this;
+            return this
+                .WithService<IFileTransferService>(() => new FileTransferService())
+                .WithService<IScriptService>(() => new ScriptService())
+                .WithService<IScriptServiceV2>(() => new ScriptServiceV2())
+                .WithService<ICapabilitiesServiceV2>(() => new CapabilitiesServiceV2());
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
@@ -242,23 +245,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .Build();
             
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
-
-            var serviceFactory = new DelegateServiceFactory()
-                .Register(() => echoService)
-                .Register(() => cachingService)
-                .Register(() => multipleParametersTestService)
-                .Register(() => complexObjectService)
-                .Register(() => lockService)
-                .Register(() => countingService)
-				.Register(() => readDataStreamService);
-
-            if (withTentacleServices)
-            {
-                serviceFactory.Register<IFileTransferService>(() => new FileTransferService());
-                serviceFactory.Register<IScriptService>(() => new ScriptService());
-                serviceFactory.Register<IScriptServiceV2>(() => new ScriptServiceV2());
-                serviceFactory.Register<ICapabilitiesServiceV2>(() => new CapabilitiesServiceV2());
-            }
+            
+            var serviceFactory = serviceFactoryBuilder.Build();
 
             // The Halibut Runtime that will be used as the Service (Tentacle)
             var service = new HalibutRuntimeBuilder()

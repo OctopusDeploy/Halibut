@@ -29,7 +29,16 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public bool Crash()
         {
             Console.WriteLine("Forwarding Crash() call to delegate");
-            return echoService.Crash();
+            try
+            {
+                return echoService.Crash();
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Received Exception: START:\n" +
+                                    e.Message
+                                    + "\nEnd Received Exception");
+            }
         }
 
         public int CountBytes(DataStream dataStream)
