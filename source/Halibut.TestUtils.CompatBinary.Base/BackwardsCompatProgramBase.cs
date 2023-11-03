@@ -65,6 +65,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                         tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll!), octopusThumbprint, proxyDetails));
                         break;
                     case ServiceConnectionType.PollingOverWebSocket:
+                        FixHungWebSocketsHack.EnableHack();
                         var sslThubprint = SettingsHelper.GetSetting("sslthubprint");
                         Console.WriteLine($"Using SSL thumbprint: {sslThubprint}");
 
