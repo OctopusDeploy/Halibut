@@ -26,18 +26,18 @@ namespace Halibut.Tests.Support
         
         public static LatestClientAndLatestServiceBuilder WithLockService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<ILockService>(() => new LockService());
+            return builder.WithAsyncService<ILockService, IAsyncLockService>(() => new AsyncLockService());
         }
         
         public static LatestClientAndLatestServiceBuilder WithCountingService(this LatestClientAndLatestServiceBuilder builder)
         {
-            var singleCountingService = new CountingService();
-            return builder.WithService<ICountingService>(() => singleCountingService);
+            var singleCountingService = new AsyncCountingService();
+            return builder.WithAsyncService<ICountingService, IAsyncCountingService>(() => singleCountingService);
         }
         
-        public static LatestClientAndLatestServiceBuilder WithCountingService(this LatestClientAndLatestServiceBuilder builder, ICountingService countingService)
+        public static LatestClientAndLatestServiceBuilder WithCountingService(this LatestClientAndLatestServiceBuilder builder, IAsyncCountingService countingService)
         {
-            return builder.WithService<ICountingService>(() => countingService);
+            return builder.WithAsyncService<ICountingService, IAsyncCountingService>(() => countingService);
         }
 
         public static LatestClientAndLatestServiceBuilder WithDoSomeActionService(this LatestClientAndLatestServiceBuilder builder, Action action)

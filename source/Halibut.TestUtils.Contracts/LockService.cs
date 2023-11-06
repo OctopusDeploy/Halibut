@@ -18,12 +18,14 @@ namespace Halibut.TestUtils.Contracts
 
     public class AsyncLockService : IAsyncLockService
     {
-        LockService service = new();
-        
-        public async Task WaitForFileToBeDeletedAsync(string fileToWaitFor, string fileSignalWhenRequestIsStarted, CancellationToken cancellationToken)
+        public async Task WaitForFileToBeDeletedAsync(string file, string fileSignalWhenRequestIsStarted, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
-            service.WaitForFileToBeDeleted(fileToWaitFor, fileSignalWhenRequestIsStarted);
+            File.Create(fileSignalWhenRequestIsStarted);
+            while (File.Exists(file))
+            {
+                await Task.Delay(20, cancellationToken);
+            }
         }
     }
 }

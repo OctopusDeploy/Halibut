@@ -16,7 +16,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions:false, testListening:false)]
         public async Task RequestsShouldBeTakenFromAnyClient(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var countingService = new CountingService();
+            var countingService = new AsyncCountingService();
             await using (var clientOnly1 = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .AsLatestClientAndLatestServiceBuilder()
                              .NoService()
@@ -45,11 +45,11 @@ namespace Halibut.Tests
 
                         await clientCountingService1.IncrementAsync();
 
-                        countingService.GetCurrentValue().Should().Be(1);
+                        countingService.CurrentValue().Should().Be(1);
 
                         await clientCountingService2.IncrementAsync();
 
-                        countingService.GetCurrentValue().Should().Be(2);
+                        countingService.CurrentValue().Should().Be(2);
                     }
                 }
             }

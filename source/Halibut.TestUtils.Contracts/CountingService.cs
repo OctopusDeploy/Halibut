@@ -31,5 +31,10 @@ namespace Halibut.TestUtils.Contracts
             await Task.CompletedTask;
             return service.GetCurrentValue();
         }
+        
+        public int CurrentValue()
+        {
+            return service.GetCurrentValue();
+        }
     }
 }

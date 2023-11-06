@@ -25,7 +25,7 @@ namespace Halibut.Tests
         public async Task SucceedsWhenPollingServicePresentsWrongCertificate_ButServiceIsConfiguredToTrustAndAllowConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
-            var countingService = new CountingService();
+            var countingService = new AsyncCountingService();
             var clientTrustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
             var firstCall = true;
@@ -53,7 +53,7 @@ namespace Halibut.Tests
                 await clientCountingService.IncrementAsync();
 
                 // Assert
-                countingService.GetCurrentValue().Should().Be(1);
+                countingService.CurrentValue().Should().Be(1);
 
                 clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeTrue();
                 unauthorizedThumbprint.Should().Be(CertAndThumbprint.TentaclePolling.Thumbprint);
@@ -65,7 +65,7 @@ namespace Halibut.Tests
         public async Task FailWhenPollingServicePresentsWrongCertificate_ButServiceIsConfiguredToBlockConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
-            var countingService = new CountingService();
+            var countingService = new AsyncCountingService();
             var trustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
 
@@ -105,7 +105,7 @@ namespace Halibut.Tests
                 await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
 
                 // Assert
-                countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
+                countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
 
                 unauthorizedThumbprint.Should().Be(CertAndThumbprint.TentaclePolling.Thumbprint);
             }
@@ -160,7 +160,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testWebSocket: false, testPolling: false, testNetworkConditions: false)]
         public async Task FailWhenClientPresentsWrongCertificateToListeningService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var countingService = new CountingService();
+            var countingService = new AsyncCountingService();
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithServiceTrustingTheWrongCertificate()
@@ -171,7 +171,7 @@ namespace Halibut.Tests
                 var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 await AssertionExtensions.Should(() => clientCountingService.IncrementAsync()).ThrowAsync<HalibutClientException>();
 
-                countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
+                countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
 
                 serviceLoggers[serviceLoggers.Keys.First(x => x != nameof(MessageSerializer))].GetLogs().Should()
                     .Contain(log => log.FormattedMessage
@@ -184,7 +184,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
         public async Task FailWhenClientPresentsWrongCertificateToPollingService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var countingService = new CountingService();
+            var countingService = new AsyncCountingService();
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithServiceTrustingTheWrongCertificate()
@@ -215,7 +215,7 @@ namespace Halibut.Tests
                 
                 await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
 
-                countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
+                countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
         
@@ -223,7 +223,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
         public async Task FailWhenListeningServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var countingService = new CountingService();
+            var countingService = new AsyncCountingService();
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithClientTrustingTheWrongCertificate()
@@ -235,7 +235,7 @@ namespace Halibut.Tests
                     .And.Message.Should().Contain("" +
                                                   "We expected the server to present a certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F'. " +
                                                   "Instead, it presented a certificate with a thumbprint of '36F35047CE8B000CF4C671819A2DD1AFCDE3403D'");
-                countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
+                countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
         
@@ -243,7 +243,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
         public async Task FailWhenPollingServicePresentsWrongCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var countingService = new CountingService();
+            var countingService = new AsyncCountingService();
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithClientTrustingTheWrongCertificate()
@@ -271,7 +271,7 @@ namespace Halibut.Tests
 
                 await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
 
-                countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
+                countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
         
