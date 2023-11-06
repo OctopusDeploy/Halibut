@@ -16,7 +16,7 @@ namespace Halibut.Tests.Support
 
         public static LatestClientAndLatestServiceBuilder WithMultipleParametersTestService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IMultipleParametersTestService>(() => new MultipleParametersTestService());
+            return builder.WithAsyncService<IMultipleParametersTestService, IAsyncMultipleParametersTestService>(() => new AsyncMultipleParametersTestService());
         }
 
         public static LatestClientAndLatestServiceBuilder WithComplexObjectService(this LatestClientAndLatestServiceBuilder builder)
