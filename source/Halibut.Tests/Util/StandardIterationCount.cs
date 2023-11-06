@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestCases;
 
@@ -24,7 +25,7 @@ namespace Halibut.Tests.Util
                     return 50;
                 case ServiceConnectionType.Listening:
                     // Listening is fast on windows.
-                    if (OperatingSystem.IsWindows())
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         return 1000;
                     }
