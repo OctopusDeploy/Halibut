@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
 
@@ -13,14 +14,11 @@ namespace Halibut.Tests
         readonly string tempFilePath = Path.GetTempFileName();
         string testHash;
 
-        readonly TaskCompletionSource<bool> prepareForLogCollectionTaskCompletionSource;
-        readonly Task prepareForLogCollection;
+        readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly Task writeDataToDiskTask;
 
         public TraceLogFileLogger()
         {
-            prepareForLogCollectionTaskCompletionSource = new TaskCompletionSource<bool>();
-            prepareForLogCollection = prepareForLogCollectionTaskCompletionSource.Task;
             writeDataToDiskTask = WriteDataToFile();
         }
 
@@ -31,19 +29,30 @@ namespace Halibut.Tests
 
         public void WriteLine(string logMessage)
         {
-            if (prepareForLogCollection.IsCompleted) return;
+            if (cancellationTokenSource.IsCancellationRequested) return;
             queue.Enqueue(logMessage);
         }
 
         async Task WriteDataToFile()
         {
-            while (!prepareForLogCollection.IsCompleted)
+            while (!cancellationTokenSource.IsCancellationRequested)
             {
-                // Don't hammer the disk, let some log message queue up before writing them.
-                if (!prepareForLogCollection.IsCompleted) await Task.WhenAny(Task.Delay(5), prepareForLogCollection);
-
                 var list = new List<string>();
-                list.Add(await queue.DequeueAsync());
+
+                try
+                {
+                    // Don't hammer the disk, let some log message queue up before writing them.
+                    await Task.Delay(TimeSpan.FromMilliseconds(5), cancellationTokenSource.Token);
+
+                    // await here for something to enter the queue.
+                    list.Add(await queue.DequeueAsync(cancellationTokenSource.Token));
+                }
+                catch (OperationCanceledException)
+                {
+                }
+
+                // If we got something from the queue, get as much as we can from queue without blocking.
+                // So what we can write it down as one chunk.
                 while (queue.TryDequeue(out var log)) list.Add(log);
 
                 using (var fileAppender = new StreamWriter(tempFilePath, true, Encoding.UTF8, 8192))
@@ -57,8 +66,9 @@ namespace Halibut.Tests
 
         void FinishWritingLogs()
         {
-            prepareForLogCollectionTaskCompletionSource.SetResult(false);
+            cancellationTokenSource.Cancel();
             writeDataToDiskTask.GetAwaiter().GetResult();
+            cancellationTokenSource.Dispose();
         }
 
         public bool CopyLogFileToArtifacts()
