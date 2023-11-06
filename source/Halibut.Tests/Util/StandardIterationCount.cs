@@ -23,8 +23,13 @@ namespace Halibut.Tests.Util
                     // Assume polling over websockets is also slow
                     return 50;
                 case ServiceConnectionType.Listening:
-                    // Listening is fast
-                    return 1000;
+                    // Listening is fast on windows.
+                    if (OperatingSystem.IsWindows())
+                    {
+                        return 1000;
+                    }
+                    // It is not clear why listening is slower on linux.
+                    return 250;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(connectionType), connectionType, null);
             }
