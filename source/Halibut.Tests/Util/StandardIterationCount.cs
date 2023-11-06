@@ -18,13 +18,13 @@ namespace Halibut.Tests.Util
             {
                 case ServiceConnectionType.Polling:
                     // Polling is slow, we don't know why
-                    return 50;
+                    return 42;
                 case ServiceConnectionType.PollingOverWebSocket:
                     // Assume polling over websockets is also slow
-                    return 50;
+                    return 42;
                 case ServiceConnectionType.Listening:
                     // Listening is fast
-                    return 1000;
+                    return 333;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(connectionType), connectionType, null);
             }
