@@ -42,7 +42,7 @@ namespace Halibut.Tests.Support
 
         public static LatestClientAndLatestServiceBuilder WithDoSomeActionService(this LatestClientAndLatestServiceBuilder builder, Action action)
         {
-            return builder.WithService<IDoSomeActionService>(() => new DoSomeActionService(action));
+            return builder.WithAsyncService<IDoSomeActionService, IAsyncDoSomeActionService>(() => new AsyncDoSomeActionService(action));
         }
         
         public static LatestClientAndLatestServiceBuilder WithReturnSomeDataStreamService(this LatestClientAndLatestServiceBuilder builder, Func<DataStream> dataStreamCreator)
