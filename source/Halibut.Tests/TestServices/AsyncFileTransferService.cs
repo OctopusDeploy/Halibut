@@ -1,21 +1,23 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Octopus.Tentacle.Contracts;
 
 namespace Halibut.Tests.TestServices
 {
-    public class FileTransferService : IFileTransferService
+    public class AsyncFileTransferService : IAsyncFileTransferService
     {
-        public UploadResult UploadFile(string remotePath, DataStream upload)
+        public async Task<UploadResult> UploadFileAsync(string remotePath, DataStream upload, CancellationToken cancellationToken)
         {
-            upload.Receiver().SaveToAsync(remotePath, CancellationToken.None).GetAwaiter().GetResult();
+            await upload.Receiver().SaveToAsync(remotePath, CancellationToken.None);
 
             return new UploadResult(remotePath, Guid.NewGuid().ToString(), upload.Length);
         }
 
-        public DataStream DownloadFile(string remotePath)
+        public async Task<DataStream> DownloadFileAsync(string remotePath, CancellationToken cancellationToken)
         {
+            await Task.CompletedTask;
             return new DataStream(
                 new FileInfo(remotePath).Length,
                 async (writer, ct) =>

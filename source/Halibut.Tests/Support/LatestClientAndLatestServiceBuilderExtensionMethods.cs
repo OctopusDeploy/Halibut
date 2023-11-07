@@ -47,7 +47,7 @@ namespace Halibut.Tests.Support
         
         public static LatestClientAndLatestServiceBuilder WithReturnSomeDataStreamService(this LatestClientAndLatestServiceBuilder builder, Func<DataStream> dataStreamCreator)
         {
-            return builder.WithService<IReturnSomeDataStreamService>(() => new ReturnSomeDataStreamService(dataStreamCreator));
+            return builder.WithAsyncService<IReturnSomeDataStreamService, IAsyncReturnSomeDataStreamService>(() => new AsyncReturnSomeDataStreamService(dataStreamCreator));
         }
 
         public static LatestClientAndLatestServiceBuilder WithReadDataStreamService(this LatestClientAndLatestServiceBuilder builder)

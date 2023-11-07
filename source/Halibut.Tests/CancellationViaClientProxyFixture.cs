@@ -169,7 +169,7 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .NoService()
-                       .WithService<IAmNotAllowed>(() => new AmNotAllowed())
+                       .WithAsyncService<IAmNotAllowed, IAsyncAmNotAllowed>(() => new AsyncAmNotAllowed())
                        .Build(CancellationToken))
             {
                 Assert.Throws<TypeNotAllowedException>(() =>
@@ -202,15 +202,21 @@ namespace Halibut.Tests
         public void Foo(HalibutProxyRequestOptions opts);
     }
     
+    public interface IAsyncAmNotAllowed
+    {
+        public Task FooAsync(HalibutProxyRequestOptions opts, CancellationToken cancellationToken);
+    }
+    
     public interface IAsyncClientAmNotAllowed
     {
         public Task FooAsync(HalibutProxyRequestOptions opts);
     }
 
-    public class AmNotAllowed : IAmNotAllowed
+    public class AsyncAmNotAllowed : IAsyncAmNotAllowed
     {
-        public void Foo(HalibutProxyRequestOptions opts)
+        public async Task FooAsync(HalibutProxyRequestOptions opts, CancellationToken cancellationToken)
         {
+            await Task.CompletedTask;
             throw new NotImplementedException();
         }
     }
