@@ -52,44 +52,6 @@ namespace Halibut.Tests.ServiceModel
             var response = await sut.InvokeAsync(request);
             response.Result.Should().Be(1);
         }
-        
-        [Test]
-        public async Task AsyncInvokeWithParamsOnSyncService()
-        {
-            var serviceFactory = new ServiceFactoryBuilder()
-                .WithService<IEchoService>(() => new EchoService())
-                .Build();
-
-            var value = Some.RandomAsciiStringOfLength(8);
-            var sut = new ServiceInvoker(serviceFactory);
-            var request = new RequestMessage
-            {
-                ServiceName = nameof(IEchoService),
-                MethodName = nameof(IEchoService.SayHello),
-                Params = new[] { value }
-            };
-
-            var response = await sut.InvokeAsync(request);
-            response.Result.Should().Be($"{value}...");
-        }
-
-        [Test]
-        public async Task AsyncInvokeWithNoParamsOnSyncService()
-        {
-            var serviceFactory = new ServiceFactoryBuilder()
-                .WithService<ICountingService>(() => new CountingService())
-                .Build();
-
-            var sut = new ServiceInvoker(serviceFactory);
-            var request = new RequestMessage
-            {
-                ServiceName = nameof(ICountingService),
-                MethodName = nameof(ICountingService.Increment)
-            };
-
-            var response = await sut.InvokeAsync(request);
-            response.Result.Should().Be(1);
-        }
 
         [Test]
         public async Task AsyncInvokeWithNoParams_AsyncServiceMissingSuffix()

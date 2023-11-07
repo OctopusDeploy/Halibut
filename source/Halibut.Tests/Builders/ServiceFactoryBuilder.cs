@@ -13,14 +13,6 @@ namespace Halibut.Tests.Builders
 
         List<Exception> conventionExceptions = new List<Exception>();
 
-        public ServiceFactoryBuilder WithService<TContract>(Func<TContract> factoryFunc)
-        {
-            factoryWithConventionVerification.Register(factoryFunc);
-            factoryWithNoConventionVerification.Register(factoryFunc);
-            return this;
-        }
-        
-
         public ServiceFactoryBuilder WithService<TContract, TClientContract>(Func<TClientContract> factoryFunc)
         {
             try
