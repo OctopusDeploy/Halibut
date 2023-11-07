@@ -28,7 +28,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithPortForwarding()
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("hello");
                 connectionsObserver.ConnectionAcceptedCount.Should().Be(1);
                 connectionsObserver.ConnectionClosedCount.Should().Be(0);
@@ -64,7 +64,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithConnectionObserverOnTcpServer(connectionsObserver)
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await AssertionExtensions.Should(() => echo.SayHelloAsync("hello")).ThrowAsync<HalibutClientException>();
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
@@ -90,7 +90,7 @@ namespace Halibut.Tests.Transport.Observability
 
                 using var cts = new CancellationTokenSource();
                 var token = cts.Token;
-                var echo = clientAndBuilder.CreateClientWithOptions<IEchoService, ISyncClientEchoServiceWithOptions, IAsyncClientEchoServiceWithOptions>(
+                var echo = clientAndBuilder.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
                 var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
@@ -123,7 +123,7 @@ namespace Halibut.Tests.Transport.Observability
             {
                 using var cts = new CancellationTokenSource();
                 var token = cts.Token;
-                var echo = clientAndBuilder.CreateClientWithOptions<IEchoService, ISyncClientEchoServiceWithOptions, IAsyncClientEchoServiceWithOptions>(
+                var echo = clientAndBuilder.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
                 var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);

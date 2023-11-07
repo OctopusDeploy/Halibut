@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.WebSockets;
-using System.Threading.Tasks;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.Tests.Support.Streams.SynIoRecording
@@ -34,13 +32,7 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
             NoteSyncCall();
             return base.Read(buffer, offset, count);
         }
-
-        public async Task<string> ReadTextMessageSynchronouslyAsync()
-        {
-            NoteSyncCall();
-            return await base.ReadTextMessageSynchronouslyAsync();
-        }
-
+        
         public override void Write(byte[] buffer, int offset, int count)
         {
             NoteSyncCall();

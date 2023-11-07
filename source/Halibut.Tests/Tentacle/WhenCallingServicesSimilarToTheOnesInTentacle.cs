@@ -29,7 +29,7 @@ namespace Halibut.Tests.Tentacle
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var fileTransferService = clientAndService.CreateClient<IFileTransferService, IAsyncClientFileTransferService>();
+                var fileTransferService = clientAndService.CreateAsyncClient<IFileTransferService, IAsyncClientFileTransferService>();
 
                 await DownloadFile(fileTransferService, clientAndServiceTestCase, CancellationToken);
                 await DownloadFile(fileTransferService, clientAndServiceTestCase, CancellationToken);
@@ -44,9 +44,7 @@ namespace Halibut.Tests.Tentacle
                 {
                     var response = await fileTransferService.DownloadFileAsync(fileToDownload.File.FullName);
                     var downloadedFilePath = Path.Combine(temporaryFolder.DirectoryPath, fileToDownload.File.Name);
-                    await clientAndServiceTestCase.SyncOrAsync
-                        .WhenSync(() => response.Receiver().SaveTo(downloadedFilePath))
-                        .WhenAsync(() => response.Receiver().SaveToAsync(downloadedFilePath, cancellationToken));
+                    await response.Receiver().SaveToAsync(downloadedFilePath, cancellationToken);
 
                     var fileToDownloadMd5 = CalculateMd5(fileToDownload.File.FullName);
                     var downloadedFileMd5 = CalculateMd5(downloadedFilePath);
@@ -64,7 +62,7 @@ namespace Halibut.Tests.Tentacle
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var fileTransferService = clientAndService.CreateClient<IFileTransferService, IAsyncClientFileTransferService>();
+                var fileTransferService = clientAndService.CreateAsyncClient<IFileTransferService, IAsyncClientFileTransferService>();
 
                 await UploadFile(fileTransferService);
                 await UploadFile(fileTransferService);
@@ -114,8 +112,8 @@ namespace Halibut.Tests.Tentacle
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var scriptService = clientAndService.CreateClient<IScriptService, IAsyncClientScriptService>();
-                var capabilitiesService = clientAndService.CreateClient<ICapabilitiesServiceV2, IAsyncClientCapabilitiesServiceV2>();
+                var scriptService = clientAndService.CreateAsyncClient<IScriptService, IAsyncClientScriptService>();
+                var capabilitiesService = clientAndService.CreateAsyncClient<ICapabilitiesServiceV2, IAsyncClientCapabilitiesServiceV2>();
 
                 var scriptBody = GetRandomMultiLineString();
                 var startScriptCommand = new StartScriptCommand(scriptBody, ScriptIsolationLevel.NoIsolation, TimeSpan.MaxValue, null, null, taskId: Guid.NewGuid().ToString());
@@ -155,8 +153,8 @@ namespace Halibut.Tests.Tentacle
                        .WithTentacleServices()
                        .Build(CancellationToken))
             {
-                var scriptService = clientAndService.CreateClient<IScriptServiceV2, IAsyncClientScriptServiceV2>();
-                var capabilitiesService = clientAndService.CreateClient<ICapabilitiesServiceV2, IAsyncClientCapabilitiesServiceV2>();
+                var scriptService = clientAndService.CreateAsyncClient<IScriptServiceV2, IAsyncClientScriptServiceV2>();
+                var capabilitiesService = clientAndService.CreateAsyncClient<ICapabilitiesServiceV2, IAsyncClientCapabilitiesServiceV2>();
 
                 var scriptBody = GetRandomMultiLineString();
                 var scriptTicket = new ScriptTicket(Guid.NewGuid().ToString());

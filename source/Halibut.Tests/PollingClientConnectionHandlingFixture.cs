@@ -107,8 +107,8 @@ namespace Halibut.Tests
                 .WithPollingReconnectRetryPolicy(() => new RetryPolicy(99999999, TimeSpan.Zero, TimeSpan.FromMinutes(1)))
                 .Build(CancellationToken);
 
-            var doSomeActionService = clientAndService.CreateClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
-            var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+            var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
+            var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
             await EnsureTentacleIsConnected(echoService);
 

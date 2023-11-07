@@ -17,7 +17,6 @@ namespace Halibut.Transport
 {
     public class SecureClient : ISecureClient
     {
-        [Obsolete("Replaced by HalibutLimits.RetryCountLimit")] public const int RetryCountLimit = 5;
         readonly ILog log;
         readonly IConnectionManager connectionManager;
         readonly X509Certificate2 clientCertificate;
@@ -41,105 +40,6 @@ namespace Halibut.Transport
 
         public ServiceEndPoint ServiceEndpoint { get; }
         
-        [Obsolete]
-        public void ExecuteTransaction(ExchangeAction protocolHandler, CancellationToken cancellationToken)
-        {
-            var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
-
-            Exception lastError = null;
-
-            // retryAllowed is also used to indicate if the error occurred before or after the connection was made
-            var retryAllowed = true;
-            var watch = Stopwatch.StartNew();
-            for (var i = 0; i < ServiceEndpoint.RetryCountLimit && retryAllowed && watch.Elapsed < ServiceEndpoint.ConnectionErrorRetryTimeout; i++)
-            {
-                if (i > 0)
-                {
-                    Thread.Sleep(retryInterval);
-                    log.Write(EventType.OpeningNewConnection, $"Retrying connection to {ServiceEndpoint.Format()} - attempt #{i}.");
-                }
-
-                try
-                {
-                    lastError = null;
-
-                    IConnection connection = null;
-                    try
-                    {
-                        connection = connectionManager.AcquireConnection(protocolBuilder, tcpConnectionFactory, ServiceEndpoint, log, cancellationToken);
-
-                        // Beyond this point, we have no way to be certain that the server hasn't tried to process a request; therefore, we can't retry after this point
-                        retryAllowed = false;
-
-                        protocolHandler(connection.Protocol);
-                    }
-                    catch
-                    {
-                        connection?.Dispose();
-                        if (connectionManager.IsDisposed)
-                            return;
-                        throw;
-                    }
-
-                    // Only return the connection to the pool if all went well
-                    connectionManager.ReleaseConnection(ServiceEndpoint, connection);
-                }
-                catch (AuthenticationException ex)
-                {
-                    lastError = ex;
-                    retryAllowed = false;
-                    break;
-                }
-                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)
-                {
-                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} refused the connection. This may mean that the expected listening service is not running.");
-                    lastError = ex;
-                    retryAllowed = false;
-                }
-                catch (SocketException ex)
-                {
-                    log.WriteException(EventType.Error, $"Socket communication error while connecting to {ServiceEndpoint.Format()}", ex);
-                    lastError = ex;
-                    // When the host is not found an immediate retry isn't going to help
-                    if (ex.SocketErrorCode == SocketError.HostNotFound)
-                    {
-                        break;
-                    }
-                }
-                catch (ConnectionInitializationFailedException ex)
-                {
-                    log.WriteException(EventType.Error, $"Connection initialization failed while connecting to {ServiceEndpoint.Format()}", ex);
-                    lastError = ex;
-                    retryAllowed = true;
-
-                    // If this is the second failure, clear the pooled connections as a precaution
-                    // against all connections in the pool being bad
-                    if (i == 1)
-                    {
-                        connectionManager.ClearPooledConnections(ServiceEndpoint, log);
-                    }
-                }
-                catch (IOException ex) when (ex.IsSocketConnectionReset())
-                {
-                    log.Write(EventType.Error, $"The remote host at {ServiceEndpoint.Format()} reset the connection. This may mean that the expected listening service does not trust the thumbprint {clientCertificate.Thumbprint} or was shut down.");
-                    lastError = ex;
-                }
-                catch (IOException ex) when (ex.IsSocketConnectionTimeout())
-                {
-                    // Received on a polling client when the network connection is lost.
-                    log.Write(EventType.Error, $"The connection to the host at {ServiceEndpoint.Format()} timed out. There may be problems with the network. The connection will be retried.");
-                    lastError = ex;
-                }
-                catch (Exception ex)
-                {
-                    log.WriteException(EventType.Error, "Unexpected exception executing transaction.", ex);
-                    lastError = ex;
-                }
-            }
-
-            HandleError(lastError, retryAllowed);
-        }
-
         public async Task ExecuteTransactionAsync(ExchangeActionAsync protocolHandler, RequestCancellationTokens requestCancellationTokens)
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;

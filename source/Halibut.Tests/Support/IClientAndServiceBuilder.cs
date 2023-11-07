@@ -16,7 +16,5 @@ namespace Halibut.Tests.Support
         IClientAndServiceBuilder WithHalibutLoggingLevel(LogLevel info);
         IClientAndServiceBuilder WithCachingService();
         IClientAndServiceBuilder NoService();
-        IClientAndServiceBuilder WithForcingClientProxyType(ForceClientProxyType forceClientProxyType);
-        IClientAndServiceBuilder WithServiceAsyncHalibutFeatureEnabled();
     }
 }

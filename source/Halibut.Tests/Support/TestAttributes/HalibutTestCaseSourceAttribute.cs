@@ -161,7 +161,6 @@ namespace Halibut.Tests.Support.TestAttributes
                         if (item is ClientAndServiceTestCase testCase)
                         {
                             parms.Properties.Add(PropertyNames.Category, testCase.ServiceConnectionType.ToString());
-                            parms.Properties.Add(PropertyNames.Category, testCase.SyncOrAsync.ToString());
                         }
 
                         data.Add(parms);

@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
@@ -49,12 +48,11 @@ namespace Halibut.Tests.Timeouts
                        .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
                            .WithLog(logFactory.ForEndpoint(uri))
                            .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                           .WithSyncOrAsync(clientAndServiceTestCase.SyncOrAsync)
                            .Build()))
                        .WithEchoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout);
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout);
                 var sw = Stopwatch.StartNew();
                 try
                 {

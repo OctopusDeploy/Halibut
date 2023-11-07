@@ -23,26 +23,6 @@ namespace Halibut.Transport
 
         public bool IsDisposed { get; private set; }
         
-        public void Dispose()
-        {
-            pool.Dispose();
-            using (connectionsLock.Lock())
-            {
-                IConnection[] connectionsToDispose;
-                using (activeConnectionsLock.Lock())
-                {
-                    connectionsToDispose = activeConnections.SelectMany(kv => kv.Value).ToArray();
-                }
-
-                foreach (var connection in connectionsToDispose)
-                {
-                    SafelyDisposeConnection(connection, null);
-                }
-            }
-
-            IsDisposed = true;
-        }
-
         public async ValueTask DisposeAsync()
         {
             await pool.DisposeAsync();
@@ -62,13 +42,7 @@ namespace Halibut.Transport
 
             IsDisposed = true;
         }
-
-        [Obsolete]
-        public IConnection AcquireConnection(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
-        }
-
+        
         public async Task<IConnection> AcquireConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, IConnectionFactory connectionFactory, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             using (await connectionsLock.LockAsync(cancellationToken))
@@ -117,13 +91,7 @@ namespace Halibut.Transport
                 activeConnections.Add(serviceEndpoint, connections);
             }
         }
-
-        [Obsolete]
-        public void ReleaseConnection(ServiceEndPoint serviceEndpoint, IConnection connection)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
-        }
-
+        
         public async Task ReleaseConnectionAsync(ServiceEndPoint serviceEndpoint, IConnection connection, CancellationToken cancellationToken)
         {
             using (await connectionsLock.LockAsync(cancellationToken))
@@ -138,13 +106,7 @@ namespace Halibut.Transport
                 }
             }
         }
-
-        [Obsolete]
-        public void ClearPooledConnections(ServiceEndPoint serviceEndPoint, ILog log)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
-        }
-
+        
         public async Task ClearPooledConnectionsAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
         {
             using (await connectionsLock.LockAsync(cancellationToken))
@@ -167,12 +129,6 @@ namespace Halibut.Transport
             }
 
             return Array.Empty<IConnection>();
-        }
-
-        [Obsolete]
-        public void Disconnect(ServiceEndPoint serviceEndPoint, ILog log)
-        {
-            throw new NotSupportedException("Should not be called when async Halibut is being used.");
         }
 
         public async Task DisconnectAsync(ServiceEndPoint serviceEndPoint, ILog log, CancellationToken cancellationToken)
@@ -231,18 +187,6 @@ namespace Halibut.Transport
             }
         }
 
-        static void SafelyDisposeConnection(IConnection connection, ILog log)
-        {
-            try
-            {
-                connection?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                log?.WriteException(EventType.Error, "Exception disposing connection", ex);
-            }
-        }
-
         static async Task SafelyDisposeConnectionAsync(IConnection connection, ILog log)
         {
             try
@@ -273,20 +217,7 @@ namespace Halibut.Transport
                 this.onDisposed = onDisposed;
                 this.onDisposedAsync = onDisposedAsync;
             }
-
-            public void Dispose()
-            {
-                try
-                {
-                    connection.Value.Dispose();
-                }
-                finally
-                {
-                    onDisposed(this);
-                }
-            }
-
-
+            
             public async ValueTask DisposeAsync()
             {
                 try

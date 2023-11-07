@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
-using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -14,7 +13,6 @@ namespace Halibut.Transport
     {
         readonly IDisposable client;
         readonly Stream stream;
-        readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly MessageExchangeProtocol protocol;
         DateTimeOffset lastUsed;
@@ -23,13 +21,11 @@ namespace Halibut.Transport
             IDisposable client, 
             Stream stream,
             ExchangeProtocolBuilder exchangeProtocolBuilder,
-            AsyncHalibutFeature asyncHalibutFeature,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             ILog log)
         {
             this.client = client;
             this.stream = stream;
-            this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             protocol = exchangeProtocolBuilder(stream, log);
             lastUsed = DateTimeOffset.UtcNow;
@@ -44,40 +40,9 @@ namespace Halibut.Transport
 
         public bool HasExpired()
         {
-            if (asyncHalibutFeature.IsEnabled())
-            {
-                return lastUsed < DateTimeOffset.UtcNow.Subtract(halibutTimeoutsAndLimits.SafeTcpClientPooledConnectionTimeout);
-            }
-#pragma warning disable CS0612
-            return lastUsed < DateTimeOffset.UtcNow.Subtract(HalibutLimits.SafeTcpClientPooledConnectionTimeout);
-#pragma warning restore CS0612
+            return lastUsed < DateTimeOffset.UtcNow.Subtract(halibutTimeoutsAndLimits.SafeTcpClientPooledConnectionTimeout);
         }
         
-        public void Dispose()
-        {
-            try
-            {
-                protocol.StopAcceptingClientRequests();
-                try
-                {
-#pragma warning disable CS0612
-                    protocol.EndCommunicationWithServer();
-#pragma warning restore CS0612
-                }
-                catch (Exception)
-                {
-                    // The stream might have already disconnected, so don't worry about it.
-                }
-                stream.Dispose();
-                client.Dispose();
-            }
-            catch (SocketException)
-            {
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-        }
 
         public async ValueTask DisposeAsync()
         {

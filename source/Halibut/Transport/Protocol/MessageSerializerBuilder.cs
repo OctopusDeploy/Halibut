@@ -51,16 +51,6 @@ namespace Halibut.Transport.Protocol
         {
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
 
-            [Obsolete]
-            JsonSerializer Serializer()
-            {
-                var settings = CreateSerializer();
-                var binder = new RegisteredSerializationBinder(typeRegistry);
-                settings.SerializationBinder = binder;
-                configureSerializer?.Invoke(settings);
-                return JsonSerializer.Create(settings);
-            }
-
             StreamCapturingJsonSerializer StreamCapturingSerializer()
             {
                 var settings = CreateSerializer();
@@ -74,9 +64,6 @@ namespace Halibut.Transport.Protocol
 
             var messageSerializer = new MessageSerializer(
                 typeRegistry, 
-#pragma warning disable CS0612
-                Serializer, 
-#pragma warning restore CS0612
                 StreamCapturingSerializer, 
                 messageSerializerObserver,
                 readIntoMemoryLimitBytes,

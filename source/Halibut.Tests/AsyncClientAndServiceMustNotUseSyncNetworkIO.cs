@@ -18,12 +18,10 @@ namespace Halibut.Tests
         [Test]
         // We are testing we only have async IO so only test async client with an async service.
         // We already know a sync service/client does sync IO.
-        [LatestClientAndLatestServiceTestCases(testSyncService: false, testAsyncServicesAsWell: true,
-            testSyncClients: false, testAsyncClients: true,
-            testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task AsyncClientAndServiceMustNotUseSyncNetworkIOTest(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var syncIoRecordingStreamFactory = new SyncIoRecordingStreamFactory(AsyncHalibutFeature.Enabled);
+            var syncIoRecordingStreamFactory = new SyncIoRecordingStreamFactory();
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithStandardServices()
@@ -31,7 +29,7 @@ namespace Halibut.Tests
                              .WithStreamFactory(syncIoRecordingStreamFactory)
                              .Build(CancellationToken))
             {
-                var service = clientAndService.CreateClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+                var service = clientAndService.CreateAsyncClient<IComplexObjectService, IAsyncClientComplexObjectService>();
                 var payload1 = "Payload #1";
                 var payload2 = "Payload #2";
 

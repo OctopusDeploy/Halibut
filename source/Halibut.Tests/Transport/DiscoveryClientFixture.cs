@@ -23,30 +23,20 @@ namespace Halibut.Tests.Transport
                 .AsLatestClientAndLatestServiceBuilder()
                 .Build(CancellationToken);
 
-            var client = new DiscoveryClient(new StreamFactory(clientAndServiceTestCase.SyncOrAsync.ToAsyncHalibutFeature()));
-
-#pragma warning disable CS0612
-            var discovered = await clientAndServiceTestCase.SyncOrAsync
-                .WhenSync(() => client.Discover(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken))
-                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken));
-#pragma warning restore CS0612
+            var client = new DiscoveryClient(new StreamFactory());
+            var discovered = await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken);
 
             discovered.RemoteThumbprint.Should().BeEquivalentTo(clientAndService.GetServiceEndPoint().RemoteThumbprint);
             discovered.BaseUri.Should().BeEquivalentTo(clientAndService.GetServiceEndPoint().BaseUri);
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task DiscoveringNonExistentEndpointThrows(SyncOrAsync syncOrAsync)
+        public async Task DiscoveringNonExistentEndpointThrows()
         {
-            var client = new DiscoveryClient(new StreamFactory(syncOrAsync.ToAsyncHalibutFeature()));
+            var client = new DiscoveryClient(new StreamFactory());
             var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "");
 
-#pragma warning disable CS0612
-            await syncOrAsync
-                .WhenSync(() => Assert.Throws<HalibutClientException>(() => client.Discover(fakeEndpoint), "No such host is known")).IgnoreResult()
-                .WhenAsync(async () => await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, new HalibutTimeoutsAndLimits(), CancellationToken), "No such host is known"));
-#pragma warning restore CS0612
+            await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, new HalibutTimeoutsAndLimits(), CancellationToken), "No such host is known");
         }
         
         [Test]
@@ -57,9 +47,7 @@ namespace Halibut.Tests.Transport
                        .AsLatestClientAndLatestServiceBuilder()
                        .Build(CancellationToken))
             {
-                var info = await clientAndServiceTestCase.SyncOrAsync
-                    .WhenSync(() => clientAndService.Client.Discover(clientAndService.ServiceUri))
-                    .WhenAsync(async () => await clientAndService.Client.DiscoverAsync(clientAndService.ServiceUri, CancellationToken));
+                var info = await clientAndService.Client.DiscoverAsync(clientAndService.ServiceUri, CancellationToken);
                     
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
@@ -81,15 +69,11 @@ namespace Halibut.Tests.Transport
                     .Build())
                 .Build(CancellationToken);
 
-            var client = new DiscoveryClient(new StreamFactory(clientAndServiceTestCase.SyncOrAsync.ToAsyncHalibutFeature()));
+            var client = new DiscoveryClient(new StreamFactory());
 
             var sw = Stopwatch.StartNew();
-#pragma warning disable CS0612
-            await AssertionExtensions.Should(() => clientAndServiceTestCase.SyncOrAsync
-                .WhenSync(() => client.Discover(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), CancellationToken))
-                .WhenAsync(async () => await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken)))
+            await AssertionExtensions.Should(() => client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken))
                 .ThrowAsync<HalibutClientException>();
-#pragma warning restore CS0612
 
             sw.Stop();
             sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");

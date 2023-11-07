@@ -27,7 +27,7 @@ namespace Halibut.Tests
                 var data = new byte[1024];
                 new Random().NextBytes(data);
 
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                 await echo.SayHelloAsync("Bob");
                 

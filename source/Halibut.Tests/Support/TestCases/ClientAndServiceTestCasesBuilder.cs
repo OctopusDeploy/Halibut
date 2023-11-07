@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Util;
-using Halibut.Util;
 
 namespace Halibut.Tests.Support.TestCases
 {
@@ -10,21 +9,15 @@ namespace Halibut.Tests.Support.TestCases
         readonly ClientAndServiceTestVersion[] clientServiceTestVersions;
         readonly ServiceConnectionType[] serviceConnectionTypes;
         readonly NetworkConditionTestCase[] networkConditionTestCases;
-        readonly ForceClientProxyType[] forceClientProxyTypes;
-        readonly AsyncHalibutFeature[] serviceAsyncHalibutFeatureTestCases;
 
         public ClientAndServiceTestCasesBuilder(
             IEnumerable<ClientAndServiceTestVersion> clientServiceTestVersions,
             IEnumerable<ServiceConnectionType> serviceConnectionTypes,
-            IEnumerable<NetworkConditionTestCase> networkConditionTestCases,
-            IEnumerable<ForceClientProxyType> forceClientProxyTypes,
-            IEnumerable<AsyncHalibutFeature> serviceAsyncHalibutFeatureTestCases)
+            IEnumerable<NetworkConditionTestCase> networkConditionTestCases)
         {
-            this.serviceAsyncHalibutFeatureTestCases = serviceAsyncHalibutFeatureTestCases.Distinct().ToArray();
             this.clientServiceTestVersions = clientServiceTestVersions.Distinct().ToArray();
             this.serviceConnectionTypes = serviceConnectionTypes.Distinct().ToArray();
             this.networkConditionTestCases = networkConditionTestCases.Distinct().ToArray();
-            this.forceClientProxyTypes = forceClientProxyTypes.Distinct().ToArray();
         }
 
         public IEnumerable<ClientAndServiceTestCase> Build()
@@ -49,33 +42,8 @@ namespace Halibut.Tests.Support.TestCases
                         {
                             recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType, clientServiceTestVersion);
                         }
-
-                        foreach (var serviceAsyncHalibutFeatureTestCase in serviceAsyncHalibutFeatureTestCases)
-                        {
-                            if (clientServiceTestVersion.IsPreviousService() && serviceAsyncHalibutFeatureTestCase == AsyncHalibutFeature.Enabled)
-                            {
-                                continue;
-                            }
-                            
-                            if (!forceClientProxyTypes.Any())
-                            {
-                                cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase));
-                            }
-                            else
-                            {
-                                if (clientServiceTestVersion.IsPreviousClient())
-                                {
-                                    cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null, serviceAsyncHalibutFeatureTestCase));
-                                }
-                                else
-                                {
-                                    foreach (var forceClientProxyType in forceClientProxyTypes)
-                                    {
-                                        cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, forceClientProxyType, serviceAsyncHalibutFeatureTestCase));
-                                    }
-                                }
-                            }
-                        }
+                        
+                        cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion));
                     }
                 }
             }

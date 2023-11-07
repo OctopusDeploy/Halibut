@@ -11,7 +11,6 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -49,7 +48,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 // Act
-                var clientCountingService = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 await clientCountingService.IncrementAsync();
 
                 // Assert
@@ -83,7 +82,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 using var cts = new CancellationTokenSource();
-                var clientCountingService = clientAndBuilder.CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(point =>
                 {
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
@@ -129,7 +128,7 @@ namespace Halibut.Tests
             {
                 using var cts = new CancellationTokenSource();
                 var clientCountingService = clientAndBuilder
-                    .CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
+                    .CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(point =>
                     {
                         point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
                     });
@@ -168,7 +167,7 @@ namespace Halibut.Tests
                        .RecordingServiceLogs(out var serviceLoggers)
                        .Build(CancellationToken))
             {
-                var clientCountingService = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 await AssertionExtensions.Should(() => clientCountingService.IncrementAsync()).ThrowAsync<HalibutClientException>();
 
                 countingService.GetCurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
@@ -195,7 +194,7 @@ namespace Halibut.Tests
                 using var cts = new CancellationTokenSource();
                 var clientCountingService = clientAndBuilder
                     .As<LatestClientAndLatestServiceBuilder.ClientAndService>()
-                    .CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions,  IAsyncClientCountingServiceWithOptions>(point =>
+                    .CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(point =>
                 {
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000);
                 });
@@ -230,7 +229,7 @@ namespace Halibut.Tests
                        .WithCountingService(countingService)
                        .Build(CancellationToken))
             {
-                var clientCountingService = clientAndBuilder.CreateClient<ICountingService, IAsyncClientCountingService>();
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 (await AssertionExtensions.Should(() => clientCountingService.IncrementAsync()).ThrowAsync<HalibutClientException>())
                     .And.Message.Should().Contain("" +
                                                   "We expected the server to present a certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F'. " +
@@ -252,7 +251,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 using var cts = new CancellationTokenSource();
-                var clientCountingService = clientAndBuilder.CreateClientWithOptions<ICountingService, ISyncClientCountingServiceWithOptions, IAsyncClientCountingServiceWithOptions>(point =>
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(point =>
                 {
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
@@ -279,20 +278,21 @@ namespace Halibut.Tests
         /// Test is redundant but kept around since we really want the security part to work. 
         /// </summary>
         [Test]
-        public void FailWhenListeningClientPresentsWrongCertificateRedundant()
+        public async Task FailWhenListeningClientPresentsWrongCertificateRedundant()
         {
             var services = GetDelegateServiceFactory();
             // The correct certificate would be Certificates.Octopus
             var wrongCertificate = Certificates.TentaclePolling;
-            using (var octopus = new HalibutRuntime(wrongCertificate))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(wrongCertificate).Build())
+            await using (var tentacleListening = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.TentacleListening).WithServiceFactory(services).Build())
             {
                 var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
 
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                var serviceEndpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint);
+                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(serviceEndpoint);
 
-                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+                Assert.ThrowsAsync<HalibutClientException>(async () => await echo.SayHelloAsync("World"));
             }
         }
 
@@ -300,11 +300,11 @@ namespace Halibut.Tests
         /// Test is redundant but kept around since we really want the security part to work. 
         /// </summary>
         [Test]
-        public void FailWhenListeningServerPresentsWrongCertificate()
+        public async Task FailWhenListeningServerPresentsWrongCertificate()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(Certificates.Octopus))
-            using (var tentacleListening = new HalibutRuntime(services, Certificates.TentacleListening))
+            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.Octopus).Build())
+            await using (var tentacleListening = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.TentacleListening).WithServiceFactory(services).Build())
             {
                 var tentaclePort = tentacleListening.Listen();
                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
@@ -312,9 +312,9 @@ namespace Halibut.Tests
                 // The correct one is Certificates.TentacleListeningPublicThumbprint
                 var wrongThumbPrint = Certificates.TentaclePollingPublicThumbprint;
 
-                var echo = octopus.CreateClient<IEchoService>("https://localhost:" + tentaclePort, wrongThumbPrint);
+                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://localhost:" + tentaclePort, wrongThumbPrint));
 
-                Assert.Throws<HalibutClientException>(() => echo.SayHello("World"));
+                Assert.ThrowsAsync<HalibutClientException>(async () => await echo.SayHelloAsync("World"));
             }
         }
         

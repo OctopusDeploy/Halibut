@@ -3,7 +3,6 @@ using System.Collections;
 using System.Linq;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestCases;
-using Halibut.Util;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
@@ -14,20 +13,17 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testWebSocket = true,
             bool testNetworkConditions = true,
             bool testListening = true,
-            bool testPolling = true,
-            bool testAsyncAndSyncClients = true,
-            bool testAsyncServicesAsWell = false // False means only the sync service will be tested.
-            ) :
+            bool testPolling = true) :
             base(
                 typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
                 nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testAsyncAndSyncClients, testAsyncServicesAsWell})
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling})
         {
         }
         
         static class LatestAndPreviousClientAndServiceVersionsTestCases
         {
-            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testAsyncAndSyncClients, bool testAsyncServicesAsWell)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -45,18 +41,6 @@ namespace Halibut.Tests.Support.TestAttributes
                 {
                     serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
-
-                var clientProxyTypesToTest = Array.Empty<ForceClientProxyType>();
-                if (testAsyncAndSyncClients)
-                {
-                    clientProxyTypesToTest = ForceClientProxyTypeValues.All;
-                }
-                
-                var serviceAsyncHalibutFeatureTestCases = AsyncHalibutFeatureValues.All().ToList();
-                if (!testAsyncServicesAsWell)
-                {
-                    serviceAsyncHalibutFeatureTestCases.Remove(AsyncHalibutFeature.Enabled);
-                }
                 
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] {
@@ -66,10 +50,7 @@ namespace Halibut.Tests.Support.TestAttributes
                         ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
                     },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
-                    clientProxyTypesToTest,
-                    serviceAsyncHalibutFeatureTestCases
-                    );
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect });
 
                 return builder.Build();
             }

@@ -25,19 +25,18 @@ namespace Halibut.Transport
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
         readonly CancellationTokenSource cts = new();
         readonly ExchangeActionAsync exchangeAction;
-        readonly AsyncHalibutFeature asyncHalibutFeature;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
         ILog log;
         HttpListener listener;
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, AsyncHalibutFeature asyncHalibutFeature, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
-            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection, asyncHalibutFeature, halibutTimeoutsAndLimits, streamFactory, connectionsObserver)
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
+            : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection, halibutTimeoutsAndLimits, streamFactory, connectionsObserver)
         {
         }
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, AsyncHalibutFeature asyncHalibutFeature, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
         {
             if (!endPoint.EndsWith("/"))
                 endPoint += "/";
@@ -50,7 +49,6 @@ namespace Halibut.Transport
             this.logFactory = logFactory;
             this.getFriendlyHtmlPageContent = getFriendlyHtmlPageContent;
             this.getFriendlyHtmlPageHeaders = getFriendlyHtmlPageHeaders;
-            this.asyncHalibutFeature = asyncHalibutFeature;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
@@ -64,11 +62,7 @@ namespace Halibut.Transport
 
             listener = new HttpListener();
             listener.Prefixes.Add(endPoint);
-            listener.TimeoutManager.IdleConnection = asyncHalibutFeature.IsEnabled()
-                ? halibutTimeoutsAndLimits.TcpClientReceiveTimeout 
-#pragma warning disable CS0612
-                : HalibutLimits.TcpClientReceiveTimeout;
-#pragma warning restore CS0612
+            listener.TimeoutManager.IdleConnection = halibutTimeoutsAndLimits.TcpClientReceiveTimeout;
             listener.Start();
 
             log = logFactory.ForPrefix(endPoint);
@@ -150,17 +144,7 @@ namespace Halibut.Transport
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
                 webSocketStream = streamFactory.CreateStream(webSocketContext.WebSocket);
 
-                string req;
-                if (asyncHalibutFeature.IsEnabled())
-                {
-                    req = await webSocketStream.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientReceiveTimeout, cts.Token).ConfigureAwait(false);
-                }
-                else
-                {
-#pragma warning disable CS0612 // Type or member is obsolete
-                    req = await webSocketStream.ReadTextMessageSynchronouslyAsync().ConfigureAwait(false); // Initial message
-#pragma warning restore CS0612 // Type or member is obsolete
-                }
+                var req = await webSocketStream.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientReceiveTimeout, cts.Token).ConfigureAwait(false);
 
                 if (string.IsNullOrEmpty(req))
                 {
@@ -233,16 +217,8 @@ namespace Halibut.Transport
 #endif
             using (var writer = new StreamWriter(response.OutputStream, new UTF8Encoding(false)) { NewLine = "\r\n" })
             {
-                if (asyncHalibutFeature.IsEnabled())
-                {
-                    await writer.WriteLineAsync(message);
-                    await writer.FlushAsync();
-                }
-                else
-                {
-                    writer.WriteLine(message);
-                    writer.Flush();
-                }
+                await writer.WriteLineAsync(message);
+                await writer.FlushAsync();
             }
         }
 

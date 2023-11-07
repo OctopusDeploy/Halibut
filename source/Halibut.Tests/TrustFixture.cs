@@ -21,7 +21,7 @@ namespace Halibut.Tests
                 .WithStandardServices()
                 .Build(CancellationToken);
 
-            var echoService = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+            var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
             var result = await echoService.SayHelloAsync("Hello");
             result.Should().Be("Hello...");
 

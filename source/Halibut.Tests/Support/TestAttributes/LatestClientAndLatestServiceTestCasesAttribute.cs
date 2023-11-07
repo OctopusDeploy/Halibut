@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Support.TestCases;
-using Halibut.Util;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
@@ -19,22 +17,18 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testNetworkConditions = true,
             bool testListening = true,
             bool testPolling = true,
-            bool testSyncClients = true,
-            bool testAsyncClients = true,
-            bool testAsyncServicesAsWell = false, // False means only the sync service will be tested.
-            bool testSyncService = true,
             params object[] additionalParameters
             ) :
             base(
                 typeof(LatestClientAndLatestServiceTestCases),
                 nameof(LatestClientAndLatestServiceTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testSyncClients, testAsyncClients, testAsyncServicesAsWell, testSyncService, additionalParameters })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, additionalParameters })
         {
         }
 
         static class LatestClientAndLatestServiceTestCases
         {
-            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, bool testSyncClients, bool testAsyncClients, bool testAsyncServicesAsWell, bool testSyncService, object[] additionalParameters)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, object[] additionalParameters)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -52,36 +46,11 @@ namespace Halibut.Tests.Support.TestAttributes
                 {
                     serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
-                
-                List<ForceClientProxyType> clientProxyTypesToTest = new();
-                
-                if (testAsyncClients)
-                {
-                    clientProxyTypesToTest.Add(ForceClientProxyType.AsyncClient);
-
-                    if (testSyncClients)
-                    {
-                        clientProxyTypesToTest.Add(ForceClientProxyType.SyncClient);
-                    }
-                }
-                
-                var serviceAsyncHalibutFeatureTestCases = AsyncHalibutFeatureValues.All().ToList();
-                if (!testAsyncServicesAsWell)
-                {
-                    serviceAsyncHalibutFeatureTestCases.Remove(AsyncHalibutFeature.Enabled);
-                }
-
-                if (!testSyncService)
-                {
-                    serviceAsyncHalibutFeatureTestCases.Remove(AsyncHalibutFeature.Disabled);
-                }
 
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] { ClientAndServiceTestVersion.Latest() },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
-                    clientProxyTypesToTest,
-                    serviceAsyncHalibutFeatureTestCases
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
                 );
                 
                 foreach (var clientAndServiceTestCase in builder.Build())

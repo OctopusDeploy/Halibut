@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.ServiceModel;
@@ -18,6 +19,11 @@ namespace Halibut.Tests.DotMemory
     public interface ICalculatorService
     {
         long Add(long a, long b);
+    }
+
+    public interface IAsyncClientCalculatorService
+    {
+        Task<long> AddAsync(long a, long b);
     }
 
     public class CalculatorService : ICalculatorService
@@ -47,21 +53,30 @@ namespace Halibut.Tests.DotMemory
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
 
-            using (var server = RunServer(Certificates.Octopus, out var port))
+            HalibutRuntime server = null;
+
+            try
             {
+                server = RunServer(Certificates.Octopus, out var port);
+
                 var expectedTcpClientCount = 1; //server listen = 1 tcpclient
                 //valid requests
                 for (var i = 0; i < NumberOfClients; i++)
-                    RunListeningClient(Certificates.TentacleListening, port, Certificates.OctopusPublicThumbprint);
+                {
+                    RunListeningClient(Certificates.TentacleListening, port, Certificates.OctopusPublicThumbprint).GetAwaiter().GetResult();
+                }
+
                 for (var i = 0; i < NumberOfClients; i++)
                 {
                     expectedTcpClientCount++; // each time the server polls, it keeps a tcpclient (as we dont have support to say StopPolling)
-                    RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint);
+                    RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint).GetAwaiter().GetResult();
                 }
 
 #if SUPPORTS_WEB_SOCKET_CLIENT
                 for (var i = 0; i < NumberOfClients; i++)
-                    RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint);
+                {
+                    RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint).GetAwaiter().GetResult();
+                }
 #endif
 
                 //https://dotnettools-support.jetbrains.com/hc/en-us/community/posts/360000088690-How-reproduce-DotMemory-s-Force-GC-button-s-behaviour-on-code-with-c-?page=1#community_comment_360000072750
@@ -79,8 +94,12 @@ namespace Halibut.Tests.DotMemory
                         Console.WriteLine($"Found {tcpClientCount} instances of TcpClient still in memory.");
                         tcpClientCount.Should().BeLessOrEqualTo(expectedTcpClientCount, "Unexpected number of TcpClient objects in memory");
                     });
-                    
+
                 }, TimeSpan.FromSeconds(SecondsToGarbageCollect));
+            }
+            finally
+            {
+                server.DisposeAsync().GetAwaiter().GetResult();
             }
         }
 
@@ -127,18 +146,18 @@ namespace Halibut.Tests.DotMemory
             return server;
         }
 
-        static void RunListeningClient(X509Certificate2 clientCertificate, int port, string remoteThumbprint, bool expectSuccess = true)
+        static async Task RunListeningClient(X509Certificate2 clientCertificate, int port, string remoteThumbprint, bool expectSuccess = true)
         {
-            using (var runtime = new HalibutRuntime(clientCertificate))
+            await using (var runtime = new HalibutRuntimeBuilder().WithServerCertificate(clientCertificate).Build())
             {
-                var calculator = runtime.CreateClient<ICalculatorService>($"https://localhost:{port}/", remoteThumbprint);
-                MakeRequest(calculator, "listening", expectSuccess);
+                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(new ServiceEndPoint($"https://localhost:{port}/", remoteThumbprint));
+                await MakeRequest(calculator, "listening", expectSuccess);
             }
         }
 
-        static void RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
+        static async Task RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
         {
-            using (var runtime = new HalibutRuntimeBuilder()
+            await using (var runtime = new HalibutRuntimeBuilder()
                        .WithServerCertificate(clientCertificate)
                        .WithLogFactory(new TestContextLogFactory("PollingService", LogLevel.Info))
                        .Build())
@@ -151,26 +170,26 @@ namespace Halibut.Tests.DotMemory
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
-                server.Poll(new Uri("poll://SQ-TENTAPOLL"), serverEndpoint);
+                server.Poll(new Uri("poll://SQ-TENTAPOLL"), serverEndpoint, CancellationToken.None);
 
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint);
 
-                var calculator = runtime.CreateClient<ICalculatorService>(clientEndpoint);
+                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(clientEndpoint);
 
-                MakeRequest(calculator, "polling", expectSuccess);
+                await MakeRequest(calculator, "polling", expectSuccess);
 
-                runtime.Disconnect(clientEndpoint);
+                await runtime.DisconnectAsync(clientEndpoint, CancellationToken.None);
             }
         }
 
-        static void RunWebSocketPollingClient(
+        static async Task RunWebSocketPollingClient(
             HalibutRuntime server,
-            X509Certificate2 clientCertificate, 
+            X509Certificate2 clientCertificate,
             string remoteThumbprint,
             string trustedCertificate,
             bool expectSuccess = true)
         {
-            using (var runtime = new HalibutRuntimeBuilder()
+            await using (var runtime = new HalibutRuntimeBuilder()
                        .WithServerCertificate(clientCertificate)
                        .WithLogFactory(new TestContextLogFactory("PollingWebSocketService", LogLevel.Info))
                        .Build())
@@ -182,24 +201,24 @@ namespace Halibut.Tests.DotMemory
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)
                 };
-                server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint);
+                server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint, CancellationToken.None);
 
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint);
-                var calculator = runtime.CreateClient<ICalculatorService>(clientEndpoint);
+                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(clientEndpoint);
 
-                MakeRequest(calculator, "websocket polling", expectSuccess);
+                await MakeRequest(calculator, "websocket polling", expectSuccess);
 
-                runtime.Disconnect(clientEndpoint);
+                await runtime.DisconnectAsync(clientEndpoint, CancellationToken.None);
             }
         }
 
         // ReSharper disable once UnusedParameter.Local
-        static void MakeRequest(ICalculatorService calculator, string requestType, bool expectSuccess)
+        static async Task MakeRequest(IAsyncClientCalculatorService clientCalculator, string requestType, bool expectSuccess)
         {
             for (var i = 0; i < RequestsPerClient; i++)
                 try
                 {
-                    var result = calculator.Add(12, 18);
+                    var result = await clientCalculator.AddAsync(12, 18);
                     Assert.That(result, Is.EqualTo(30));
                     if (!expectSuccess)
                         Assert.Fail(DateTime.Now.ToString("s") + ": Wasn't expecting this test to pass");

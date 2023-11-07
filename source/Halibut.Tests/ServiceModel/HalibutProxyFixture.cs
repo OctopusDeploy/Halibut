@@ -15,7 +15,7 @@ namespace Halibut.Tests.ServiceModel
         {
             var serverError = ResponseMessage.ServerErrorFromException(new MethodNotFoundHalibutClientException("not found", "not even mum could find it"));
 
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+            Action errorThrower = () => HalibutProxyWithAsync.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
             errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
         }
@@ -25,7 +25,7 @@ namespace Halibut.Tests.ServiceModel
         {
             var serverError = new ServerError { Message = "bob", Details = "details", HalibutErrorType = "Foo.BarException" };
 
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+            Action errorThrower = () => HalibutProxyWithAsync.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
             errorThrower.Should().Throw<HalibutClientException>();
         }
@@ -35,7 +35,7 @@ namespace Halibut.Tests.ServiceModel
         {
             var serverError = new ServerError { Message = "bob", Details = "details", HalibutErrorType = null };
 
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+            Action errorThrower = () => HalibutProxyWithAsync.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
             errorThrower.Should().Throw<HalibutClientException>();
         }
@@ -55,7 +55,7 @@ namespace Halibut.Tests.ServiceModel
                 HalibutErrorType = null
             };
 
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+            Action errorThrower = () => HalibutProxyWithAsync.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
             errorThrower.Should().Throw<ServiceNotFoundHalibutClientException>();
         }
@@ -70,7 +70,7 @@ namespace Halibut.Tests.ServiceModel
                 HalibutErrorType = null
             };
 
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+            Action errorThrower = () => HalibutProxyWithAsync.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
             errorThrower.Should().Throw<MethodNotFoundHalibutClientException>();
         }
@@ -99,7 +99,7 @@ String, <null>
                 HalibutErrorType = null
             };
 
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+            Action errorThrower = () => HalibutProxyWithAsync.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
             errorThrower.Should().Throw<AmbiguousMethodMatchHalibutClientException>();
         }
@@ -123,7 +123,7 @@ String, <null>
                 HalibutErrorType = null
             };
 
-            Action errorThrower = () => HalibutProxy.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
+            Action errorThrower = () => HalibutProxyWithAsync.ThrowExceptionFromReceivedError(serverError, new InMemoryConnectionLog("endpoint"));
 
             errorThrower.Should().Throw<ServiceInvocationHalibutClientException>();
         }

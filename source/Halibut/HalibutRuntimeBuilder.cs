@@ -21,7 +21,6 @@ namespace Halibut
         ITypeRegistry typeRegistry;
         Action<TypeRegistryBuilder> configureTypeRegisterBuilder;
         Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
-        AsyncHalibutFeature asyncHalibutFeature = AsyncHalibutFeature.Disabled;
         Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         IStreamFactory streamFactory;
@@ -101,17 +100,6 @@ namespace Halibut
             return this;
         }
 
-        public HalibutRuntimeBuilder WithAsyncHalibutFeatureEnabled()
-        {
-            return WithAsyncHalibutFeature(AsyncHalibutFeature.Enabled);
-        }
-
-        public HalibutRuntimeBuilder WithAsyncHalibutFeature(AsyncHalibutFeature asyncHalibutFeature)
-        {
-            this.asyncHalibutFeature = asyncHalibutFeature;
-            return this;
-        }
-
         internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
@@ -133,16 +121,13 @@ namespace Halibut
         public HalibutRuntime Build()
         {
             var halibutTimeoutsAndLimits = this.halibutTimeoutsAndLimits;
-            if (this.asyncHalibutFeature.IsEnabled())
-            {
-                halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
-            }
+            halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
 
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
             var logFactory = this.logFactory ?? new LogFactory();
 #pragma warning disable CS0612
-            var queueFactory = this.queueFactory ?? (asyncHalibutFeature.IsEnabled() ? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory) : new DefaultPendingRequestQueueFactory(logFactory));
+            var queueFactory = this.queueFactory ?? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
 #pragma warning restore CS0612
             var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
 
@@ -163,7 +148,7 @@ namespace Halibut
             var builder = new MessageSerializerBuilder(logFactory);
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
-            var streamFactory = this.streamFactory ?? new StreamFactory(asyncHalibutFeature);
+            var streamFactory = this.streamFactory ?? new StreamFactory();
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
 
@@ -176,7 +161,6 @@ namespace Halibut
                 typeRegistry,
                 messageSerializer,
                 pollingReconnectRetryPolicy,
-                asyncHalibutFeature,
                 halibutTimeoutsAndLimits,
                 streamFactory,
                 rpcObserver,

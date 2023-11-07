@@ -60,35 +60,6 @@ namespace Halibut.Transport.Protocol
             return receiveResult.Count;
         }
 
-        [Obsolete]
-        public async Task<string> ReadTextMessageSynchronouslyAsync()
-        {
-            AssertCanReadOrWrite();
-            var sb = new StringBuilder();
-            var buffer = new ArraySegment<byte>(new byte[10000]);
-            while (true)
-            {
-                using (var cts = new CancellationTokenSource(HalibutLimits.TcpClientReceiveTimeout))
-                using (var combined = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, cancel.Token))
-                {
-                    var result = await context.ReceiveAsync(buffer, combined.Token).ConfigureAwait(false);
-                    if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        using (var sendCancel = new CancellationTokenSource(TimeSpan.FromSeconds(1)))
-                            await context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Close received", sendCancel.Token).ConfigureAwait(false);
-                        return null;
-                    }
-
-                    if (result.MessageType != WebSocketMessageType.Text)
-                        throw new Exception($"Encountered an unexpected message type {result.MessageType}");
-                    sb.Append(Encoding.UTF8.GetString(buffer.Array, 0, result.Count));
-
-                    if (result.EndOfMessage)
-                        return sb.ToString();
-                }
-            }
-        }
-
         public async Task<string> ReadTextMessage(TimeSpan timeout, CancellationToken cancellationToken)
         {
             AssertCanReadOrWrite();

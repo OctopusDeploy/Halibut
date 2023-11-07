@@ -15,7 +15,7 @@ namespace Halibut.Tests.Transport.Observability
     public class RpcObservabilityFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions:false, testSyncClients:false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
         public async Task RpcCallsShouldBeObserved_RecordsStartAndEndWhenValueIsReturned(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var rpcObserver = new TestRpcObserver();
@@ -26,7 +26,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithStandardServices()
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                 await echo.SayHelloAsync("Hello");
                 
@@ -36,7 +36,7 @@ namespace Halibut.Tests.Transport.Observability
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task RpcCallsShouldBeObserved_RegardlessOfSuccessOrFailure(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var rpcObserver = new TestRpcObserver();
@@ -47,7 +47,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithStandardServices()
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 
                 await AssertionExtensions.Should(() => echo.CrashAsync()).ThrowAsync<ServiceInvocationHalibutClientException>();
 

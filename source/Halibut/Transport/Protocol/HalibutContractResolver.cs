@@ -44,14 +44,7 @@ namespace Halibut.Transport.Protocol
             }
             else
             {
-#pragma warning disable CS0612
-                var capture = StreamCapture.Current;
-#pragma warning restore CS0612
-
-                if (capture != null)
-                {
-                    capture.SerializedStreams.Add((DataStream)o);
-                }
+                throw new ArgumentException("context.Context should be of type StreamCapturingJsonSerializer.StreamCaptureContext");
             }
         }
 
@@ -63,13 +56,7 @@ namespace Halibut.Transport.Protocol
             }
             else
             {
-#pragma warning disable CS0612
-                var capture = StreamCapture.Current;
-#pragma warning restore CS0612
-                if (capture != null)
-                {
-                    capture.DeserializedStreams.Add((DataStream)o);
-                }
+                throw new ArgumentException("context.Context should be of type StreamCapturingJsonSerializer.StreamCaptureContext");
             }
         }
     }

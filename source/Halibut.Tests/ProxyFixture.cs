@@ -23,7 +23,7 @@ namespace Halibut.Tests
                        .WithProxy()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 (await echo.SayHelloAsync("Hello")).Should().Be("Hello...");
 
                 for (var i = 0; i < 5; i++)
@@ -45,7 +45,7 @@ namespace Halibut.Tests
             {
                 clientAndService.HttpProxy!.Dispose();
 
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.TcpClientConnectTimeout = TimeSpan.FromSeconds(5);
                     point.RetryCountLimit = 2;
@@ -72,7 +72,7 @@ namespace Halibut.Tests
             {
                 clientAndService.HttpProxy!.PauseNewConnections();
 
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.TcpClientConnectTimeout = TimeSpan.FromSeconds(5);
                     point.RetryCountLimit = 2;

@@ -1,25 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
-using Halibut.Util;
 
 namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
     public class SyncIoRecordingStreamFactory : IStreamFactory
     {
         public readonly List<IRecordSyncIo> streams = new();
-        readonly AsyncHalibutFeature asyncHalibutFeature;
-
-        public SyncIoRecordingStreamFactory(AsyncHalibutFeature asyncHalibutFeature)
-        {
-            this.asyncHalibutFeature = asyncHalibutFeature;
-        }
-
+        
         public List<StackTrace> PlacesSyncIoWasUsed()
         {
             lock (streams)
@@ -41,7 +33,7 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
 
         public Stream CreateStream(TcpClient stream)
         {
-            var s = new SyncIoRecordingStream(new StreamFactory(asyncHalibutFeature).CreateStream(stream));
+            var s = new SyncIoRecordingStream(new StreamFactory().CreateStream(stream));
             AddRecorder(s);
             return s;
         }

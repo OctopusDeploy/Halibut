@@ -44,7 +44,7 @@ namespace Halibut.Tests.Timeouts
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 
                 await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000));
                 // --> NEXT sent

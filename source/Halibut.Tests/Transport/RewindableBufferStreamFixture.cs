@@ -160,8 +160,7 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        [SyncAndAsync]
-        public async Task CancelShouldNotRewind(SyncOrAsync syncOrAsync)
+        public async Task CancelShouldNotRewind()
         {
             using (var baseStream = new MemoryStream(16))
             await using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
@@ -173,14 +172,11 @@ namespace Halibut.Tests.Transport
 
                 sut.StartBuffer();
                 var outputBuffer = new byte[inputBuffer.Length];
-                await syncOrAsync.WhenSync(() => sut.Read(outputBuffer, 0, inputBuffer.Length))
-                    .WhenAsync(() => sut.ReadAsync(outputBuffer, 0, inputBuffer.Length));
+                await sut.ReadAsync(outputBuffer, 0, inputBuffer.Length);
                 sut.CancelBuffer();
 
                 var rewoundOutputBuffer = new byte[1];
-                Assert.AreEqual(0, 
-                    await syncOrAsync.WhenSync(() => sut.Read(rewoundOutputBuffer, 0, 1))
-                        .WhenAsync(() => sut.ReadAsync(rewoundOutputBuffer, 0, 1)));
+                Assert.AreEqual(0, await sut.ReadAsync(rewoundOutputBuffer, 0, 1));
             }
         }
         

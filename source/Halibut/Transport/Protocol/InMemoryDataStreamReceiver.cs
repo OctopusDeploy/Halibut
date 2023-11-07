@@ -31,7 +31,7 @@ namespace Halibut.Transport.Protocol
 #if !NETFRAMEWORK
             await
 #endif
-            using (var file = new FileStream(filePath, FileMode.Create))
+                using (var file = new FileStream(filePath, FileMode.Create))
             {
                 await writerAsync(file, cancellationToken);
             }

@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -36,7 +35,7 @@ namespace Halibut.Tests
                        .NoService()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.TcpClientConnectTimeout = TimeSpan.FromSeconds(1);
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
@@ -57,7 +56,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
             }
@@ -68,15 +67,15 @@ namespace Halibut.Tests
         /// </summary>
         /// <param name="clientAndServiceTestCase"></param>
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testSyncClients: false, testAsyncClients: true, testSyncService: false, testAsyncServicesAsWell: true)]
-        [PreviousClientAndLatestServiceVersionsTestCases(testNetworkConditions: false, testSyncClients: false, testAsyncClients: true, testSyncService: false, testAsyncServicesAsWell: true)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [PreviousClientAndLatestServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task FailsWithInvocationServiceExceptionWhenAsyncServiceCrashes(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithAsyncService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService())
                              .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
 
@@ -97,13 +96,13 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
         }
 
         [Test]
-        public void FailOnInvalidHostname()
+        public async Task FailOnInvalidHostname()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.Octopus).WithServiceFactory(services).Build())
             {
-                var echo = octopus.CreateClient<IEchoService>("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint));
+                var ex = Assert.ThrowsAsync<HalibutClientException>(async () => await echo.CrashAsync());
                 var message = ex.Message;
 
                 message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request");
@@ -121,18 +120,18 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
         }
 
         [Test]
-        public void FailOnInvalidPort()
+        public async Task FailOnInvalidPort()
         {
             var services = GetDelegateServiceFactory();
-            using (var octopus = new HalibutRuntime(services, Certificates.Octopus))
+            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.Octopus).WithServiceFactory(services).Build())
             {
                 var endpoint = new ServiceEndPoint("https://google.com:88", Certificates.TentacleListeningPublicThumbprint)
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(2),
                     RetryCountLimit = 2
                 };
-                var echo = octopus.CreateClient<IEchoService>(endpoint);
-                var ex = Assert.Throws<HalibutClientException>(() => echo.Crash());
+                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(endpoint);
+                var ex = Assert.ThrowsAsync<HalibutClientException>(async () => await echo.CrashAsync());
                 ex.Message.Should().Be("An error occurred when sending a request to 'https://google.com:88/', before the request could begin: The client was unable to establish the initial connection within the timeout 00:00:02.");
             }
         }
@@ -148,7 +147,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))
             {
-                var readDataSteamService = clientAndService.CreateClient<IReadDataStreamService, IAsyncReadDataStreamService>();
+                var readDataSteamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncReadDataStreamService>();
 
                 // Previously tentacle would eventually stop responding only after many failed calls.
                 // This loop ensures (at the time) the test shows the problem.
