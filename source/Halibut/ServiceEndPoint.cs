@@ -8,22 +8,8 @@ namespace Halibut
     {
         readonly string baseUriString;
 
-        [Obsolete]
-        public ServiceEndPoint(string baseUri, string remoteThumbprint)
-            : this(new Uri(baseUri), remoteThumbprint)
-        {
-        }
-
-        [Obsolete]
-        public ServiceEndPoint(Uri baseUri, string remoteThumbprint)
-            : this(baseUri, remoteThumbprint, null, null)
-        {
-        }
-
-        [JsonConstructor]
-        [Obsolete]
-        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy) 
-            : this(baseUri, remoteThumbprint, proxy, null)
+        public ServiceEndPoint(string baseUri, string remoteThumbprint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+            : this(new Uri(baseUri), remoteThumbprint, null, halibutTimeoutsAndLimits)
         {
         }
 
@@ -32,6 +18,7 @@ namespace Halibut
         {
         }
 
+        [JsonConstructor]
         public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             if (IsWebSocketAddress(baseUri))
@@ -47,52 +34,49 @@ namespace Halibut
             RemoteThumbprint = remoteThumbprint;
             Proxy = proxy;
 
-            if (halibutTimeoutsAndLimits != null)
-            {
-                this.PollingRequestQueueTimeout = halibutTimeoutsAndLimits.PollingRequestQueueTimeout;
-                this.PollingRequestMaximumMessageProcessingTimeout = halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout;
-                this.RetryListeningSleepInterval = halibutTimeoutsAndLimits.RetryListeningSleepInterval;
-                this.RetryCountLimit = halibutTimeoutsAndLimits.RetryCountLimit;
-                this.ConnectionErrorRetryTimeout = halibutTimeoutsAndLimits.ConnectionErrorRetryTimeout;
-                this.TcpClientConnectTimeout = halibutTimeoutsAndLimits.TcpClientConnectTimeout;
-            }
+            halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
+
+            this.PollingRequestQueueTimeout = halibutTimeoutsAndLimits.PollingRequestQueueTimeout;
+            this.PollingRequestMaximumMessageProcessingTimeout = halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout;
+            this.RetryListeningSleepInterval = halibutTimeoutsAndLimits.RetryListeningSleepInterval;
+            this.RetryCountLimit = halibutTimeoutsAndLimits.RetryCountLimit;
+            this.ConnectionErrorRetryTimeout = halibutTimeoutsAndLimits.ConnectionErrorRetryTimeout;
+            this.TcpClientConnectTimeout = halibutTimeoutsAndLimits.TcpClientConnectTimeout;
         }
 
-#pragma warning disable CS0612
         /// <summary>
         /// The amount of time the client will wait for the server to collect a message from the
         /// polling request queue before raising a TimeoutException
         /// </summary>
-        public TimeSpan PollingRequestQueueTimeout { get; set; } = HalibutLimits.PollingRequestQueueTimeout;
+        public TimeSpan PollingRequestQueueTimeout { get; set; }
 
 
         /// <summary>
         /// The amount of time the client will wait for the server to process a message collected
         /// from the polling request queue before it raises a TimeoutException
         /// </summary>
-        public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; } = HalibutLimits.PollingRequestMaximumMessageProcessingTimeout;
+        public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; }
 
         /// <summary>
         /// The amount of time to wait between connection requests to the remote endpoint (applies
         /// to both polling and listening connections)
         /// </summary>
-        public TimeSpan RetryListeningSleepInterval { get; set; } = HalibutLimits.RetryListeningSleepInterval;
+        public TimeSpan RetryListeningSleepInterval { get; set; }
 
         /// <summary>
         /// The number of times to try and connect to the remote endpoint
         /// </summary>
-        public int RetryCountLimit { get; set; } = HalibutLimits.RetryCountLimit;
+        public int RetryCountLimit { get; set; }
 
         /// <summary>
         /// Stops connection retries if this time period has been exceeded from the initial connection attempt
         /// </summary>
-        public TimeSpan ConnectionErrorRetryTimeout { get; set; } = HalibutLimits.ConnectionErrorRetryTimeout;
+        public TimeSpan ConnectionErrorRetryTimeout { get; set; }
 
         /// <summary>
         /// Amount of time to wait for a successful TCP or WSS connection
         /// </summary>
-        public TimeSpan TcpClientConnectTimeout { get; set; } = HalibutLimits.TcpClientConnectTimeout;
-#pragma warning restore CS0612
+        public TimeSpan TcpClientConnectTimeout { get; set; }
 
         public Uri BaseUri { get; }
 

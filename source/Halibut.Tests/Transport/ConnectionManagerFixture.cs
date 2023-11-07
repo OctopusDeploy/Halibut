@@ -22,7 +22,7 @@ namespace Halibut.Tests.Transport
         {
             var connectionFactory = CreateFactoryThatCreatesTestConnections();
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             //do it twice because this bug only triggers on multiple enumeration, having 1 in the collection doesn't trigger the bug
@@ -38,7 +38,7 @@ namespace Halibut.Tests.Transport
         {
             var connectionFactory = CreateFactoryThatCreatesTestConnections();
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
@@ -53,7 +53,7 @@ namespace Halibut.Tests.Transport
         {
             var connectionFactory = CreateFactoryThatCreatesTestConnections();
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
@@ -69,7 +69,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
@@ -88,7 +88,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
@@ -107,7 +107,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using (var connectionManager = new ConnectionManagerAsync())
             {
                 var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
@@ -124,7 +124,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using (var connectionManager = new ConnectionManagerAsync())
             {
                 var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
@@ -141,7 +141,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
             
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var activeConnection = await connectionManager.AcquireConnectionAsync(GetProtocol, connectionFactory, serviceEndpoint, new InMemoryConnectionLog(serviceEndpoint.ToString()), CancellationToken);
@@ -164,7 +164,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var connections = new List<IConnection>();
@@ -189,7 +189,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var inMemoryConnectionLog = new InMemoryConnectionLog(serviceEndpoint.ToString());
@@ -209,7 +209,7 @@ namespace Halibut.Tests.Transport
             var createdTestConnections = new List<TestConnection>();
             var connectionFactory = CreateFactoryThatCreatesTestConnections(createdTestConnections.Add);
 
-            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint);
+            var serviceEndpoint = new ServiceEndPoint("https://localhost:42", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             await using var connectionManager = new ConnectionManagerAsync();
 
             var inMemoryConnectionLog = new InMemoryConnectionLog(serviceEndpoint.ToString());

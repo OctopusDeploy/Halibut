@@ -31,7 +31,7 @@ namespace Halibut.Tests.Timeouts
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
                        .WhenTestingAsyncClient(clientAndServiceTestCase, b =>
                        {
-                           b.WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits()
+                           b.WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build()
                                .SetAllTcpTimeoutsTo(TimeSpan.FromSeconds(133))
                                .WithTcpClientReceiveTimeout(expectedTimeout));
                        })
@@ -50,7 +50,7 @@ namespace Halibut.Tests.Timeouts
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
-                    .BeLessThan(expectedTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
+                    .BeLessThan(expectedTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
                 
                 // The polling tentacle, will not reconnect in time since it has a 133s receive control message timeout.
                 // To move it along we, kill the connection here.
@@ -82,9 +82,9 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeGreaterThan(HalibutLimits.TcpClientReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service.TimeoutsAndLimits.TcpClientReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
-                    .BeLessThan(HalibutLimits.TcpClientReceiveTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
+                    .BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientReceiveTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
                 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
@@ -114,9 +114,9 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeGreaterThan(HalibutLimits.TcpClientReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service.TimeoutsAndLimits.TcpClientReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
-                    .BeLessThan(HalibutLimits.TcpClientReceiveTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
+                    .BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientReceiveTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
@@ -151,14 +151,14 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
-                var expectedTimeOut = HalibutLimits.TcpClientSendTimeout;
+                var expectedTimeOut = clientAndService.Service.TimeoutsAndLimits.TcpClientSendTimeout;
 
                 sw.Elapsed.Should().BeGreaterThan(
                         expectedTimeOut - TimeSpan.FromSeconds(2), 
                         "Should wait the send timeout amount of time NOT the heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(
-                        expectedTimeOut + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout,
+                        expectedTimeOut + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout,
                         "Should wait the send timeout amount of time");
                 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
@@ -192,10 +192,10 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
-                var expectedTimeout = HalibutLimits.TcpClientSendTimeout;
+                var expectedTimeout = clientAndService.Service.TimeoutsAndLimits.TcpClientSendTimeout;
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
-                    .BeLessThan(expectedTimeout + LowerHalibutLimitsForAllTests.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
+                    .BeLessThan(expectedTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }

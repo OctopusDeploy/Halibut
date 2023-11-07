@@ -147,7 +147,11 @@ namespace Halibut.Tests
             var services = new DelegateServiceFactory();
             services.Register<IEchoService>(() => new EchoService());
 
-            var builder = new HalibutRuntimeBuilder().WithServiceFactory(services).WithServerCertificate(Certificates.Octopus);
+            var builder = new HalibutRuntimeBuilder()
+                .WithServiceFactory(services)
+                .WithServerCertificate(Certificates.Octopus)
+                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
+
             return builder.Build();
         }
     }

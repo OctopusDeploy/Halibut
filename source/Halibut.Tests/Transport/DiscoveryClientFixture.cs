@@ -24,7 +24,10 @@ namespace Halibut.Tests.Transport
                 .Build(CancellationToken);
 
             var client = new DiscoveryClient(new StreamFactory());
-            var discovered = await client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken);
+            var discovered = await client.DiscoverAsync(
+                new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, "", clientAndService.Client.TimeoutsAndLimits), 
+                clientAndService.Client.TimeoutsAndLimits, 
+                CancellationToken);
 
             discovered.RemoteThumbprint.Should().BeEquivalentTo(clientAndService.GetServiceEndPoint().RemoteThumbprint);
             discovered.BaseUri.Should().BeEquivalentTo(clientAndService.GetServiceEndPoint().BaseUri);
@@ -34,9 +37,9 @@ namespace Halibut.Tests.Transport
         public async Task DiscoveringNonExistentEndpointThrows()
         {
             var client = new DiscoveryClient(new StreamFactory());
-            var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "");
+            var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "", new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
 
-            await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, new HalibutTimeoutsAndLimits(), CancellationToken), "No such host is known");
+            await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), CancellationToken), "No such host is known");
         }
         
         [Test]
@@ -72,11 +75,14 @@ namespace Halibut.Tests.Transport
             var client = new DiscoveryClient(new StreamFactory());
 
             var sw = Stopwatch.StartNew();
-            await AssertionExtensions.Should(() => client.DiscoverAsync(new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, ""), clientAndService.Client.TimeoutsAndLimits, CancellationToken))
+            await AssertionExtensions.Should(() => client.DiscoverAsync(
+                    new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, "", clientAndService.Client.TimeoutsAndLimits), 
+                    clientAndService.Client.TimeoutsAndLimits, 
+                    CancellationToken))
                 .ThrowAsync<HalibutClientException>();
 
             sw.Stop();
-            sw.Elapsed.Should().BeCloseTo(HalibutLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
+            sw.Elapsed.Should().BeCloseTo(clientAndService.Service.TimeoutsAndLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
         }
     }
 }

@@ -225,6 +225,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             var proxyClient = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogCreator("ProxyClient", halibutLogLevel).ToCachingLogFactory())
+                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
                 .Build();
             
             proxyClient.Trust(serviceCertAndThumbprint.Thumbprint);
@@ -236,6 +237,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .WithServiceFactory(serviceFactory)
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                 .WithLogFactory(new TestContextLogCreator("Tentacle", halibutLogLevel).ToCachingLogFactory())
+                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
                 .Build();
 
             PortForwarder? portForwarder = null;

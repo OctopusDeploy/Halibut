@@ -99,9 +99,13 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
         public async Task FailOnInvalidHostname()
         {
             var services = GetDelegateServiceFactory();
-            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.Octopus).WithServiceFactory(services).Build())
+            await using (var octopus = new HalibutRuntimeBuilder()
+                             .WithServerCertificate(Certificates.Octopus)
+                             .WithServiceFactory(services)
+                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                             .Build())
             {
-                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint));
+                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits));
                 var ex = Assert.ThrowsAsync<HalibutClientException>(async () => await echo.CrashAsync());
                 var message = ex.Message;
 
@@ -123,9 +127,13 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
         public async Task FailOnInvalidPort()
         {
             var services = GetDelegateServiceFactory();
-            await using (var octopus = new HalibutRuntimeBuilder().WithServerCertificate(Certificates.Octopus).WithServiceFactory(services).Build())
+            await using (var octopus = new HalibutRuntimeBuilder()
+                             .WithServerCertificate(Certificates.Octopus)
+                             .WithServiceFactory(services)
+                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                             .Build())
             {
-                var endpoint = new ServiceEndPoint("https://google.com:88", Certificates.TentacleListeningPublicThumbprint)
+                var endpoint = new ServiceEndPoint("https://google.com:88", Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits)
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(2),
                     RetryCountLimit = 2

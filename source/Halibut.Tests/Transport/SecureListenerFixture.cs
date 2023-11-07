@@ -66,7 +66,7 @@ namespace Halibut.Tests.Transport
                     () => "",
                     () => new Dictionary<string, string>(),
                     (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
-                    new HalibutTimeoutsAndLimits(),
+                    new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
                     new StreamFactory(),
                     NoOpConnectionsObserver.Instance
                 );

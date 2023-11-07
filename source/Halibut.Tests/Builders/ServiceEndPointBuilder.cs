@@ -1,5 +1,6 @@
 ﻿using Halibut.Transport.Protocol;
 using System;
+using Halibut.Diagnostics;
 
 namespace Halibut.Tests.Builders
 {
@@ -31,7 +32,7 @@ namespace Halibut.Tests.Builders
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
 
-            var serviceEndPoint = new ServiceEndPoint(new Uri(endpoint), "thumbprint");
+            var serviceEndPoint = new ServiceEndPoint(new Uri(endpoint), "thumbprint", new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
             if (pollingRequestQueueTimeout is not null)
             {
                 serviceEndPoint.PollingRequestQueueTimeout = pollingRequestQueueTimeout.Value;
