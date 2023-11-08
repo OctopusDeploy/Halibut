@@ -26,7 +26,7 @@ namespace Halibut.Tests.DotMemory
         Task<long> AddAsync(long a, long b, CancellationToken cancellationToken);
     }
 
-    public interface IClientAsyncClientCalculatorService
+    public interface IAsyncClientCalculatorService
     {
         Task<long> AddAsync(long a, long b);
     }
@@ -156,7 +156,7 @@ namespace Halibut.Tests.DotMemory
         {
             await using (var runtime = new HalibutRuntimeBuilder().WithServerCertificate(clientCertificate).Build())
             {
-                var calculator = runtime.CreateAsyncClient<ICalculatorService, IClientAsyncClientCalculatorService>(new ServiceEndPoint($"https://localhost:{port}/", remoteThumbprint, runtime.TimeoutsAndLimits));
+                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(new ServiceEndPoint($"https://localhost:{port}/", remoteThumbprint, runtime.TimeoutsAndLimits));
                 await MakeRequest(calculator, "listening", expectSuccess);
             }
         }
@@ -180,7 +180,7 @@ namespace Halibut.Tests.DotMemory
 
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-TENTAPOLL", remoteThumbprint, runtime.TimeoutsAndLimits);
 
-                var calculator = runtime.CreateAsyncClient<ICalculatorService, IClientAsyncClientCalculatorService>(clientEndpoint);
+                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(clientEndpoint);
 
                 await MakeRequest(calculator, "polling", expectSuccess);
 
@@ -210,7 +210,7 @@ namespace Halibut.Tests.DotMemory
                 server.Poll(new Uri("poll://SQ-WEBSOCKETPOLL"), serverEndpoint, CancellationToken.None);
 
                 var clientEndpoint = new ServiceEndPoint("poll://SQ-WEBSOCKETPOLL", remoteThumbprint, runtime.TimeoutsAndLimits);
-                var calculator = runtime.CreateAsyncClient<ICalculatorService, IClientAsyncClientCalculatorService>(clientEndpoint);
+                var calculator = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(clientEndpoint);
 
                 await MakeRequest(calculator, "websocket polling", expectSuccess);
 
@@ -219,7 +219,7 @@ namespace Halibut.Tests.DotMemory
         }
 
         // ReSharper disable once UnusedParameter.Local
-        static async Task MakeRequest(IClientAsyncClientCalculatorService clientCalculator, string requestType, bool expectSuccess)
+        static async Task MakeRequest(IAsyncClientCalculatorService clientCalculator, string requestType, bool expectSuccess)
         {
             for (var i = 0; i < RequestsPerClient; i++)
                 try
