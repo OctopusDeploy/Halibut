@@ -18,24 +18,7 @@ namespace Halibut.Transport.Protocol
             this.path = path;
             this.log = log;
         }
-
-        [Obsolete]
-        public void SaveTo(string filePath)
-        {
-            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
-
-            AttemptToDelete(filePath);
-            File.Move(path, filePath);
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                SetFilePermissionsToInheritFromParent(filePath);
-            }
-
-            moved = true;
-            GC.SuppressFinalize(this);
-        }
-
+        
         public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
         {
             if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
@@ -78,21 +61,7 @@ namespace Halibut.Transport.Protocol
                 log?.Write(EventType.Security, $"Ignoring an unauthorized access issue: {ex.Message}. {nameof(TemporaryFileStream)} assumes that filesystem permissions allow full control to the executing user for {filePath}. Update those permissions to remove this log.");
             }
         }
-
-        [Obsolete]
-        public void Read(Action<Stream> reader)
-        {
-            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
-
-            using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
-            {
-                reader(file);
-            }
-            AttemptToDelete(path);
-            moved = true;
-            GC.SuppressFinalize(this);
-        }
-
+        
         public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
         {
             if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
@@ -107,28 +76,7 @@ namespace Halibut.Transport.Protocol
             moved = true;
             GC.SuppressFinalize(this);
         }
-
-        [Obsolete]
-        static void AttemptToDelete(string fileToDelete)
-        {
-            for (var i = 1; i <= 3; i++)
-            {
-                try
-                {
-                    if (File.Exists(fileToDelete))
-                    {
-                        File.Delete(fileToDelete);
-                    }
-                }
-                catch (Exception)
-                {
-                    if (i == 3)
-                        throw;
-                    Thread.Sleep(1000);
-                }
-            }
-        }
-
+        
         static async Task AttemptToDeleteAsync(string fileToDelete)
         {
             for (var i = 1; i <= 3; i++)

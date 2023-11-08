@@ -11,48 +11,48 @@ namespace Halibut.Tests.Support
     {
         public static LatestClientAndLatestServiceBuilder WithEchoService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IEchoService>(() => new EchoService());
+            return builder.WithAsyncService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
         }
 
         public static LatestClientAndLatestServiceBuilder WithMultipleParametersTestService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IMultipleParametersTestService>(() => new MultipleParametersTestService());
+            return builder.WithAsyncService<IMultipleParametersTestService, IAsyncMultipleParametersTestService>(() => new AsyncMultipleParametersTestService());
         }
 
         public static LatestClientAndLatestServiceBuilder WithComplexObjectService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IComplexObjectService>(() => new ComplexObjectService());
+            return builder.WithAsyncService<IComplexObjectService, IAsyncComplexObjectService>(() => new AsyncComplexObjectService());
         }
         
         public static LatestClientAndLatestServiceBuilder WithLockService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<ILockService>(() => new LockService());
+            return builder.WithAsyncService<ILockService, IAsyncLockService>(() => new AsyncLockService());
         }
         
         public static LatestClientAndLatestServiceBuilder WithCountingService(this LatestClientAndLatestServiceBuilder builder)
         {
-            var singleCountingService = new CountingService();
-            return builder.WithService<ICountingService>(() => singleCountingService);
+            var singleCountingService = new AsyncCountingService();
+            return builder.WithAsyncService<ICountingService, IAsyncCountingService>(() => singleCountingService);
         }
         
-        public static LatestClientAndLatestServiceBuilder WithCountingService(this LatestClientAndLatestServiceBuilder builder, ICountingService countingService)
+        public static LatestClientAndLatestServiceBuilder WithCountingService(this LatestClientAndLatestServiceBuilder builder, IAsyncCountingService countingService)
         {
-            return builder.WithService<ICountingService>(() => countingService);
+            return builder.WithAsyncService<ICountingService, IAsyncCountingService>(() => countingService);
         }
 
         public static LatestClientAndLatestServiceBuilder WithDoSomeActionService(this LatestClientAndLatestServiceBuilder builder, Action action)
         {
-            return builder.WithService<IDoSomeActionService>(() => new DoSomeActionService(action));
+            return builder.WithAsyncService<IDoSomeActionService, IAsyncDoSomeActionService>(() => new AsyncDoSomeActionService(action));
         }
         
         public static LatestClientAndLatestServiceBuilder WithReturnSomeDataStreamService(this LatestClientAndLatestServiceBuilder builder, Func<DataStream> dataStreamCreator)
         {
-            return builder.WithService<IReturnSomeDataStreamService>(() => new ReturnSomeDataStreamService(dataStreamCreator));
+            return builder.WithAsyncService<IReturnSomeDataStreamService, IAsyncReturnSomeDataStreamService>(() => new AsyncReturnSomeDataStreamService(dataStreamCreator));
         }
 
         public static LatestClientAndLatestServiceBuilder WithReadDataStreamService(this LatestClientAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IReadDataStreamService>(() => new ReadDataStreamService());
+            return builder.WithAsyncService<IReadDataStreamService, IAsyncReadDataStreamService>(() => new AsyncReadDataStreamService());
         }
 
         public static LatestClientAndLatestServiceBuilder WithInstantReconnectPollingRetryPolicy(this LatestClientAndLatestServiceBuilder builder)

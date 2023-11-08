@@ -106,7 +106,7 @@ namespace Halibut.Tests.Diagnostics
             public async Task BecauseThePollingRequestWasNotCollected(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 var services = new DelegateServiceFactory();
-                services.Register<IEchoService>(() => new EchoService());
+                services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
 
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .NoService()
@@ -192,7 +192,6 @@ namespace Halibut.Tests.Diagnostics
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                     var dataStream = new DataStream(10, 
-                        _ => new FileStream("DoesNotExist2497546", FileMode.Open).Dispose(), 
                         async (_, _) =>
                             {
                                 await Task.CompletedTask;
@@ -219,7 +218,6 @@ namespace Halibut.Tests.Diagnostics
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                     var dataStream = new DataStream(10, 
-                        _ => throw new FileNotFoundException(), 
                         async (_, _) =>
                         {
                             await Task.CompletedTask.ConfigureAwait(false);

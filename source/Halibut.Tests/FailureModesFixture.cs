@@ -9,6 +9,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
@@ -21,7 +22,7 @@ namespace Halibut.Tests
         static DelegateServiceFactory GetDelegateServiceFactory()
         {
             var services = new DelegateServiceFactory();
-            services.Register<IEchoService>(() => new EchoService());
+            services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
             return services;
         }
 
@@ -58,7 +59,19 @@ namespace Halibut.Tests
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
-                ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
+                if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousService())
+                {
+                    ex.Message.Should().Contain("at Halibut.TestUtils.SampleProgram.Base.Services.EchoService.Crash()").And.Contain("divide by zero");
+                }
+                else
+                {
+                    var expected = "at Halibut.Tests.TestServices.AsyncEchoService.CrashAsync(";
+#if NETFRAMEWORK
+                    expected = "at Halibut.Tests.TestServices.AsyncEchoService.<CrashAsync>";
+#endif
+                    ex.Message.Should().Contain(expected).And.Contain("divide by zero");
+                }
+                
             }
         }
 
@@ -77,7 +90,11 @@ namespace Halibut.Tests
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
-                ex.Message.Should().Contain("at Halibut.TestUtils.Contracts.EchoService.Crash()").And.Contain("divide by zero");
+                var expected = "at Halibut.Tests.TestServices.AsyncEchoService.CrashAsync(";
+#if NETFRAMEWORK
+                    expected = "at Halibut.Tests.TestServices.AsyncEchoService.<CrashAsync>";
+#endif
+                ex.Message.Should().Contain(expected).And.Contain("divide by zero");
 
                 if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient())
                 {
@@ -155,7 +172,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                        .Build(CancellationToken))
             {
-                var readDataSteamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncReadDataStreamService>();
+                var readDataSteamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncClientReadDataStreamService>();
 
                 // Previously tentacle would eventually stop responding only after many failed calls.
                 // This loop ensures (at the time) the test shows the problem.
@@ -163,7 +180,6 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                 {
                     await AssertAsync.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(
                         new DataStream(10000, 
-                            stream => throw new Exception("Oh noes"), 
                             async (_, _) =>
                                 {
                                     await Task.CompletedTask;

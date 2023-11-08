@@ -20,16 +20,22 @@ namespace Halibut.Tests.DotMemory
     {
         long Add(long a, long b);
     }
+    
+    public interface IAsyncCalculatorService
+    {
+        Task<long> AddAsync(long a, long b, CancellationToken cancellationToken);
+    }
 
     public interface IAsyncClientCalculatorService
     {
         Task<long> AddAsync(long a, long b);
     }
 
-    public class CalculatorService : ICalculatorService
+    public class AsyncCalculatorService : IAsyncCalculatorService
     {
-        public long Add(long a, long b)
+        public async Task<long> AddAsync(long a, long b, CancellationToken cancellationToken)
         {
+            await Task.CompletedTask;
             return a + b;
         }
     }
@@ -128,7 +134,7 @@ namespace Halibut.Tests.DotMemory
         static HalibutRuntime RunServer(X509Certificate2 serverCertificate, out int port)
         {
             var services = new DelegateServiceFactory();
-            services.Register<ICalculatorService>(() => new CalculatorService());
+            services.Register<ICalculatorService, IAsyncCalculatorService>(() => new AsyncCalculatorService());
 
             var server = new HalibutRuntimeBuilder()
                 .WithServerCertificate(serverCertificate)

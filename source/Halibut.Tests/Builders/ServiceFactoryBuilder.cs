@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Halibut.ServiceModel;
 using Halibut.Tests.Util;
 
@@ -6,18 +7,11 @@ namespace Halibut.Tests.Builders
 {
     public class ServiceFactoryBuilder
     {
-        bool _conventionVerificationDisabled;
-        DelegateServiceFactory factoryWithConventionVerification = new();
-        NoSanityCheckingDelegateServiceFactory factoryWithNoConventionVerification = new();
-        
+        bool conventionVerificationDisabled;
+        readonly DelegateServiceFactory factoryWithConventionVerification = new();
+        readonly NoSanityCheckingDelegateServiceFactory factoryWithNoConventionVerification = new();
 
-        public ServiceFactoryBuilder WithService<TContract>(Func<TContract> factoryFunc)
-        {
-            factoryWithConventionVerification.Register(factoryFunc);
-            factoryWithNoConventionVerification.Register(factoryFunc);
-            return this;
-        }
-        
+        readonly List<Exception> conventionExceptions = new();
 
         public ServiceFactoryBuilder WithService<TContract, TClientContract>(Func<TClientContract> factoryFunc)
         {
@@ -25,10 +19,9 @@ namespace Halibut.Tests.Builders
             {
                 factoryWithConventionVerification.Register<TContract, TClientContract>(factoryFunc);
             }
-            // Convention verification may throw, but that just means we're probably going to use
-            // the other factory anyway, so we don't care!
-            catch
+            catch (Exception e)
             {
+                conventionExceptions.Add(e);
             }
 
             factoryWithNoConventionVerification.Register<TContract, TClientContract>(factoryFunc);
@@ -37,18 +30,19 @@ namespace Halibut.Tests.Builders
 
         public ServiceFactoryBuilder WithConventionVerificationDisabled()
         {
-            _conventionVerificationDisabled = true;
+            conventionVerificationDisabled = true;
             return this;
         }
 
         public IServiceFactory Build()
         {
-            if (_conventionVerificationDisabled)
+            if (conventionVerificationDisabled)
             {
                 return factoryWithNoConventionVerification;
             }
             else
             {
+                if (conventionExceptions.Count > 0) throw new AggregateException(conventionExceptions);
                 return factoryWithConventionVerification;
             }
         }

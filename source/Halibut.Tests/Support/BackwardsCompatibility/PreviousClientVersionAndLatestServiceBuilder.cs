@@ -99,25 +99,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithService<TContract>(Func<TContract> implementation)
-        {
-            serviceFactoryBuilder.WithService(implementation);
-            
-            if (serviceFactory != null)
-            {
-                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
-                {
-                    delegateServiceFactory.Register(implementation);
-                }
-                else
-                {
-                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
-                }
-            }
-
-            return this;
-        }
-        
         public PreviousClientVersionAndLatestServiceBuilder WithAsyncService<TContract, TClientContract>(Func<TClientContract> implementation)
         {
             serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);
@@ -160,16 +141,16 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithTentacleServices()
         {
-            return WithTenancyServices();
+            return WithTentacleServices();
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithTenancyServices()
+        public PreviousClientVersionAndLatestServiceBuilder WithTentacleServices()
         {
             return this
-                .WithService<IFileTransferService>(() => new FileTransferService())
-                .WithService<IScriptService>(() => new ScriptService())
-                .WithService<IScriptServiceV2>(() => new ScriptServiceV2())
-                .WithService<ICapabilitiesServiceV2>(() => new CapabilitiesServiceV2());
+                .WithAsyncService<IFileTransferService, IAsyncFileTransferService>(() => new AsyncFileTransferService())
+                .WithAsyncService<IScriptService, IAsyncScriptService>(() => new AsyncScriptService())
+                .WithAsyncService<IScriptServiceV2, IAsyncScriptServiceV2>(() => new AsyncScriptServiceV2())
+                .WithAsyncService<ICapabilitiesServiceV2, IAsyncCapabilitiesServiceV2>(() => new AsyncCapabilitiesServiceV2());
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()

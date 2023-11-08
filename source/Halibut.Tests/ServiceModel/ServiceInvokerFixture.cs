@@ -4,6 +4,7 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
+using Halibut.Tests.TestServices;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
@@ -31,49 +32,11 @@ namespace Halibut.Tests.ServiceModel
             };
 
             var response = await sut.InvokeAsync(request);
-            response.Result.Should().Be($"{value}Async...");
-        }
-
-        [Test]
-        public async Task AsyncInvokeWithNoParamsOnAsyncService()
-        {
-            var serviceFactory = new ServiceFactoryBuilder()
-                .WithService<ICountingService, IAsyncCountingService>(() => new AsyncCountingService())
-                .Build();
-
-            var sut = new ServiceInvoker(serviceFactory);
-            var request = new RequestMessage
-            {
-                ServiceName = nameof(ICountingService),
-                MethodName = nameof(ICountingService.Increment)
-            };
-
-            var response = await sut.InvokeAsync(request);
-            response.Result.Should().Be(1);
-        }
-
-        [Test]
-        public async Task AsyncInvokeWithParamsOnSyncService()
-        {
-            var serviceFactory = new ServiceFactoryBuilder()
-                .WithService<IEchoService>(() => new EchoService())
-                .Build();
-
-            var value = Some.RandomAsciiStringOfLength(8);
-            var sut = new ServiceInvoker(serviceFactory);
-            var request = new RequestMessage
-            {
-                ServiceName = nameof(IEchoService),
-                MethodName = nameof(IEchoService.SayHello),
-                Params = new[] { value }
-            };
-
-            var response = await sut.InvokeAsync(request);
             response.Result.Should().Be($"{value}...");
         }
 
         [Test]
-        public async Task AsyncInvokeWithNoParamsOnSyncService()
+        public async Task AsyncInvokeWithNoParamsOnAsyncService()
         {
             var serviceFactory = new ServiceFactoryBuilder()
                 .WithService<ICountingService, IAsyncCountingService>(() => new AsyncCountingService())

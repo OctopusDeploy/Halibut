@@ -13,18 +13,6 @@ namespace Halibut.Tests.Util
         readonly Dictionary<string, Func<object>> services = new(StringComparer.OrdinalIgnoreCase);
         readonly HashSet<Type> serviceTypes = new();
 
-        public NoSanityCheckingDelegateServiceFactory Register<TContract>(Func<TContract> implementation)
-        {
-            var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
-            lock (serviceTypes)
-            {
-                serviceTypes.Add(serviceType);
-            }
-
-            return this;
-        }
-
         public NoSanityCheckingDelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
         {
             var serviceType = typeof(TContract);

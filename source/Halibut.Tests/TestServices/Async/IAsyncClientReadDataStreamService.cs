@@ -2,7 +2,7 @@
 
 namespace Halibut.Tests.TestServices.Async
 {
-    public interface IAsyncReadDataStreamService
+    public interface IAsyncClientReadDataStreamService
     {
         Task<long> SendDataAsync(params DataStream[] dataStreams);
     }

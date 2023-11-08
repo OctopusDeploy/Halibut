@@ -153,7 +153,6 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                 var dataStream = await Task.FromResult(DataStream.FromStream(stream,
-                        i => throw new Exception("Wrong path it should be doing async calls"),
                         async (i, token) => {
                             await Task.CompletedTask;
                             progressReported.Add(i);

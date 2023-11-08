@@ -1,12 +1,7 @@
 ﻿using System;
 using Halibut.Tests.Support.BackwardsCompatibility;
-using Halibut.Tests.Support.TestAttributes;
-using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
-using Halibut.Transport.Observability;
-using Halibut.Util;
-using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 
 namespace Halibut.Tests.Support
 {
@@ -14,38 +9,33 @@ namespace Halibut.Tests.Support
     {
         public static PreviousClientVersionAndLatestServiceBuilder WithEchoService(this PreviousClientVersionAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IEchoService>(() => new EchoService());
+            return builder.WithAsyncService<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
         }
 
         public static PreviousClientVersionAndLatestServiceBuilder WithMultipleParametersTestService(this PreviousClientVersionAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IMultipleParametersTestService>(() => new MultipleParametersTestService());
+            return builder.WithAsyncService<IMultipleParametersTestService, IAsyncMultipleParametersTestService>(() => new AsyncMultipleParametersTestService());
         }
 
         public static PreviousClientVersionAndLatestServiceBuilder WithComplexObjectService(this PreviousClientVersionAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IComplexObjectService>(() => new ComplexObjectService());
+            return builder.WithAsyncService<IComplexObjectService, IAsyncComplexObjectService>(() => new AsyncComplexObjectService());
         }
         
         public static PreviousClientVersionAndLatestServiceBuilder WithLockService(this PreviousClientVersionAndLatestServiceBuilder builder)
         {
-            return builder.WithService<ILockService>(() => new LockService());
+            return builder.WithAsyncService<ILockService, IAsyncLockService>(() => new AsyncLockService());
         }
         
         public static PreviousClientVersionAndLatestServiceBuilder WithCountingService(this PreviousClientVersionAndLatestServiceBuilder builder)
         {
-            var singleCountingService = new CountingService();
-            return builder.WithService<ICountingService>(() => singleCountingService);
+            var singleCountingService = new AsyncCountingService();
+            return builder.WithAsyncService<ICountingService, IAsyncCountingService>(() => singleCountingService);
         }
-        
-        public static PreviousClientVersionAndLatestServiceBuilder WithCountingService(this PreviousClientVersionAndLatestServiceBuilder builder, ICountingService countingService)
-        {
-            return builder.WithService<ICountingService>(() => countingService);
-        }
-        
+
         public static PreviousClientVersionAndLatestServiceBuilder WithReadDataStreamService(this PreviousClientVersionAndLatestServiceBuilder builder)
         {
-            return builder.WithService<IReadDataStreamService>(() => new ReadDataStreamService());
+            return builder.WithAsyncService<IReadDataStreamService, IAsyncReadDataStreamService>(() => new AsyncReadDataStreamService());
         }
     }
 }

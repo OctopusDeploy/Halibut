@@ -78,14 +78,7 @@ namespace Halibut.Tests.Tentacle
                     var uploadedFilePath = Path.Combine(temporaryFolder.DirectoryPath, Guid.NewGuid().ToString());
 
                     var dataStream = new DataStream(fileToUpload.File.Length, 
-                        writer =>
-                            {
-                                using (var stream = new FileStream(fileToUpload.File.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                                {
-                                    stream.CopyTo(writer);
-                                    writer.Flush();
-                                }
-                            }, async (outputStream, ct) =>
+                        async (outputStream, ct) =>
                         {
                             using (var stream = new FileStream(fileToUpload.File.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                             {
