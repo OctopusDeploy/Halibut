@@ -94,5 +94,25 @@ namespace Halibut.Diagnostics
                 return timeout > TimeSpan.Zero ? timeout : TcpClientReceiveTimeout;
             }
         }
+
+        /// <summary>
+        /// Whether we want to use TCP keep alive or not.
+        /// </summary>
+        public bool TcpKeepAliveEnabled { get; set; } = true;
+
+        /// <summary>
+        /// The number of TCP keep alive probes that will be sent before the connection is terminated.
+        /// </summary>
+        public int TcpKeepAliveRetryCount { get; set; } = 10;
+
+        /// <summary>
+        /// The duration a TCP connection will remain alive/idle before keepalive probes are sent to the remote.
+        /// </summary>
+        public TimeSpan TcpKeepAliveTime { get; set; } = TimeSpan.FromSeconds(15);
+
+        /// <summary>
+        /// The duration a TCP connection will wait for a keepalive response before sending another keepalive probe.
+        /// </summary>
+        public TimeSpan TcpKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(5);
     }
 }

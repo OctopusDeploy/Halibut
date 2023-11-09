@@ -80,22 +80,24 @@ namespace Halibut.Transport
         /// <summary>
         /// Enable KeepAlive fot the TcpClient
         /// </summary>
-        /// <param name="tcpClient">TcpClient</param>
-        internal static void EnableTcpKeepAlive(this TcpClient tcpClient)
+        internal static void EnableTcpKeepAlive(this TcpClient tcpClient, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
-            // TODO - Use non static options
-#pragma warning disable CS0612 // Type or member is obsolete
-            if (!HalibutLimits.TcpKeepAliveEnabled) return;
-            
-            SetKeepAliveValues(tcpClient.Client, HalibutLimits.TcpKeepAliveTime, HalibutLimits.TcpKeepAliveInterval, HalibutLimits.TcpKeepAliveRetryCount);
-#pragma warning restore CS0612 // Type or member is obsolete
+            if (!halibutTimeoutsAndLimits.TcpKeepAliveEnabled)
+            {
+                return;
+            }
+
+            SetKeepAliveValues(
+                tcpClient.Client,
+                halibutTimeoutsAndLimits.TcpKeepAliveTime,
+                halibutTimeoutsAndLimits.TcpKeepAliveInterval,
+                halibutTimeoutsAndLimits.TcpKeepAliveRetryCount);
         }
 
         /// <summary>
         /// Configure KeepAliveValues for Socket
         /// </summary>
         /// <param name="socket">Socket</param>
-        /// <param name="enabled">Enable or disable keep alive</param>
         /// <param name="keepAliveTime">The duration a TCP connection will remain alive/idle before keepalive probes are sent to the remote.</param>
         /// <param name="keepAliveInterval">The duration a TCP connection will wait for a keepalive response before sending another keepalive probe.</param>
         /// <param name="tcpKeepAliveRetryCount">The number of TCP keep alive probes that will be sent before the connection is terminated.</param>

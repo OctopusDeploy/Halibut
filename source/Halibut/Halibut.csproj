@@ -52,8 +52,7 @@
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <DefineConstants>$(DefineConstants);HAS_ASYNC_LOCAL;LIBLOG_PORTABLE;HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS</DefineConstants>
+    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE;HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS</DefineConstants>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
