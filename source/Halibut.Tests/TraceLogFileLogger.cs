@@ -4,6 +4,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.TeamCity.ServiceMessages.Write;
+using JetBrains.TeamCity.ServiceMessages.Write.Special;
 using Microsoft.VisualStudio.Threading;
 
 namespace Halibut.Tests
@@ -13,6 +15,7 @@ namespace Halibut.Tests
         readonly AsyncQueue<string> queue = new();
         readonly string tempFilePath = Path.GetTempFileName();
         string testHash;
+        string testName;
 
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly Task writeDataToDiskTask;
@@ -25,6 +28,11 @@ namespace Halibut.Tests
         public void SetTestHash(string testHash)
         {
             this.testHash = testHash;
+        }
+
+        public void SetTestName(string name)
+        {
+            this.testName = name;
         }
 
         public void WriteLine(string logMessage)
@@ -74,6 +82,12 @@ namespace Halibut.Tests
         public bool CopyLogFileToArtifacts()
         {
             FinishWritingLogs();
+            return CopyFileToArtifactsDirectory();
+        }
+
+        bool CopyFileToArtifactsDirectory()
+        {
+
             // The current directory is expected to have the following structure
             // (w/ variance depending on Debug/Release and dotnet framework used (net6.0, net48 etc):
             //
@@ -87,9 +101,22 @@ namespace Halibut.Tests
             var traceLogsDirectory = rootDirectory.CreateSubdirectory("artifacts").CreateSubdirectory("trace-logs");
             var fileName = $"{testHash}.tracelog";
 
+
             try
             {
-                File.Copy(tempFilePath, Path.Combine(traceLogsDirectory.ToString(), fileName), true);
+                var traceLogFilePath = Path.Combine(traceLogsDirectory.ToString(), fileName);
+                File.Copy(tempFilePath, traceLogFilePath, true);
+
+                using var teamCityWriter = new TeamCityServiceMessages().CreateWriter(Console.WriteLine);
+                teamCityWriter.PublishArtifact($"{traceLogFilePath} => adrian-test-trace-logs");
+                var artifactUri = $"adrian-test-trace-logs/{fileName}";
+                teamCityWriter.WriteRawMessage(new ServiceMessage("testMetadata")
+                {
+                    { "testName", testName },
+                    { "type", "artifact" },
+                    { "value", artifactUri }
+                });
+
                 return true;
             }
             catch

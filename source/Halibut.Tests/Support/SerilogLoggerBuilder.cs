@@ -67,6 +67,7 @@ namespace Halibut.Tests.Support
             {
                 TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
                 traceFileLogger.SetTestHash(testHash);
+                traceFileLogger.SetTestName(testName);
             }
 
             return logger;
