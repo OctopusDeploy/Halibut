@@ -1,4 +1,4 @@
-Halibut is the communication framework behind Octopus Deploy 3.0. .
+Halibut is the communication framework behind Octopus Deploy 3.0. ..
 
 ## Overview
 
