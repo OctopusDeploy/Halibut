@@ -17,6 +17,9 @@ namespace Halibut.Tests
         string testHash;
         string testName;
 
+        ITeamCityWriter teamCityWriter;
+        ITeamCityTestWriter testWriter;
+
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly Task writeDataToDiskTask;
 
@@ -33,6 +36,8 @@ namespace Halibut.Tests
         public void SetTestName(string name)
         {
             this.testName = name;
+            teamCityWriter = new TeamCityServiceMessages().CreateWriter(Console.WriteLine);
+            testWriter = teamCityWriter.OpenTest(testName);
         }
 
         public void WriteLine(string logMessage)
@@ -106,11 +111,9 @@ namespace Halibut.Tests
             {
                 var traceLogFilePath = Path.Combine(traceLogsDirectory.ToString(), fileName);
                 File.Copy(tempFilePath, traceLogFilePath, true);
-
-                using var teamCityWriter = new TeamCityServiceMessages().CreateWriter(Console.WriteLine);
+                
                 teamCityWriter.PublishArtifact($"{traceLogFilePath} => adrian-test-trace-logs");
                 var artifactUri = $"adrian-test-trace-logs/{fileName}";
-                using var testWriter = teamCityWriter.OpenTest(testName);
                 testWriter.WriteValue("some random value", "Adrian test value");
                 testWriter.WriteFile(artifactUri, "Trace logs");
                 teamCityWriter.WriteRawMessage(new ServiceMessage("testMetadata")
@@ -132,6 +135,8 @@ namespace Halibut.Tests
         {
             try
             {
+                testWriter.Dispose();
+                teamCityWriter.Dispose();
                 File.Delete(tempFilePath);
             }
             catch
