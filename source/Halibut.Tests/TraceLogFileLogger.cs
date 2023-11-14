@@ -111,13 +111,14 @@ namespace Halibut.Tests
                 teamCityWriter.PublishArtifact($"{traceLogFilePath} => adrian-test-trace-logs");
                 var artifactUri = $"adrian-test-trace-logs/{fileName}";
                 using var testWriter = teamCityWriter.OpenTest(testName);
+                testWriter.WriteValue("some random value", "Adrian test value");
                 testWriter.WriteFile(artifactUri, "Trace logs");
-                // teamCityWriter.WriteRawMessage(new ServiceMessage("testMetadata")
-                // {
-                //     { "testName", testName },
-                //     { "type", "artifact" },
-                //     { "value", artifactUri }
-                // });
+                teamCityWriter.WriteRawMessage(new ServiceMessage("testMetadata")
+                {
+                    { "testName", testName },
+                    { "type", "artifact" },
+                    { "value", artifactUri }
+                });
 
                 return true;
             }
