@@ -371,6 +371,20 @@ namespace Halibut.Tests.Transport.Protocol
                 return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
             }
 
+            public async Task WithTimeout(MessageExchangeStreamTimeout timeout, Func<Task> func)
+            {
+                output.AppendLine("|-- Set Timeout " + timeout);
+
+                await func();
+            }
+
+            public async Task<T> WithTimeout<T>(MessageExchangeStreamTimeout timeout, Func<Task<T>> func)
+            {
+                output.AppendLine("|-- Set Timeout " + timeout);
+
+                return await func();
+            }
+
             public override string ToString()
             {
                 return output.ToString();

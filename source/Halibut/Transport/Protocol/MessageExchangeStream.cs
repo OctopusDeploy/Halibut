@@ -43,9 +43,14 @@ namespace Halibut.Transport.Protocol
 
         public async Task IdentifyAsClientAsync(CancellationToken cancellationToken)
         {
-            log.Write(EventType.Diagnostic, "Identifying as a client");
-            await SendIdentityMessageAsync($"{MxClient} {currentVersion}", cancellationToken);
-            await ExpectServerIdentityAsync(cancellationToken);
+            await WithTimeout(
+                MessageExchangeStreamTimeout.AuthenticationShortTimeout,
+                async () =>
+                {
+                    log.Write(EventType.Diagnostic, "Identifying as a client");
+                    await SendIdentityMessageAsync($"{MxClient} {currentVersion}", cancellationToken);
+                    await ExpectServerIdentityAsync(cancellationToken);
+                });
         }
 
         async Task SendControlMessageAsync(string message, CancellationToken cancellationToken)
@@ -85,15 +90,20 @@ namespace Halibut.Transport.Protocol
 
         public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
         {
-            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
-    
-            return line switch
-            {
-                Next => true,
-                null => false,
-                End => false,
-                _ => throw new ProtocolException($"Expected {Next} or {End}, got: " + line)
-            };
+            return await WithTimeout(
+                MessageExchangeStreamTimeout.ControlMessageExchangeShortTimeout,
+                async () =>
+                {
+                    var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
+            
+                    return line switch
+                    {
+                        Next => true,
+                        null => false,
+                        End => false,
+                        _ => throw new ProtocolException($"Expected {Next} or {End}, got: " + line)
+                    };
+                });
         }
 
         public async Task ExpectProceedAsync(CancellationToken cancellationToken)
@@ -118,13 +128,23 @@ namespace Halibut.Transport.Protocol
 
         public async Task IdentifyAsSubscriberAsync(string subscriptionId, CancellationToken cancellationToken)
         {
-            await SendIdentityMessageAsync($"{MxSubscriber} {currentVersion} {subscriptionId}", cancellationToken);
-            await ExpectServerIdentityAsync(cancellationToken);
+            await WithTimeout(
+                MessageExchangeStreamTimeout.AuthenticationShortTimeout,
+                async () =>
+                {
+                    await SendIdentityMessageAsync($"{MxSubscriber} {currentVersion} {subscriptionId}", cancellationToken);
+                    await ExpectServerIdentityAsync(cancellationToken);
+                });
         }
 
         public async Task IdentifyAsServerAsync(CancellationToken cancellationToken)
         {
-            await SendIdentityMessageAsync($"{MxServer} {currentVersion}", cancellationToken);
+            await WithTimeout(
+                MessageExchangeStreamTimeout.AuthenticationShortTimeout,
+                async () =>
+                {
+                    await SendIdentityMessageAsync($"{MxServer} {currentVersion}", cancellationToken);
+                });
         }
 
         public async Task<RemoteIdentity> ReadRemoteIdentityAsync(CancellationToken cancellationToken)
@@ -187,12 +207,12 @@ namespace Halibut.Transport.Protocol
             return result;
         }
         
-        async Task WithTimeout(MessageExchangeStreamTimeout timeout, Func<Task> func)
+        public async Task WithTimeout(MessageExchangeStreamTimeout timeout, Func<Task> func)
         {
             await stream.WithTimeout(halibutTimeoutsAndLimits, timeout, func);
         }
 
-        async Task<T> WithTimeout<T>(MessageExchangeStreamTimeout timeout, Func<Task<T>> func)
+        public async Task<T> WithTimeout<T>(MessageExchangeStreamTimeout timeout, Func<Task<T>> func)
         {
             return await stream.WithTimeout(halibutTimeoutsAndLimits, timeout, func);
         }

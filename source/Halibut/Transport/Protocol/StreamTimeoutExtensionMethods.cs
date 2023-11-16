@@ -70,6 +70,14 @@ namespace Halibut.Transport.Protocol
                     stream.WriteTimeout = (int)halibutTimeoutsAndLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
                     stream.ReadTimeout = (int)halibutTimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
                     break;
+                case MessageExchangeStreamTimeout.AuthenticationShortTimeout:
+                    stream.WriteTimeout = (int)halibutTimeoutsAndLimits.TcpClientAuthenticationSendTimeout.TotalMilliseconds;
+                    stream.ReadTimeout = (int)halibutTimeoutsAndLimits.TcpClientAuthenticationReceiveTimeout.TotalMilliseconds;
+                    break;
+                case MessageExchangeStreamTimeout.PollingForNextRequestShortTimeout:
+                    stream.WriteTimeout = (int)halibutTimeoutsAndLimits.TcpClientPollingForNextRequestSendTimeout.TotalMilliseconds;
+                    stream.ReadTimeout = (int)halibutTimeoutsAndLimits.TcpClientPollingForNextRequestReceiveTimeout.TotalMilliseconds;
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(timeout), timeout, null);
             }

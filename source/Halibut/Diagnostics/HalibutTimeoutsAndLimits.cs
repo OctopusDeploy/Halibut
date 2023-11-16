@@ -53,11 +53,14 @@ namespace Halibut.Diagnostics
         ///     Amount of time a connection can stay in the pool
         /// </summary>
         public TimeSpan TcpClientPooledConnectionTimeout { get; set; } = TimeSpan.FromMinutes(9);
-        
-        /// <summary>
-        ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully for a control message
-        /// </summary>
-        public SendReceiveTimeout TcpClientHeartbeatTimeout { get; set; } = new(sendTimeout: TimeSpan.FromSeconds(60), receiveTimeout: TimeSpan.FromSeconds(60));
+
+        public TimeSpan TcpClientHeartbeatSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientHeartbeatReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+        public TimeSpan TcpClientAuthenticationSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientAuthenticationReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientPollingForNextRequestSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientPollingForNextRequestReceiveTimeout { get; set; } = TimeSpan.FromSeconds(30) + TimeSpan.FromSeconds(60);
         
         /// <summary>
         ///     Amount of time to wait for a successful TCP or WSS connection
