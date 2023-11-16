@@ -6,6 +6,8 @@ namespace Halibut.Tests
     public class HalibutTimeoutsAndLimitsForTestsBuilder
     {
         public static readonly TimeSpan HalfTheTcpReceiveTimeout = TimeSpan.FromSeconds(22.5);
+        static readonly TimeSpan PollingQueueWaitTimeout = TimeSpan.FromSeconds(20);
+        static readonly TimeSpan ShortTimeout = TimeSpan.FromSeconds(15);
 
         public HalibutTimeoutsAndLimits Build()
         {
@@ -22,10 +24,17 @@ namespace Halibut.Tests
                 TcpClientSendTimeout = HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout,
                 TcpClientReceiveTimeout = HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout,
             
-                TcpClientHeartbeatSendTimeout = TimeSpan.FromSeconds(15),
-                TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(15),
+                TcpClientHeartbeatSendTimeout = ShortTimeout,
+                TcpClientHeartbeatReceiveTimeout = ShortTimeout,
+
+                TcpClientAuthenticationSendTimeout = ShortTimeout,
+                TcpClientAuthenticationReceiveTimeout = ShortTimeout,
+
+                TcpClientPollingForNextRequestSendTimeout = ShortTimeout,
+                TcpClientPollingForNextRequestReceiveTimeout = PollingQueueWaitTimeout + ShortTimeout,
+
                 TcpClientConnectTimeout = TimeSpan.FromSeconds(20),
-                PollingQueueWaitTimeout = TimeSpan.FromSeconds(20)
+                PollingQueueWaitTimeout = PollingQueueWaitTimeout
             };
         }
     }

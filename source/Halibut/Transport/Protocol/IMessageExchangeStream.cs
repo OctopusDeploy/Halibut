@@ -26,5 +26,8 @@ namespace Halibut.Transport.Protocol
         Task SendAsync<T>(T message, CancellationToken cancellationToken);
 
         Task<T> ReceiveAsync<T>(CancellationToken cancellationToken);
+
+        Task WithTimeout(MessageExchangeStreamTimeout timeout, Func<Task> func);
+        Task<T> WithTimeout<T>(MessageExchangeStreamTimeout timeout, Func<Task<T>> func);
     }
 }

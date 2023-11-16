@@ -62,6 +62,11 @@ namespace Halibut.Diagnostics
         public TimeSpan TcpClientHeartbeatSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
         public TimeSpan TcpClientHeartbeatReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
 
+        public TimeSpan TcpClientAuthenticationSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientAuthenticationReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientPollingForNextRequestSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientPollingForNextRequestReceiveTimeout { get; set; } = TimeSpan.FromSeconds(30) + TimeSpan.FromSeconds(60);
+
         /// <summary>
         ///     Amount of time to wait for a successful TCP or WSS connection
         /// </summary>

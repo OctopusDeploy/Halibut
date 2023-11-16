@@ -57,16 +57,16 @@ namespace Halibut.Tests.Support
             var testHash = CurrentTestHash();
             var logger = Logger.ForContext("TestHash", testHash);
 
-            if (!HasLoggedTestHash.Contains(testName))
-            {
-                HasLoggedTestHash.Add(testName);
-                logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {testHash}");
-            }
-
             if (traceFileLogger != null)
             {
                 TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
                 traceFileLogger.SetTestHash(testHash);
+            }
+
+            if (!HasLoggedTestHash.Contains(testName))
+            {
+                HasLoggedTestHash.Add(testName);
+                logger.Information($"Test: {TestContext.CurrentContext.Test.Name} has hash {testHash}");
             }
 
             return logger;
