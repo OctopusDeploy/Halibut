@@ -37,6 +37,7 @@ namespace Halibut.Transport
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
             
             var networkTimeoutStream = streamFactory.CreateStream(client);
+            client.EnableTcpKeepAlive(halibutTimeoutsAndLimits);
 
             var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
 
