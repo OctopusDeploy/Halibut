@@ -41,6 +41,7 @@ namespace Halibut.Transport
             {
                 try
                 {
+                    //client.CloseImmediately();
                     ((IDisposable) client).Dispose();
                 }
                 catch (SocketException)

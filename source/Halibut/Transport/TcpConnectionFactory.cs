@@ -93,6 +93,7 @@ namespace Halibut.Transport
             {
                 SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds,
                 ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds
+                //LingerState = new LingerOption(true, 0),
             };
 
             if (client.Client.AddressFamily == AddressFamily.InterNetworkV6)
