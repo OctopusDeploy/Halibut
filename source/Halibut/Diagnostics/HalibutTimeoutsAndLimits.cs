@@ -47,12 +47,17 @@ namespace Halibut.Diagnostics
         /// <summary>
         ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully
         /// </summary>
-        public SendReceiveTimeout TcpClientTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
+        public TimeSpan TcpClientSendTimeout { get; set; } = TimeSpan.FromMinutes(1);
+
+        /// <summary>
+        ///     Amount of time to wait for a TCP or SslStream read to complete successfully
+        /// </summary>
+        public TimeSpan TcpClientReceiveTimeout { get; set; } = TimeSpan.FromMinutes(5);
         
         /// <summary>
         ///     Amount of time a connection can stay in the pool
         /// </summary>
-        public TimeSpan TcpClientPooledConnectionTimeout { get; set; } = TimeSpan.FromMinutes(9);
+        public TimeSpan TcpClientPooledConnectionTimeout { get; set; } = TimeSpan.FromMinutes(4.5);
 
         public TimeSpan TcpClientHeartbeatSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
         public TimeSpan TcpClientHeartbeatReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
@@ -60,7 +65,7 @@ namespace Halibut.Diagnostics
         public TimeSpan TcpClientAuthenticationSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
         public TimeSpan TcpClientAuthenticationReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
         public TimeSpan TcpClientPollingForNextRequestSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
-        public TimeSpan TcpClientPollingForNextRequestReceiveTimeout { get; set; } = TimeSpan.FromSeconds(30) + TimeSpan.FromSeconds(60);
+        public TimeSpan TcpClientPollingForNextRequestReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
         
         /// <summary>
         ///     Amount of time to wait for a successful TCP or WSS connection
