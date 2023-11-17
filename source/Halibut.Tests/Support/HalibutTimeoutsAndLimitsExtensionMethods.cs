@@ -8,12 +8,9 @@ namespace Halibut.Tests.Support
         public static HalibutTimeoutsAndLimits SetAllTcpTimeoutsTo(this HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, TimeSpan timeSpan)
         {
             halibutTimeoutsAndLimits.TcpClientConnectTimeout = timeSpan;
-            
-            halibutTimeoutsAndLimits.TcpClientReceiveTimeout = timeSpan;
-            halibutTimeoutsAndLimits.TcpClientSendTimeout = timeSpan;
-            
-            halibutTimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout = timeSpan;
-            halibutTimeoutsAndLimits.TcpClientHeartbeatSendTimeout = timeSpan;
+            halibutTimeoutsAndLimits.TcpClientTimeout = new(timeSpan, timeSpan);
+            halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout  = new(timeSpan, timeSpan);
+
             return halibutTimeoutsAndLimits;
         }
     }

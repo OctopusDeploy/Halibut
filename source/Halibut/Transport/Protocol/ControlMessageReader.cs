@@ -76,7 +76,7 @@ namespace Halibut.Transport.Protocol
                 return new CancellationTokenSource(stream.ReadTimeout);
             }
 
-            return new CancellationTokenSource(halibutTimeoutsAndLimits.TcpClientReceiveTimeout); // Just default to a higher timeout, rather than be cancellation token none
+            return new CancellationTokenSource(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout); // Just default to a higher timeout, rather than be cancellation token none
         }
     }
 }

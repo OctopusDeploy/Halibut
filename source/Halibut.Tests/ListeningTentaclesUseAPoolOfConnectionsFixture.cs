@@ -53,8 +53,8 @@ namespace Halibut.Tests
                 
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(2, "Since the last connection should not have been put back into the pool.");
 
-                sw.Elapsed.Should().BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
-                                                                                               "then pulling it out detecting it is bad and then attempting to create a new connection");
+                sw.Elapsed.Should().BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
+                                                                                                                                    "then pulling it out detecting it is bad and then attempting to create a new connection");
             }
         }
     }

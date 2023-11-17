@@ -62,7 +62,7 @@ namespace Halibut.Transport
 
             listener = new HttpListener();
             listener.Prefixes.Add(endPoint);
-            listener.TimeoutManager.IdleConnection = halibutTimeoutsAndLimits.TcpClientReceiveTimeout;
+            listener.TimeoutManager.IdleConnection = halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout;
             listener.Start();
 
             log = logFactory.ForPrefix(endPoint);
@@ -144,7 +144,7 @@ namespace Halibut.Transport
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
                 webSocketStream = streamFactory.CreateStream(webSocketContext.WebSocket);
 
-                var req = await webSocketStream.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientReceiveTimeout, cts.Token).ConfigureAwait(false);
+                var req = await webSocketStream.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, cts.Token).ConfigureAwait(false);
 
                 if (string.IsNullOrEmpty(req))
                 {

@@ -37,9 +37,9 @@ namespace Halibut.Tests
                 await echo.SayHelloAsync("Bob");
                 sw.Stop();
 
-                sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout - TimeSpan.FromSeconds(1), // Allow for some slack, don't care if it actually waited just under.  
+                sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout - TimeSpan.FromSeconds(1), // Allow for some slack, don't care if it actually waited just under.  
                     "Since we should test connections in the pool using using the heart beat timeout.")
-                    .And.BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientReceiveTimeout, "Since we should test connections in the pool using using the shorter timeout.");
+                    .And.BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, "Since we should test connections in the pool using using the shorter timeout.");
             }
         }
     }

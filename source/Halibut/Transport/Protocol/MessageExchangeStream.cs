@@ -36,7 +36,7 @@ namespace Halibut.Transport.Protocol
             this.controlMessageReader = new ControlMessageReader(halibutTimeoutsAndLimits);
             this.serializer = serializer;
 
-            SetReadAndWriteTimeouts(MessageExchangeStreamTimeout.NormalTimeout);
+            SetReadAndWriteTimeouts(halibutTimeoutsAndLimits.TcpClientTimeout);
         }
 
         static int streamCount;
@@ -65,21 +65,19 @@ namespace Halibut.Transport.Protocol
         public async Task SendNextAsync(CancellationToken cancellationToken)
         {
             await WithTimeout(
-                MessageExchangeStreamTimeout.ControlMessageExchangeShortTimeout,
+                halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout,
                 async () => await SendControlMessageAsync(Next, cancellationToken));
         }
 
         public async Task SendProceedAsync(CancellationToken cancellationToken)
         {
-            await WithTimeout(
-                MessageExchangeStreamTimeout.ControlMessageExchangeShortTimeout,
-                async () => await SendControlMessageAsync(Proceed, cancellationToken));
+            await SendControlMessageAsync(Proceed, cancellationToken);
         }
 
         public async Task SendEndAsync(CancellationToken cancellationToken)
         {
             await WithTimeout(
-                MessageExchangeStreamTimeout.ControlMessageExchangeShortTimeout,
+                halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout,
                 async () => await SendControlMessageAsync(End, cancellationToken));
         }
 
@@ -99,7 +97,7 @@ namespace Halibut.Transport.Protocol
         public async Task ExpectProceedAsync(CancellationToken cancellationToken)
         {
             await WithTimeout(
-                MessageExchangeStreamTimeout.ControlMessageExchangeShortTimeout,
+                halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout,
                 async () =>
                 {
                     var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
@@ -187,19 +185,19 @@ namespace Halibut.Transport.Protocol
             return result;
         }
         
-        async Task WithTimeout(MessageExchangeStreamTimeout timeout, Func<Task> func)
+        async Task WithTimeout(SendReceiveTimeout timeout, Func<Task> func)
         {
-            await stream.WithTimeout(halibutTimeoutsAndLimits, timeout, func);
+            await stream.WithTimeout(timeout, func);
         }
 
-        async Task<T> WithTimeout<T>(MessageExchangeStreamTimeout timeout, Func<Task<T>> func)
+        async Task<T> WithTimeout<T>(SendReceiveTimeout timeout, Func<Task<T>> func)
         {
-            return await stream.WithTimeout(halibutTimeoutsAndLimits, timeout, func);
+            return await stream.WithTimeout(timeout, func);
         }
 
-        void SetReadAndWriteTimeouts(MessageExchangeStreamTimeout timeout)
+        void SetReadAndWriteTimeouts(SendReceiveTimeout timeout)
         {
-            stream.SetReadAndWriteTimeouts(timeout, halibutTimeoutsAndLimits);
+            stream.SetReadAndWriteTimeouts(timeout);
         }
 
         static RemoteIdentityType ParseIdentityType(string identityType)

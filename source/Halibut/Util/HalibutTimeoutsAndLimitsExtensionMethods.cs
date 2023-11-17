@@ -7,7 +7,10 @@ namespace Halibut.Util
     {
         public static HalibutTimeoutsAndLimits WithTcpClientReceiveTimeout(this HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, TimeSpan tcpClientReceiveTimeout)
         {
-            halibutTimeoutsAndLimits.TcpClientReceiveTimeout = tcpClientReceiveTimeout;
+            halibutTimeoutsAndLimits.TcpClientTimeout = new(
+                sendTimeout: halibutTimeoutsAndLimits.TcpClientTimeout.SendTimeout, 
+                receiveTimeout: tcpClientReceiveTimeout);
+
             return halibutTimeoutsAndLimits;
         }
     }
