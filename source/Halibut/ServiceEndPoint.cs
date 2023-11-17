@@ -78,7 +78,7 @@ namespace Halibut
         /// </summary>
         public TimeSpan TcpClientConnectTimeout { get; set; }
 
-        public Uri BaseUri { get; }
+        public Uri BaseUri { get; set;  }
 
         public string RemoteThumbprint { get; }
 

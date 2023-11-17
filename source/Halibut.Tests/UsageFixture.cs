@@ -17,6 +17,29 @@ namespace Halibut.Tests
     public class UsageFixture : BaseTest
     {
         [Test]
+        [LatestClientAndLatestServiceTestCases()]
+        public async Task Test(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithStandardServices()
+                             .NoService()
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(e =>
+                {
+                    e.BaseUri = new Uri("https://34.87.220.7:10933");
+                });
+
+                (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
+
+                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
+                {
+                    (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+
+        [Test]
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {

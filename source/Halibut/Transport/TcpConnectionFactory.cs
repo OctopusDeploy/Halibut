@@ -61,22 +61,46 @@ namespace Halibut.Transport
         
         internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, ILog log, CancellationToken cancellationToken)
         {
-            TcpClient client;
             if (endPoint.Proxy == null)
             {
-                client = CreateTcpClientAsync(halibutTimeoutsAndLimits);
-                await client.ConnectWithTimeoutAsync(endPoint.BaseUri, endPoint.TcpClientConnectTimeout, cancellationToken);
+                var client = CreateTcpClientAsync(halibutTimeoutsAndLimits);
+
+                // THIS SHOWS THAT THE TCP PORT CAN BE REUSED TO REDUCE THE PORTS BEING USED FOR RETIRES
+                for (var i = 0; i <= 5; i++)
+                {
+                    try
+                    {
+                        await client.ConnectWithTimeoutAsync(endPoint.BaseUri, endPoint.TcpClientConnectTimeout, cancellationToken);
+
+                        return client;
+                    }
+                    catch (Exception)
+                    {
+                        if (i == 5)
+                        {
+                            client.CloseImmediately();
+                            client.Close();
+                            client.Dispose();
+                            client = null;
+
+                            throw;
+                        }
+                    }
+                }
+
+                return client;
             }
             else
             {
                 log.Write(EventType.Diagnostic, "Creating a proxy client");
                 
-                client = await new ProxyClientFactory(streamFactory)
+                var client = await new ProxyClientFactory(streamFactory)
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(() => CreateTcpClientAsync(halibutTimeoutsAndLimits))
                     .CreateConnectionAsync(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout, cancellationToken);
+
+                return client;
             }
-            return client;
         }
 
         internal static TcpClient CreateTcpClientAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)

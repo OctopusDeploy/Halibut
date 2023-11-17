@@ -21,8 +21,14 @@ namespace Halibut.Transport
         {
             try
             {
+#if NETFRAMEWORK
                 var task = client.ConnectAsync(host, port);
                 await task.TimeoutAfter(timeout, cancellationToken);
+#else
+                using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
+                var linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCancellationTokenSource.Token);
+                await client.ConnectAsync(host, port, linkedCancellationTokenSource.Token);
+#endif
             }
             catch (TimeoutException)
             {
@@ -39,18 +45,27 @@ namespace Halibut.Transport
                 DisposeClient();
                 ExceptionDispatchInfo.Capture(ex).Throw();
             }
+
             void DisposeClient()
             {
-                try
-                {
-                    ((IDisposable) client).Dispose();
-                }
-                catch (SocketException)
-                {
-                }
-                catch (ObjectDisposedException)
-                {
-                }
+                //((IDisposable)client).Dispose();
+
+//                try
+//                {
+//                    ((IDisposable)client).Dispose();
+//                }
+//                catch (SocketException)
+//                {
+//#pragma warning disable CS0219 // Variable is assigned but its value is never used
+//                    int i = 0;
+//#pragma warning restore CS0219 // Variable is assigned but its value is never used
+//                }
+//                catch (ObjectDisposedException)
+//                {
+//#pragma warning disable CS0219 // Variable is assigned but its value is never used
+//                    int i = 0;
+//#pragma warning restore CS0219 // Variable is assigned but its value is never used
+//                }
             }
         }
 
