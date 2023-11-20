@@ -187,8 +187,8 @@ namespace Halibut.Transport
         {
             try
             {
-                client.SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds;
-                client.ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                client.SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientTimeout.SendTimeout.TotalMilliseconds;
+                client.ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout.TotalMilliseconds;
 
                 log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.GetRemoteEndpointString());
                 await ExecuteRequest(client).ConfigureAwait(false);

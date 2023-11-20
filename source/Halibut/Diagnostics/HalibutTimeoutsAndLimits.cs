@@ -45,23 +45,20 @@ namespace Halibut.Diagnostics
         public int RewindableBufferStreamSize { get; set; } = 8192;
 
         /// <summary>
-        ///     Amount of time to wait for a TCP or SslStream write to complete successfully
+        ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully
         /// </summary>
-        public TimeSpan TcpClientSendTimeout { get; set; } = TimeSpan.FromMinutes(10);
-
-        /// <summary>
-        ///     Amount of time to wait for a TCP or SslStream read to complete successfully
-        /// </summary>
-        public TimeSpan TcpClientReceiveTimeout { get; set; } = TimeSpan.FromMinutes(10);
-
+        public SendReceiveTimeout TcpClientTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
+        
         /// <summary>
         ///     Amount of time a connection can stay in the pool
         /// </summary>
         public TimeSpan TcpClientPooledConnectionTimeout { get; set; } = TimeSpan.FromMinutes(9);
-
-        public TimeSpan TcpClientHeartbeatSendTimeout { get; set; } = TimeSpan.FromSeconds(60);
-        public TimeSpan TcpClientHeartbeatReceiveTimeout { get; set; } = TimeSpan.FromSeconds(60);
-
+        
+        /// <summary>
+        ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully for a control message
+        /// </summary>
+        public SendReceiveTimeout TcpClientHeartbeatTimeout { get; set; } = new(sendTimeout: TimeSpan.FromSeconds(60), receiveTimeout: TimeSpan.FromSeconds(60));
+        
         /// <summary>
         ///     Amount of time to wait for a successful TCP or WSS connection
         /// </summary>
@@ -85,13 +82,13 @@ namespace Halibut.Diagnostics
         {
             get
             {
-                if (TcpClientPooledConnectionTimeout < TcpClientReceiveTimeout)
+                if (TcpClientPooledConnectionTimeout < TcpClientTimeout.ReceiveTimeout)
                 {
                     return TcpClientPooledConnectionTimeout;
                 }
 
-                var timeout = TcpClientReceiveTimeout - TimeSpan.FromSeconds(10);
-                return timeout > TimeSpan.Zero ? timeout : TcpClientReceiveTimeout;
+                var timeout = TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(10);
+                return timeout > TimeSpan.Zero ? timeout : TcpClientTimeout.ReceiveTimeout;
             }
         }
 

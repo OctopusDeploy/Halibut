@@ -19,11 +19,14 @@ namespace Halibut.Tests
                 ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(66), // Must always be greater than the heartbeat timeout.
             
                 // Intentionally set higher than the heart beat, since some tests need to determine that the hart beat timeout applies.
-                TcpClientSendTimeout = HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout,
-                TcpClientReceiveTimeout = HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout,
+                TcpClientTimeout = new(
+                    sendTimeout: HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout, 
+                    receiveTimeout: HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout),
             
-                TcpClientHeartbeatSendTimeout = TimeSpan.FromSeconds(15),
-                TcpClientHeartbeatReceiveTimeout = TimeSpan.FromSeconds(15),
+                TcpClientHeartbeatTimeout = new(
+                    sendTimeout: TimeSpan.FromSeconds(15), 
+                    receiveTimeout: TimeSpan.FromSeconds(15)),
+                
                 TcpClientConnectTimeout = TimeSpan.FromSeconds(20),
                 PollingQueueWaitTimeout = TimeSpan.FromSeconds(20)
             };

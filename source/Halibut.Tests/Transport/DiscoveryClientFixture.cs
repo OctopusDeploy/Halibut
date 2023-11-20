@@ -82,7 +82,7 @@ namespace Halibut.Tests.Transport
                 .ThrowAsync<HalibutClientException>();
 
             sw.Stop();
-            sw.Elapsed.Should().BeCloseTo(clientAndService.Service.TimeoutsAndLimits.TcpClientReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
+            sw.Elapsed.Should().BeCloseTo(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
         }
     }
 }

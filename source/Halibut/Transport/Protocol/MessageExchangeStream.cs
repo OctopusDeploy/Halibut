@@ -35,7 +35,8 @@ namespace Halibut.Transport.Protocol
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.controlMessageReader = new ControlMessageReader(halibutTimeoutsAndLimits);
             this.serializer = serializer;
-            SetNormalTimeoutsAsync();
+
+            SetReadAndWriteTimeouts(halibutTimeoutsAndLimits.TcpClientTimeout);
         }
 
         static int streamCount;
@@ -63,9 +64,9 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendNextAsync(CancellationToken cancellationToken)
         {
-            SetShortTimeoutsAsync();
-            await SendControlMessageAsync(Next, cancellationToken);
-            SetNormalTimeoutsAsync();
+            await WithTimeout(
+                halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout,
+                async () => await SendControlMessageAsync(Next, cancellationToken));
         }
 
         public async Task SendProceedAsync(CancellationToken cancellationToken)
@@ -75,15 +76,15 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendEndAsync(CancellationToken cancellationToken)
         {
-            SetShortTimeoutsAsync(); 
-            await SendControlMessageAsync(End, cancellationToken);
-            SetNormalTimeoutsAsync();
+            await WithTimeout(
+                halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout,
+                async () => await SendControlMessageAsync(End, cancellationToken));
         }
 
         public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
         {
             var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
-            
+    
             return line switch
             {
                 Next => true,
@@ -95,21 +96,22 @@ namespace Halibut.Transport.Protocol
 
         public async Task ExpectProceedAsync(CancellationToken cancellationToken)
         {
-            SetShortTimeoutsAsync();
+            await WithTimeout(
+                halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout,
+                async () =>
+                {
+                    var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
 
-            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
+                    if (line == null)
+                    {
+                        throw new AuthenticationException($"Expected {Proceed}, got no data");
+                    }
 
-            if (line == null)
-            {
-                throw new AuthenticationException($"Expected {Proceed}, got no data");
-            }
-
-            if (line != Proceed)
-            {
-                throw new ProtocolException($"Expected {Proceed}, got: " + line);
-            }
-
-            SetNormalTimeoutsAsync();
+                    if (line != Proceed)
+                    {
+                        throw new ProtocolException($"Expected {Proceed}, got: " + line);
+                    }
+                });
         }
 
         public async Task IdentifyAsSubscriberAsync(string subscriptionId, CancellationToken cancellationToken)
@@ -181,6 +183,21 @@ namespace Halibut.Transport.Protocol
             await ReadStreamsAsync(dataStreams, cancellationToken);
             log.Write(EventType.Diagnostic, "Received: {0}", result);
             return result;
+        }
+        
+        async Task WithTimeout(SendReceiveTimeout timeout, Func<Task> func)
+        {
+            await stream.WithTimeout(timeout, func);
+        }
+
+        async Task<T> WithTimeout<T>(SendReceiveTimeout timeout, Func<Task<T>> func)
+        {
+            return await stream.WithTimeout(timeout, func);
+        }
+
+        void SetReadAndWriteTimeouts(SendReceiveTimeout timeout)
+        {
+            stream.SetReadAndWriteTimeouts(timeout);
         }
 
         static RemoteIdentityType ParseIdentityType(string identityType)
@@ -281,29 +298,6 @@ namespace Halibut.Transport.Protocol
                 await stream.WriteLongAsync(dataStream.Length, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
             }
-        }
-        
-        void SetNormalTimeoutsAsync()
-        {
-            // TODO - ASYNC ME UP!
-            // We should always be given a stream that can timeout.
-            if (!stream.CanTimeout)
-                return;
-
-            stream.WriteTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds;
-        }
-        
-        void SetShortTimeoutsAsync()
-        {
-            
-            // TODO - ASYNC ME UP!
-            // We should always be given a stream that can timeout.
-            if (!stream.CanTimeout)
-                return;
-
-            stream.WriteTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)this.halibutTimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
         }
     }
 }
