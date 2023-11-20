@@ -90,13 +90,13 @@ namespace Halibut.Diagnostics
         {
             get
             {
-                if (TcpClientPooledConnectionTimeout < TcpClientTimeout.ReceiveTimeout)
+                if (TcpClientPooledConnectionTimeout < TcpClientReceiveTimeout)
                 {
                     return TcpClientPooledConnectionTimeout;
                 }
 
-                var timeout = TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(10);
-                return timeout > TimeSpan.Zero ? timeout : TcpClientTimeout.ReceiveTimeout;
+                var timeout = TcpClientReceiveTimeout - TimeSpan.FromSeconds(10);
+                return timeout > TimeSpan.Zero ? timeout : TcpClientReceiveTimeout;
             }
         }
 
