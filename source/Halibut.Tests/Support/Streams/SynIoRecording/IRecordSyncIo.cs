@@ -6,6 +6,6 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
     public interface IRecordSyncIo
     {
-        public List<StackTrace> SyncCalls { get; }
+        public IReadOnlyList<StackTrace> SyncCalls { get; }
     }
 }

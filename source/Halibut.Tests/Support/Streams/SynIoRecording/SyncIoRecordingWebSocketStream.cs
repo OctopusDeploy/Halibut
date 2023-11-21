@@ -7,17 +7,31 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
     public class SyncIoRecordingWebSocketStream : WebSocketStream, IRecordSyncIo
     {
+        readonly List<StackTrace> syncCalls = new();
+        
         public SyncIoRecordingWebSocketStream(WebSocket context) : base(context)
         {
         }
 
-        public List<StackTrace> SyncCalls { get; } = new();
+        
+        public IReadOnlyList<StackTrace> SyncCalls
+        {
+            get
+            {
+                lock (syncCalls)
+                {
+                    // return a copy to avoid races against NoteSyncCall
+                    return syncCalls.ToArray();
+                }
+            }
+        }
+
 
         public void NoteSyncCall()
         {
-            lock (SyncCalls)
+            lock (syncCalls)
             {
-                SyncCalls.Add(new StackTrace());
+                syncCalls.Add(new StackTrace());
             }
         }
 
