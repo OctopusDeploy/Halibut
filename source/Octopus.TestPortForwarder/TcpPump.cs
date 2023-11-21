@@ -11,7 +11,7 @@ namespace Octopus.TestPortForwarder
 {
     public class TcpPump : IDisposable
     {
-        static long numberOfTcpPumpsCreated = 0;
+        static long numberOfTcpPumpsCreated;
 
         static long NextTcpPumpNumber()
         {
@@ -43,7 +43,7 @@ namespace Octopus.TestPortForwarder
             clientEndPoint = clientSocket.RemoteEndPoint ?? throw new ArgumentException("Remote endpoint is null", nameof(clientSocket));
         }
         
-        public event EventHandler<EventArgs> Stopped;
+        public event EventHandler<EventArgs>? Stopped;
 
         public void Start()
         {

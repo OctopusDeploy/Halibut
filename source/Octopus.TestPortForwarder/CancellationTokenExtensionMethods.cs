@@ -10,10 +10,11 @@ namespace Octopus.TestPortForwarder
         {
             var tcs = new TaskCompletionSource<TResult>();
 
-            IDisposable registration = null;
+            IDisposable? registration = null;
             registration = cancellationToken.Register(() =>
             {
                 tcs.TrySetCanceled();
+                // ReSharper disable once AccessToModifiedClosure
                 registration?.Dispose();
             }, useSynchronizationContext: false);
 
@@ -24,10 +25,11 @@ namespace Octopus.TestPortForwarder
         {
             var tcs = new TaskCompletionSource<VoidResult>();
 
-            IDisposable registration = null;
+            IDisposable? registration = null;
             registration = cancellationToken.Register(() =>
             {
                 tcs.TrySetCanceled();
+                // ReSharper disable once AccessToModifiedClosure
                 registration?.Dispose();
             }, useSynchronizationContext: false);
 
