@@ -75,9 +75,7 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
             
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false, 
-                testWebSocket:false // Since websockets do not timeout
-                )]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
             public async Task WhenTheConnectionPausesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

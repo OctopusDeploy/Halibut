@@ -167,10 +167,11 @@ namespace Halibut.Transport
 
                     errorEventType = EventType.Error;
 
-                    var halibutLimitsStream = new HalibutLimitsStream(webSocketStream, halibutTimeoutsAndLimits.TcpClientReceiveTimeout, halibutTimeoutsAndLimits.TcpClientSendTimeout);
+                    // Do we need this?
+                    //var halibutLimitsStream = new HalibutLimitsStream(webSocketStream, halibutTimeoutsAndLimits.TcpClientReceiveTimeout, halibutTimeoutsAndLimits.TcpClientSendTimeout);
 
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                    await ExchangeMessages(new NetworkTimeoutStream(halibutLimitsStream)).ConfigureAwait(false);
+                    await ExchangeMessages(new NetworkTimeoutStream(webSocketStream)).ConfigureAwait(false);
                 }
             }
             catch (TaskCanceledException)
