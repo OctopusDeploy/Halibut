@@ -80,7 +80,7 @@ class Build : NukeBuild
 
     Target CompileNet48 => _ => CompileDefinition(_, "net48");
 
-    Target CompileNet60 => _ => CompileDefinition(_, "net6.0");
+    Target CompileNet80 => _ => CompileDefinition(_, "net8.0");
 
     ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
     {
@@ -108,7 +108,7 @@ class Build : NukeBuild
     Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestWindowsNet60 => _ => TestDefinition(_, CompileNet60, "net6.0", runDotMemoryTests: true);
+    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: true);
 
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {

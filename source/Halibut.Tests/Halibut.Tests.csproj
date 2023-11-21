@@ -10,10 +10,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
-    <TargetFrameworks>net48;net6.0</TargetFrameworks>
+    <TargetFrameworks>net48;net6.0;net8.0</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
     <None Update="Certificates/WrongCert.pfx;Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
@@ -49,11 +49,11 @@
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="3.0.1" />
   </ItemGroup>
 
-  <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'net4.8' ">
     <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
   </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'net60' ">
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0' Or '$(TargetFramework)' == 'net8.0' ">
         <DefineConstants>$(DefineConstants);HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS</DefineConstants>
     </PropertyGroup>
 
