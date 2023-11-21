@@ -218,7 +218,9 @@ namespace Halibut.Transport
                 await using (Try.CatchingErrorOnDisposal(ssl, ex => log.WriteException(EventType.Diagnostic, "Could not dispose SSL stream", ex)))
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
+#pragma warning disable SYSLIB0039 // NET8: TLS 1.0 and TLS1.1 are obsolete; we should consider removing them. This is only on the NET6/8 code path so should be good. Also enable TLS1.3
                     await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+#pragma warning restore SYSLIB0039
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 

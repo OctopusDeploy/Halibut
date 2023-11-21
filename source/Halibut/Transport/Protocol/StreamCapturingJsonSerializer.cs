@@ -15,7 +15,9 @@ namespace Halibut.Transport.Protocol
         {
             Serializer = JsonSerializer.Create(settings);
             streamCaptureContext = new StreamCaptureContext();
+#pragma warning disable SYSLIB0050 // NET8: Formatter-based serialization is obsolete and should not be used.
             Serializer.Context = new StreamingContext(default, streamCaptureContext);
+#pragma warning restore SYSLIB0050
         }
 
         public class StreamCaptureContext

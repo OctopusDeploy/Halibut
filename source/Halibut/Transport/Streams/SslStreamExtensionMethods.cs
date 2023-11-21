@@ -23,7 +23,9 @@ namespace Halibut.Transport.Streams
             {
                 TargetHost = serviceEndpoint.BaseUri.Host,
                 ClientCertificates = clientCertificates,
+#pragma warning disable SYSLIB0039 // NET8: TLS 1.0 and TLS1.1 are obsolete; we should consider removing them. This is only on the NET6/8 code path so should be good. Also enable TLS1.3
                 EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
+#pragma warning restore SYSLIB0039
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck
             };
 
