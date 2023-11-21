@@ -52,12 +52,12 @@ namespace Halibut.Diagnostics
         /// <summary>
         ///     Amount of time to wait for a response from an RPC call.
         /// </summary>
-        public SendReceiveTimeout TcpClientReceiveResponseTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
+        public TimeSpan TcpClientReceiveResponseTimeout { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         ///     Amount of time to wait when receiving a response from an RPC call, after data has started being received.
         /// </summary>
-        public SendReceiveTimeout TcpClientReceiveResponseTransmissionAfterInitialReadTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
+        public TimeSpan TcpClientReceiveResponseTransmissionAfterInitialReadTimeout { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         ///     Amount of time a connection can stay in the pool

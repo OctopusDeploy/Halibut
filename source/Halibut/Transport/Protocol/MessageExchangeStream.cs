@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Security.Authentication;
 using System.Text;
 using System.Threading;
@@ -186,11 +185,11 @@ namespace Halibut.Transport.Protocol
         public async Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
         {
             // Wait for data to become available using existing timeouts, then once we have data streaming in, use the smaller timeout (so we do not wait as long if an error happens here).
-            await WithTimeout(
+            await stream.WithReadTimeout(
                 halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout,
                 async () => await stream.WaitForDataToBeAvailableAsync(cancellationToken));
 
-            return await WithTimeout(
+            return await stream.WithReadTimeout(
                 halibutTimeoutsAndLimits.TcpClientReceiveResponseTransmissionAfterInitialReadTimeout,
                 async () => await ReceiveAsync<ResponseMessage>(cancellationToken));
         }

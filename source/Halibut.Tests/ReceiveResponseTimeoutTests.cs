@@ -23,15 +23,13 @@ namespace Halibut.Tests
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits
             {
-                TcpKeepAliveEnabled = false,
-                TcpClientReceiveResponseTimeout = new SendReceiveTimeout(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100)),
+                TcpClientReceiveResponseTimeout = TimeSpan.FromMilliseconds(100),
                 // Ensure subsequent reads do not trigger timeouts
-                TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = new SendReceiveTimeout(TimeSpan.FromHours(1), TimeSpan.FromHours(1))
+                TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = TimeSpan.FromHours(1)
             };
 
             // Arrange
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                             .WithStandardServices()
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                              .WithDoSomeActionService(() => Thread.Sleep(3000))
@@ -54,17 +52,16 @@ namespace Halibut.Tests
             // Arrange
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits
             {
-                TcpKeepAliveEnabled = false,
                 // Ensure execution time does not trigger timeouts
-                TcpClientReceiveResponseTimeout = new SendReceiveTimeout(TimeSpan.FromHours(1), TimeSpan.FromHours(1)),
-                TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = new SendReceiveTimeout(TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(100))
+                TcpClientReceiveResponseTimeout = TimeSpan.FromHours(1),
+                TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = TimeSpan.FromMilliseconds(100)
             };
 
-            var enoughDataToCauseMultipleReads = Enumerable.Range(0, 1024 * 1024)
+            var enoughDataToCauseMultipleReadOperations = Enumerable.Range(0, 1024 * 1024)
                 .Select(_ => Guid.NewGuid().ToString())
                 .ToList();
             
-            var listService = new AsyncListService(enoughDataToCauseMultipleReads);
+            var listService = new AsyncListService(enoughDataToCauseMultipleReadOperations);
             
             var dataTransferObserver = new DataTransferObserverBuilder()
                 .WithWritingDataObserver((_, _) =>
@@ -78,9 +75,9 @@ namespace Halibut.Tests
                 .Build();
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                             .WithAsyncService<IListService, IAsyncListService>(() => listService)
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                             .WithAsyncService<IListService, IAsyncListService>(() => listService)
                              .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                                  .WithDataObserver(() => new BiDirectionalDataTransferObserver(dataTransferObserver, dataTransferObserver))
                                  .Build())
