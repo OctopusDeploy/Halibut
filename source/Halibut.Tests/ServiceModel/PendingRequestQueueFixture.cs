@@ -225,7 +225,6 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
-        [IgnoreOnTeamCity("This test takes way too long on Team City")]
         [NonParallelizable]
         public async Task QueueAndWait_Can_Queue_Dequeue_Apply_VeryLargeNumberOfRequests()
         {
