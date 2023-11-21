@@ -12,22 +12,15 @@ using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
-<<<<<<< HEAD
 using NUnit.Framework;
-=======
 using LogLevel = Halibut.Logging.LogLevel;
->>>>>>> 48525a3 (WIP)
 
 namespace Halibut.Tests.Timeouts
 {
     public class SendingAndReceivingRequestMessagesTimeoutsFixture : BaseTest
     {
         [Test]
-<<<<<<< HEAD
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
-=======
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false,  testAsyncServicesAsWell: true, testSyncService : false, testSyncClients: false, testAsyncClients: true)]
->>>>>>> 48525a3 (WIP)
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task HalibutTimeoutsAndLimits_AppliesToTcpClientReceiveTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var expectedTimeout = TimeSpan.FromSeconds(10);
