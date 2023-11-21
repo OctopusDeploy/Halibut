@@ -7,7 +7,7 @@ namespace Halibut.Transport.Protocol
 {
     public static class StreamTimeoutExtensionMethods
     {
-        public static async Task WithTimeout(this Stream stream, SendReceiveTimeout timeout, Func<Task> func)
+        public static async Task WithTimeout(this Stream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, MessageExchangeStreamTimeout timeout, Func<Task> func)
         {
             if (!stream.CanTimeout)
             {
@@ -21,7 +21,7 @@ namespace Halibut.Transport.Protocol
 
             try
             {
-                stream.SetReadAndWriteTimeouts(timeout);
+                stream.SetReadAndWriteTimeouts(timeout, halibutTimeoutsAndLimits);
                 await func();
             }
             finally
@@ -30,8 +30,8 @@ namespace Halibut.Transport.Protocol
                 stream.WriteTimeout = currentWriteTimeout;
             }
         }
-
-        public static async Task<T> WithTimeout<T>(this Stream stream, SendReceiveTimeout timeout, Func<Task<T>> func)
+        
+        public static async Task<T> WithTimeout<T>(this Stream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, MessageExchangeStreamTimeout timeout, Func<Task<T>> func)
         {
             if (!stream.CanTimeout)
             {
@@ -43,7 +43,7 @@ namespace Halibut.Transport.Protocol
 
             try
             {
-                stream.SetReadAndWriteTimeouts(timeout);
+                stream.SetReadAndWriteTimeouts(timeout, halibutTimeoutsAndLimits);
                 return await func();
             }
             finally
@@ -52,16 +52,35 @@ namespace Halibut.Transport.Protocol
                 stream.WriteTimeout = currentWriteTimeout;
             }
         }
-
-        public static void SetReadAndWriteTimeouts(this Stream stream, SendReceiveTimeout timeout)
+        
+        public static void SetReadAndWriteTimeouts(this Stream stream, MessageExchangeStreamTimeout timeout, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             if (!stream.CanTimeout)
             {
                 return;
             }
-
-            stream.WriteTimeout = (int)timeout.SendTimeout.TotalMilliseconds;
-            stream.ReadTimeout = (int)timeout.ReceiveTimeout.TotalMilliseconds;
+            
+            switch (timeout)
+            {
+                case MessageExchangeStreamTimeout.NormalTimeout:
+                    stream.WriteTimeout = (int)halibutTimeoutsAndLimits.TcpClientSendTimeout.TotalMilliseconds;
+                    stream.ReadTimeout = (int)halibutTimeoutsAndLimits.TcpClientReceiveTimeout.TotalMilliseconds;
+                    break;
+                case MessageExchangeStreamTimeout.ControlMessageExchangeShortTimeout:
+                    stream.WriteTimeout = (int)halibutTimeoutsAndLimits.TcpClientHeartbeatSendTimeout.TotalMilliseconds;
+                    stream.ReadTimeout = (int)halibutTimeoutsAndLimits.TcpClientHeartbeatReceiveTimeout.TotalMilliseconds;
+                    break;
+                case MessageExchangeStreamTimeout.AuthenticationShortTimeout:
+                    stream.WriteTimeout = (int)halibutTimeoutsAndLimits.TcpClientAuthenticationSendTimeout.TotalMilliseconds;
+                    stream.ReadTimeout = (int)halibutTimeoutsAndLimits.TcpClientAuthenticationReceiveTimeout.TotalMilliseconds;
+                    break;
+                case MessageExchangeStreamTimeout.PollingForNextRequestShortTimeout:
+                    stream.WriteTimeout = (int)halibutTimeoutsAndLimits.TcpClientPollingForNextRequestSendTimeout.TotalMilliseconds;
+                    stream.ReadTimeout = (int)halibutTimeoutsAndLimits.TcpClientPollingForNextRequestReceiveTimeout.TotalMilliseconds;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(timeout), timeout, null);
+            }
         }
     }
 }

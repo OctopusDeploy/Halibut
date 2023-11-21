@@ -64,7 +64,7 @@ namespace Halibut.Tests.Timeouts
                 }
 
                 sw.Stop();
-                sw.Elapsed.Should().BeCloseTo(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
+                sw.Elapsed.Should().BeCloseTo(clientAndService.Service.TimeoutsAndLimits.TcpClientAuthenticationSendTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
 
                 await echo.SayHelloAsync("The pump wont be paused here so this should work.");
             }

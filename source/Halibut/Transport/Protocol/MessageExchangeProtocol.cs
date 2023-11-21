@@ -93,7 +93,9 @@ namespace Halibut.Transport.Protocol
 
         static async Task ReceiveAndProcessRequestAsync(IMessageExchangeStream stream, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, CancellationToken cancellationToken)
         {
-            var request = await stream.ReceiveAsync<RequestMessage>(cancellationToken);
+            var request = await stream.WithTimeout(
+                MessageExchangeStreamTimeout.PollingForNextRequestShortTimeout,
+                async () => await stream.ReceiveAsync<RequestMessage>(cancellationToken));
 
             if (request != null)
             {

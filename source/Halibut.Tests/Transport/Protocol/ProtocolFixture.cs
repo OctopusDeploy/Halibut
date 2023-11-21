@@ -121,22 +121,32 @@ namespace Halibut.Tests.Transport.Protocol
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED");
         }
@@ -179,37 +189,57 @@ namespace Halibut.Tests.Transport.Protocol
             AssertOutput(@"
 --> MX-SUBSCRIBE subscriptionId
 <-- MX-SERVER
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> ResponseMessage
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED
+|-- Set Timeout PollingForNextRequestShortTimeout
 <-- RequestMessage
+|-- Revert Timeout PollingForNextRequestShortTimeout
 --> NEXT
 <-- PROCEED");
         }
@@ -279,17 +309,12 @@ namespace Halibut.Tests.Transport.Protocol
                 numberOfReads = reads;
             }
 
-            public void IdentifyAsClient()
-            {
-                output.AppendLine("--> MX-CLIENT");
-                output.AppendLine("<-- MX-SERVER");
-            }
-
             public async Task IdentifyAsClientAsync(CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 
-                IdentifyAsClient();
+                output.AppendLine("--> MX-CLIENT");
+                output.AppendLine("<-- MX-SERVER");
             }
             
             public async Task SendNextAsync(CancellationToken cancellationToken)
@@ -369,6 +394,22 @@ namespace Halibut.Tests.Transport.Protocol
 
                 output.AppendLine("<-- " + typeof(T).Name);
                 return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+            }
+
+            public async Task WithTimeout(MessageExchangeStreamTimeout timeout, Func<Task> func)
+            {
+                output.AppendLine("|-- Set Timeout " + timeout);
+                await func();
+                output.AppendLine("|-- Revert Timeout " + timeout);
+            }
+
+            public async Task<T> WithTimeout<T>(MessageExchangeStreamTimeout timeout, Func<Task<T>> func)
+            {
+                output.AppendLine("|-- Set Timeout " + timeout);
+                var response = await func();
+                output.AppendLine("|-- Revert Timeout " + timeout);
+
+                return response;
             }
 
             public override string ToString()

@@ -276,7 +276,7 @@ namespace Halibut.Transport
             finally
             {
                 if (!connectionAuthorizedAndObserved)
-                {
+                { 
                     connectionsObserver.ConnectionAccepted(false);
                 }
 
