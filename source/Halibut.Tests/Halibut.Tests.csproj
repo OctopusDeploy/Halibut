@@ -53,7 +53,7 @@
     <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
   </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'net60' ">
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
         <DefineConstants>$(DefineConstants);HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS</DefineConstants>
     </PropertyGroup>
 
