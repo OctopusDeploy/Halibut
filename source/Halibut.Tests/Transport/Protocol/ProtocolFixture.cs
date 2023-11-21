@@ -362,8 +362,18 @@ namespace Halibut.Tests.Transport.Protocol
 
                 output.AppendLine("--> " + typeof(T).Name);
             }
-            
-            public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
+
+            public Task<RequestMessage> ReceiveRequestAsync(CancellationToken cancellationToken)
+            {
+                return ReceiveAsync<RequestMessage>();
+            }
+
+            public Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
+            {
+                return ReceiveAsync<ResponseMessage>();
+            }
+
+            async Task<T> ReceiveAsync<T>()
             {
                 await Task.CompletedTask;
 

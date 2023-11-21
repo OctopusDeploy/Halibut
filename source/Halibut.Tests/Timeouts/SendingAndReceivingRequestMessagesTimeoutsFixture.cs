@@ -32,7 +32,7 @@ namespace Halibut.Tests.Timeouts
                        .WhenTestingAsyncClient(clientAndServiceTestCase, b =>
                        {
                            b.WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build()
-                               .SetAllTcpTimeoutsTo(TimeSpan.FromSeconds(133))
+                               .WithAllTcpTimeoutsTo(TimeSpan.FromSeconds(133))
                                .WithTcpClientReceiveTimeout(expectedTimeout));
                        })
                        .WithInstantReconnectPollingRetryPolicy()

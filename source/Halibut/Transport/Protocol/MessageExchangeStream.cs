@@ -177,14 +177,31 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
+        public async Task<RequestMessage> ReceiveRequestAsync(CancellationToken cancellationToken)
+        {
+            return await ReceiveAsync<RequestMessage>(cancellationToken);
+        }
+
+        public async Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
+        {
+            // Wait for data to become available using existing timeouts, then once we have data streaming in, use the smaller timeout (so we do not wait as long if an error happens here).
+            await stream.WithReadTimeout(
+                halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout,
+                async () => await stream.WaitForDataToBeAvailableAsync(cancellationToken));
+
+            return await stream.WithReadTimeout(
+                halibutTimeoutsAndLimits.TcpClientReceiveResponseTransmissionAfterInitialReadTimeout,
+                async () => await ReceiveAsync<ResponseMessage>(cancellationToken));
+        }
+
+        async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
         {
             var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
             await ReadStreamsAsync(dataStreams, cancellationToken);
             log.Write(EventType.Diagnostic, "Received: {0}", result);
             return result;
         }
-        
+
         async Task WithTimeout(SendReceiveTimeout timeout, Func<Task> func)
         {
             await stream.WithTimeout(timeout, func);
