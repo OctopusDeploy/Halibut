@@ -22,6 +22,8 @@ namespace Halibut.Transport.Streams
         {
             this.baseStream = baseStream;
             rewindBuffer = new byte[rewindBufferSize];
+
+            ResetRewindBuffer();
         }
 
         public override void Flush() => baseStream.Flush();
@@ -36,7 +38,6 @@ namespace Halibut.Transport.Streams
                 throw new NotSupportedException("Rewind buffer has already been started.");
             }
 
-            ResetRewindBuffer();
             rewindEnabled = true;
         }
 
@@ -235,9 +236,18 @@ namespace Halibut.Transport.Streams
             rewindBufferPopulated = false;
         }
 
-        private int ReduceReadCountToBufferSize(int count)
+        int ReduceReadCountToBufferSize(int count)
         {
             return Math.Min(rewindBuffer.Length, count);
+        }
+
+        public async Task WaitForDataToBeAvailableAsync(CancellationToken cancellationToken)
+        {
+            StartBuffer();
+
+            var bytesRead = await ReadAsync(new byte[1], 0, 1, cancellationToken);
+
+            FinishAndRewind(bytesRead);
         }
     }
 }
