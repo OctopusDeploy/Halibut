@@ -12,6 +12,7 @@ namespace Halibut.Tests.Support
             halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout  = new(timeSpan, timeSpan);
             halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout = timeSpan;
             halibutTimeoutsAndLimits.TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = timeSpan;
+            halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts = new(timeSpan, timeSpan);
 
             return halibutTimeoutsAndLimits;
         }

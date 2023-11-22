@@ -68,6 +68,13 @@ namespace Halibut.Diagnostics
         ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully for a control message
         /// </summary>
         public SendReceiveTimeout TcpClientHeartbeatTimeout { get; set; } = new(sendTimeout: TimeSpan.FromSeconds(60), receiveTimeout: TimeSpan.FromSeconds(60));
+
+        /// <summary>
+        ///    Timeout for read/writes during the the authentication and identification phase of communication.
+        ///
+        ///    Currently set to 10 minutes as this was the previous value, a value similar to TcpClientHeartbeatTimeout is recommended.
+        /// </summary>
+        public SendReceiveTimeout TcpClientAuthenticationAndIdentificationTimeouts { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
         
         /// <summary>
         ///     Amount of time to wait for a successful TCP or WSS connection
