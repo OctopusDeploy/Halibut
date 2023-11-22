@@ -143,7 +143,7 @@ namespace Halibut.Transport
             {
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
                 webSocketStream = streamFactory.CreateStream(webSocketContext.WebSocket);
-                var currentTimeouts = webSocketStream.GetReadAndWriteTimeouts();
+                var previousTimeouts = webSocketStream.GetReadAndWriteTimeouts();
                 webSocketStream.SetReadAndWriteTimeouts(halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts);
 
                 var req = await webSocketStream.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, cts.Token).ConfigureAwait(false);
@@ -170,7 +170,7 @@ namespace Halibut.Transport
                     errorEventType = EventType.Error;
 
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                    webSocketStream.SetReadAndWriteTimeouts(currentTimeouts);
+                    webSocketStream.SetReadAndWriteTimeouts(previousTimeouts);
                     await ExchangeMessages(webSocketStream).ConfigureAwait(false);
                 }
             }
