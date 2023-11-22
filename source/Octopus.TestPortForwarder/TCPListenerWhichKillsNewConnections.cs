@@ -25,7 +25,9 @@ namespace Octopus.TestPortForwarder
             listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             listeningSocket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
             listeningSocket.Listen(0);
-            Port = ((IPEndPoint)listeningSocket.LocalEndPoint).Port;
+
+            var ipEndPoint = listeningSocket.LocalEndPoint as IPEndPoint ?? throw new InvalidOperationException("listeningSocket.LocalEndPoint was not an IPEndPoint");
+            Port = ipEndPoint.Port;
             Task.Factory.StartNew(() => WorkerTask(cancellationTokenSource.Token).ConfigureAwait(false), TaskCreationOptions.LongRunning);
         }
         

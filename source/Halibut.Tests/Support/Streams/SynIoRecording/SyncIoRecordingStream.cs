@@ -14,18 +14,30 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
         , IAsyncDisposable
 #endif
     {
+        readonly List<StackTrace> syncCalls = new();
+        
         public SyncIoRecordingStream(Stream inner)
         {
             Inner = inner;
         }
 
-        public List<StackTrace> SyncCalls { get; } = new();
+        public IReadOnlyList<StackTrace> SyncCalls
+        {
+            get
+            {
+                lock (syncCalls)
+                {
+                    // return a copy to avoid races against NoteSyncCall
+                    return syncCalls.ToArray();
+                }
+            }
+        }
 
         public void NoteSyncCall()
         {
-            lock (SyncCalls)
+            lock (syncCalls)
             {
-                SyncCalls.Add(new StackTrace());
+                syncCalls.Add(new StackTrace());
             }
         }
 
