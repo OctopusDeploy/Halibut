@@ -51,8 +51,21 @@ namespace Halibut.Diagnostics
 
         /// <summary>
         ///     Amount of time to wait for a response from an RPC call.
+        /// 
+        ///     Specifically the amount of time to wait for the first byte of the request to arrive.
         /// </summary>
         public TimeSpan TcpClientReceiveResponseTimeout { get; set; } = TimeSpan.FromMinutes(10);
+        
+        /// <summary>
+        ///     Amount of time the polling service will wait for a request from an RPC call.
+        ///     Specifically the amount of time to wait for the first byte of the request to arrive.
+        ///
+        ///     This value must never be less than the PollingQueueWaitTimeout, of the client, since this
+        ///     is the timeout of the long poll the polling service makes to the client to get the next request.
+        ///
+        ///     Currently set to 10 minutes as that is what the timeout used to be. 
+        /// </summary>
+        public TimeSpan TcpClientReceiveRequestTimeoutForPolling { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         ///     Amount of time to wait when receiving a response from an RPC call, after data has started being received.
@@ -87,6 +100,7 @@ namespace Halibut.Diagnostics
         ///     re-request.
         /// </summary>
         public TimeSpan PollingQueueWaitTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
 
         // After a client/server message exchange is complete, the client returns
         // the connection to the pool but the server continues to block and reads

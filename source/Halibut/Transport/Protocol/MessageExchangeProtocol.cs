@@ -18,14 +18,16 @@ namespace Halibut.Transport.Protocol
     {
         readonly IMessageExchangeStream stream;
         readonly IRpcObserver rcpObserver;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
         {
             this.stream = stream;
             this.rcpObserver = rcpObserver;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.log = log;
         }
 
@@ -87,13 +89,13 @@ namespace Halibut.Transport.Protocol
 
             for (var i = 0; i < maxAttempts; i++)
             {
-                await ReceiveAndProcessRequestAsync(stream, incomingRequestProcessor, cancellationToken);
+                await ReceiveAndProcessRequestAsSubscriberAsync(stream, incomingRequestProcessor, cancellationToken);
             }
         }
 
-        static async Task ReceiveAndProcessRequestAsync(IMessageExchangeStream stream, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, CancellationToken cancellationToken)
+        async Task ReceiveAndProcessRequestAsSubscriberAsync(IMessageExchangeStream stream, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, CancellationToken cancellationToken)
         {
-            var request = await stream.ReceiveRequestAsync(cancellationToken);
+            var request = await stream.ReceiveRequestAsync(halibutTimeoutsAndLimits.TcpClientReceiveRequestTimeoutForPolling, cancellationToken);
 
             if (request != null)
             {
@@ -156,7 +158,9 @@ namespace Halibut.Transport.Protocol
         {
             while (acceptClientRequests && !cancellationToken.IsCancellationRequested)
             {
-                var request = await stream.ReceiveRequestAsync(cancellationToken);
+                // This timeout is probably too high since we know that we either just send identification control messages
+                // or we just sent NEXT and PROCEED control messages.
+                var request = await stream.ReceiveRequestAsync(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, cancellationToken);
 
                 if (request == null || !acceptClientRequests)
                 {

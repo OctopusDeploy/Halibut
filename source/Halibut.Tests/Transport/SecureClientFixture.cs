@@ -63,7 +63,7 @@ namespace Halibut.Tests.Transport
             for (int i = 0; i < halibutTimeoutsAndLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream, new NoRpcObserver(), log));
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, new NoRpcObserver(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), log));
 
                 await connectionManager.ReleaseConnectionAsync(endpoint, connection, CancellationToken.None);
             }
@@ -92,7 +92,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger), new NoRpcObserver(), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger), new NoRpcObserver(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger);
         }
     }
 }
