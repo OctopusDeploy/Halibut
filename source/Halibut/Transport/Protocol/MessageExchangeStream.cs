@@ -84,9 +84,9 @@ namespace Halibut.Transport.Protocol
                 async () => await SendControlMessageAsync(End, cancellationToken));
         }
 
-        public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
+        public async Task<bool> ExpectNextOrEndAsync(TimeSpan readTimeout, CancellationToken cancellationToken)
         {
-            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
+            var line = await stream.WithReadTimeout(readTimeout, async () => await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken));
     
             return line switch
             {
