@@ -29,6 +29,9 @@ namespace Halibut.Tests
             var clientTrustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
             var firstCall = true;
+            
+            var unauthorizedClientHasConnected = new TaskCompletionSource<bool>();
+            CancellationToken.Register(() => unauthorizedClientHasConnected.TrySetCanceled()); // backup to fail the test in case it never connects
 
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
@@ -44,6 +47,7 @@ namespace Halibut.Tests
                            }
 
                            unauthorizedThumbprint = clientThumbprint;
+                           unauthorizedClientHasConnected.TrySetResult(true);
                            return UnauthorizedClientConnectResponse.TrustAndAllowConnection;
                        })
                        .Build(CancellationToken))
@@ -52,6 +56,8 @@ namespace Halibut.Tests
                 var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 await clientCountingService.IncrementAsync();
 
+                await unauthorizedClientHasConnected.Task;
+                
                 // Assert
                 countingService.CurrentValue().Should().Be(1);
 
@@ -69,6 +75,9 @@ namespace Halibut.Tests
             var trustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
 
+            var unauthorizedClientHasConnected = new TaskCompletionSource<bool>();
+            CancellationToken.Register(() => unauthorizedClientHasConnected.TrySetCanceled()); // backup to fail the test in case it never connects
+
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithCountingService(countingService)
@@ -78,6 +87,7 @@ namespace Halibut.Tests
                        .WithClientOnUnauthorizedClientConnect((_, clientThumbprint) =>
                        {
                            unauthorizedThumbprint = clientThumbprint;
+                           unauthorizedClientHasConnected.TrySetResult(true);
                            return UnauthorizedClientConnectResponse.BlockConnection;
                        })
                        .Build(CancellationToken))
@@ -104,6 +114,9 @@ namespace Halibut.Tests
                 
                 await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
 
+                // don't assert things until we've seen the client actually connect
+                await unauthorizedClientHasConnected.Task;
+                
                 // Assert
                 countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
 

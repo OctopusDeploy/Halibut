@@ -53,6 +53,48 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        public static async Task WithReadTimeout(this Stream stream, TimeSpan timeout, Func<Task> func)
+        {
+            if (!stream.CanTimeout)
+            {
+                await func();
+
+                return;
+            }
+
+            var currentReadTimeout = stream.ReadTimeout;
+
+            try
+            {
+                stream.SetReadTimeouts(timeout);
+                await func();
+            }
+            finally
+            {
+                stream.ReadTimeout = currentReadTimeout;
+            }
+        }
+
+        public static async Task<T> WithReadTimeout<T>(this Stream stream, TimeSpan timeout, Func<Task<T>> func)
+        {
+            if (!stream.CanTimeout)
+            {
+                return await func();
+            }
+
+            var currentReadTimeout = stream.ReadTimeout;
+
+            try
+            {
+                stream.SetReadTimeouts(timeout);
+                return await func();
+            }
+            finally
+            {
+                stream.ReadTimeout = currentReadTimeout;
+            }
+        }
+
         public static void SetReadAndWriteTimeouts(this Stream stream, SendReceiveTimeout timeout)
         {
             if (!stream.CanTimeout)
@@ -62,6 +104,16 @@ namespace Halibut.Transport.Protocol
 
             stream.WriteTimeout = (int)timeout.SendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)timeout.ReceiveTimeout.TotalMilliseconds;
+        }
+
+        public static void SetReadTimeouts(this Stream stream, TimeSpan timeout)
+        {
+            if (!stream.CanTimeout)
+            {
+                return;
+            }
+
+            stream.ReadTimeout = (int)timeout.TotalMilliseconds;
         }
     }
 }

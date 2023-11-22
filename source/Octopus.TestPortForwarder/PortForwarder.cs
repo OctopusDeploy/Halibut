@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Octopus.TestPortForwarder
 {
@@ -13,13 +14,13 @@ namespace Octopus.TestPortForwarder
     {
         readonly Uri originServer;
         Socket? listeningSocket;
-        readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+        readonly CancellationTokenSource cancellationTokenSource = new();
         readonly List<TcpPump> pumps = new();
         readonly ILogger logger;
         readonly TimeSpan sendDelay;
         readonly int numberOfBytesToDelaySending;
         Func<BiDirectionalDataTransferObserver> biDirectionalDataTransferObserverFactory;
-        bool active = false;
+        bool active;
 
         public int ListeningPort { get; }
 
@@ -48,13 +49,15 @@ namespace Octopus.TestPortForwarder
             var scheme = originServer.Scheme;
 
             Start();
-
-            ListeningPort = ((IPEndPoint)listeningSocket.LocalEndPoint).Port;
+            var ipEndPoint = listeningSocket.LocalEndPoint as IPEndPoint ?? throw new InvalidOperationException("listeningSocket.LocalEndPoint was not an IPEndPoint");
+            
+            ListeningPort = ipEndPoint.Port;
             PublicEndpoint = new UriBuilder(scheme, "localhost", ListeningPort).Uri;
 
             Task.Factory.StartNew(() => WorkerTask(cancellationTokenSource.Token).ConfigureAwait(false), TaskCreationOptions.LongRunning);
         }
 
+        [MemberNotNull(nameof(listeningSocket))]
         private void Start()
         {
             if (active)
@@ -106,6 +109,7 @@ namespace Octopus.TestPortForwarder
 
         async Task WorkerTask(CancellationToken cancellationToken)
         {
+            var socket = this.listeningSocket ?? throw new InvalidOperationException("Cannot start WorkerTask with an uninitialized listeningSocket");
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Yield();
@@ -113,7 +117,7 @@ namespace Octopus.TestPortForwarder
                 {
                     try
                     {
-                        var clientSocket = await listeningSocket?.AcceptAsync();
+                        var clientSocket = await socket.AcceptAsync();
 
                         try
                         {
@@ -177,7 +181,7 @@ namespace Octopus.TestPortForwarder
                     }
                     catch (Exception)
                     {
-
+                        // if we encounter an error during cancellation there's not a lot that we can do about that
                     }
                 }
                 else
@@ -190,7 +194,7 @@ namespace Octopus.TestPortForwarder
             pump.Start();
         }
 
-        void OnPortForwarderStopped(object sender, EventArgs e)
+        void OnPortForwarderStopped(object? sender, EventArgs e)
         {
             if (sender is TcpPump portForwarder)
             {
@@ -316,6 +320,7 @@ namespace Octopus.TestPortForwarder
             }
             catch (Exception)
             {
+                // if we encounter an error during shutdown there's not a lot that we can do about that
             }
         }
     }

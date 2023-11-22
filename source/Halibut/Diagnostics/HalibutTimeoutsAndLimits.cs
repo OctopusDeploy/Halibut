@@ -48,7 +48,17 @@ namespace Halibut.Diagnostics
         ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully
         /// </summary>
         public SendReceiveTimeout TcpClientTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
-        
+
+        /// <summary>
+        ///     Amount of time to wait for a response from an RPC call.
+        /// </summary>
+        public TimeSpan TcpClientReceiveResponseTimeout { get; set; } = TimeSpan.FromMinutes(10);
+
+        /// <summary>
+        ///     Amount of time to wait when receiving a response from an RPC call, after data has started being received.
+        /// </summary>
+        public TimeSpan TcpClientReceiveResponseTransmissionAfterInitialReadTimeout { get; set; } = TimeSpan.FromMinutes(10);
+
         /// <summary>
         ///     Amount of time a connection can stay in the pool
         /// </summary>

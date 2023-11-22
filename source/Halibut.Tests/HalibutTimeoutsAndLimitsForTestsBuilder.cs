@@ -6,6 +6,7 @@ namespace Halibut.Tests
     public class HalibutTimeoutsAndLimitsForTestsBuilder
     {
         public static readonly TimeSpan HalfTheTcpReceiveTimeout = TimeSpan.FromSeconds(22.5);
+        static readonly TimeSpan TcpReceiveTimeout = HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout;
 
         public HalibutTimeoutsAndLimits Build()
         {
@@ -20,9 +21,12 @@ namespace Halibut.Tests
             
                 // Intentionally set higher than the heart beat, since some tests need to determine that the hart beat timeout applies.
                 TcpClientTimeout = new(
-                    sendTimeout: HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout, 
-                    receiveTimeout: HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout),
-            
+                    sendTimeout: TcpReceiveTimeout, 
+                    receiveTimeout: TcpReceiveTimeout),
+
+                TcpClientReceiveResponseTimeout = TcpReceiveTimeout,
+                TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = TcpReceiveTimeout,
+
                 TcpClientHeartbeatTimeout = new(
                     sendTimeout: TimeSpan.FromSeconds(15), 
                     receiveTimeout: TimeSpan.FromSeconds(15)),
