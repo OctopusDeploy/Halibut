@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Diagnostics;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
@@ -34,6 +35,9 @@ namespace Halibut.Tests.Timeouts
                 .WithWritePausing(Logger, writeNumberToPauseOn)
                 .Build();
             var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
+
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromMinutes(20));
+            halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts = new SendReceiveTimeout(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
             
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
@@ -49,6 +53,7 @@ namespace Halibut.Tests.Timeouts
                            .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
                            .Build()))
                        .WithEchoService()
+                       .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout);
@@ -64,7 +69,8 @@ namespace Halibut.Tests.Timeouts
                 }
 
                 sw.Stop();
-                sw.Elapsed.Should().BeCloseTo(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
+                sw.Elapsed.Should()
+                    .BeCloseTo(halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
 
                 await echo.SayHelloAsync("The pump wont be paused here so this should work.");
             }

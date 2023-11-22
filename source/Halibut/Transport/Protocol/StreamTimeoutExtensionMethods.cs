@@ -97,6 +97,8 @@ namespace Halibut.Transport.Protocol
 
         public static void SetReadAndWriteTimeouts(this Stream stream, SendReceiveTimeout timeout)
         {
+            if(timeout == null) return;
+            
             if (!stream.CanTimeout)
             {
                 return;
@@ -104,6 +106,16 @@ namespace Halibut.Transport.Protocol
 
             stream.WriteTimeout = (int)timeout.SendTimeout.TotalMilliseconds;
             stream.ReadTimeout = (int)timeout.ReceiveTimeout.TotalMilliseconds;
+        }
+        
+        public static SendReceiveTimeout GetReadAndWriteTimeouts(this Stream stream)
+        {
+            if (!stream.CanTimeout)
+            {
+                return null;
+            }
+
+            return new SendReceiveTimeout(sendTimeout: TimeSpan.FromMilliseconds(stream.WriteTimeout), receiveTimeout: TimeSpan.FromMilliseconds(stream.ReadTimeout));
         }
 
         public static void SetReadTimeouts(this Stream stream, TimeSpan timeout)

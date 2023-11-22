@@ -127,6 +127,12 @@ namespace Halibut.Transport.Protocol
 
         public async Task<RemoteIdentity> ReadRemoteIdentityAsync(CancellationToken cancellationToken)
         {
+            return await WithTimeout(
+                halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts,
+                async () => await ReadAndParseRemoteIdentityAsync(cancellationToken));
+        }
+        async Task<RemoteIdentity> ReadAndParseRemoteIdentityAsync(CancellationToken cancellationToken)
+        {
             var line = await controlMessageReader.ReadControlMessageAsync(stream, cancellationToken);
             if (string.IsNullOrEmpty(line))
             {
