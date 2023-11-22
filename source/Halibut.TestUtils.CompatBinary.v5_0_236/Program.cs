@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Halibut.TestUtils.SampleProgram.Base;
 
-namespace Halibut.TestUtils.SampleProgram.v5_0_237
+namespace Halibut.TestUtils.SampleProgram.v5_0_236
 {
     public class Program
     {
