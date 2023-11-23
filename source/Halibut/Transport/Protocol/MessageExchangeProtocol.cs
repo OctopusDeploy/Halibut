@@ -241,6 +241,9 @@ namespace Halibut.Transport.Protocol
 
             try
             {
+                // The polling service will send the "NEXT" control message immediately after it has sent the response.
+                // Thus the NEXT control message is likely to have already arrived or will arrive in a very short amount
+                // of time
                 var receiveTimeout = halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout;
                 if (!halibutTimeoutsAndLimits.TcpClientHeartbeatTimeoutShouldActuallyBeUsed)
                 {
