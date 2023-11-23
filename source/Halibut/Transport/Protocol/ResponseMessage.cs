@@ -1,5 +1,6 @@
 using System;
 using Halibut.Diagnostics;
+using Halibut.Exceptions;
 using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
@@ -35,10 +36,12 @@ namespace Halibut.Transport.Protocol
         internal static ServerError ServerErrorFromException(Exception ex)
         {
             string? errorType = null;
-            if (ex is HalibutClientException)
+
+            if (ex is HalibutClientException or RequestCancelledException)
             {
                 errorType = ex.GetType().FullName;
             }
+
             return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), HalibutErrorType = errorType };
         }
     }

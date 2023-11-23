@@ -33,7 +33,7 @@ namespace Halibut.Tests
 
             var client = clientOnly.CreateClientWithoutService<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
-            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken, CancellationToken.None))))
+            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
                 .And.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out.");
         }
 
@@ -55,7 +55,7 @@ namespace Halibut.Tests
 
             var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None))))
+            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken))))
                 .And.Message.Should().Contain("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:06), so the request timed out.");
 
             waitSemaphore.Release();
@@ -73,7 +73,7 @@ namespace Halibut.Tests
 
             var client = clientOnly.CreateClientWithoutService<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
-            await AssertException.Throws<OperationCanceledException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token, CancellationToken.None)));
+            await AssertException.Throws<OperationCanceledException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token)));
         }
 
         [Test]
@@ -92,7 +92,7 @@ namespace Halibut.Tests
 
             var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-            await AssertException.Throws<OperationCanceledException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken.None, cancellationTokenSource.Token)));
+            await AssertException.Throws<OperationCanceledException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token)));
 
             waitSemaphore.Release();
         }
@@ -113,7 +113,7 @@ namespace Halibut.Tests
 
             var client = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
-            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken, CancellationToken.None))))
+            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
                 .And.Message.Should().ContainAny(
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: No connection could be made because the target machine actively refused it",
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Connection refused");
@@ -136,7 +136,7 @@ namespace Halibut.Tests
 
             var client = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
-            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken, CancellationToken.None))))
+            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
                 .And.Message.Should().ContainAny(
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Unable to read data from the transport connection:",
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Unable to write data to the transport connection:");
@@ -158,7 +158,7 @@ namespace Halibut.Tests
             // We need to use a non localhost address to get a timeout
             var client = clientOnly.CreateClient<IEchoService, IAsyncClientEchoServiceWithOptions>(new Uri("https://20.5.79.31:10933/"));
 
-            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken, CancellationToken.None))))
+            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
                 .And.Message.Should().Contain(
                     $"An error occurred when sending a request to 'https://20.5.79.31:10933/', before the request could begin: The client was unable to establish the initial connection within the timeout 00:00:01.");
         }
@@ -183,10 +183,10 @@ namespace Halibut.Tests
             
             (await AssertException.Throws<HalibutClientException>(async () =>
             {
-                var task = client.SayHelloAsync("Hello", new(cancellationTokenSource.Token, CancellationToken.None));
+                var task = client.SayHelloAsync("Hello", new(cancellationTokenSource.Token));
                 cancellationTokenSource.Cancel();
                 await task;
-            })).And.Message.Should().Contain($"An error occurred when sending a request to 'https://20.5.79.31:10933/', after the request began: The operation was canceled.");
+            })).And.Message.Should().Contain($"An error occurred when sending a request to 'https://20.5.79.31:10933/', after the request began: The Request was cancelled while Connecting.");
         }
 
         [Test]
@@ -212,8 +212,8 @@ namespace Halibut.Tests
 
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token, CancellationToken.None))))
-                .And.Message.Should().Contain("An error occurred when sending a request to 'https://20.5.79.31:10933/', after the request began: The operation was canceled.");
+            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token))))
+                .And.Message.Should().Contain("An error occurred when sending a request to 'https://20.5.79.31:10933/', after the request began: The Request was cancelled while Connecting.");
         }
 
         [Test]
@@ -237,15 +237,8 @@ namespace Halibut.Tests
 
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-#if NETFRAMEWORK
-            // net48 does not support cancellation of the request as the DeflateStream ends up using Begin and End methods which don't get passed the cancellation token
-            // This results in a different exception message / a different code path executing. This highlights an inconsistency in the response from 
-            // Halibut due to the way the code is written, so leaving this here as it should really be consistent.
-            await AssertException.Throws<OperationCanceledException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token, CancellationToken.None)));
-#else
-            var exception = (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token, CancellationToken.None)))).And;
-            exception.Message.Should().Be($"An error occurred when sending a request to '{clientAndService.ServiceUri}', after the request began: The ReadAsync operation was cancelled.");
-#endif
+            var exception = (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token)))).And;
+            exception.Message.Should().Be($"An error occurred when sending a request to '{clientAndService.ServiceUri}', after the request began: The Request was cancelled while Connecting.");
         }
         
 // net48 does not support cancellation of the request as the DeflateStream ends up using Begin and End methods which don't get passed the cancellation token
@@ -276,8 +269,8 @@ namespace Halibut.Tests
                 cancellationTokenSource.Cancel();
             });
 
-            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token, cancellationTokenSource.Token))))
-                .And.Message.Should().Contain($"An error occurred when sending a request to '{clientAndService.ServiceUri}', after the request began: The ReadAsync operation was cancelled.");
+            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token))))
+                .And.Message.Should().Contain($"An error occurred when sending a request to '{clientAndService.ServiceUri}', after the request began: The Request was cancelled while Transferring.");
 
             waitSemaphore.Release();
             await cancellationTask;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Halibut.Util
 {
@@ -10,6 +11,18 @@ namespace Halibut.Util
             try
             {
                 tryThisAction();
+            }
+            catch (Exception e)
+            {
+                onFailure(e);
+            }
+        }
+
+        public static async Task CatchingError(Func<Task> tryThisAction, Action<Exception> onFailure)
+        {
+            try
+            {
+                await tryThisAction();
             }
             catch (Exception e)
             {
