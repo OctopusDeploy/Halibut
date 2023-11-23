@@ -192,11 +192,11 @@ namespace Halibut
             var logger = logs.ForEndpoint(endpoint.BaseUri);
 
             var proxy = DispatchProxyAsync.Create<TAsyncClientService, HalibutProxyWithAsync>();
-            (proxy as HalibutProxyWithAsync)!.Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger, CancellationToken.None);
+            (proxy as HalibutProxyWithAsync)!.Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger);
             return proxy;
         }
 
-        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, RequestCancellationTokens requestCancellationTokens)
+        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
@@ -212,10 +212,10 @@ namespace Halibut
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    response = await SendOutgoingHttpsRequestAsync(request, requestCancellationTokens).ConfigureAwait(false);
+                    response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
                     break;
                 case "poll":
-                    response = await SendOutgoingPollingRequestAsync(request, requestCancellationTokens).ConfigureAwait(false);
+                    response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
                     break;
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
@@ -225,7 +225,7 @@ namespace Halibut
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
+        async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, tcpConnectionFactory);
 
@@ -236,15 +236,15 @@ namespace Halibut
                 {
                     response = await protocol.ExchangeAsClientAsync(request, cts).ConfigureAwait(false);
                 }, 
-                requestCancellationTokens).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingPollingRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
+        async Task<ResponseMessage> SendOutgoingPollingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
-            return await queue.QueueAndWaitAsync(request, requestCancellationTokens);
+            return await queue.QueueAndWaitAsync(request, cancellationToken);
         }
 
         async Task<ResponseMessage> HandleIncomingRequestAsync(RequestMessage request)

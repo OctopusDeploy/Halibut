@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Transport.Observability;
 
@@ -207,26 +208,36 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest, CancellationToken cancellationToken)
+        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessageWithCancellationToken nextRequest, CancellationToken cancellationToken)
         {
             try
             {
                 if (nextRequest != null)
                 {
-                    var response = await SendAndReceiveRequest(nextRequest, cancellationToken);
-                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(nextRequest.CancellationToken, cancellationToken);
+                    var linkedCancellationToken = linkedTokenSource.Token;
+
+                    var response = await SendAndReceiveRequest(nextRequest, linkedCancellationToken);
+                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
                 }
                 else
                 {
-                    await stream.SendAsync(nextRequest, cancellationToken);
+                    await stream.SendAsync<RequestMessage>(null, cancellationToken);
                 }
             }
             catch (Exception ex)
             {
                 if (nextRequest != null)
                 {
-                    var response = ResponseMessage.FromException(nextRequest, ex);
-                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    var cancellationException = nextRequest.CancellationToken.IsCancellationRequested ? new TransferringRequestCancelledException(ex) : ex;
+
+                    var response = ResponseMessage.FromException(nextRequest.RequestMessage, cancellationException);
+                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
+
+                    if (nextRequest.CancellationToken.IsCancellationRequested)
+                    {
+                        throw cancellationException;
+                    }
                 }
 
                 return false;
@@ -253,18 +264,18 @@ namespace Halibut.Transport.Protocol
             return true;
         }
         
-        async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendAndReceiveRequest(RequestMessageWithCancellationToken nextRequest, CancellationToken cancellationToken)
         {
-            rcpObserver.StartCall(nextRequest);
+            rcpObserver.StartCall(nextRequest.RequestMessage);
 
             try
             {
-                await stream.SendAsync(nextRequest, cancellationToken);
+                await stream.SendAsync(nextRequest.RequestMessage, cancellationToken);
                 return await stream.ReceiveResponseAsync(cancellationToken);
             }
             finally
             {
-                rcpObserver.StopCall(nextRequest);
+                rcpObserver.StopCall(nextRequest.RequestMessage);
             }
         }
         
