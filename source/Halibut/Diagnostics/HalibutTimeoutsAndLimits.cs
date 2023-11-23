@@ -169,7 +169,8 @@ namespace Halibut.Diagnostics
         {
             return new HalibutTimeoutsAndLimits()
             {
-                TcpClientTimeout = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10)),
+                // In general all writes/read calls should take less than a minute.
+                TcpClientTimeout = new(sendTimeout: TimeSpan.FromMinutes(1), receiveTimeout: TimeSpan.FromMinutes(1)),
                 TcpClientReceiveResponseTimeout = TimeSpan.FromMinutes(5), // ~ 5 minutes to execute a RPC call
                 TcpClientReceiveRequestTimeoutForPolling = new HalibutTimeoutsAndLimits().PollingQueueWaitTimeout + TimeSpan.FromSeconds(30),
                 TcpClientHeartbeatTimeoutShouldActuallyBeUsed = true
