@@ -74,7 +74,15 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendProceedAsync(CancellationToken cancellationToken)
         {
-            await SendControlMessageAsync(Proceed, cancellationToken);
+            var sendTimeout = this.stream.GetReadAndWriteTimeouts();
+            if (halibutTimeoutsAndLimits.TcpClientHeartbeatTimeoutShouldActuallyBeUsed)
+            {
+                sendTimeout = halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout;
+            }
+            
+            await WithTimeout(
+                sendTimeout,
+                async () => await SendControlMessageAsync(Proceed, cancellationToken));
         }
 
         public async Task SendEndAsync(CancellationToken cancellationToken)
