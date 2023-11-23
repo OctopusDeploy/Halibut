@@ -1,5 +1,6 @@
 using System;
 using Halibut.Diagnostics;
+using Halibut.Tests.Support;
 
 namespace Halibut.Tests
 {
@@ -26,6 +27,7 @@ namespace Halibut.Tests
 
                 TcpClientReceiveResponseTimeout = TcpReceiveTimeout,
                 TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = TcpReceiveTimeout,
+                TcpClientReceiveRequestTransmissionTimeout = TcpReceiveTimeout,
 
                 TcpClientHeartbeatTimeout = new(
                     sendTimeout: TimeSpan.FromSeconds(15), 

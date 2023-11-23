@@ -158,9 +158,9 @@ namespace Halibut.Transport.Protocol
         {
             while (acceptClientRequests && !cancellationToken.IsCancellationRequested)
             {
-                // This timeout is probably too high since we know that we either just send identification control messages
-                // or we just sent NEXT and PROCEED control messages.
-                var request = await stream.ReceiveRequestAsync(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, cancellationToken);
+                // We either just send identification control messages or we jus exchanged NEXT and PROCEED control messages indicating
+                // the client is about to send a request.
+                var request = await stream.ReceiveRequestAsync(halibutTimeoutsAndLimits.TcpClientReceiveRequestTransmissionTimeout, cancellationToken);
 
                 if (request == null || !acceptClientRequests)
                 {

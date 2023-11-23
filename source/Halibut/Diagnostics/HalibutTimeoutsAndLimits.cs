@@ -71,6 +71,18 @@ namespace Halibut.Diagnostics
         ///     Amount of time to wait when receiving a response from an RPC call, after data has started being received.
         /// </summary>
         public TimeSpan TcpClientReceiveResponseTransmissionAfterInitialReadTimeout { get; set; } = TimeSpan.FromMinutes(10);
+        
+        
+        /// <summary>
+        ///     Amount of time to wait when receiving a Request of an RPC call.
+        ///
+        ///     For polling services this applies after the TcpClientReceiveRequestTimeoutForPolling has been applied.
+        ///
+        ///     Currently set to 10 minutes as that is what the timeout used to be. A lower timeout closer to
+        ///     the TcpClientHeartbeatTimeout is recommended since this timeout applies when we know we have
+        ///     just recently communicated with the client.  
+        /// </summary>
+        public TimeSpan TcpClientReceiveRequestTransmissionTimeout { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         ///     Amount of time a connection can stay in the pool

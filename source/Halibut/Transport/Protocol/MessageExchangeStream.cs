@@ -191,8 +191,10 @@ namespace Halibut.Transport.Protocol
             await stream.WithReadTimeout(
                 timeoutForReceivingTheFirstByte,
                 async () => await stream.WaitForDataToBeAvailableAsync(cancellationToken));
-            
-            return await ReceiveAsync<RequestMessage>(cancellationToken);
+
+            return await stream.WithReadTimeout(
+                halibutTimeoutsAndLimits.TcpClientReceiveRequestTransmissionTimeout,
+                async () => await ReceiveAsync<RequestMessage>(cancellationToken));
         }
 
         public async Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
