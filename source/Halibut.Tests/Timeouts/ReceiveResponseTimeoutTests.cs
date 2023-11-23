@@ -50,7 +50,7 @@ namespace Halibut.Tests.Timeouts
             // Arrange
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromSeconds(10));
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
 
             var enoughDataToCauseMultipleReadOperations = Enumerable.Range(0, 1024 * 1024)
                 .Select(_ => Guid.NewGuid().ToString())
@@ -95,17 +95,18 @@ namespace Halibut.Tests.Timeouts
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromSeconds(10));
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
+
+            var largeStringForDataStream = Some.RandomAsciiStringOfLength(1024 * 1024);
 
             // Arrange
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                             .WithPortForwarding(out var portForwarderRef)
                              .WithReturnSomeDataStreamService(() => DataStreamUtil.From(
-                                 firstSend: "hello",
-                                 andThenRun: portForwarderRef.Value!.PauseExistingConnections,
-                                 thenSend: "All done"))
+                                 firstSend: largeStringForDataStream,
+                                 andThenRun: () => Thread.Sleep(3000),
+                                 thenSend: largeStringForDataStream))
                              .Build(CancellationToken))
             {
                 var returnDataStreamService = clientAndService.CreateAsyncClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>();
