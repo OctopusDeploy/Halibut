@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
@@ -23,28 +24,28 @@ namespace Halibut.Tests.Timeouts
         {
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
-                           .WithDataObserver(() =>
-                           {
-                               var perTcpPumpStopwatch = Stopwatch.StartNew();
-                               return new BiDirectionalDataTransferObserver(
-                                   new DataTransferObserverBuilder()
-                                       .WithWritingDataObserver((_, _) =>
-                                       {
-                                           timeSpansBetweenDataFlowing.Add(perTcpPumpStopwatch.Elapsed);
-                                           perTcpPumpStopwatch.Reset();
-                                       })
-                                       .Build(),
-                                   new DataTransferObserverBuilder().Build());
-                           })
-                           .Build())
-                       .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
-                           .WithLog(logFactory.ForEndpoint(uri))
-                           .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                           .Build()))
-                       .WithEchoService()
-                       .Build(CancellationToken))
+                             .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
+                                 .WithDataObserver(() =>
+                                 {
+                                     var perTcpPumpStopwatch = Stopwatch.StartNew();
+                                     return new BiDirectionalDataTransferObserver(
+                                         new DataTransferObserverBuilder()
+                                             .WithWritingDataObserver((_, _) =>
+                                             {
+                                                 timeSpansBetweenDataFlowing.Add(perTcpPumpStopwatch.Elapsed);
+                                                 perTcpPumpStopwatch.Reset();
+                                             })
+                                             .Build(),
+                                         new DataTransferObserverBuilder().Build());
+                                 })
+                                 .Build())
+                             .As<LatestClientAndLatestServiceBuilder>()
+                             .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
+                                 .WithLog(logFactory.ForEndpoint(uri))
+                                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
+                                 .Build()))
+                             .WithEchoService()
+                             .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Make a request to make sure the connection is running, and ready. Lets not measure SSL setup cost.");
@@ -58,6 +59,40 @@ namespace Halibut.Tests.Timeouts
                 {
                     timeSpan.Should().BeLessThan(TimeSpan.FromSeconds(6), "The polling queue should be timing out causing messages to flow across the wire, this should be happen close to every 1 second.");
                 }
+            }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        public async Task WhenThePollingQueueHasNoMessagesAndDoesNotReturnNullResponsesPeriodically_ThePollingServiceStartsANewTcpConnection(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var waitForNullMessagesFromQueueTimeout = TimeSpan.FromSeconds(10);
+            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
+                                 .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
+                                 .Build())
+                             .As<LatestClientAndLatestServiceBuilder>()
+                             .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
+                                 .WithLog(logFactory.ForEndpoint(uri))
+                                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(100)) // Increase the time between sending null requests back to trigger the timeout.
+                                 .Build()))
+                             .WithEchoService()
+                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder()
+                                 .Build()
+                                 .WithAllTcpTimeoutsTo(TimeSpan.FromHours(1))
+                                 .Apply(h => { h.TcpClientReceiveRequestTimeoutForPolling = waitForNullMessagesFromQueueTimeout; })
+                             )
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("Check everything is working.");
+
+                tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1);
+
+                Wait.UntilActionSucceeds(() => tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().BeGreaterThan(1),
+                    waitForNullMessagesFromQueueTimeout + waitForNullMessagesFromQueueTimeout,
+                    Logger, CancellationToken);
             }
         }
     }

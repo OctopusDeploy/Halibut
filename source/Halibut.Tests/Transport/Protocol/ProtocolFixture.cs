@@ -24,7 +24,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
-            protocol = new MessageExchangeProtocol(stream, Substitute.For<IRpcObserver>(), Substitute.For<ILog>());
+            protocol = new MessageExchangeProtocol(stream, Substitute.For<IRpcObserver>(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), Substitute.For<ILog>());
         }
 
         // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation
@@ -363,7 +363,7 @@ namespace Halibut.Tests.Transport.Protocol
                 output.AppendLine("--> " + typeof(T).Name);
             }
 
-            public Task<RequestMessage> ReceiveRequestAsync(CancellationToken cancellationToken)
+            public Task<RequestMessage> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
             {
                 return ReceiveAsync<RequestMessage>();
             }

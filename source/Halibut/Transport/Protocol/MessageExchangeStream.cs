@@ -186,8 +186,12 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public async Task<RequestMessage> ReceiveRequestAsync(CancellationToken cancellationToken)
+        public async Task<RequestMessage> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
         {
+            await stream.WithReadTimeout(
+                timeoutForReceivingTheFirstByte,
+                async () => await stream.WaitForDataToBeAvailableAsync(cancellationToken));
+            
             return await ReceiveAsync<RequestMessage>(cancellationToken);
         }
 
