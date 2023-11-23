@@ -31,7 +31,7 @@ namespace Halibut.Tests
                     sendTimeout: TimeSpan.FromSeconds(15), 
                     receiveTimeout: TimeSpan.FromSeconds(15)),
                 
-                TcpClientAuthenticationAndIdentificationTimeouts = new(sendTimeout: TimeSpan.FromSeconds(15), receiveTimeout: TimeSpan.FromSeconds(15)),
+                TcpClientAuthenticationAndIdentificationTimeouts = new(sendTimeout: TimeSpan.FromSeconds(20), receiveTimeout: TimeSpan.FromSeconds(20)),
                 TcpClientConnectTimeout = TimeSpan.FromSeconds(20),
                 PollingQueueWaitTimeout = TimeSpan.FromSeconds(20),
                 TcpClientReceiveRequestTimeoutForPolling = TimeSpan.FromSeconds(20) + TimeSpan.FromSeconds(10)

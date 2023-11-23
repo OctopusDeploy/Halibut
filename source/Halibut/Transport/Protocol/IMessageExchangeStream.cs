@@ -12,7 +12,7 @@ namespace Halibut.Transport.Protocol
         Task SendProceedAsync(CancellationToken cancellationToken);
 
         Task SendEndAsync(CancellationToken cancellationToken);
-
+        
         /// <summary>
         /// When the service is listening, the listening service will block on this call waiting for
         /// the client to send the control message "NEXT". For listening this is the point in the protocol
@@ -23,7 +23,7 @@ namespace Halibut.Transport.Protocol
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken);
+        Task<bool> ExpectNextOrEndAsync(TimeSpan readTimeout, CancellationToken cancellationToken);
 
         Task ExpectProceedAsync(CancellationToken cancellationToken);
 

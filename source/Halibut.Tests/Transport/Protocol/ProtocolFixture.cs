@@ -313,7 +313,7 @@ namespace Halibut.Tests.Transport.Protocol
                 output.AppendLine("--> END");
             }
 
-            public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
+            public async Task<bool> ExpectNextOrEndAsync(TimeSpan readTimeout, CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 

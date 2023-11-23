@@ -178,7 +178,10 @@ namespace Halibut.Transport.Protocol
 
                 try
                 {
-                    if (!acceptClientRequests || cancellationToken.IsCancellationRequested || !await stream.ExpectNextOrEndAsync(cancellationToken))
+                    // This is the location a listening service will wait at when waiting for more work. If the connection (on the client) is
+                    // in the pool then the listening service is waiting here. 
+                    var timeForListeningServiceToWaitForTheNextRequest = halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout;
+                    if (!acceptClientRequests || cancellationToken.IsCancellationRequested || !await stream.ExpectNextOrEndAsync(timeForListeningServiceToWaitForTheNextRequest, cancellationToken))
                     {
                         return;
                     }
@@ -238,7 +241,16 @@ namespace Halibut.Transport.Protocol
 
             try
             {
-                if (!await stream.ExpectNextOrEndAsync(cancellationToken))
+                // The polling service will send the "NEXT" control message immediately after it has sent the response.
+                // Thus the NEXT control message is likely to have already arrived or will arrive in a very short amount
+                // of time
+                var receiveTimeout = halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout;
+                if (!halibutTimeoutsAndLimits.TcpClientHeartbeatTimeoutShouldActuallyBeUsed)
+                {
+                    receiveTimeout = halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout;
+                }
+                
+                if (!await stream.ExpectNextOrEndAsync(receiveTimeout, cancellationToken))
                 {
                     return false;
                 }
