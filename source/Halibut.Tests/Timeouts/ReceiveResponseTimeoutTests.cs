@@ -50,7 +50,7 @@ namespace Halibut.Tests.Timeouts
             // Arrange
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromSeconds(10));
 
             var enoughDataToCauseMultipleReadOperations = Enumerable.Range(0, 1024 * 1024)
                 .Select(_ => Guid.NewGuid().ToString())
@@ -64,6 +64,7 @@ namespace Halibut.Tests.Timeouts
                     if (listService.WasCalled)
                     {
                         //Sleep for < TcpClientReceiveResponseTimeout to pass initial data receipt, but > TcpClientReceiveResponseTransmissionAfterInitialReadTimeout for timeout.
+                        Thread.Sleep(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout);
                         Thread.Sleep(1000);
                     }
                 })
@@ -94,7 +95,7 @@ namespace Halibut.Tests.Timeouts
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromSeconds(10));
 
             // Arrange
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
