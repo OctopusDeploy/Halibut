@@ -56,13 +56,10 @@ namespace Halibut.Transport.Protocol
 
         async Task SendIdentityMessageAsync(string identityLine, CancellationToken cancellationToken)
         {
-            await stream.WithTimeout(halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts, async () =>
-            {
-                // The identity line and the additional empty line must be sent together as a single write operation when using a stream to mimic the 
-                // buffering behaviour of the StreamWriter. When sent as 2 writes to the Stream, old Halibut Services e.g. 4.4.8 will often fail when reading the identity line.
-                await stream.WriteControlLineAsync(identityLine + StreamExtensionMethods.ControlMessageNewLine, cancellationToken);
-                await stream.FlushAsync(cancellationToken);
-            });
+            // The identity line and the additional empty line must be sent together as a single write operation when using a stream to mimic the 
+            // buffering behaviour of the StreamWriter. When sent as 2 writes to the Stream, old Halibut Services e.g. 4.4.8 will often fail when reading the identity line.
+            await stream.WriteControlLineAsync(identityLine + StreamExtensionMethods.ControlMessageNewLine, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
         }
 
         public async Task SendNextAsync(CancellationToken cancellationToken)
@@ -138,12 +135,6 @@ namespace Halibut.Transport.Protocol
 
         public async Task<RemoteIdentity> ReadRemoteIdentityAsync(CancellationToken cancellationToken)
         {
-            return await WithTimeout(
-                halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts,
-                async () => await ReadAndParseRemoteIdentityAsync(cancellationToken));
-        }
-        async Task<RemoteIdentity> ReadAndParseRemoteIdentityAsync(CancellationToken cancellationToken)
-        {
             var line = await controlMessageReader.ReadControlMessageAsync(stream, cancellationToken);
             if (string.IsNullOrEmpty(line))
             {
@@ -210,9 +201,7 @@ namespace Halibut.Transport.Protocol
                 halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout,
                 async () => await stream.WaitForDataToBeAvailableAsync(cancellationToken));
 
-            return await stream.WithReadTimeout(
-                halibutTimeoutsAndLimits.TcpClientReceiveResponseTransmissionAfterInitialReadTimeout,
-                async () => await ReceiveAsync<ResponseMessage>(cancellationToken));
+            return await ReceiveAsync<ResponseMessage>(cancellationToken);
         }
 
         async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
