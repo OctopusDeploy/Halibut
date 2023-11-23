@@ -45,7 +45,14 @@ namespace Halibut.Diagnostics
         public int RewindableBufferStreamSize { get; set; } = 8192;
 
         /// <summary>
-        ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully
+        /// Amount of time to wait for a TCP read/write to complete successfully.
+        ///
+        /// This Timeout is used when no other more specific timeout applies.
+        /// 
+        /// This applies to:
+        /// - Initial authentication and identification
+        /// - Sending and receiving of Request/Response messages, except for the first byte in some instances.
+        /// - Sending/receiving data streams. 
         /// </summary>
         public SendReceiveTimeout TcpClientTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
 
