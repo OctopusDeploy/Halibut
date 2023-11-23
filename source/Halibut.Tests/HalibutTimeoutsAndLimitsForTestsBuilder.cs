@@ -23,18 +23,18 @@ namespace Halibut.Tests
                 TcpClientTimeout = new(
                     sendTimeout: TcpReceiveTimeout, 
                     receiveTimeout: TcpReceiveTimeout),
+                TcpListeningNextRequestIdleTimeout = TcpReceiveTimeout,
 
                 TcpClientReceiveResponseTimeout = TcpReceiveTimeout,
-                TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = TcpReceiveTimeout,
 
                 TcpClientHeartbeatTimeout = new(
-                    sendTimeout: TimeSpan.FromSeconds(15), 
+                    sendTimeout: TimeSpan.FromSeconds(15),
                     receiveTimeout: TimeSpan.FromSeconds(15)),
                 
-                TcpClientAuthenticationAndIdentificationTimeouts = new(sendTimeout: TimeSpan.FromSeconds(20), receiveTimeout: TimeSpan.FromSeconds(20)),
                 TcpClientConnectTimeout = TimeSpan.FromSeconds(20),
                 PollingQueueWaitTimeout = TimeSpan.FromSeconds(20),
-                TcpClientReceiveRequestTimeoutForPolling = TimeSpan.FromSeconds(20) + TimeSpan.FromSeconds(10)
+                TcpClientReceiveRequestTimeoutForPolling = TimeSpan.FromSeconds(20) + TimeSpan.FromSeconds(10),
+                TcpClientHeartbeatTimeoutShouldActuallyBeUsed = true
             };
         }
     }

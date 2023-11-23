@@ -50,7 +50,7 @@ namespace Halibut.Tests.Timeouts
             // Arrange
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = TimeSpan.FromMilliseconds(100);
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
 
             var enoughDataToCauseMultipleReadOperations = Enumerable.Range(0, 1024 * 1024)
                 .Select(_ => Guid.NewGuid().ToString())
@@ -64,6 +64,7 @@ namespace Halibut.Tests.Timeouts
                     if (listService.WasCalled)
                     {
                         //Sleep for < TcpClientReceiveResponseTimeout to pass initial data receipt, but > TcpClientReceiveResponseTransmissionAfterInitialReadTimeout for timeout.
+                        Thread.Sleep(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout);
                         Thread.Sleep(1000);
                     }
                 })
@@ -94,24 +95,26 @@ namespace Halibut.Tests.Timeouts
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientReceiveResponseTransmissionAfterInitialReadTimeout = TimeSpan.FromSeconds(1);
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
+
+            var largeStringForDataStream = Some.RandomAsciiStringOfLength(1024 * 1024);
 
             // Arrange
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                             .WithPortForwarding(out var portForwarderRef)
                              .WithReturnSomeDataStreamService(() => DataStreamUtil.From(
-                                 firstSend: "hello",
-                                 andThenRun: portForwarderRef.Value!.PauseExistingConnections,
-                                 thenSend: "All done"))
+                                 firstSend: largeStringForDataStream,
+                                 andThenRun: () => Thread.Sleep(3000),
+                                 thenSend: largeStringForDataStream))
                              .Build(CancellationToken))
             {
                 var returnDataStreamService = clientAndService.CreateAsyncClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>();
 
                 // Act
-                (await AssertionExtensions.Should(() => returnDataStreamService.SomeDataStreamAsync()).ThrowAsync<HalibutClientException>())
-                    .And.Message.Should().ContainAny(
+                var e = (await AssertionExtensions.Should(() => returnDataStreamService.SomeDataStreamAsync()).ThrowAsync<HalibutClientException>()).And;
+                Logger.Information(e, "The received expected exception, we were expecting one");
+                e.Message.Should().ContainAny(
                         "Connection timed out.",
                         "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
             }

@@ -38,29 +38,26 @@ namespace Halibut.Transport
             
             var networkTimeoutStream = streamFactory.CreateStream(client);
 
-            return await networkTimeoutStream.WithTimeout(this.halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts, async () =>
-            {
-                client.EnableTcpKeepAlive(halibutTimeoutsAndLimits);
+            client.EnableTcpKeepAlive(halibutTimeoutsAndLimits);
 
-                var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
+            var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
 
-                log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
+            log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
 
 #if NETFRAMEWORK
-            // TODO: ASYNC ME UP!
-            // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
-            await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+        // TODO: ASYNC ME UP!
+        // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
+        await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
 #else
-                await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), cancellationToken);
+            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), cancellationToken);
 #endif
 
-                await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
-                await ssl.FlushAsync(cancellationToken);
+            await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
+            await ssl.FlushAsync(cancellationToken);
 
-                log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
 
-                return new SecureConnection(client, ssl, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
-            });
+            return new SecureConnection(client, ssl, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
         }
         
         internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, ILog log, CancellationToken cancellationToken)

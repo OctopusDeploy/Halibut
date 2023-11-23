@@ -38,7 +38,7 @@ namespace Halibut.Tests.Timeouts
             var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
 
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromMinutes(20));
-            halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts = new SendReceiveTimeout(TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(6));
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
             
             TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
             
@@ -86,7 +86,7 @@ namespace Halibut.Tests.Timeouts
 
                 sw.Stop();
                 sw.Elapsed.Should()
-                    .BeCloseTo(halibutTimeoutsAndLimits.TcpClientAuthenticationAndIdentificationTimeouts.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
+                    .BeCloseTo(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
 
                 await echo.SayHelloAsync("The pump wont be paused here so this should work.");
             }
