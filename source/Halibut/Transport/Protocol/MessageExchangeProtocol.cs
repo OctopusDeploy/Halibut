@@ -217,7 +217,7 @@ namespace Halibut.Transport.Protocol
                     using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(nextRequest.CancellationToken, cancellationToken);
                     var linkedCancellationToken = linkedTokenSource.Token;
 
-                    var response = await SendAndReceiveRequest(nextRequest, linkedCancellationToken);
+                    var response = await SendAndReceiveRequest(nextRequest.RequestMessage, linkedCancellationToken);
                     await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
                 }
                 else
@@ -264,18 +264,18 @@ namespace Halibut.Transport.Protocol
             return true;
         }
         
-        async Task<ResponseMessage> SendAndReceiveRequest(RequestMessageWithCancellationToken nextRequest, CancellationToken cancellationToken)
+        async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
         {
-            rcpObserver.StartCall(nextRequest.RequestMessage);
+            rcpObserver.StartCall(nextRequest);
 
             try
             {
-                await stream.SendAsync(nextRequest.RequestMessage, cancellationToken);
+                await stream.SendAsync(nextRequest, cancellationToken);
                 return await stream.ReceiveResponseAsync(cancellationToken);
             }
             finally
             {
-                rcpObserver.StopCall(nextRequest.RequestMessage);
+                rcpObserver.StopCall(nextRequest);
             }
         }
         

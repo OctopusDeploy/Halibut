@@ -37,8 +37,7 @@ namespace Halibut.Tests
                 {
                     var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-                    (await AssertAsync.Throws<Exception>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions)))
-                        .And.Should().Match(x => x is ConnectingRequestCancelledException);
+                    await AssertAsync.Throws<ConnectingRequestCancelledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
             }
         }
@@ -78,9 +77,8 @@ namespace Halibut.Tests
                     shouldCancelWhenRequestDequeued = true;
                     var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
                     var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>();
-                    
-                    (await AssertAsync.Throws<Exception>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions)))
-                        .And.Should().Match(x => x is TransferringRequestCancelledException);
+
+                    await AssertAsync.Throws<TransferringRequestCancelledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
 
                     // Ensure we can send another message to the Service which will validate the Client had the request cancelled to the socket
                     shouldCancelWhenRequestDequeued = false;
