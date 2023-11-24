@@ -70,7 +70,7 @@ namespace Halibut.Tests
                            })
                            .WithEchoService()
                            .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => 
-                               new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourceToCancel, ShouldCancel, OnResponseApplied)))
+                               new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourceToCancel, ShouldCancelOnDequeue, OnResponseApplied)))
                            .Build(CancellationToken))
                 {
 
@@ -101,7 +101,7 @@ namespace Halibut.Tests
                 responseMessages.ElementAt(1).Error.Should().BeNull();
                 responseMessages.ElementAt(1).Id.Should().Contain("IEchoService::SayHelloAsync");
 
-                bool ShouldCancel()
+                bool ShouldCancelOnDequeue()
                 {
                     return shouldCancelWhenRequestDequeued;
                 }
@@ -186,21 +186,21 @@ namespace Halibut.Tests
         class CancelWhenRequestDequeuedPendingRequestQueueFactory : IPendingRequestQueueFactory
         {
             readonly CancellationTokenSource cancellationTokenSource;
-            readonly Func<bool> shouldCancel;
+            readonly Func<bool> shouldCancelOnDequeue;
             readonly Action<ResponseMessage> onResponseApplied;
             readonly IPendingRequestQueueFactory inner;
 
-            public CancelWhenRequestDequeuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource, Func<bool> shouldCancel, Action<ResponseMessage> onResponseApplied)
+            public CancelWhenRequestDequeuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource, Func<bool> shouldCancelOnDequeue, Action<ResponseMessage> onResponseApplied)
             {
                 this.cancellationTokenSource = cancellationTokenSource;
-                this.shouldCancel = shouldCancel;
+                this.shouldCancelOnDequeue = shouldCancelOnDequeue;
                 this.inner = inner;
                 this.onResponseApplied = onResponseApplied;
             }
 
             public IPendingRequestQueue CreateQueue(Uri endpoint)
             {
-                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSource, shouldCancel, onResponseApplied);
+                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSource, shouldCancelOnDequeue, onResponseApplied);
             }
 
             class Decorator : IPendingRequestQueue
