@@ -93,7 +93,7 @@ namespace Halibut.Tests.Transport.Observability
                 var echo = clientAndBuilder.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
-                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
+                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 
@@ -126,7 +126,7 @@ namespace Halibut.Tests.Transport.Observability
                 var echo = clientAndBuilder.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
-                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
+                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 

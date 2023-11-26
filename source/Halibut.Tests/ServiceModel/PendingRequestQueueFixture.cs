@@ -187,7 +187,7 @@ namespace Halibut.Tests.ServiceModel
             foreach (var expectedRequest in requestsInOrder)
             {
                 var request = await sut.DequeueAsync(CancellationToken);
-                request.Should().Be(expectedRequest);
+                request.RequestMessage.Should().Be(expectedRequest);
             }
 
             await ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
@@ -217,7 +217,7 @@ namespace Halibut.Tests.ServiceModel
             for (int i = 0; i < requestsInOrder.Count; i++)
             {
                 var request = await sut.DequeueAsync(CancellationToken);
-                requests.Add(request);
+                requests.Add(request.RequestMessage);
             }
             requests.Should().BeEquivalentTo(requestsInOrder);
 
@@ -285,7 +285,7 @@ namespace Halibut.Tests.ServiceModel
             
             var index = 0;
             var cancelled = 0;
-            var dequeueTasks = new ConcurrentBag<Task<RequestMessage>>();
+            var dequeueTasks = new ConcurrentBag<Task<RequestMessageWithCancellationToken>>();
 
             var cancelSomeTask = Task.Run(() =>
             {
@@ -356,7 +356,7 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
-        public async Task QueueAndWait_CancellingAPendingRequestAfterItIsDequeued_ShouldWaitTillRequestRespondsAndClearRequest()
+        public async Task QueueAndWait_CancellingAPendingRequestAfterItIsDequeued_ShouldThrowExceptionAndClearRequest()
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
@@ -365,8 +365,8 @@ namespace Halibut.Tests.ServiceModel
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
+
             var request = new RequestMessageBuilder(endpoint).Build();
-            var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -378,45 +378,14 @@ namespace Halibut.Tests.ServiceModel
             // Cancel, and give the queue time to start waiting for a response
             cancellationTokenSource.Cancel();
             await Task.Delay(1000, CancellationToken);
-
-            await sut.ApplyResponse(expectedResponse, request.Destination);
-
-            var response = await queueAndWaitTask;
-
+            
+            await AssertionExtensions.Should(() => queueAndWaitTask).ThrowAsync<OperationCanceledException>();
+            
             // Assert
-            dequeued.Should().NotBeNull().And.Be(request);
-            response.Should().Be(expectedResponse);
-
+            dequeued.RequestMessage.Should().NotBeNull().And.Be(request);
+            
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
-        }
-
-        [Test]
-        public async Task QueueAndWait_CancellingAPendingRequestAfterItIsDequeued_AndPollingRequestMaximumMessageProcessingTimeoutIsReached_WillStopWaiting()
-        {
-            // Arrange
-            const string endpoint = "poll://endpoint001";
-
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
-            var request = new RequestMessageBuilder(endpoint)
-                .WithServiceEndpoint(seb => seb.WithPollingRequestMaximumMessageProcessingTimeout(TimeSpan.FromMilliseconds(1000)))
-                .Build();
-
-            var cancellationTokenSource = new CancellationTokenSource();
-
-            // Act
-            var stopwatch = Stopwatch.StartNew();
-            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationTokenSource.Token);
-            
-            await sut.DequeueAsync(CancellationToken);
-            cancellationTokenSource.Cancel();
-            var response = await queueAndWaitTask;
-
-            // Assert
-            // Although we sleep for 1 second, sometimes it can be just under. So be generous with the buffer.
-            stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
-            response.Id.Should().Be(request.Id);
-            response.Error.Message.Should().Be("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:01), so the request timed out.");
         }
         
         [Test]
@@ -494,7 +463,7 @@ namespace Halibut.Tests.ServiceModel
             // Although we sleep for 1 second, sometimes it can be just under. So be generous with the buffer.
             stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
 
-            dequeuedRequest.Should().Be(request);
+            dequeuedRequest.RequestMessage.Should().Be(request);
 
             // Apply a response so we can prove this counts as taking a message.
             await sut.ApplyResponse(expectedResponse, request.Destination);
@@ -528,7 +497,7 @@ namespace Halibut.Tests.ServiceModel
             await queueAndWaitTask;
 
             var singleDequeuedRequest = dequeueTasks.Should().ContainSingle(t => t.Result != null).Subject.Result;
-            singleDequeuedRequest.Should().Be(request);
+            singleDequeuedRequest.RequestMessage.Should().Be(request);
         }
 
         [Test]
@@ -569,11 +538,11 @@ namespace Halibut.Tests.ServiceModel
         async Task<Task<ResponseMessage>> StartQueueAndWaitAndWaitForRequestToBeQueued(
             IPendingRequestQueue pendingRequestQueue,
             RequestMessage request,
-            CancellationToken queueAndWaitCancellationToken)
+            CancellationToken requestCancellationToken)
         {
             var count = pendingRequestQueue.Count;
 
-            var task = StartQueueAndWait(pendingRequestQueue, request, queueAndWaitCancellationToken);
+            var task = StartQueueAndWait(pendingRequestQueue, request, requestCancellationToken);
 
             await WaitForQueueCountToBecome(pendingRequestQueue, count + 1);
 
@@ -588,10 +557,13 @@ namespace Halibut.Tests.ServiceModel
             }
         }
 
-        Task<ResponseMessage> StartQueueAndWait(IPendingRequestQueue pendingRequestQueue, RequestMessage request, CancellationToken queueAndWaitCancellationToken)
+        Task<ResponseMessage> StartQueueAndWait(
+            IPendingRequestQueue pendingRequestQueue, 
+            RequestMessage request, 
+            CancellationToken requestCancellationToken)
         {
             var task = Task.Run(
-                async () => await pendingRequestQueue.QueueAndWaitAsync(request, new RequestCancellationTokens(queueAndWaitCancellationToken, CancellationToken.None)),
+                async () => await pendingRequestQueue.QueueAndWaitAsync(request, requestCancellationToken),
                 CancellationToken);
             return task;
         }
@@ -602,10 +574,9 @@ namespace Halibut.Tests.ServiceModel
             CancellationToken cancellationToken)
         {
             //For most tests, this is not a good method to use. It is a fix for some specific tests to cope with a race condition when Team City runs out of resources (and causes tests to become flaky)
-
             while (true)
             {
-                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
+                var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationToken);
                 sut.Count.Should().Be(1, "Item should be queued");
 
                 var dequeued = await sut.DequeueAsync(cancellationToken);
@@ -617,7 +588,7 @@ namespace Halibut.Tests.ServiceModel
                 // So if dequeued is null, then try again.
                 if (dequeued is not null)
                 {
-                    return (queueAndWaitTask, dequeued);
+                    return (queueAndWaitTask, dequeued.RequestMessage);
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
