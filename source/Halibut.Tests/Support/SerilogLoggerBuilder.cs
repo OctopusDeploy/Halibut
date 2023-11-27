@@ -66,13 +66,12 @@ namespace Halibut.Tests.Support
             if (traceFileLogger != null)
             {
                 TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
-                traceFileLogger.SetTestHash(testHash);
             }
 
             return logger;
         }
 
-        static string CurrentTestHash()
+        public static string CurrentTestHash()
         {
             using (SHA256 mySHA256 = SHA256.Create())
             {
