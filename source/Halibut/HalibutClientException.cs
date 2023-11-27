@@ -1,9 +1,12 @@
+#nullable enable
 using System;
 
 namespace Halibut
 {
     public class HalibutClientException : Exception
     {
+        public Type? InnerExceptionType { get; set; }
+
         public HalibutClientException(string message)
             : base(message)
         {
@@ -12,6 +15,7 @@ namespace Halibut
         public HalibutClientException(string message, Exception inner)
             : base(message, inner)
         {
+            this.InnerExceptionType = inner?.GetType();
         }
 
         public HalibutClientException(string message, string serverException)

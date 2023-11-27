@@ -12,6 +12,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -41,7 +42,7 @@ namespace Halibut.Tests
                 tokenSourceToCancel.CancelAfter(TimeSpan.FromMilliseconds(100));
 
                 (await AssertAsync.Throws<Exception>(() => echo.IncrementAsync(halibutRequestOption)))
-                    .And.Should().Match(x => x is ConnectingRequestCancelledException || (x is HalibutClientException && x.As<HalibutClientException>().Message.Contains("The Request was cancelled while Connecting")));
+                    .And.Should().Match(x => x is ConnectingRequestCancelledException || (x is HalibutClientException && x.As<HalibutClientException>().InnerExceptionTypeIs<ConnectingRequestCancelledException>()));
 
                 clientAndService.PortForwarder.ReturnToNormalMode();
                 
@@ -96,7 +97,7 @@ namespace Halibut.Tests
                 await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);
 
                 (await AssertionExtensions.Should(async () => await inFlightRequest).ThrowAsync<Exception>())
-                    .And.Should().Match(x => x is TransferringRequestCancelledException || (x is HalibutClientException && x.As<HalibutClientException>().Message.Contains("The Request was cancelled while Transferring")));
+                    .And.Should().Match(x => x is TransferringRequestCancelledException || (x is HalibutClientException && x.As<HalibutClientException>().InnerExceptionTypeIs<TransferringRequestCancelledException>()));
             }
         }
 
