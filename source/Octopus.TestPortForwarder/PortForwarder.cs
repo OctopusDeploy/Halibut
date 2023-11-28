@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
 using System.Diagnostics.CodeAnalysis;
-using Serilog.Core;
 
 namespace Octopus.TestPortForwarder
 {
@@ -222,7 +221,6 @@ namespace Octopus.TestPortForwarder
 
         public void PauseExistingConnections()
         {
-            logger.Information("Pausing existing connections");
             lock (pumps)
             {
                 foreach (var pump in pumps)

@@ -59,6 +59,13 @@ namespace Halibut.Tests.Support
         {
             return builder.WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero));
         }
+
+        public static LatestClientAndLatestServiceBuilder WhenTestingAsyncClient(this LatestClientAndLatestServiceBuilder builder, ClientAndServiceTestCase clientAndServiceTestCase, Action<LatestClientAndLatestServiceBuilder> action)
+        {
+
+            action(builder);
+            return builder;
+        }
         
         public static LatestClientAndLatestServiceBuilder WithConnectionObserverOnTcpServer(this LatestClientAndLatestServiceBuilder builder, IConnectionsObserver connectionsObserver)
         {
