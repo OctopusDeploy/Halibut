@@ -77,9 +77,9 @@ namespace Halibut.TestUtils.Contracts.Tentacle.Services
 
         class RunningScript
         {
-            public StartScriptCommandV2 StartScriptCommand { get; set; }
-            public string FullScriptOutput { get; set; }
-            public ScriptTicket ScriptTicket { get; set; }
+            public StartScriptCommandV2? StartScriptCommand { get; set; }
+            public string? FullScriptOutput { get; set; }
+            public ScriptTicket? ScriptTicket { get; set; }
             public ProcessState ProcessState { get; set; }
             public int ExitCode { get; set; }
             public int RemainingGetStatusCallsBeforeComplete { get; set; }
@@ -95,7 +95,7 @@ namespace Halibut.TestUtils.Contracts.Tentacle.Services
                     ProcessState = ProcessState.Complete;
                 }
 
-                var logLines = FullScriptOutput.Split('\n');
+                var logLines = FullScriptOutput!.Split('\n');
                 var take = ProcessState == ProcessState.Complete ? int.MaxValue : new Random().Next(1, 20);
                 var logs = logLines.Skip(lastLogSequence).Take(take).Select(x => new ProcessOutput(ProcessOutputSource.StdOut, x.Trim('\r', '\n'))).ToList();
 
@@ -104,7 +104,7 @@ namespace Halibut.TestUtils.Contracts.Tentacle.Services
 
             public List<ProcessOutput> GetProcessOutput(int index)
             {
-                var logLines = FullScriptOutput.Split('\n');
+                var logLines = FullScriptOutput!.Split('\n');
 
                 return new List<ProcessOutput>{ new (ProcessOutputSource.StdOut, logLines.ElementAt(index).Trim('\r', '\n')) };
             }

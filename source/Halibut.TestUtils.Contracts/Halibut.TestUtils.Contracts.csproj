@@ -3,6 +3,7 @@
     <PropertyGroup>
         <LangVersion>9.0</LangVersion>
         <RootNamespace>Halibut.TestUtils.Contracts</RootNamespace>
+	    <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
