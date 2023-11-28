@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
-using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Transport.Observability;
 
@@ -215,36 +214,26 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessageWithCancellationToken nextRequest, CancellationToken cancellationToken)
+        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest, CancellationToken cancellationToken)
         {
             try
             {
                 if (nextRequest != null)
                 {
-                    using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(nextRequest.CancellationToken, cancellationToken);
-                    var linkedCancellationToken = linkedTokenSource.Token;
-
-                    var response = await SendAndReceiveRequest(nextRequest.RequestMessage, linkedCancellationToken);
-                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
+                    var response = await SendAndReceiveRequest(nextRequest, cancellationToken);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
                 else
                 {
-                    await stream.SendAsync<RequestMessage>(null, cancellationToken);
+                    await stream.SendAsync(nextRequest, cancellationToken);
                 }
             }
             catch (Exception ex)
             {
                 if (nextRequest != null)
                 {
-                    var cancellationException = nextRequest.CancellationToken.IsCancellationRequested ? new TransferringRequestCancelledException(ex) : ex;
-
-                    var response = ResponseMessage.FromException(nextRequest.RequestMessage, cancellationException);
-                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
-
-                    if (nextRequest.CancellationToken.IsCancellationRequested)
-                    {
-                        throw cancellationException;
-                    }
+                    var response = ResponseMessage.FromException(nextRequest, ex);
+                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
                 }
 
                 return false;

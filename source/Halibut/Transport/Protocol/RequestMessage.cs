@@ -1,4 +1,5 @@
 using System;
+using Halibut.Diagnostics;
 using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol

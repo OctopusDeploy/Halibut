@@ -16,9 +16,13 @@ namespace Halibut.Transport
         readonly ILog log;
         readonly ISecureClient secureClient;
         readonly Uri subscription;
+
         Task? pollingClientLoopTask;
-        readonly CancellationTokenSource cancellationTokenSource;
+        readonly CancellationTokenSource workingCancellationTokenSource;
+        readonly CancellationToken cancellationToken;
+        
         readonly Func<RetryPolicy> createRetryPolicy;
+        RequestCancellationTokens? requestCancellationTokens;
 
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy)
         {
@@ -26,7 +30,8 @@ namespace Halibut.Transport
             this.secureClient = secureClient;
             this.handleIncomingRequest = handleIncomingRequest;
             this.log = log;
-            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            this.cancellationToken = cancellationToken;
+            workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             this.createRetryPolicy = createRetryPolicy;
         }
         
@@ -36,31 +41,33 @@ namespace Halibut.Transport
             this.secureClient = secureClient;
             this.handleIncomingRequestAsync = handleIncomingRequestAsync;
             this.log = log;
-            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            this.cancellationToken = cancellationToken;
+            workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             this.createRetryPolicy = createRetryPolicy;
         }
 
         public void Start()
         {
-            var requestCancellationToken = cancellationTokenSource.Token;
-            pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions(requestCancellationToken));
+            requestCancellationTokens = new RequestCancellationTokens(workingCancellationTokenSource.Token, workingCancellationTokenSource.Token);
+            pollingClientLoopTask = Task.Run(async () => await ExecutePollingLoopAsyncCatchingExceptions(requestCancellationTokens));
         }
 
         public void Dispose()
         {
-            Try.CatchingError(cancellationTokenSource.Cancel, _ => { });
-            Try.CatchingError(cancellationTokenSource.Dispose, _ => { });
+            Try.CatchingError(workingCancellationTokenSource.Cancel, _ => { });
+            Try.CatchingError(workingCancellationTokenSource.Dispose, _ => { });
+            Try.CatchingError(() => requestCancellationTokens?.Dispose(), _ => { });
         }
 
         /// <summary>
         /// Runs ExecutePollingLoopAsync but catches any exception that falls out of it, log here
         /// rather than let it be unobserved. We are not expecting an exception but just in case.
         /// </summary>
-        async Task ExecutePollingLoopAsyncCatchingExceptions(CancellationToken cancellationToken)
+        async Task ExecutePollingLoopAsyncCatchingExceptions(RequestCancellationTokens requestCancellationTokens)
         {
             try
             {
-                await ExecutePollingLoopAsync(cancellationToken);
+                await ExecutePollingLoopAsync(requestCancellationTokens);
             }
             catch (Exception e)
             {
@@ -68,11 +75,11 @@ namespace Halibut.Transport
             }
         }
 
-        async Task ExecutePollingLoopAsync(CancellationToken cancellationToken)
+        async Task ExecutePollingLoopAsync(RequestCancellationTokens requestCancellationTokens)
         {
             var retry = createRetryPolicy();
             var sleepFor = TimeSpan.Zero;
-            while (!cancellationToken.IsCancellationRequested)
+            while (!requestCancellationTokens.LinkedCancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -85,7 +92,7 @@ namespace Halibut.Transport
                             // Subsequent connection issues will try and reconnect quickly and then back-off
                             retry.Success();
                             await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequestAsync, int.MaxValue, ct);
-                        }, cancellationToken);
+                        }, requestCancellationTokens);
                         retry.Success();
                     }
                     finally
@@ -103,7 +110,7 @@ namespace Halibut.Transport
                 }
                 finally
                 {
-                    await Task.Delay(sleepFor, cancellationToken);
+                    await Task.Delay(sleepFor, requestCancellationTokens.LinkedCancellationToken);
                 }
             }
         }

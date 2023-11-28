@@ -80,7 +80,9 @@ namespace Halibut.Tests.Transport
             var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l), endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
 
-            await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None);
+            using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);
+
+            await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), requestCancellationTokens);
 
             // The pool should be cleared after the second failure
             await stream.Received(2).IdentifyAsClientAsync(Arg.Any<CancellationToken>());
