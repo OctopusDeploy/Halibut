@@ -38,6 +38,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.TestUtils.CompatBin
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Halibut.TestUtils.CompatBinary.v4_4_8", "Halibut.TestUtils.CompatBinary.v4_4_8\Halibut.TestUtils.CompatBinary.v4_4_8.csproj", "{80042E24-9461-47D1-9AC5-E414E4DBF821}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F3E5130E-C600-45F3-BA7C-CBFABC1291CA}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -59,6 +59,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
     <None Include="icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
