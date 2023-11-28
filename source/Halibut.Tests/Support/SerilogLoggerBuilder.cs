@@ -39,7 +39,7 @@ namespace Halibut.Tests.Support
 
             Logger = new LoggerConfiguration()
                 .MinimumLevel.Verbose()
-                .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(nUnitOutputTemplate)), LogEventLevel.Debug)
+                .WriteTo.Sink(new NonProgressNUnitSink(new MessageTemplateTextFormatter(nUnitOutputTemplate)))
                 .WriteTo.Sink(new TraceLogsForFailedTestsSink(new MessageTemplateTextFormatter(localOutputTemplate)))
                 .CreateLogger();
         }
@@ -67,6 +67,7 @@ namespace Halibut.Tests.Support
             {
                 TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
                 traceFileLogger.SetTestHash(testHash);
+                traceFileLogger.SetTestName(testName);
             }
 
             return logger;
@@ -98,6 +99,12 @@ namespace Halibut.Tests.Support
                     throw new ArgumentNullException(nameof(logEvent));
                 if (TestContext.Out == null)
                     return;
+
+                // SerilogLoggerBuilder creates this sink with Verbose logging, but we only want Verbose logging
+                // if we're running locally, as Verbose logs spam the TeamCity build log.
+                if (TeamCityDetection.IsRunningInTeamCity() && logEvent.Level < LogEventLevel.Debug)
+                    return;
+                
                 var output = new StringWriter();
                 if (logEvent.Properties.TryGetValue("SourceContext", out var sourceContext))
                 {
