@@ -31,10 +31,12 @@ namespace Halibut.Tests.Support.TestCases
 
             foreach (var clientServiceTestVersion in clientServiceTestVersions)
             {
+                if(!clientServiceTestVersion.IsLatest()) continue;
                 foreach (var serviceConnectionType in serviceConnectionTypes)
                 {
                     foreach (var networkConditionTestCase in networkConditionTestCases)
                     {
+                        
                         // Slightly bad network conditions e.g. a delay of 20ms can blow out test times especially when running for 2000 iterations.
                         // 15 iterations seems ok.
                         var recommendedIterations = 15;
