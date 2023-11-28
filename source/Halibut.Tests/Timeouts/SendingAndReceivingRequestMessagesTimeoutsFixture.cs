@@ -29,7 +29,12 @@ namespace Halibut.Tests.Timeouts
                        .WithPortForwarding(out var portForwarderRef)
                        .WithEchoService()
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
-                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromSeconds(133)).WithTcpClientReceiveTimeout(expectedTimeout))
+                       .WhenTestingAsyncClient(clientAndServiceTestCase, b =>
+                       {
+                           b.WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build()
+                               .WithAllTcpTimeoutsTo(TimeSpan.FromSeconds(133))
+                               .WithTcpClientReceiveTimeout(expectedTimeout));
+                       })
                        .WithInstantReconnectPollingRetryPolicy()
                        .Build(CancellationToken))
             {
@@ -43,7 +48,6 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(expectedTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
