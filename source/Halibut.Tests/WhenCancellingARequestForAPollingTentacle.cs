@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Exceptions;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
@@ -13,7 +11,6 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
-using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
@@ -24,10 +21,15 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued : BaseTest
         {
             [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-            public async Task TheRequestShouldBeCancelled_WhenTheRequestCancellationTokenIsCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ true, false })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ false, true })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ true, true })]
+            public async Task TheRequestShouldBeCancelled_WhenTheConnectingOrInProgressCancellationTokenIsCancelled_OnAsyncClients(
+                ClientAndServiceTestCase clientAndServiceTestCase, 
+                bool connectingCancellationTokenCancelled,
+                bool inProgressCancellationTokenCancelled)
             {
-                var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions();
+                var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions(connectingCancellationTokenCancelled, inProgressCancellationTokenCancelled);
 
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
@@ -37,7 +39,7 @@ namespace Halibut.Tests
                 {
                     var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-                    await AssertAsync.Throws<ConnectingRequestCancelledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
+                    await AssertAsync.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
             }
         }
@@ -46,12 +48,47 @@ namespace Halibut.Tests
         {
             [Test]
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-            public async Task TheRequestShouldBeCancelled_WhenTheRequestCancellationTokenIsCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
+            public async Task TheRequestShouldNotBeCancelled_WhenTheConnectingCancellationTokenIsCancelled_OnAsyncClients(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                var responseMessages = new List<ResponseMessage>();
-                var shouldCancelWhenRequestDequeued = false;
                 var calls = new List<DateTime>();
-                var (tokenSourceToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions();
+                var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions(
+                    connectingCancellationTokenCancelled: true, 
+                    inProgressCancellationTokenCancelled: false);
+
+                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                           .AsLatestClientAndLatestServiceBuilder()
+                           .WithDoSomeActionService(() =>
+                           {
+                               calls.Add(DateTime.UtcNow);
+
+                               while (!tokenSourcesToCancel.All(x => x.IsCancellationRequested))
+                               {
+                                   Thread.Sleep(TimeSpan.FromMilliseconds(10));
+                               }
+
+                               Thread.Sleep(TimeSpan.FromSeconds(1));
+                           })
+                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourcesToCancel)))
+                           .Build(CancellationToken))
+                {
+                    var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
+
+                    await doSomeActionService.ActionAsync(halibutProxyRequestOptions);
+                }
+
+                calls.Should().HaveCount(1);
+            }
+
+            [Test]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ false, true })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ true, true })]
+            public async Task TheRequestShouldBeCancelled_WhenTheInProgressCancellationTokenIsCancelled_OnAsyncClients(
+                ClientAndServiceTestCase clientAndServiceTestCase, 
+                bool connectingCancellationTokenCancelled,
+                bool inProgressCancellationTokenCancelled)
+            {
+                var calls = new List<DateTime>();
+                var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions(connectingCancellationTokenCancelled, inProgressCancellationTokenCancelled);
 
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
@@ -60,65 +97,50 @@ namespace Halibut.Tests
                            {
                                calls.Add(DateTime.UtcNow);
 
-                               while (!tokenSourceToCancel.IsCancellationRequested)
+                               while (!tokenSourcesToCancel.All(x => x.IsCancellationRequested))
                                {
-                                   // Wait until the request is cancelled
-                                   Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                                   Thread.Sleep(TimeSpan.FromMilliseconds(10));
                                }
 
                                Thread.Sleep(TimeSpan.FromSeconds(1));
                            })
-                           .WithEchoService()
-                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => 
-                               new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourceToCancel, ShouldCancelOnDequeue, OnResponseApplied)))
+                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourcesToCancel)))
                            .Build(CancellationToken))
                 {
-
-                    shouldCancelWhenRequestDequeued = true;
                     var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
-                    var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
-                    await AssertAsync.Throws<TransferringRequestCancelledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
-
-                    // Ensure we can send another message to the Service which will validate the Client had the request cancelled to the socket
-                    shouldCancelWhenRequestDequeued = false;
-                    var started = Stopwatch.StartNew();
-                    await echoService.SayHelloAsync(".", new HalibutProxyRequestOptions(CancellationToken.None));
-                    // This should return quickly
-                    started.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10));
+                    await AssertAsync.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
 
                 calls.Should().HaveCount(1);
-
-                // Wait for all responses have been received
-                await Task.Delay(TimeSpan.FromSeconds(5));
-
-                // Ensure we did not get a valid response back from the doSomeActionService and that the request was cancelled to the socket.
-                responseMessages.Should().HaveCount(2);
-                responseMessages.ElementAt(0).Id.Should().Contain("IDoSomeActionService::ActionAsync");
-                responseMessages.ElementAt(0).Error.Should().NotBeNull();
-                responseMessages.ElementAt(0).Error.Message.Should().Contain("The Request was cancelled while Transferring");
-                responseMessages.ElementAt(1).Error.Should().BeNull();
-                responseMessages.ElementAt(1).Id.Should().Contain("IEchoService::SayHelloAsync");
-
-                bool ShouldCancelOnDequeue()
-                {
-                    return shouldCancelWhenRequestDequeued;
-                }
-
-                void OnResponseApplied(ResponseMessage response)
-                {
-                    responseMessages.Add(response);
-                }
             }
         }
 
-        static (CancellationTokenSource TokenSourceToCancel, HalibutProxyRequestOptions HalibutProxyRequestOptions) CreateTokenSourceAndHalibutProxyRequestOptions()
+        static (CancellationTokenSource[] ToeknSourcesToCancel, HalibutProxyRequestOptions HalibutProxyRequestOptions) CreateTokenSourceAndHalibutProxyRequestOptions(
+            bool connectingCancellationTokenCancelled, 
+            bool inProgressCancellationTokenCancelled)
         {
-            var requestCancellationTokenSource = new CancellationTokenSource();
-            var halibutProxyRequestOptions = new HalibutProxyRequestOptions(requestCancellationTokenSource.Token);
+            var connectingCancellationTokenSource = new CancellationTokenSource();
+            var inProgressCancellationTokenSource = new CancellationTokenSource();
+
+            CancellationTokenSource[] tokenSourcesToCancel;
+
+            if (connectingCancellationTokenCancelled && inProgressCancellationTokenCancelled)
+            {
+                tokenSourcesToCancel = new [] { connectingCancellationTokenSource, inProgressCancellationTokenSource };
+            }
+            else if (connectingCancellationTokenCancelled)
+            {
+                tokenSourcesToCancel = new [] { connectingCancellationTokenSource };
+            }
+            else
+            {
+                tokenSourcesToCancel = new [] { inProgressCancellationTokenSource };
+            }
+
+            var halibutProxyRequestOptions = new HalibutProxyRequestOptions(connectingCancellationTokenSource.Token, inProgressCancellationTokenSource.Token);
                 
-            return (requestCancellationTokenSource, halibutProxyRequestOptions);
+            return (tokenSourcesToCancel, halibutProxyRequestOptions);
         }
 
         /// <summary>
@@ -126,41 +148,40 @@ namespace Halibut.Tests
         /// </summary>
         class CancelWhenRequestQueuedPendingRequestQueueFactory : IPendingRequestQueueFactory
         {
-            readonly CancellationTokenSource cancellationTokenSource;
+            readonly CancellationTokenSource[] cancellationTokenSources;
             readonly IPendingRequestQueueFactory inner;
 
-            public CancelWhenRequestQueuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource)
+            public CancelWhenRequestQueuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource[] cancellationTokenSources)
             {
-                this.cancellationTokenSource = cancellationTokenSource;
+                this.cancellationTokenSources = cancellationTokenSources;
                 this.inner = inner;
             }
-            
+
+            public CancelWhenRequestQueuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource) : this(inner, new[]{ cancellationTokenSource }) {
+            }
+
             public IPendingRequestQueue CreateQueue(Uri endpoint)
             {
-                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSource);
+                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSources);
             }
 
             class Decorator : IPendingRequestQueue
             {
-                readonly CancellationTokenSource cancellationTokenSource;
+                readonly CancellationTokenSource[] cancellationTokenSources;
                 readonly IPendingRequestQueue inner;
 
-                public Decorator(IPendingRequestQueue inner, CancellationTokenSource cancellationTokenSource)
+                public Decorator(IPendingRequestQueue inner, CancellationTokenSource[] cancellationTokenSources)
                 {
                     this.inner = inner;
-                    this.cancellationTokenSource = cancellationTokenSource;
+                    this.cancellationTokenSources = cancellationTokenSources;
                 }
 
                 public bool IsEmpty => inner.IsEmpty;
                 public int Count => inner.Count;
-                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination)
-                {
-                    await inner.ApplyResponse(response, destination);
-                }
+                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
+                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
 
-                public async Task<RequestMessageWithCancellationToken> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
-
-                public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
+                public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
                 {
                     var task = Task.Run(async () =>
                         {
@@ -169,11 +190,11 @@ namespace Halibut.Tests
                                 await Task.Delay(TimeSpan.FromMilliseconds(10), CancellationToken.None);
                             }
 
-                            cancellationTokenSource.Cancel();
+                            Parallel.ForEach(cancellationTokenSources, cancellationTokenSource => cancellationTokenSource.Cancel());
                         },
                         CancellationToken.None);
 
-                    var result = await inner.QueueAndWaitAsync(request, requestCancellationToken);
+                    var result = await inner.QueueAndWaitAsync(request, requestCancellationTokens);
                     await task;
                     return result;
                 }
@@ -185,61 +206,50 @@ namespace Halibut.Tests
         /// </summary>
         class CancelWhenRequestDequeuedPendingRequestQueueFactory : IPendingRequestQueueFactory
         {
-            readonly CancellationTokenSource cancellationTokenSource;
-            readonly Func<bool> shouldCancelOnDequeue;
-            readonly Action<ResponseMessage> onResponseApplied;
+            readonly CancellationTokenSource[] cancellationTokenSources;
             readonly IPendingRequestQueueFactory inner;
 
-            public CancelWhenRequestDequeuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource, Func<bool> shouldCancelOnDequeue, Action<ResponseMessage> onResponseApplied)
+            public CancelWhenRequestDequeuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource[] cancellationTokenSources)
             {
-                this.cancellationTokenSource = cancellationTokenSource;
-                this.shouldCancelOnDequeue = shouldCancelOnDequeue;
+                this.cancellationTokenSources = cancellationTokenSources;
                 this.inner = inner;
-                this.onResponseApplied = onResponseApplied;
+            }
+
+            public CancelWhenRequestDequeuedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, CancellationTokenSource cancellationTokenSource): this(inner, new []{ cancellationTokenSource })
+            {
             }
 
             public IPendingRequestQueue CreateQueue(Uri endpoint)
             {
-                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSource, shouldCancelOnDequeue, onResponseApplied);
+                return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSources);
             }
 
             class Decorator : IPendingRequestQueue
             {
-                readonly CancellationTokenSource cancellationTokenSource;
-                readonly Func<bool> shouldCancel;
-                readonly Action<ResponseMessage> onResponseApplied;
+                readonly CancellationTokenSource[] cancellationTokenSources;
                 readonly IPendingRequestQueue inner;
 
-                public Decorator(IPendingRequestQueue inner, CancellationTokenSource cancellationTokenSource, Func<bool> shouldCancel, Action<ResponseMessage> onResponseApplied)
+                public Decorator(IPendingRequestQueue inner, CancellationTokenSource[] cancellationTokenSources)
                 {
                     this.inner = inner;
-                    this.cancellationTokenSource = cancellationTokenSource;
-                    this.shouldCancel = shouldCancel;
-                    this.onResponseApplied = onResponseApplied;
+                    this.cancellationTokenSources = cancellationTokenSources;
                 }
 
                 public bool IsEmpty => inner.IsEmpty;
                 public int Count => inner.Count;
-                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination)
-                {
-                    onResponseApplied(response);
-                    await inner.ApplyResponse(response, destination);
-                }
-
-                public async Task<RequestMessageWithCancellationToken> DequeueAsync(CancellationToken cancellationToken)
+                public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
+                
+                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
                 {
                     var response = await inner.DequeueAsync(cancellationToken);
-
-                    if (shouldCancel())
-                    {
-                        cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(2));
-                    }
+                    
+                    Parallel.ForEach(cancellationTokenSources, cancellationTokenSource => cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(2)));
 
                     return response;
                 }
 
-                public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
-                    => await inner.QueueAndWaitAsync(request, requestCancellationToken);
+                public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
+                    => await inner.QueueAndWaitAsync(request, requestCancellationTokens);
             }
         }
     }

@@ -15,8 +15,8 @@ namespace Halibut.Transport.Streams
     class NetworkTimeoutStream : AsyncStream
     {
         readonly Stream inner;
-        bool hasCancelledOrTimedOut = false;
-        Exception? cancellationOrTimeoutException = null;
+        bool hasTimedOut = false;
+        Exception? timeoutException = null;
 
         public NetworkTimeoutStream(Stream inner)
         {
@@ -30,7 +30,7 @@ namespace Halibut.Transport.Streams
 
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             await WrapWithCancellationAndTimeout(
                 async ct =>
@@ -46,7 +46,7 @@ namespace Halibut.Transport.Streams
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, offset, count, ct),
@@ -58,7 +58,7 @@ namespace Halibut.Transport.Streams
 
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             await WrapWithCancellationAndTimeout(
                 async ct =>
@@ -75,7 +75,7 @@ namespace Halibut.Transport.Streams
 #if !NETFRAMEWORK
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             return await WrapWithCancellationAndTimeout(
                 async ct => await inner.ReadAsync(buffer, ct),
@@ -87,7 +87,7 @@ namespace Halibut.Transport.Streams
 
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             await WrapWithCancellationAndTimeout(
                 async ct =>
@@ -109,7 +109,7 @@ namespace Halibut.Transport.Streams
 
         public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             await base.CopyToAsync(destination, bufferSize, cancellationToken);
         }
@@ -131,14 +131,14 @@ namespace Halibut.Transport.Streams
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             return inner.Seek(offset, origin);
         }
 
         public override void SetLength(long value)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             inner.SetLength(value);
         }
@@ -156,14 +156,14 @@ namespace Halibut.Transport.Streams
 #if !NETFRAMEWORK
         public override void CopyTo(Stream destination, int bufferSize)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             base.CopyTo(destination, bufferSize);
         }
 
         public override int Read(Span<byte> buffer)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             try
             {
@@ -183,7 +183,7 @@ namespace Halibut.Transport.Streams
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             try
             {
@@ -205,14 +205,14 @@ namespace Halibut.Transport.Streams
 #if NETFRAMEWORK
         public override ObjRef CreateObjRef(Type requestedType)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
             
             return inner.CreateObjRef(requestedType);
         }
 
         public override object? InitializeLifetimeService()
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             return inner.InitializeLifetimeService();
         }
@@ -222,12 +222,12 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.ReadTimeout;
             }
             set
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 inner.ReadTimeout = value;
             }
         }
@@ -236,12 +236,12 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.WriteTimeout;
             }
             set
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 inner.WriteTimeout = value;
             }
         }
@@ -250,7 +250,7 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.CanTimeout;
             }
         }
@@ -259,7 +259,7 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.CanRead;
             }
         }
@@ -268,7 +268,7 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.CanSeek;
             }
         }
@@ -277,7 +277,7 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.CanWrite;
             }
         }
@@ -286,7 +286,7 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.Length;
             }
         }
@@ -295,12 +295,12 @@ namespace Halibut.Transport.Streams
         {
             get
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 return inner.Position;
             }
             set
             {
-                ThrowIfAlreadyCancelledOrTimedOut();
+                ThrowIfAlreadyTimedOut();
                 inner.Position = value;
             }
         }
@@ -329,10 +329,15 @@ namespace Halibut.Transport.Streams
 
             async Task SafelyDisposeStream(Exception exception)
             {
-                cancellationOrTimeoutException = exception;
-                hasCancelledOrTimedOut = true;
-
-                await Try.CatchingError(async () => await DisposeAsync(), _ => { });
+                try
+                {
+                    timeoutException = exception;
+                    hasTimedOut = true;
+                    await inner.DisposeAsync();
+                }
+                catch
+                {
+                }
             }
 
             Exception CreateExceptionOnTimeout()
@@ -344,7 +349,7 @@ namespace Halibut.Transport.Streams
 
         void TryCloseOnTimeout(Action action)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             try
             {
@@ -364,7 +369,7 @@ namespace Halibut.Transport.Streams
 
         T TryCloseOnTimeout<T>(Func<T> action)
         {
-            ThrowIfAlreadyCancelledOrTimedOut();
+            ThrowIfAlreadyTimedOut();
 
             try
             {
@@ -384,8 +389,8 @@ namespace Halibut.Transport.Streams
 
         void CloseOnTimeout(Exception ex)
         {
-            cancellationOrTimeoutException = ex;
-            hasCancelledOrTimedOut = true;
+            timeoutException = ex;
+            hasTimedOut = true;
             inner.Close();
         }
 
@@ -399,11 +404,11 @@ namespace Halibut.Transport.Streams
             return exception.InnerException != null && IsTimeoutException(exception.InnerException);
         }
 
-        void ThrowIfAlreadyCancelledOrTimedOut()
+        void ThrowIfAlreadyTimedOut()
         {
-            if (hasCancelledOrTimedOut)
+            if (hasTimedOut)
             {
-                throw cancellationOrTimeoutException ?? new SocketException((int)SocketError.TimedOut);
+                throw timeoutException ?? new SocketException((int)SocketError.TimedOut);
             }
         }
     }
