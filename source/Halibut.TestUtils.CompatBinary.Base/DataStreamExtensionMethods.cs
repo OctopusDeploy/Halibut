@@ -7,7 +7,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
     {
         public static string ReadAsString(this DataStream stream)
         {
-            string result = null;
+            var result = string.Empty;
             stream.Receiver().Read(s =>
             {
                 using (var reader = new StreamReader(s))

@@ -10,8 +10,8 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
         {
             return new ComplexObjectMultipleDataStreams
             {
-                Payload1 = ReadIntoNewDataStream(request.Payload1),
-                Payload2 = ReadIntoNewDataStream(request.Payload2)
+                Payload1 = ReadIntoNewDataStream(request.Payload1!),
+                Payload2 = ReadIntoNewDataStream(request.Payload2!)
             };
         }
 
@@ -21,15 +21,15 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
             {
                 Child1 = new ComplexChild1
                 {
-                    ChildPayload1 = ReadIntoNewDataStream(request.Child1.ChildPayload1),
-                    ChildPayload2 = ReadIntoNewDataStream(request.Child1.ChildPayload2),
-                    ListOfStreams = request.Child1.ListOfStreams.Select(ReadIntoNewDataStream).ToList(),
-                    DictionaryPayload = request.Child1.DictionaryPayload.ToDictionary(pair => pair.Key, pair => pair.Value),
+                    ChildPayload1 = ReadIntoNewDataStream(request.Child1!.ChildPayload1!),
+                    ChildPayload2 = ReadIntoNewDataStream(request.Child1!.ChildPayload2!),
+                    ListOfStreams = request.Child1.ListOfStreams!.Select(ReadIntoNewDataStream).ToList(),
+                    DictionaryPayload = request.Child1.DictionaryPayload!.ToDictionary(pair => pair.Key, pair => pair.Value),
                 },
                 Child2 = new ComplexChild2
                 {
-                    EnumPayload = request.Child2.EnumPayload,
-                    ComplexPayloadSet = request.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, ReadIntoNewDataStream(x.Payload))).ToHashSet()
+                    EnumPayload = request.Child2!.EnumPayload,
+                    ComplexPayloadSet = request.Child2.ComplexPayloadSet!.Select(x => new ComplexPair<DataStream>(x.EnumValue, ReadIntoNewDataStream(x.Payload))).ToHashSet()
                 }
             };
         }
@@ -38,8 +38,8 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
         {
             return new ComplexObjectWithInheritance
             {
-                Child1 = new ComplexInheritedChild1(request.Child1.Name),
-                Child2 = new ComplexInheritedChild2(request.Child2.Description)
+                Child1 = new ComplexInheritedChild1(request.Child1!.Name),
+                Child2 = new ComplexInheritedChild2(request.Child2!.Description)
             };
         }
 
