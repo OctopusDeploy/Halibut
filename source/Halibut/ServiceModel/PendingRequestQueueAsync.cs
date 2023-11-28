@@ -199,7 +199,11 @@ namespace Halibut.ServiceModel
 
                 try
                 {
-                    responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestQueueTimeout, cancellationToken);
+                    responseSet = await WaitForResponseToBeSet(
+                        request.Destination.PollingRequestQueueTimeout, 
+                        // Don't cancel a dequeued request as we need to wait PollingRequestMaximumMessageProcessingTimeout for it to complete
+                        cancelTheRequestWhenTransferHasBegun: false, 
+                        cancellationToken);
 
                     if (responseSet)
                     {
@@ -237,7 +241,11 @@ namespace Halibut.ServiceModel
 
                 if (waitForTransferToComplete)
                 {
-                    responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestMaximumMessageProcessingTimeout, cancellationToken);
+                    responseSet = await WaitForResponseToBeSet(
+                        request.Destination.PollingRequestMaximumMessageProcessingTimeout, 
+                        // Cancel the dequeued request to force Reads and Writes to be cancelled
+                        cancelTheRequestWhenTransferHasBegun: true,
+                        cancellationToken);
 
                     if (responseSet)
                     {
@@ -272,7 +280,7 @@ namespace Halibut.ServiceModel
                 }
             }
 
-            async Task<bool> WaitForResponseToBeSet(TimeSpan timeout, CancellationToken cancellationToken)
+            async Task<bool> WaitForResponseToBeSet(TimeSpan timeout, bool cancelTheRequestWhenTransferHasBegun, CancellationToken cancellationToken)
             {
                 using var timeoutCancellationTokenSource = new CancellationTokenSource(timeout);
 
@@ -283,16 +291,24 @@ namespace Halibut.ServiceModel
                 }
                 catch (OperationCanceledException ex)
                 {
-                    // Cancel the Request to force cancellation to the socket if it is currently being transferred 
-                    CancelRequest();
-
-                    if (timeoutCancellationTokenSource.IsCancellationRequested)
-                    {
-                        return false;
-                    }
-
                     using (await transferLock.LockAsync(CancellationToken.None))
                     {
+                        if (transferBegun && cancelTheRequestWhenTransferHasBegun)
+                        {
+                            // Cancel the dequeued request. This will cause co-operative cancellation on the thread dequeuing the request
+                            pendingRequestCancellationTokenSource.Cancel();
+                        }
+                        else if (!transferBegun)
+                        {
+                            // Cancel the queued request. This will flag the request as cancelled to stop it being dequeued
+                            pendingRequestCancellationTokenSource.Cancel();
+                        }
+
+                        if (timeoutCancellationTokenSource.IsCancellationRequested)
+                        {
+                            return false;
+                        }
+                    
                         throw transferBegun ? new TransferringRequestCancelledException(ex) : new ConnectingRequestCancelledException(ex);
                     }
                 }
@@ -311,7 +327,9 @@ namespace Halibut.ServiceModel
                 {
                     using (await transferLock.LockAsync(CancellationToken.None))
                     {
-                        if (completed)
+                        // Check if the request has already been completed or if the request has been cancelled 
+                        // to ensure we don't dequeue an already completed or already cancelled request
+                        if (completed || pendingRequestCancellationTokenSource.IsCancellationRequested)
                         {
                             return false;
                         }
@@ -333,11 +351,6 @@ namespace Halibut.ServiceModel
             {
                 Response = response;
                 responseWaiter.Set();
-            }
-
-            void CancelRequest()
-            {
-                pendingRequestCancellationTokenSource.Cancel();
             }
 
             public void Dispose()
