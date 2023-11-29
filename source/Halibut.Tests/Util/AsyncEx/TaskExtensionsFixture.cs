@@ -144,7 +144,7 @@ namespace Halibut.Tests.Util.AsyncEx
         {
             //inspired by https://stackoverflow.com/a/21269145/779192
             var mre = new ManualResetEvent(initialState: false);
-            void Subscription(object s, UnobservedTaskExceptionEventArgs args)
+            void Subscription(object? s, UnobservedTaskExceptionEventArgs args)
             {
                 if (exceptionThrown(args.Exception) || args.Exception.InnerExceptions.Any(exceptionThrown))
                 {
@@ -167,7 +167,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 }
 
                 //unobserved task exceptions are thrown from the finalizer
-                createTaskToHaveTimeoutAfterCallInvokedOn = null; // Allow the task to be GC'ed
+                createTaskToHaveTimeoutAfterCallInvokedOn = null!; // Allow the task to be GC'ed
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 if (mre.WaitOne(2000))

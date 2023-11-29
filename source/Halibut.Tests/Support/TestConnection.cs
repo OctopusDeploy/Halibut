@@ -13,7 +13,7 @@ namespace Halibut.Tests.Support
 
         public bool Disposed { get; private set; }
 
-        public MessageExchangeProtocol Protocol => null;
+        public MessageExchangeProtocol Protocol => null!;
 
         public void Dispose()
         {

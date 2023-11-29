@@ -10,7 +10,7 @@ namespace Halibut.Tests.Util
         // TODO: This could be async
         public static string ReadAsString(this DataStream stream)
         {
-            string result = null;
+            var result = string.Empty;
             stream.Receiver().ReadAsync(async (s, ct) =>
                     {
                         await Task.CompletedTask;

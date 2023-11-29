@@ -19,7 +19,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
         public async Task TestOnlyHealthConnectionsAreKeptInThePool(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
+            TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
@@ -38,7 +38,7 @@ namespace Halibut.Tests
                 var pauseCurrentTcpConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                 await echoService.SayHelloAsync("This should make one connection");
-                tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1);
+                tcpConnectionsCreatedCounter!.ConnectionsCreatedCount.Should().Be(1);
                 
                 await echoService.SayHelloAsync("Should re-use the same connection");
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1, "We should use the same connection since the last was healthy");
@@ -53,7 +53,7 @@ namespace Halibut.Tests
                 
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(2, "Since the last connection should not have been put back into the pool.");
 
-                sw.Elapsed.Should().BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
+                sw.Elapsed.Should().BeLessThan(clientAndService.Service!.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
                                                                                                                                     "then pulling it out detecting it is bad and then attempting to create a new connection");
             }
         }

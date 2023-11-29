@@ -203,7 +203,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
+                clientAndService.Client!.OverrideErrorResponseMessageCaching = response => response.Error!.Message.Contains("CACHE ME");
 
                 var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
@@ -249,7 +249,7 @@ namespace Halibut.Tests
             OverrideErrorResponseMessageCachingAction action = message => false;
             
             // Actual test, testing a null response.
-            cache.CacheResponse(serviceEndpoint, request, methodInfo, null, action);
+            cache.CacheResponse(serviceEndpoint, request, methodInfo, null!, action);
             cache.GetCachedResponse(serviceEndpoint, request, methodInfo).Should().BeNull();
             
             // This just checks we are using the cache correctly, ensuring the above is valid.

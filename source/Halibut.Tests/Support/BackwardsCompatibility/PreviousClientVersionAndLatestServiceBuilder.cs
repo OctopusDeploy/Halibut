@@ -30,17 +30,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     {
         readonly ServiceConnectionType serviceConnectionType;
         
-        ServiceFactoryBuilder serviceFactoryBuilder = new();
-        IServiceFactory? serviceFactory;
+        readonly ServiceFactoryBuilder serviceFactoryBuilder = new();
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         Version? version = null;
         ProxyFactory? proxyFactory;
         Func<int, PortForwarder>? portForwarderFactory;
         LogLevel halibutLogLevel = LogLevel.Trace;
-        ILockService lockService;
-        ICountingService countingService;
-
+        
         PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
@@ -103,18 +100,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);
             
-            if (serviceFactory != null)
-            {
-                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
-                {
-                    delegateServiceFactory.Register<TContract, TClientContract>(implementation);
-                }
-                else
-                {
-                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
-                }
-            }
-
             return this;
         }
 

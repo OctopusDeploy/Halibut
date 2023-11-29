@@ -105,7 +105,7 @@ namespace Halibut.Tests.Transport.Protocol
             {
                 var result = await ReadMessage<ResponseMessage>(sut, stream);
                 result.Error.Should().NotBeNull();
-                result.Error.Message = "foo";
+                result.Error!.Message = "foo";
                 result.Error.HalibutErrorType = "MethodNotFoundHalibutClientException";
             }
         }

@@ -10,7 +10,7 @@ namespace Halibut.Tests.Support.ExtensionMethods
         public static TestExecutionContext GetTestExecutionContext(this TestContext testContext)
         {
             var testExecutionContextField = testContext.GetType().GetField("_testExecutionContext", BindingFlags.NonPublic | BindingFlags.Instance);
-            var testExecutionContext = (TestExecutionContext)testExecutionContextField!.GetValue(testContext);
+            var testExecutionContext = (TestExecutionContext)testExecutionContextField!.GetValue(testContext)!;
 
             return testExecutionContext;
         }

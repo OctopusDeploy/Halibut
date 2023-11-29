@@ -124,7 +124,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
             {
                 var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits));
                 var ex = Assert.ThrowsAsync<HalibutClientException>(async () => await echo.CrashAsync());
-                var message = ex.Message;
+                var message = ex!.Message;
 
                 message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request");
 
@@ -157,7 +157,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                 };
                 var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(endpoint);
                 var ex = Assert.ThrowsAsync<HalibutClientException>(async () => await echo.CrashAsync());
-                ex.Message.Should().Be("An error occurred when sending a request to 'https://google.com:88/', before the request could begin: The client was unable to establish the initial connection within the timeout 00:00:02.");
+                ex!.Message.Should().Be("An error occurred when sending a request to 'https://google.com:88/', before the request could begin: The client was unable to establish the initial connection within the timeout 00:00:02.");
             }
         }
 

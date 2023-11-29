@@ -128,7 +128,7 @@ namespace Halibut.Tests.Transport.Streams
                         await Task.Delay(10, CancellationToken);
                     }
 
-                    Assert.AreEqual("Test"[0], readData.ToCharArray()[0]);
+                    Assert.AreEqual("Test"[0], readData!.ToCharArray()[0]);
                 }
                 else
                 {
@@ -501,12 +501,12 @@ namespace Halibut.Tests.Transport.Streams
                 sut.WriteTimeout = (int)TimeSpan.FromSeconds(1).TotalMilliseconds;
                 sut.ReadTimeout = (int)TimeSpan.FromSeconds(1).TotalMilliseconds;
 
-                var exception = await Try.CatchingError(async () => await sut.ReadFromStream(streamMethod, new byte[19], 0, 19, CancellationToken));
+                var exception = (await Try.CatchingError(async () => await sut.ReadFromStream(streamMethod, new byte[19], 0, 19, CancellationToken)))!;
 
                 callCountingStream.Reset();
 
                 exception.Should().NotBeNull();
-                AssertExceptionsAreEqual(exception!, AssertionExtensions.Should(() => sut.Position).Throw<Exception>().And);
+                AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.Position).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.Position = 0).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.CanRead).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.CanSeek).Throw<Exception>().And);

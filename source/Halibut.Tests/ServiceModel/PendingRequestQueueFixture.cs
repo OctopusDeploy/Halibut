@@ -61,7 +61,7 @@ namespace Halibut.Tests.ServiceModel
             queueAndWaitTask.IsCompleted.Should().BeFalse();
 
             // Apply unrelated responses
-            await sut.ApplyResponse(null, request.Destination);
+            await sut.ApplyResponse(null!, request.Destination);
             await sut.ApplyResponse(unexpectedResponse, request.Destination);
 
             await Task.Delay(1000, CancellationToken);
@@ -95,7 +95,7 @@ namespace Halibut.Tests.ServiceModel
             // Although we sleep for 1 second, sometimes it can be just under. So be generous with the buffer.
             stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
             response.Id.Should().Be(request.Id);
-            response.Error.Message.Should().Be("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:01), so the request timed out.");
+            response.Error!.Message.Should().Be("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:01), so the request timed out.");
 
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
@@ -125,7 +125,7 @@ namespace Halibut.Tests.ServiceModel
             // Although we sleep for 2 second, sometimes it can be just under. So be generous with the buffer.
             stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(1800));
             response.Id.Should().Be(request.Id);
-            response.Error.Message.Should().Be("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:01), so the request timed out.");
+            response.Error!.Message.Should().Be("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:01), so the request timed out.");
 
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
@@ -213,7 +213,7 @@ namespace Halibut.Tests.ServiceModel
             await WaitForQueueCountToBecome(sut, requestsInOrder.Count);
 
             // Assert
-            var requests = new List<RequestMessage>();
+            var requests = new List<RequestMessage?>();
             for (int i = 0; i < requestsInOrder.Count; i++)
             {
                 var request = await sut.DequeueAsync(CancellationToken);
@@ -285,7 +285,7 @@ namespace Halibut.Tests.ServiceModel
             
             var index = 0;
             var cancelled = 0;
-            var dequeueTasks = new ConcurrentBag<Task<RequestMessage>>();
+            var dequeueTasks = new ConcurrentBag<Task<RequestMessage?>>();
 
             var cancelSomeTask = Task.Run(() =>
             {
@@ -416,7 +416,7 @@ namespace Halibut.Tests.ServiceModel
             // Although we sleep for 1 second, sometimes it can be just under. So be generous with the buffer.
             stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
             response.Id.Should().Be(request.Id);
-            response.Error.Message.Should().Be("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:01), so the request timed out.");
+            response.Error!.Message.Should().Be("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:01), so the request timed out.");
         }
         
         [Test]

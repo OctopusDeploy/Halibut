@@ -59,8 +59,8 @@ namespace Halibut.Tests.Transport
                 var client = new SecureListener(
                     new IPEndPoint(new IPAddress(new byte[] { 127, 0, 0, 1 }), 0),
                     Certificates.TentacleListening,
-                    null,
-                    null,
+                    null!,
+                    null!,
                     _ => true,
                     new LogFactory(),
                     () => "",

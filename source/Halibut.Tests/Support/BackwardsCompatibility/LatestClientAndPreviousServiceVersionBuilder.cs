@@ -18,7 +18,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         Version? version = null;
         Func<int, PortForwarder>? portForwarderFactory;
-        ProxyFactory proxyFactory;
+        ProxyFactory? proxyFactory;
         LogLevel halibutLogLevel = LogLevel.Trace;
         OldServiceAvailableServices availableServices = new(false, false);
         bool hasService = true;
@@ -184,7 +184,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             if (proxy != null)
             {
                 await proxy.StartAsync();
-                proxyDetails = new ProxyDetails("localhost", proxy.Endpoint.Port, ProxyType.HTTP);
+                proxyDetails = new ProxyDetails("localhost", proxy.Endpoint!.Port, ProxyType.HTTP);
             }
 
             Uri serviceUri;
@@ -208,7 +208,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         clientCertAndThumbprint,
                         serviceCertAndThumbprint,
                         version?.ToString(),
-                        proxyDetails,
+                        proxyDetails!,
                         halibutLogLevel,
                         availableServices,
                         logger).Run();

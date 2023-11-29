@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using FluentAssertions;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -151,7 +152,7 @@ namespace Halibut.Tests
 
         public bool TryGetValue(string key, out string value)
         {
-            return _dictionaryImplementation.TryGetValue(key, out value);
+            return _dictionaryImplementation.TryGetValue(key, out value!);
         }
 
         public string this[string key]

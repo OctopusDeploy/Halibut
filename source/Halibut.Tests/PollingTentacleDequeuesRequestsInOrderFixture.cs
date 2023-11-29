@@ -21,7 +21,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            IPendingRequestQueue pendingRequestQueue = null;
+            IPendingRequestQueue ?pendingRequestQueue = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
@@ -68,7 +68,7 @@ namespace Halibut.Tests
                     await Wait.For(async () =>
                     {
                         await task.AwaitIfFaulted();
-                        return pendingRequestQueue.Count == i + 1;
+                        return pendingRequestQueue!.Count == i + 1;
                     }, CancellationToken);
                 }
 

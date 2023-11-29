@@ -40,7 +40,7 @@ namespace Halibut.Tests.Timeouts
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromMinutes(20));
             halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
             
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
+            TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
@@ -81,7 +81,7 @@ namespace Halibut.Tests.Timeouts
                     // happy with the service and moves on to getting stuff out of the queue, however the service is still waiting
                     // to authentice the client but can't since the TCP connection is paused. 
                     // So instead lets count created TCP connections.
-                    Wait.UntilActionSucceeds(() => tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().BeGreaterThanOrEqualTo(2), TimeSpan.FromSeconds(30), Logger, CancellationToken);
+                    Wait.UntilActionSucceeds(() => tcpConnectionsCreatedCounter!.ConnectionsCreatedCount.Should().BeGreaterThanOrEqualTo(2), TimeSpan.FromSeconds(30), Logger, CancellationToken);
                 }
 
                 sw.Stop();

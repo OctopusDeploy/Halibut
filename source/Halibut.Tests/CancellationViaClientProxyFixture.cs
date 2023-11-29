@@ -47,7 +47,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder.EnterKillNewAndExistingConnectionsMode();
+                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
@@ -174,7 +174,7 @@ namespace Halibut.Tests
             {
                 Assert.Throws<TypeNotAllowedException>(() =>
                 {
-                    clientAndService.Client.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.GetServiceEndPoint());
+                    clientAndService.Client!.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.GetServiceEndPoint());
                 });
             }
         }

@@ -179,7 +179,7 @@ namespace Halibut.Tests
                 public bool IsEmpty => inner.IsEmpty;
                 public int Count => inner.Count;
                 public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
-                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
+                public async Task<RequestMessage?> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
 
                 public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
                 {
@@ -239,7 +239,7 @@ namespace Halibut.Tests
                 public int Count => inner.Count;
                 public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
                 
-                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
+                public async Task<RequestMessage?> DequeueAsync(CancellationToken cancellationToken)
                 {
                     var response = await inner.DequeueAsync(cancellationToken);
                     

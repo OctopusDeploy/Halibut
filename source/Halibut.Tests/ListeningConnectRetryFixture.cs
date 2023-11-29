@@ -19,7 +19,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task ListeningRetriesAttemptsUpToTheConfiguredValue(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
+            TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
@@ -45,7 +45,7 @@ namespace Halibut.Tests
                 
                 await AssertAsync.Throws<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
 
-                tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(20);
+                tcpConnectionsCreatedCounter!.ConnectionsCreatedCount.Should().Be(20);
             }
         }
         
@@ -53,13 +53,12 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task ListeningRetriesAttemptsUpToTheConfiguredTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
-                               .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
+                               .WithCountTcpConnectionsCreated(out _)
                                .Build();
 
                            return portForwarder;
@@ -90,13 +89,12 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task ListeningRetryListeningSleepIntervalWorks(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
-                               .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
+                               .WithCountTcpConnectionsCreated(out _)
                                .Build();
 
                            return portForwarder;
@@ -127,7 +125,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task ListeningRetriesAttemptsCanEventuallyWork(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
+            TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithPortForwarding(port =>
@@ -152,7 +150,7 @@ namespace Halibut.Tests
                 });
 
                 var echoCallThatShouldEventuallySucceed = Task.Run(() => echoService.SayHelloAsync("hello"));
-                while (tcpConnectionsCreatedCounter.ConnectionsCreatedCount < 5)
+                while (tcpConnectionsCreatedCounter!.ConnectionsCreatedCount < 5)
                 {
                     Logger.Information("TCP count is at: {Count}", tcpConnectionsCreatedCounter.ConnectionsCreatedCount);
                     await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
