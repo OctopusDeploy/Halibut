@@ -59,7 +59,7 @@ namespace Halibut.Tests.DotMemory
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
 
-            HalibutRuntime server = null;
+            HalibutRuntime? server = null;
 
             try
             {
@@ -105,7 +105,7 @@ namespace Halibut.Tests.DotMemory
             }
             finally
             {
-                server.DisposeAsync().GetAwaiter().GetResult();
+                server?.DisposeAsync().GetAwaiter().GetResult();
             }
         }
 
