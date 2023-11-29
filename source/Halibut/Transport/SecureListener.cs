@@ -218,6 +218,7 @@ namespace Halibut.Transport
                 await using (Try.CatchingErrorOnDisposal(ssl, ex => log.WriteException(EventType.Diagnostic, "Could not dispose SSL stream", ex)))
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
+
                     await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());

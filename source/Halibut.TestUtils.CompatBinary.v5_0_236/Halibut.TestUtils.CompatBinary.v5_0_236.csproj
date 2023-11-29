@@ -3,7 +3,7 @@
     <PropertyGroup>
         <OutputType>Exe</OutputType>
         <LangVersion>9.0</LangVersion>
-        <RootNamespace>Halibut.TestUtils.SampleProgram.v5_0_237</RootNamespace>
+        <RootNamespace>Halibut.TestUtils.SampleProgram.v5_0_236</RootNamespace>
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
