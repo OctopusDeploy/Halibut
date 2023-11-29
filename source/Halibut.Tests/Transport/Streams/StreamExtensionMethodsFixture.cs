@@ -109,7 +109,7 @@ namespace Halibut.Tests.Transport.Streams
         public async Task WithTemporaryReadTimeoutSetsAndRestoresReadTimeout()
         {
             var currentTimeOut = TimeSpan.FromMilliseconds(42);
-            using var stream = new SupportsTimeoutsStream(new MemoryStream(), currentTimeOut, TimeSpan.FromMilliseconds(13));
+            await using var stream = new SupportsTimeoutsStream(new MemoryStream(), currentTimeOut, TimeSpan.FromMilliseconds(13));
             using (var _ = stream.WithTemporaryReadTimeout(34))
             {
                 stream.ReadTimeout.Should().Be(34);
