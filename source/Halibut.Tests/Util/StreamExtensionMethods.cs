@@ -19,7 +19,9 @@ namespace Halibut.Tests.Util
             switch (streamMethod)
             {
                 case StreamReadMethod.Read:
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                     return sut.Read(readBuffer, offset, count);
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                 case StreamReadMethod.ReadByte:
                     return sut.ReadByte();
                 case StreamReadMethod.BeginReadEndWithinCallback:
@@ -44,7 +46,9 @@ namespace Halibut.Tests.Util
                 case StreamMethod.Async:
                     return await sut.ReadAsync(readBuffer, offset, count, cancellationToken);
                 case StreamMethod.Sync:
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                     return sut.Read(readBuffer, offset, count);
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                 case StreamMethod.LegacyAsyncCallEndWithinCallback:
                     return await sut.ReadFromStreamLegacyAsyncCallEndWithinCallback(readBuffer, offset, count, cancellationToken);
                 case StreamMethod.LegacyAsyncCallEndOutsideCallback:

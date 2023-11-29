@@ -258,7 +258,7 @@ namespace Halibut.Tests.Transport
             await using (var sut =  new RewindableBufferStream(baseStream, 2))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
-                baseStream.Write(inputBuffer, 0, inputBuffer.Length);
+                await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
                 baseStream.Position = 0;
 
                 sut.StartBuffer();
@@ -269,7 +269,7 @@ namespace Halibut.Tests.Transport
                 sut.FinishAndRewind(2);
 
                 var rewoundOutputBuffer = new byte[8];
-                Assert.AreEqual(2, sut.Read(rewoundOutputBuffer, 0, 8));
+                Assert.AreEqual(2, await sut.ReadAsync(rewoundOutputBuffer, 0, 8));
                 var postRewindValue = Encoding.ASCII.GetString(rewoundOutputBuffer.AsSpan(0, 2).ToArray());
                 Assert.AreEqual("st", postRewindValue);
             }

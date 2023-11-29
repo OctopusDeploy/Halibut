@@ -121,8 +121,10 @@ namespace Halibut.Tests.Transport.Streams
 
             await errorRecordingStream.ReadAsync(new byte[0], 0, 0);
             await errorRecordingStream.ReadAsync(new byte[100], 1, 0);
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
             errorRecordingStream.Read(new byte[0], 0, 0);
             errorRecordingStream.Read(new byte[100], 1, 0);
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
 
 
             errorRecordingStream.WasTheEndOfStreamEncountered.Should().Be(false);
