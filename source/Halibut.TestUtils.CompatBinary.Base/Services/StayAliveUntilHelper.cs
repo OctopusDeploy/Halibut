@@ -32,7 +32,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
                         Environment.Exit(0);
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                 
                 }
