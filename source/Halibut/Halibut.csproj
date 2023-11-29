@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Description>Halibut is a secure, RPC-based communication framework. Like WCF and similar frameworks, Halibut uses a simple request/response based programming model. However, unlike other request/response frameworks, the transport layer can be configured to allow either party to be a TCP listener or TCP client.</Description>
     <NeutralLanguage>en-US</NeutralLanguage>
     <VersionPrefix>0.0.0</VersionPrefix>
@@ -13,9 +12,9 @@
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <PackageIcon>icon.png</PackageIcon>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <LangVersion>9.0</LangVersion>
 	  <Nullable>enable</Nullable>
   </PropertyGroup>

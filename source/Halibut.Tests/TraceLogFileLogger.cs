@@ -93,7 +93,9 @@ namespace Halibut.Tests
         public void Dispose()
         {
             cancellationTokenSource.Cancel();
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
             writeDataToDiskTask.GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
             cancellationTokenSource.Dispose();
         }
     }
