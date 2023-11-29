@@ -226,7 +226,7 @@ namespace Halibut.Tests
                 
                 cts.Cancel();
                 
-                await AssertException.Throws<Exception>(incrementCount);
+                await AssertException.Throws<OperationCanceledException>(incrementCount);
                 
                 countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
@@ -282,7 +282,7 @@ namespace Halibut.Tests
 
                 cts.Cancel();
 
-                await AssertException.Throws<Exception>(incrementCount);
+                await AssertException.Throws<OperationCanceledException>(incrementCount);
 
                 countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }

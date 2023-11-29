@@ -102,16 +102,14 @@ namespace Halibut.Tests.Transport
 
         IEnumerable<float> CollectCounterValues(PerformanceCounter counter)
         {
-#if !NETFRAMEWORK
-            if (!OperatingSystem.IsWindows()) throw new InvalidOperationException("This is a Windows only operation");
-#endif
-
             var sleepTime = TimeSpan.FromSeconds(1);
 
             while (true)
             {
                 Thread.Sleep(sleepTime);
+#pragma warning disable CA1416 // Validate platform compatibility
                 yield return counter.NextValue();
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             // ReSharper disable once IteratorNeverReturns : Take is limit
         }
