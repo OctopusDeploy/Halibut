@@ -4,6 +4,7 @@
         <OutputType>Exe</OutputType>
         <LangVersion>9.0</LangVersion>
         <RootNamespace>Halibut.TestUtils.SampleProgram.v4_4_8</RootNamespace>
+	    <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
