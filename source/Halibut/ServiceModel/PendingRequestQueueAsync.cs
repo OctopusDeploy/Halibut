@@ -80,7 +80,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
+        public async Task<RequestMessage?> DequeueAsync(CancellationToken cancellationToken)
         {
             var timer = Stopwatch.StartNew();
 
@@ -101,7 +101,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        async Task<PendingRequest> DequeueNextAsync(TimeSpan timeout, CancellationToken cancellationToken)
+        async Task<PendingRequest?> DequeueNextAsync(TimeSpan timeout, CancellationToken cancellationToken)
         {
             var first = await TakeFirst(cancellationToken);
             if (first != null || timeout <= TimeSpan.Zero)
@@ -124,7 +124,7 @@ namespace Halibut.ServiceModel
             return await TakeFirst(cancellationToken);
         }
 
-        async Task<PendingRequest> TakeFirst(CancellationToken cancellationToken)
+        async Task<PendingRequest?> TakeFirst(CancellationToken cancellationToken)
         {
             using (await queueLock.LockAsync(cancellationToken))
             {
@@ -169,6 +169,7 @@ namespace Halibut.ServiceModel
             readonly SemaphoreSlim transferLock = new(1, 1);
             bool transferBegun;
             bool completed;
+            ResponseMessage? response;
 
             public PendingRequest(RequestMessage request, ILog log)
             {
@@ -311,11 +312,11 @@ namespace Halibut.ServiceModel
                 }
             }
 
-            public ResponseMessage Response { get; private set; }
+            public ResponseMessage Response => response ?? throw new InvalidOperationException("Response has not been set.");
 
             public void SetResponse(ResponseMessage response)
             {
-                Response = response;
+                this.response = response;
                 responseWaiter.Set();
             }
 

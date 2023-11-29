@@ -63,7 +63,7 @@ namespace Halibut.Transport
         internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, ILog log, CancellationToken cancellationToken)
         {
             TcpClient client;
-            if (endPoint.Proxy == null)
+            if (endPoint.Proxy is null)
             {
                 client = CreateTcpClientAsync(halibutTimeoutsAndLimits);
                 await client.ConnectWithTimeoutAsync(endPoint.BaseUri, endPoint.TcpClientConnectTimeout, cancellationToken);
@@ -104,7 +104,7 @@ namespace Halibut.Transport
             return client;
         }
 
-        X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
+        X509Certificate UserCertificateSelectionCallback(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate? remoteCertificate, string[] acceptableIssuers)
         {
             return clientCertificate;
         }

@@ -4,7 +4,7 @@ namespace Halibut.Diagnostics
 {
     public class LogEvent
     {
-        public LogEvent(EventType type, string message, Exception error, object[] formatArguments)
+        public LogEvent(EventType type, string message, Exception error, object?[] formatArguments)
         {
             Type = type;
             Error = error;

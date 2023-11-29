@@ -51,7 +51,7 @@ namespace Halibut.Transport.Proxy
     public class HttpProxyClient : IProxyClient
     {
         private HttpResponseCodes _respCode;
-        private string _respText;
+        private string? _respText;
         readonly ILog log;
 
         private const string HTTP_PROXY_CONNECT_CMD = "CONNECT {0}:{1} HTTP/1.0\r\nHost: {0}:{1}\r\n\r\n";
@@ -112,7 +112,7 @@ namespace Halibut.Transport.Proxy
         /// <param name="proxyPort">Port number for the proxy server.</param>
         /// <param name="proxyUserName">Proxy authentication user name.</param>
         /// <param name="proxyPassword">Proxy authentication password.</param>
-        public HttpProxyClient(ILog logger, string proxyHost, int proxyPort, string proxyUserName, string proxyPassword, IStreamFactory streamFactory)
+        public HttpProxyClient(ILog logger, string proxyHost, int proxyPort, string? proxyUserName, string? proxyPassword, IStreamFactory streamFactory)
         {
             log = logger;
             if (string.IsNullOrEmpty(proxyHost))
@@ -150,18 +150,18 @@ namespace Halibut.Transport.Proxy
         /// <summary>
         /// Gets or sets proxy authentication user name.
         /// </summary>
-        public string ProxyUserName { get; set; }
+        public string? ProxyUserName { get; set; }
 
         /// <summary>
         /// Gets or sets proxy authentication password.
         /// </summary>
-        public string ProxyPassword { get; set; }
+        public string? ProxyPassword { get; set; }
 
         /// <summary>
         /// Gets or sets the TcpClient object. 
         /// This property can be set prior to executing CreateConnection to use an existing TcpClient connection.
         /// </summary>
-        public TcpClient TcpClient { get; set; }
+        public TcpClient? TcpClient { get; set; }
         
         readonly IStreamFactory streamFactory;
 
@@ -221,7 +221,7 @@ namespace Halibut.Transport.Proxy
         
         async Task SendConnectionCommandAsync(string host, int port, CancellationToken cancellationToken)
         {
-            var stream = streamFactory.CreateStream(TcpClient);
+            var stream = streamFactory.CreateStream(TcpClient!);
             var connectCmd = GetConnectCmd(host, port);
             var request = Encoding.ASCII.GetBytes(connectCmd);
 
@@ -281,16 +281,16 @@ namespace Halibut.Transport.Proxy
             switch (_respCode)
             {
                 case HttpResponseCodes.None:
-                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} failed to return a recognized HTTP response code.  Server response: {2}", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient), _respText);
+                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} failed to return a recognized HTTP response code.  Server response: {2}", Utils.GetHost(TcpClient!), Utils.GetPort(TcpClient!), _respText);
                     break;
 
                 case HttpResponseCodes.BadGateway:
                     //HTTP/1.1 502 Proxy Error (The specified Secure Sockets Layer (SSL) port is not allowed. ISA Server is not configured to allow SSL requests from this port. Most Web browsers use port 443 for SSL requests.)
-                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a 502 code - Bad Gateway.  If you are connecting to a Microsoft ISA destination please refer to knowledge based article Q283284 for more information.  Server response: {2}", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient), _respText);
+                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a 502 code - Bad Gateway.  If you are connecting to a Microsoft ISA destination please refer to knowledge based article Q283284 for more information.  Server response: {2}", Utils.GetHost(TcpClient!), Utils.GetPort(TcpClient!), _respText);
                     break;
 
                 default:
-                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a {2} code - {3}", Utils.GetHost(TcpClient), Utils.GetPort(TcpClient), ((int)_respCode).ToString(CultureInfo.InvariantCulture), _respText);
+                    msg = string.Format(CultureInfo.InvariantCulture, "Proxy destination {0} on port {1} responded with a {2} code - {3}", Utils.GetHost(TcpClient!), Utils.GetPort(TcpClient!), ((int)_respCode).ToString(CultureInfo.InvariantCulture), _respText);
                     break;
             }
 

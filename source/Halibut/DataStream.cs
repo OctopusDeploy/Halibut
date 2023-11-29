@@ -11,10 +11,12 @@ namespace Halibut
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
         readonly Func<Stream, CancellationToken, Task> writerAsync;
-        IDataStreamReceiver receiver;
+        IDataStreamReceiver? receiver;
 
         [JsonConstructor]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public DataStream()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
         }
         
@@ -49,14 +51,14 @@ namespace Halibut
             return new InMemoryDataStreamReceiver(writerAsync);
         }
 
-        public bool Equals(DataStream other)
+        public bool Equals(DataStream? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Id.Equals(other.Id);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;

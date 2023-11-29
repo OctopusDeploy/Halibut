@@ -17,7 +17,7 @@ namespace Halibut.Diagnostics.LogWriters
             this.logWriter = logWriter;
         }
 
-        public void Write(EventType type, string message, params object[] args)
+        public void Write(EventType type, string message, params object?[] args)
         {
             foreach (var writer in logWriter)
             {
@@ -26,7 +26,7 @@ namespace Halibut.Diagnostics.LogWriters
             log.Write(type, message, args);
         }
 
-        public void WriteException(EventType type, string message, Exception ex, params object[] args)
+        public void WriteException(EventType type, string message, Exception ex, params object?[] args)
         {
             foreach (var writer in logWriter)
             {

@@ -12,20 +12,20 @@ namespace Halibut
 {
     public class HalibutRuntimeBuilder
     {
-        ILogFactory logFactory;
-        IPendingRequestQueueFactory queueFactory;
-        X509Certificate2 serverCertificate;
-        IServiceFactory serviceFactory;
-        ITrustProvider trustProvider;
-        Action<MessageSerializerBuilder> configureMessageSerializerBuilder;
-        ITypeRegistry typeRegistry;
-        Action<TypeRegistryBuilder> configureTypeRegisterBuilder;
+        ILogFactory? logFactory;
+        IPendingRequestQueueFactory? queueFactory;
+        X509Certificate2? serverCertificate;
+        IServiceFactory? serviceFactory;
+        ITrustProvider? trustProvider;
+        Action<MessageSerializerBuilder>? configureMessageSerializerBuilder;
+        ITypeRegistry? typeRegistry;
+        Action<TypeRegistryBuilder>? configureTypeRegisterBuilder;
         Func<RetryPolicy> pollingReconnectRetryPolicy = RetryPolicy.Create;
-        Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect;
-        HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
-        IStreamFactory streamFactory;
-        IRpcObserver rpcObserver;
-        IConnectionsObserver connectionsObserver;
+        Func<string, string, UnauthorizedClientConnectResponse>? onUnauthorizedClientConnect;
+        HalibutTimeoutsAndLimits? halibutTimeoutsAndLimits;
+        IStreamFactory? streamFactory;
+        IRpcObserver? rpcObserver;
+        IConnectionsObserver? connectionsObserver;
 
         public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {

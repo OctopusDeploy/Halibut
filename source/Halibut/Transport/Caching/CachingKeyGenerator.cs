@@ -10,7 +10,7 @@ namespace Halibut.Transport.Caching
     {
         const char LinkChar = ':';
 
-        internal string GetCacheKey(MethodInfo methodInfo, object[] args, string prefix)
+        internal string GetCacheKey(MethodInfo methodInfo, object[] args, string? prefix)
         {
             var methodArguments = args?.Any() == true
                 ? args.Select(ParameterCacheKeys.GenerateCacheKey)
@@ -18,7 +18,7 @@ namespace Halibut.Transport.Caching
             return GenerateCacheKey(methodInfo, prefix, methodArguments);
         }
 
-        string GetCacheKeyPrefix(MethodInfo methodInfo, string prefix)
+        string GetCacheKeyPrefix(MethodInfo methodInfo, string? prefix)
         {
             if (!string.IsNullOrWhiteSpace(prefix)) return $"{prefix}{LinkChar}";
 
@@ -28,7 +28,7 @@ namespace Halibut.Transport.Caching
             return $"{typeName}{LinkChar}{methodName}{LinkChar}";
         }
 
-        string GenerateCacheKey(MethodInfo methodInfo, string prefix, IEnumerable<string> parameters)
+        string GenerateCacheKey(MethodInfo methodInfo, string? prefix, IEnumerable<string> parameters)
         {
             var cacheKeyPrefix = GetCacheKeyPrefix(methodInfo, prefix);
 

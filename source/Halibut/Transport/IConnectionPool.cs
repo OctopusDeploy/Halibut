@@ -8,7 +8,7 @@ namespace Halibut.Transport
     public interface IConnectionPool<TKey, TPooledResource> : IAsyncDisposable
         where TPooledResource : class, IPooledResource
     {
-        Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken);
+        Task<TPooledResource?> TakeAsync(TKey endPoint, CancellationToken cancellationToken);
 
         Task ReturnAsync(TKey endPoint, TPooledResource resource, CancellationToken cancellationToken);
 

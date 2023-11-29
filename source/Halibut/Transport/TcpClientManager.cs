@@ -87,7 +87,7 @@ namespace Halibut.Transport
             lock (syncLock)
             {
                 var clients = activeClients?.ToArray();
-                activeClients = null;
+                activeClients = null!;
 
                 if (clients == null || !clients.Any())
                 {

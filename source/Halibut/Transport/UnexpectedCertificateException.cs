@@ -7,7 +7,7 @@ namespace Halibut.Transport
     class UnexpectedCertificateException : AuthenticationException
     {
         public X509Certificate2 ProvidedCert { get; }
-        public string ExpectedThumbprint { get; }
+        public string? ExpectedThumbprint { get; }
         public Uri ServerUrl { get; }
 
         const string Text = "The server at {0} presented an unexpected security certificate. We expected the server to " +

@@ -8,9 +8,9 @@ namespace Halibut.Transport.Protocol
     public class MessageSerializerBuilder
     {
         readonly ILogFactory logFactory;
-        ITypeRegistry typeRegistry;
-        Action<JsonSerializerSettings> configureSerializer;
-        IMessageSerializerObserver messageSerializerObserver;
+        ITypeRegistry? typeRegistry;
+        Action<JsonSerializerSettings>? configureSerializer;
+        IMessageSerializerObserver? messageSerializerObserver;
         // Initial prod telemetry showed quite large read values (> 17M). But a decent number were below 64K.
         // This number is also below what .NET uses to put objects on the LOH (threshold is 85K)
         long readIntoMemoryLimitBytes = 1024L * 64L;

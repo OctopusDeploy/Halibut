@@ -14,7 +14,9 @@ namespace Halibut.Transport.Proxy
             var host = "";
             try
             {
-                host = ((System.Net.IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+                host = ((System.Net.IPEndPoint)client.Client.RemoteEndPoint)!.Address.ToString();
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
             }
             catch
             {   };
@@ -30,7 +32,9 @@ namespace Halibut.Transport.Proxy
             var port = "";
             try
             {
-                port = ((System.Net.IPEndPoint)client.Client.RemoteEndPoint).Port.ToString(CultureInfo.InvariantCulture);
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+                port = ((System.Net.IPEndPoint)client.Client.RemoteEndPoint)!.Port.ToString(CultureInfo.InvariantCulture);
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
             }
             catch
             { };

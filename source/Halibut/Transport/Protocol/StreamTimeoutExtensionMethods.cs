@@ -7,7 +7,7 @@ namespace Halibut.Transport.Protocol
 {
     public static class StreamTimeoutExtensionMethods
     {
-        public static async Task WithTimeout(this Stream stream, SendReceiveTimeout timeout, Func<Task> func)
+        public static async Task WithTimeout(this Stream stream, SendReceiveTimeout? timeout, Func<Task> func)
         {
             if (!stream.CanTimeout)
             {
@@ -95,9 +95,9 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public static void SetReadAndWriteTimeouts(this Stream stream, SendReceiveTimeout timeout)
+        public static void SetReadAndWriteTimeouts(this Stream stream, SendReceiveTimeout? timeout)
         {
-            if(timeout == null) return;
+            if (timeout == null) return;
             
             if (!stream.CanTimeout)
             {
@@ -108,7 +108,7 @@ namespace Halibut.Transport.Protocol
             stream.ReadTimeout = (int)timeout.ReceiveTimeout.TotalMilliseconds;
         }
         
-        public static SendReceiveTimeout GetReadAndWriteTimeouts(this Stream stream)
+        public static SendReceiveTimeout? GetReadAndWriteTimeouts(this Stream stream)
         {
             if (!stream.CanTimeout)
             {

@@ -53,7 +53,7 @@ namespace Halibut.Transport.Proxy
         /// <summary>
         /// Gets or set the TcpClient object if one was specified in the constructor.
         /// </summary>
-        TcpClient TcpClient { get; }
+        TcpClient? TcpClient { get; }
 
         IProxyClient WithTcpClientFactory(Func<TcpClient> tcpClientfactory);
 

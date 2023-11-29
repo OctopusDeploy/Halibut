@@ -10,7 +10,7 @@ namespace Halibut.Transport
     {
         public const string Header = "X-Octopus-RequestId";
 
-        static readonly Dictionary<string, X509Certificate2> certificates = new();
+        static readonly Dictionary<string, X509Certificate2?> certificates = new();
         static bool initialized;
 
 
@@ -58,14 +58,14 @@ namespace Halibut.Transport
 
         public static void Validate(string connectionId, ServiceEndPoint endPoint)
         {
-            X509Certificate2 providedCertificate;
+            X509Certificate2? providedCertificate;
 
             lock (certificates)
                 if (!certificates.TryGetValue(connectionId, out providedCertificate))
                     throw new Exception("Did not recieve a certificate from the server");
 
-            if (providedCertificate.Thumbprint != endPoint.RemoteThumbprint)
-                throw new UnexpectedCertificateException(providedCertificate, endPoint);
+            if (providedCertificate?.Thumbprint != endPoint.RemoteThumbprint)
+                throw new UnexpectedCertificateException(providedCertificate!, endPoint);
         }
     }
 }

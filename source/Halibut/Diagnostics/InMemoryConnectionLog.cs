@@ -24,12 +24,12 @@ namespace Halibut.Diagnostics
             this.logger = logger;
         }
 
-        public void Write(EventType type, string message, params object[] args)
+        public void Write(EventType type, string message, params object?[] args)
         {
-            WriteInternal(new LogEvent(type, message, null, args));
+            WriteInternal(new LogEvent(type, message, null!, args));
         }
 
-        public void WriteException(EventType type, string message, Exception ex, params object[] args)
+        public void WriteException(EventType type, string message, Exception ex, params object?[] args)
         {
             WriteInternal(new LogEvent(type, message, ex, args));
         }

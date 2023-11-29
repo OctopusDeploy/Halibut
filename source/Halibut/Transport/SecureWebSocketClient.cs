@@ -54,7 +54,7 @@ namespace Halibut.Transport
         {
             var retryInterval = ServiceEndpoint.RetryListeningSleepInterval;
 
-            Exception lastError = null;
+            Exception? lastError = null;
 
             // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
@@ -71,7 +71,7 @@ namespace Halibut.Transport
                 {
                     lastError = null;
 
-                    IConnection connection = null;
+                    IConnection? connection = null;
                     try
                     {
                         connection = await connectionManager.AcquireConnectionAsync(
@@ -150,7 +150,7 @@ namespace Halibut.Transport
             HandleError(lastError, retryAllowed);
         }
 
-        void HandleError(Exception lastError, bool retryAllowed)
+        void HandleError(Exception? lastError, bool retryAllowed)
         {
             if (lastError == null)
                 return;
