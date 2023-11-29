@@ -109,11 +109,27 @@ namespace Halibut.Transport.Protocol
                 .ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        public async Task WriteTextMessage(string message)
+        public async Task WriteTextMessage(string message, TimeSpan timeout, CancellationToken cancellationToken)
         {
             AssertCanReadOrWrite();
             var buffer = new ArraySegment<byte>(Encoding.UTF8.GetBytes(message));
-            await context.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
+
+            await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(
+                async ct =>
+                {
+                    await context.SendAsync(buffer, WebSocketMessageType.Text, true, ct);
+                    return true;
+                },
+                onCancellationAction: null,
+                onActionTaskExceptionAction: null,
+                getExceptionOnTimeout: () =>
+                {
+                    var socketException = new SocketException(10060);
+                    return new IOException($"Unable to write data to the transport connection: {socketException.Message}.", socketException);
+                },
+                timeout,
+                nameof(WriteTextMessage),
+                cancellationToken);
         }
 
         void AssertCanReadOrWrite()

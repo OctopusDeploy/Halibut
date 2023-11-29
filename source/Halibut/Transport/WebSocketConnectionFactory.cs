@@ -11,6 +11,7 @@ using Halibut.Transport.Proxy;
 using Halibut.Transport.Proxy.Exceptions;
 using Halibut.Transport.Streams;
 using Halibut.Util;
+using Halibut.Util.AsyncEx;
 
 namespace Halibut.Transport
 {
@@ -35,14 +36,14 @@ namespace Halibut.Transport
             var client = await CreateConnectedClientAsync(serviceEndpoint, cancellationToken);
 
             log.Write(EventType.Diagnostic, "Connection established");
-
-            var stream = streamFactory.CreateStream(client);
+            var webSocketStream = streamFactory.CreateStream(client);
 
             log.Write(EventType.Security, "Performing handshake");
-            await stream.WriteTextMessage("MX");
+            await webSocketStream.WriteTextMessage("MX", halibutTimeoutsAndLimits.TcpClientTimeout.SendTimeout, cancellationToken);
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
 
+            var stream = new NetworkTimeoutStream(webSocketStream);
             return new SecureConnection(client, stream, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
         }
         

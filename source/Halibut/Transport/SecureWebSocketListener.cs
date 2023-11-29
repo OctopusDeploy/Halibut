@@ -167,9 +167,6 @@ namespace Halibut.Transport
 
                     errorEventType = EventType.Error;
 
-                    // Do we need this?
-                    //var halibutLimitsStream = new HalibutLimitsStream(webSocketStream, halibutTimeoutsAndLimits.TcpClientReceiveTimeout, halibutTimeoutsAndLimits.TcpClientSendTimeout);
-
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
                     await ExchangeMessages(new NetworkTimeoutStream(webSocketStream)).ConfigureAwait(false);
                 }
