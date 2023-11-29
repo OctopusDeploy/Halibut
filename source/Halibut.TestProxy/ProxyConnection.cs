@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -11,7 +10,7 @@ namespace Halibut.TestProxy
 {
     interface IProxyConnection : IDisposable
     {
-        Task Connect(TcpClient source, CancellationToken cancellationToken);
+        void Connect(TcpClient source, CancellationToken cancellationToken);
     }
 
     class ProxyConnection : IProxyConnection
@@ -26,7 +25,7 @@ namespace Halibut.TestProxy
             this.logger = logger;
         }
 
-        public async Task Connect(TcpClient source, CancellationToken cancellationToken)
+        public void Connect(TcpClient source, CancellationToken cancellationToken)
         {
             if (source.Client.RemoteEndPoint is not IPEndPoint sourceRemoteEndpoint)
             {
