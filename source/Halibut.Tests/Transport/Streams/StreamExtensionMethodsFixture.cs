@@ -102,7 +102,7 @@ namespace Halibut.Tests.Transport.Streams
             memoryStream.WriteString("not enough");
             memoryStream.Position = 0;
             
-            await AssertAsync.Throws<EndOfStreamException>(async () => await memoryStream.ReadBytesAsync(1000, CancellationToken));
+            await AssertException.Throws<EndOfStreamException>(async () => await memoryStream.ReadBytesAsync(1000, CancellationToken));
         }
 
         [Test]

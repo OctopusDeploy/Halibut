@@ -56,7 +56,7 @@ namespace Halibut.Tests
                 
                 tokenSourceToCancel.CancelAfter(TimeSpan.FromMilliseconds(100));
                 
-                (await AssertAsync.Throws<Exception>(() => echo.IncrementAsync(halibutRequestOption)))
+                (await AssertException.Throws<Exception>(() => echo.IncrementAsync(halibutRequestOption)))
                     .And.Message.Contains("The operation was canceled");
 
                 clientAndService.PortForwarder.ReturnToNormalMode();
@@ -156,7 +156,7 @@ namespace Halibut.Tests
                 // Give time for the cancellation to do something
                 await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);
 
-                (await AssertAsync.Throws<Exception>(inFlightRequest))
+                (await AssertException.Throws<Exception>(inFlightRequest))
                     .And
                     .Should().Match<Exception>(x => x is OperationCanceledException || (x.GetType() == typeof(HalibutClientException) && x.Message.Contains("The ReadAsync operation was cancelled")));
             }

@@ -99,7 +99,7 @@ namespace Halibut.Tests.Transport.Observability
 
                 cts.Cancel();
 
-                await AssertAsync.Throws<Exception>(sayHelloTask);
+                await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);
@@ -132,7 +132,7 @@ namespace Halibut.Tests.Transport.Observability
 
                 cts.Cancel();
 
-                await AssertAsync.Throws<Exception>(sayHelloTask);
+                await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);

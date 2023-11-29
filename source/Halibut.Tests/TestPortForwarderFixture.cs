@@ -50,7 +50,7 @@ namespace Halibut.Tests
                                     serviceEndPoint.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
                                 });
 
-                await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Deploy package A"));
+                await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Deploy package A"));
             }
         }
 

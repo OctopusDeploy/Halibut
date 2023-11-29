@@ -105,7 +105,7 @@ namespace Halibut.TestUtils.Contracts
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return EnumValue.Equals(other.EnumValue) && Payload is not null && Payload.Equals(other.Payload);
+            return EnumValue.Equals(other.EnumValue) && Equals(Payload, other.Payload);
         }
 
         public override int GetHashCode()

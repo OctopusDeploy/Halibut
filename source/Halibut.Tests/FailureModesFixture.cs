@@ -43,7 +43,7 @@ namespace Halibut.Tests
                 });
 
                 
-                var error = (await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Paul"))).And;
+                var error = (await AssertException.Throws<HalibutClientException>(() => echo.SayHelloAsync("Paul"))).And;
                 error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
             }
         }
@@ -58,7 +58,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
-                var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
+                var ex = (await AssertException.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousService())
                 {
                     ex.Message.Should().Contain("at Halibut.TestUtils.SampleProgram.Base.Services.EchoService.Crash()").And.Contain("divide by zero");
@@ -89,7 +89,7 @@ namespace Halibut.Tests
                              .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
-                var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
+                var ex = (await AssertException.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 var expected = "at Halibut.Tests.TestServices.AsyncEchoService.CrashAsync(";
 #if NETFRAMEWORK
                     expected = "at Halibut.Tests.TestServices.AsyncEchoService.<CrashAsync>";
@@ -178,7 +178,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                 // This loop ensures (at the time) the test shows the problem.
                 for (var i = 0; i < 128; i++)
                 {
-                    await AssertAsync.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(
+                    await AssertException.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(
                         new DataStream(10000, 
                             async (_, _) =>
                                 {

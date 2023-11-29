@@ -45,7 +45,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 triggered = true;
             });
             var timeWaiting = Stopwatch.StartNew();
-            await AssertAsync.Throws<TimeoutException>(task.TimeoutAfter(TimeSpan.FromMilliseconds(1), CancellationToken.None));
+            await AssertException.Throws<TimeoutException>(task.TimeoutAfter(TimeSpan.FromMilliseconds(1), CancellationToken.None));
             timeWaiting.Stop();
             timeWaiting.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10), "we should have stopped waiting on the task when timeout happened");
             
@@ -78,7 +78,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 triggered = true;
             });
 
-            await AssertAsync.Throws<OperationCanceledException>(task.TimeoutAfter(TimeSpan.FromDays(1), ctsForTimeoutAfter.Token));
+            await AssertException.Throws<OperationCanceledException>(task.TimeoutAfter(TimeSpan.FromDays(1), ctsForTimeoutAfter.Token));
             triggered.Should().Be(false, "we should have stopped waiting on the task when cancellation happened");
             taskWillRunUntilThisIsCancelled.Cancel();
             await task;
@@ -159,7 +159,7 @@ namespace Halibut.Tests.Util.AsyncEx
             try
             {
                 var backgroundTask = createTaskToHaveTimeoutAfterCallInvokedOn.Invoke();
-                await AssertAsync.Throws<T>(timeoutAfterCall(backgroundTask));
+                await AssertException.Throws<T>(timeoutAfterCall(backgroundTask));
 
                 timeoutAfterCallHasFinished();
                 //delay long enough to ensure the task throws its exception

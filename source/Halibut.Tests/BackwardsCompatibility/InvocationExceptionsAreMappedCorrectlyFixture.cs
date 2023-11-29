@@ -22,7 +22,7 @@ namespace Halibut.Tests.BackwardsCompatibility
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
-                await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await echo.CrashAsync());
+                await AssertException.Throws<ServiceInvocationHalibutClientException>(async () => await echo.CrashAsync());
             }
         }
     }

@@ -58,7 +58,7 @@ namespace Halibut.Tests.Diagnostics
                     var svc = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                     // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
-                    var exception = (await AssertAsync.Throws<HalibutClientException>(async () => await svc.ActionAsync())).And;
+                    var exception = (await AssertException.Throws<HalibutClientException>(async () => await svc.ActionAsync())).And;
                     new SerilogLoggerBuilder().Build().Information(exception, "Got an exception, we were expecting one");
                     exception.IsNetworkError()
                         .Should()
@@ -89,7 +89,7 @@ namespace Halibut.Tests.Diagnostics
                     var svc = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                     // When svc.Action() is executed, tentacle will kill the TCP connection and dispose the port forwarder preventing new connections.
-                    var exception = (await AssertAsync.Throws<HalibutClientException>(() => svc.ActionAsync())).And;
+                    var exception = (await AssertException.Throws<HalibutClientException>(() => svc.ActionAsync())).And;
                     new SerilogLoggerBuilder().Build().Information(exception, "Got an exception, we were expecting one");
                     exception.IsNetworkError()
                         .Should()
@@ -114,7 +114,7 @@ namespace Halibut.Tests.Diagnostics
                 {
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
 
-                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
+                    (await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.UnknownError);
@@ -131,7 +131,7 @@ namespace Halibut.Tests.Diagnostics
                 {
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
 
-                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
+                    (await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
                         .IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
@@ -153,7 +153,7 @@ namespace Halibut.Tests.Diagnostics
                     {
                         point.RetryCountLimit = 1;
                     });
-                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello")))
+                    (await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello")))
                         .And
                         .IsNetworkError()
                         .Should()
@@ -173,7 +173,7 @@ namespace Halibut.Tests.Diagnostics
                 {
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
-                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello")))
+                    (await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello")))
                         .And
                         .IsNetworkError()
                         .Should()
@@ -201,7 +201,7 @@ namespace Halibut.Tests.Diagnostics
 
                             });
 
-                    (await AssertAsync.Throws<HalibutClientException>(async () => await echo.CountBytesAsync(dataStream)))
+                    (await AssertException.Throws<HalibutClientException>(async () => await echo.CountBytesAsync(dataStream)))
                         .And
                         .IsNetworkError()
                         .Should()
@@ -226,7 +226,7 @@ namespace Halibut.Tests.Diagnostics
                             throw new FileNotFoundException();
                         });
 
-                    (await AssertAsync.Throws<HalibutClientException>(() => echo.CountBytesAsync(dataStream)))
+                    (await AssertException.Throws<HalibutClientException>(() => echo.CountBytesAsync(dataStream)))
                         .And
                         .IsNetworkError()
                         .Should()
@@ -244,7 +244,7 @@ namespace Halibut.Tests.Diagnostics
                 {
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
-                    var exception = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
+                    var exception = (await AssertException.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                     exception.IsNetworkError().Should().Be(HalibutNetworkExceptionType.NotANetworkError);
                 }
             }

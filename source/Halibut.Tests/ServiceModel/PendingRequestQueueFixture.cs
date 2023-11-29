@@ -350,7 +350,7 @@ namespace Halibut.Tests.ServiceModel
             cancellationTokenSource.Cancel();
 
             // Assert
-            await AssertAsync.Throws<OperationCanceledException>(queueAndWaitTask);
+            await AssertException.Throws<OperationCanceledException>(queueAndWaitTask);
 
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
@@ -555,7 +555,7 @@ namespace Halibut.Tests.ServiceModel
             await Task.Delay(1000, CancellationToken);
             await sut.DequeueAsync(CancellationToken);
 
-            await AssertAsync.Throws<OperationCanceledException>(queueAndWaitTask);
+            await AssertException.Throws<OperationCanceledException>(queueAndWaitTask);
 
 
             // Act

@@ -39,7 +39,7 @@ namespace Halibut.Tests.Transport
             var client = new DiscoveryClient(new StreamFactory());
             var fakeEndpoint = new ServiceEndPoint("https://fake-tentacle.example", "", new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
 
-            await AssertAsync.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), CancellationToken), "No such host is known");
+            await AssertException.Throws<HalibutClientException>(() => client.DiscoverAsync(fakeEndpoint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), CancellationToken), "No such host is known");
         }
         
         [Test]

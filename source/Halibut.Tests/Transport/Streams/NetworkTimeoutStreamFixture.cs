@@ -308,7 +308,7 @@ namespace Halibut.Tests.Transport.Streams
                 // NetworkStream implementation of Flush and FlushAsync is a NoOp so pause to make sure our wrapper is working
                 pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
 
-                (await AssertAsync.Throws<IOException>(async () => await sut.FlushAsync(CancellationToken)))
+                (await AssertException.Throws<IOException>(async () => await sut.FlushAsync(CancellationToken)))
                     .And.Message.Should().ContainAny(
                     "Unable to write data to the transport connection: Connection timed out.",
                     "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
@@ -332,8 +332,8 @@ namespace Halibut.Tests.Transport.Streams
 
                 // NetworkStream implementation of Flush and FlushAsync is a NoOp so pause to make sure our wrapper is working
                 pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
-
-                AssertAsync.Throws<IOException>(() => sut.Flush())
+                
+                AssertException.Throws<IOException>(() => sut.Flush())
                     .And.Message.Should().ContainAny(
                         "Unable to write data to the transport connection: Connection timed out.",
                         "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");

@@ -44,7 +44,7 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -78,7 +78,7 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -110,7 +110,7 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -142,7 +142,7 @@ namespace Halibut.Tests.Timeouts
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(() =>
+                var e = (await AssertException.Throws<HalibutClientException>(() =>
                 {
                     var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 20);
                     return echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend);
@@ -181,7 +181,7 @@ namespace Halibut.Tests.Timeouts
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
                     firstSend: "hello",
                     andThenRun: portForwarderRef.Value!.PauseExistingConnections,
                     thenSend: "All done" + Some.RandomAsciiStringOfLength(10*1024*1024)

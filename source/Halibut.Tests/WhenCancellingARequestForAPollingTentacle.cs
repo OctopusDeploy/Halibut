@@ -39,7 +39,7 @@ namespace Halibut.Tests
                 {
                     var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-                    await AssertAsync.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
+                    await AssertException.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
             }
         }
@@ -109,7 +109,7 @@ namespace Halibut.Tests
                 {
                     var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-                    await AssertAsync.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
+                    await AssertException.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
 
                 calls.Should().HaveCount(1);
