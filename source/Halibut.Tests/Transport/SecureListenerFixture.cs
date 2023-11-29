@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Runtime.Versioning;
 using System.Threading;
 using FluentAssertions;
 using Halibut.Diagnostics;
@@ -20,12 +21,14 @@ namespace Halibut.Tests.Transport
     {
         PerformanceCounter GetCounterForCurrentProcess(string categoryName, string counterName)
         {
+#pragma warning disable CA1416 // Validate platform compatibility
             var pid = Process.GetCurrentProcess().Id;
 
             var instanceName = new PerformanceCounterCategory("Process")
                 .GetInstanceNames()
                 .FirstOrDefault(instance =>
                 {
+
                     using (var counter = new PerformanceCounter("Process", "ID Process", instance, true))
                     {
                         try
@@ -45,6 +48,7 @@ namespace Halibut.Tests.Transport
             }
 
             return new PerformanceCounter(categoryName, counterName, instanceName, true);
+#pragma warning restore CA1416 // Validate platform compatibility
         }
 
         [Test]
@@ -98,6 +102,10 @@ namespace Halibut.Tests.Transport
 
         IEnumerable<float> CollectCounterValues(PerformanceCounter counter)
         {
+#if !NETFRAMEWORK
+            if (!OperatingSystem.IsWindows()) throw new InvalidOperationException("This is a Windows only operation");
+#endif
+
             var sleepTime = TimeSpan.FromSeconds(1);
 
             while (true)

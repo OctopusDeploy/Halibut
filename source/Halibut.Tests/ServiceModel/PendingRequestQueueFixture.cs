@@ -636,7 +636,7 @@ namespace Halibut.Tests.ServiceModel
 
             //Concurrently apply responses to prove this does not cause issues.
             var applyResponseTasks = requestsInOrder
-                .Select((r,i) => Task.Factory.StartNew(async () => await sut.ApplyResponse(expectedResponsesInOrder[i], r.Destination)))
+                .Select((r,i) => Task.Run(async () => await sut.ApplyResponse(expectedResponsesInOrder[i], r.Destination)))
                 .ToList();
             
             await Task.WhenAll(applyResponseTasks);

@@ -88,7 +88,6 @@ namespace Halibut.Tests.Transport.Streams
         [Test]
         public void EndOfStreamEncounteredIsRecorded()
         {
-            int counter = 0;
             var errorRecordingStream = new ErrorRecordingStream(new MemoryStream("hello".GetBytesUtf8()), true);
 
             while (errorRecordingStream.Read(new byte[100], 0, 100) != 0)
@@ -102,7 +101,6 @@ namespace Halibut.Tests.Transport.Streams
         [Test]
         public async Task EndOfStreamEncounteredIsRecordedAsync()
         {
-            int counter = 0;
             var errorRecordingStream = new ErrorRecordingStream(new MemoryStream("hello".GetBytesUtf8()), true);
 
             while ((await errorRecordingStream.ReadAsync(new byte[100], 0, 100)) != 0)
@@ -116,7 +114,6 @@ namespace Halibut.Tests.Transport.Streams
         [Test]
         public async Task ReadingIntoAZeroLengthArrayIsNotAEndOfStream()
         {
-            int counter = 0;
             var errorRecordingStream = new ErrorRecordingStream(new MemoryStream("hello".GetBytesUtf8()), true);
 
             await errorRecordingStream.ReadAsync(new byte[0], 0, 0);
