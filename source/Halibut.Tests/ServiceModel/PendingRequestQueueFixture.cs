@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -349,7 +350,7 @@ namespace Halibut.Tests.ServiceModel
             cancellationTokenSource.Cancel();
 
             // Assert
-            await AssertionExtensions.Should(() => queueAndWaitTask).ThrowAsync<OperationCanceledException>();
+            await AssertAsync.Throws<OperationCanceledException>(queueAndWaitTask);
 
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
@@ -554,7 +555,7 @@ namespace Halibut.Tests.ServiceModel
             await Task.Delay(1000, CancellationToken);
             await sut.DequeueAsync(CancellationToken);
 
-            await AssertionExtensions.Should(() => queueAndWaitTask).ThrowAsync<OperationCanceledException>();
+            await AssertAsync.Throws<OperationCanceledException>(queueAndWaitTask);
 
 
             // Act

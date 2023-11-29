@@ -111,8 +111,8 @@ namespace Halibut.Tests
                     CancellationToken);
                 
                 cts.Cancel();
-                
-                await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
+
+                await AssertAsync.Throws<OperationCanceledException>(incrementCount);
 
                 // don't assert things until we've seen the client actually connect
                 await unauthorizedClientHasConnected.Task;
@@ -161,7 +161,7 @@ namespace Halibut.Tests
 
                 cts.Cancel();
 
-                var exception = await AssertionExtensions.Should(() => incrementCount).ThrowAsync<Exception>();
+                var exception = await AssertAsync.Throws<Exception>(incrementCount);
 
                 exception.And.Should().Match(e => e.GetType() == typeof(HalibutClientException) 
                                                   || e.GetType() == typeof(OperationCanceledException) 
@@ -226,7 +226,7 @@ namespace Halibut.Tests
                 
                 cts.Cancel();
                 
-                await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
+                await AssertAsync.Throws<Exception>(incrementCount);
                 
                 countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
@@ -282,7 +282,7 @@ namespace Halibut.Tests
 
                 cts.Cancel();
 
-                await AssertionExtensions.Should(() => incrementCount).ThrowAsync<OperationCanceledException>();
+                await AssertAsync.Throws<Exception>(incrementCount);
 
                 countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
