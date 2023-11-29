@@ -212,7 +212,7 @@ namespace Halibut.Tests.Transport
             await using (var sut = RewindableBufferStreamBuilder.Build(baseStream))
             {
                 var inputBuffer = Encoding.ASCII.GetBytes("Test");
-                baseStream.Write(inputBuffer, 0, inputBuffer.Length);
+                await baseStream.WriteAsync(inputBuffer, 0, inputBuffer.Length);
 
                 baseStream.Position = 0;
 

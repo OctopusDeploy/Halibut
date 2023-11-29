@@ -243,7 +243,9 @@ namespace Halibut.Tests.Transport.Streams
 
             using (disposables)
             {
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                 sut.Dispose();
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
 
                 Action read = () => sut.Read(new byte[1], 0, 1);
                 read.Should().Throw<ObjectDisposedException>("Because the stream is closed");
@@ -271,7 +273,9 @@ namespace Halibut.Tests.Transport.Streams
 
             using (disposables)
             {
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                 sut.Flush();
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                 callCountingStream.FlushCallCount.Should().Be(1);
             }
         }
@@ -329,7 +333,7 @@ namespace Halibut.Tests.Transport.Streams
                 // NetworkStream implementation of Flush and FlushAsync is a NoOp so pause to make sure our wrapper is working
                 pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
 
-                (await AssertAsync.Throws<IOException>(async () => sut.Flush()))
+                AssertAsync.Throws<IOException>(() => sut.Flush())
                     .And.Message.Should().ContainAny(
                         "Unable to write data to the transport connection: Connection timed out.",
                         "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
@@ -573,7 +577,9 @@ namespace Halibut.Tests.Transport.Streams
                 // Close and Dispose should not re-throw on timeout as callers do not expect these to throw 
                 // e.g. if using ... throw it makes the stream difficult to use
                 sut.Close();
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                 sut.Dispose();
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                 await sut.DisposeAsync();
 
                 callCountingStream.CloseCallCount.Should().Be(2);

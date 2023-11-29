@@ -11,5 +11,11 @@ namespace Halibut.Tests.Support
         {
             return await task.Should().ThrowAsync<T>(because);
         }
+
+        //TODO: @server-at-scale this does not belong here. Move it, or rename this class.
+        public static ExceptionAssertions<T> Throws<T>(this Action task, string because = "") where T : Exception
+        {
+            return task.Should().Throw<T>(because);
+        }
     }
 }

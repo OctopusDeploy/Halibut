@@ -108,7 +108,9 @@ namespace Halibut.Tests.Util
                     await sut.WriteAsync(buffer, offset, count, cancellationToken);
                     return;
                 case StreamMethod.Sync:
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                     sut.Write(buffer, offset, count);
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                     return;
                 case StreamMethod.LegacyAsyncCallEndWithinCallback:
                     await WriteToStreamLegacyAsyncCallEndWithinCallback(sut, buffer, offset, count, cancellationToken);
@@ -126,7 +128,9 @@ namespace Halibut.Tests.Util
             switch (streamWriteMethod)
             {
                 case StreamWriteMethod.Write:
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                     sut.Write(buffer, offset, count);
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                     return;
                 case StreamWriteMethod.WriteByte:
                     sut.WriteByte(buffer[0]);
@@ -194,10 +198,14 @@ namespace Halibut.Tests.Util
             switch (streamCopyToMethod)
             {
                 case StreamCopyToMethod.CopyTo:
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                     sut.CopyTo(destination);
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                     return;
                 case StreamCopyToMethod.CopyToWithBufferSize:
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                     sut.CopyTo(destination, bufferSize);
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                     return;
                 case StreamCopyToMethod.CopyToAsync:
 #if NETFRAMEWORK

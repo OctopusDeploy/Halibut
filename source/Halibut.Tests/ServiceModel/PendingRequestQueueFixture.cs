@@ -527,7 +527,7 @@ namespace Halibut.Tests.ServiceModel
             await sut.ApplyResponse(expectedResponse, request.Destination);
             await queueAndWaitTask;
 
-            var singleDequeuedRequest = dequeueTasks.Should().ContainSingle(t => t.Result != null).Subject.Result;
+            var singleDequeuedRequest = await dequeueTasks.Should().ContainSingle(t => t.Result != null).Subject;
             singleDequeuedRequest.Should().Be(request);
         }
 

@@ -195,8 +195,10 @@ namespace Halibut.Tests.Diagnostics
                         async (_, _) =>
                             {
                                 await Task.CompletedTask;
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                                 new FileStream("DoesNotExist2497546", FileMode.Open).Dispose();
-                                
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
+
                             });
 
                     (await AssertAsync.Throws<HalibutClientException>(async () => await echo.CountBytesAsync(dataStream)))
