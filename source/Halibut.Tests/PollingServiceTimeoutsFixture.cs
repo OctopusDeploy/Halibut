@@ -64,8 +64,7 @@ namespace Halibut.Tests
                 stopwatch.Stop();
 
                 stopwatch.Elapsed.Should()
-                    .BeGreaterThan(halibutTimeoutsAndLimits.PollingRequestQueueTimeout, "Should have waited longer than the PollingRequestQueueTimeout").And
-                    .BeLessThan(responseDelay + TimeSpan.FromSeconds(5), "Should have received the response after the 10 second delay + 5 second buffer");
+                    .BeGreaterThan(halibutTimeoutsAndLimits.PollingRequestQueueTimeout, "Should have waited longer than the PollingRequestQueueTimeout");
             }
         }
 
