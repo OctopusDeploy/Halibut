@@ -50,6 +50,13 @@ namespace Halibut.Tests.Support
             return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
         }
 
+        public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri, Func<ServiceEndPoint, ServiceEndPoint> modifyServiceEndpoint)
+        {
+            var serviceEndPoint = GetServiceEndPoint(serviceUri);
+            serviceEndPoint = modifyServiceEndpoint(serviceEndPoint);
+            return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
+        }
+
         public TAsyncClientService CreateClientWithoutService<TService, TAsyncClientService>()
         {
             var serviceThatDoesNotExistUri = GetServiceUriThatDoesNotExist();
@@ -61,6 +68,14 @@ namespace Halibut.Tests.Support
             var serviceThatDoesNotExistUri = GetServiceUriThatDoesNotExist();
             var serviceEndPoint = GetServiceEndPoint(serviceThatDoesNotExistUri);
             modifyServiceEndpoint(serviceEndPoint);
+            return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
+        }
+
+        public TAsyncClientService CreateClientWithoutService<TService, TAsyncClientService>(Func<ServiceEndPoint, ServiceEndPoint> modifyServiceEndpoint)
+        {
+            var serviceThatDoesNotExistUri = GetServiceUriThatDoesNotExist();
+            var serviceEndPoint = GetServiceEndPoint(serviceThatDoesNotExistUri);
+            serviceEndPoint = modifyServiceEndpoint(serviceEndPoint);
             return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
         }
 

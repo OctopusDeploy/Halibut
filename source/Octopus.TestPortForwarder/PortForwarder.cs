@@ -95,6 +95,7 @@ namespace Octopus.TestPortForwarder
         public Uri PublicEndpoint { get; set; }
 
         public bool KillNewConnectionsImmediatlyMode { get; set; }
+        public bool PauseNewConnectionsImmediatelyMode { get; private set; }
 
         public void EnterKillNewAndExistingConnectionsMode()
         {
@@ -102,9 +103,16 @@ namespace Octopus.TestPortForwarder
             this.CloseExistingConnections();
         }
 
+        public void EnterPauseNewAndExistingConnectionsMode()
+        {
+            PauseNewConnectionsImmediatelyMode = true;
+            this.PauseExistingConnections();
+        }
+
         public void ReturnToNormalMode()
         {
             KillNewConnectionsImmediatlyMode = false;
+            PauseNewConnectionsImmediatelyMode = false;
         }
 
         async Task WorkerTask(CancellationToken cancellationToken)
@@ -136,6 +144,13 @@ namespace Octopus.TestPortForwarder
                             var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 
                             var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, biDirectionalDataTransferObserver, numberOfBytesToDelaySending, logger);
+
+                            if (PauseNewConnectionsImmediatelyMode)
+                            {
+                                logger.Information("Pausing the Pump or the new conenction");
+                                pump.Pause();
+                            }
+
                             AddNewPump(pump, cancellationToken);
                         }
                         catch (Exception exception)

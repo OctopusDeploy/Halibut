@@ -85,7 +85,8 @@ namespace Halibut.Tests.Timeouts
                 (await AssertionExtensions.Should(() => lastServiceClient.GetListAsync()).ThrowAsync<HalibutClientException>())
                     .And.Message.Should().ContainAny(
                         "Connection timed out.",
-                        "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
+                        "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond",
+                        "Unable to read data from the transport connection: Connection reset by peer");
             }
         }
         
