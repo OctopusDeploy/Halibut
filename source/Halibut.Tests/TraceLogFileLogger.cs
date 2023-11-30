@@ -5,10 +5,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
+using IAsyncDisposable = System.IAsyncDisposable;
 
 namespace Halibut.Tests
 {
-    public class TraceLogFileLogger : IDisposable
+    public class TraceLogFileLogger : IAsyncDisposable
     {
         readonly AsyncQueue<string> queue = new();
         public readonly string logFilePath;
@@ -90,12 +91,12 @@ namespace Halibut.Tests
             return traceLogsDirectory;
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             cancellationTokenSource.Cancel();
-#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
-            writeDataToDiskTask.GetAwaiter().GetResult();
-#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
+#pragma warning disable VSTHRD003
+            await writeDataToDiskTask;
+#pragma warning restore VSTHRD003
             cancellationTokenSource.Dispose();
         }
     }
