@@ -289,9 +289,9 @@ namespace Halibut.Tests.Support
             }
 
             var client = await clientBuilder.Build(cancellationToken);
-            if (client.PollingUri is not null)
+            if (client.ListeningUri is not null)
             {
-                serviceBuilder.WithPollingClient(client.PollingUri);
+                serviceBuilder.WithPollingClient(client.ListeningUri);
             }
             
             var service = await serviceBuilder.Build(cancellationToken);

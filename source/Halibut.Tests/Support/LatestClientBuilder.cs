@@ -203,7 +203,7 @@ namespace Halibut.Tests.Support
             
             var disposableCollection = new DisposableCollection();
             PortForwarder? portForwarder = null;
-            Uri? clientPollingUri = null;
+            Uri? clientListeningUri = null;
 
             if (serviceConnectionType == ServiceConnectionType.Polling)
             {
@@ -211,7 +211,7 @@ namespace Halibut.Tests.Support
 
                 portForwarder = portForwarderFactory?.Invoke(clientListenPort);
                 
-                clientPollingUri = new Uri($"https://localhost:{portForwarder?.ListeningPort ?? clientListenPort}");
+                clientListeningUri = new Uri($"https://localhost:{portForwarder?.ListeningPort ?? clientListenPort}");
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
@@ -225,7 +225,7 @@ namespace Halibut.Tests.Support
 
                 portForwarder = portForwarderFactory?.Invoke(webSocketListeningInfo.WebSocketListeningPort);
 
-                clientPollingUri = new Uri($"wss://localhost:{portForwarder?.ListeningPort ?? webSocketListeningInfo.WebSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
+                clientListeningUri = new Uri($"wss://localhost:{portForwarder?.ListeningPort ?? webSocketListeningInfo.WebSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
@@ -251,7 +251,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new LatestClient(client, clientPollingUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
+            return new LatestClient(client, clientListeningUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
         }
 
         IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
@@ -299,8 +299,9 @@ namespace Halibut.Tests.Support
             readonly ServiceConnectionType serviceConnectionType;
             readonly DisposableCollection disposableCollection;
 
-            public LatestClient(HalibutRuntime client,
-                Uri? pollingUri,
+            public LatestClient(
+                HalibutRuntime client,
+                Uri? listeningUri,
                 string thumbprint,
                 PortForwarder? portForwarder,
                 ProxyDetails? proxyDetails,
@@ -308,7 +309,7 @@ namespace Halibut.Tests.Support
                 DisposableCollection disposableCollection)
             {
                 Client = client;
-                PollingUri = pollingUri;
+                ListeningUri = listeningUri;
                 this.thumbprint = thumbprint;
                 this.portForwarder = portForwarder;
                 this.proxyDetails = proxyDetails;
@@ -317,7 +318,7 @@ namespace Halibut.Tests.Support
             }
 
             public HalibutRuntime Client { get; }
-            public Uri? PollingUri { get; }
+            public Uri? ListeningUri { get; }
             
             public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri)
             {

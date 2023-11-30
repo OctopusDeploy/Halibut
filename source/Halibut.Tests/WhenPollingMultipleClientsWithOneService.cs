@@ -23,8 +23,8 @@ namespace Halibut.Tests
                 {
                     var clients = new[]
                     {
-                        clientOnly1.PollingUri!,
-                        clientOnly2.PollingUri!
+                        clientOnly1.ListeningUri!,
+                        clientOnly2.ListeningUri!
                     };
 
                     await using (var service = await clientAndServiceTestCase.CreateServiceOnlyTestCaseBuilder()
