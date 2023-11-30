@@ -25,8 +25,7 @@ namespace Halibut.Tests.Timeouts
             var expectedTimeout = TimeSpan.FromSeconds(10);
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType).Build())
-                       .WithPortForwarding(out var portForwarderRef)
+                       .WithPortForwarding(out var portForwarderRef, port => PortForwarderUtil.ForwardingToLocalPort(port).WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType).Build())
                        .WithEchoService()
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
                        .WhenTestingAsyncClient(clientAndServiceTestCase, b =>

@@ -284,7 +284,6 @@ namespace Halibut.Tests.Support
                 await httpProxy.StartAsync();
                 var httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint!.Port, ProxyType.HTTP);
 
-                //TODO: Should we instead pass this into the create client method?
                 clientBuilder.WithProxyDetails(httpProxyDetails);
                 serviceBuilder.WithProxyDetails(httpProxyDetails);
             }

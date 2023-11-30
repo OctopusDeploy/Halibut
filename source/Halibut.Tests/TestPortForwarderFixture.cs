@@ -38,8 +38,7 @@ namespace Halibut.Tests
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
-                       .WithPortForwarding(out var portForwarderRef)
+                       .WithPortForwarding(out var portForwarderRef, i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .Build(CancellationToken))
             {
                 portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
