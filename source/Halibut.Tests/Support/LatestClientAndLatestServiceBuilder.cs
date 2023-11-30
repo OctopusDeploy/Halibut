@@ -291,7 +291,7 @@ namespace Halibut.Tests.Support
             var client = await clientBuilder.Build(cancellationToken);
             if (client.ListeningUri is not null)
             {
-                serviceBuilder.WithPollingClient(client.ListeningUri);
+                serviceBuilder.WithListeningClient(client.ListeningUri);
             }
             
             var service = await serviceBuilder.Build(cancellationToken);
@@ -310,12 +310,12 @@ namespace Halibut.Tests.Support
 
         public class ClientAndService : IClientAndService
         {
-            readonly LatestClientBuilder.LatestClient client;
-            readonly LatestServiceBuilder.LatestService service;
+            readonly LatestClient client;
+            readonly LatestService service;
 
             public ClientAndService(
-                LatestClientBuilder.LatestClient client,
-                LatestServiceBuilder.LatestService service,
+                LatestClient client,
+                LatestService service,
                 HttpProxyService? proxy)
             {
                 this.client = client;

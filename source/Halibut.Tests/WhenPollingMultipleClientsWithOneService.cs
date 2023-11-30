@@ -29,7 +29,7 @@ namespace Halibut.Tests
 
                     await using (var service = await clientAndServiceTestCase.CreateServiceOnlyTestCaseBuilder()
                                      .AsLatestServiceBuilder()
-                                     .WithPollingClients(clients)
+                                     .WithListeningClients(clients)
                                      .WithCountingService(countingService)
                                      .Build(CancellationToken))
                     {

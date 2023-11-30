@@ -46,31 +46,16 @@ namespace Halibut.Tests.Support
             clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
         }
 
-        public static LatestClientBuilder Polling()
-        {
-            return new LatestClientBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling);
-        }
-
-        public static LatestClientBuilder PollingOverWebSocket()
-        {
-            return new LatestClientBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling);
-        }
-
-        public static LatestClientBuilder Listening()
-        {
-            return new LatestClientBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening);
-        }
-
         public static LatestClientBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
         {
             switch (serviceConnectionType)
             {
                 case ServiceConnectionType.Polling:
-                    return Polling();
+                    return new LatestClientBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling);
                 case ServiceConnectionType.Listening:
-                    return Listening();
+                    return new LatestClientBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening);
                 case ServiceConnectionType.PollingOverWebSocket:
-                    return PollingOverWebSocket();
+                    return new LatestClientBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
@@ -229,17 +214,7 @@ namespace Halibut.Tests.Support
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
-                //Do over in other builder?
-                //var dummyTentacle = new TCPListenerWhichKillsNewConnections();
-                //disposableCollection.Add(dummyTentacle);
-                //var listenPort = dummyTentacle.Port;
-                
-
-                //portForwarder = portForwarderFactory?.Invoke(listenPort);
-                //if (portForwarder != null)
-                //{
-                //    listenPort = portForwarder.ListeningPort;
-                //}
+                //Nothing to do if we are listening (except not throw an NotSupportedException)
             }
             else
             {
@@ -289,101 +264,6 @@ namespace Halibut.Tests.Support
                 }
             )
                 .ToCachingLogFactory();
-        }
-        
-        public class LatestClient : IClient
-        {
-            readonly string thumbprint;
-            readonly PortForwarder? portForwarder;
-            readonly ProxyDetails? proxyDetails;
-            readonly ServiceConnectionType serviceConnectionType;
-            readonly DisposableCollection disposableCollection;
-
-            public LatestClient(
-                HalibutRuntime client,
-                Uri? listeningUri,
-                string thumbprint,
-                PortForwarder? portForwarder,
-                ProxyDetails? proxyDetails,
-                ServiceConnectionType serviceConnectionType,
-                DisposableCollection disposableCollection)
-            {
-                Client = client;
-                ListeningUri = listeningUri;
-                this.thumbprint = thumbprint;
-                this.portForwarder = portForwarder;
-                this.proxyDetails = proxyDetails;
-                this.serviceConnectionType = serviceConnectionType;
-                this.disposableCollection = disposableCollection;
-            }
-
-            public HalibutRuntime Client { get; }
-            public Uri? ListeningUri { get; }
-            
-            public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri)
-            {
-                var serviceEndPoint = GetServiceEndPoint(serviceUri);
-                return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
-            }
-
-            public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri, Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                var serviceEndPoint = GetServiceEndPoint(serviceUri);
-                modifyServiceEndpoint(serviceEndPoint);
-                return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
-            }
-
-            public TAsyncClientService CreateClientWithoutService<TService, TAsyncClientService>()
-            {
-                var serviceThatDoesNotExistUri = ServiceUriThatDoesNotExist();
-                return CreateClient<TService, TAsyncClientService>(serviceThatDoesNotExistUri);
-            }
-
-            public TAsyncClientService CreateClientWithoutService<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
-            {
-                var serviceThatDoesNotExistUri = ServiceUriThatDoesNotExist();
-                var serviceEndPoint = GetServiceEndPoint(serviceThatDoesNotExistUri);
-                modifyServiceEndpoint(serviceEndPoint);
-                return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
-            }
-
-            public ServiceEndPoint GetServiceEndPoint(Uri serviceUri)
-            {
-                var serviceEndPoint = new ServiceEndPoint(serviceUri, thumbprint, proxyDetails, Client.TimeoutsAndLimits);
-                return serviceEndPoint;
-            }
-
-            Uri ServiceUriThatDoesNotExist()
-            {
-                switch (serviceConnectionType)
-                {
-                    case ServiceConnectionType.Polling:
-                        return LatestServiceBuilder.PollingTentacleServiceUri;
-                    case ServiceConnectionType.PollingOverWebSocket:
-                        return LatestServiceBuilder.PollingOverWebSocketTentacleServiceUri;
-                    case ServiceConnectionType.Listening:
-                        return LatestServiceBuilder.ListeningTentacleServiceUri(51234);
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
-
-            public async ValueTask DisposeAsync()
-            {
-                var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClient>();
-
-                logger.Information("****** ****** ****** ****** ****** ****** ******");
-                logger.Information("****** CLIENT DISPOSE CALLED  ******");
-                logger.Information("*     Subsequent errors should be ignored      *");
-                logger.Information("****** ****** ****** ****** ****** ****** ******");
-
-                void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
-                
-                await Try.DisposingAsync(Client, LogError);
-                
-                Try.CatchingError(() => portForwarder?.Dispose(), LogError);
-                Try.CatchingError(disposableCollection.Dispose, LogError);
-            }
         }
     }
 }

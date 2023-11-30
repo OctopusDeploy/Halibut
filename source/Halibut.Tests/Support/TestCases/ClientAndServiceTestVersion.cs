@@ -166,7 +166,6 @@ namespace Halibut.Tests.Support.TestCases
                 return LatestClientBuilder.ForServiceConnectionType;
             }
 
-
             throw new Exception($"We don't know what kind of thing to build here: version={version}");
         }
 

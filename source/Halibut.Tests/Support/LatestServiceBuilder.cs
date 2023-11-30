@@ -30,7 +30,7 @@ namespace Halibut.Tests.Support
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
         
-        readonly List<Uri> pollingClientUris = new();
+        readonly List<Uri> listeningClientUris = new();
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
@@ -50,47 +50,32 @@ namespace Halibut.Tests.Support
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             serviceTrustsThumbprint = clientCertAndThumbprint.Thumbprint;
         }
-
-        public static LatestServiceBuilder Polling()
-        {
-            return new LatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling);
-        }
-
-        public static LatestServiceBuilder PollingOverWebSocket()
-        {
-            return new LatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling);
-        }
-
-        public static LatestServiceBuilder Listening()
-        {
-            return new LatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening);
-        }
-
+        
         public static LatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
         {
             switch (serviceConnectionType)
             {
                 case ServiceConnectionType.Polling:
-                    return Polling();
+                    return new LatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling);
                 case ServiceConnectionType.Listening:
-                    return Listening();
+                    return new LatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening);
                 case ServiceConnectionType.PollingOverWebSocket:
-                    return PollingOverWebSocket();
+                    return new LatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
         }
 
-        public LatestServiceBuilder WithPollingClient(Uri pollingClient)
+        public LatestServiceBuilder WithListeningClient(Uri listeningClient)
         {
-            pollingClientUris.Add(pollingClient);
+            listeningClientUris.Add(listeningClient);
 
             return this;
         }
 
-        public LatestServiceBuilder WithPollingClients(IEnumerable<Uri> pollingClientUris)
+        public LatestServiceBuilder WithListeningClients(IEnumerable<Uri> listeningClientUris)
         {
-            this.pollingClientUris.AddRange(pollingClientUris);
+            this.listeningClientUris.AddRange(listeningClientUris);
 
             return this;
         }
@@ -220,11 +205,11 @@ namespace Halibut.Tests.Support
             {
                 serviceUri = PollingTentacleServiceUri;
 
-                foreach (var clientUriToPoll in pollingClientUris)
+                foreach (var listeningClientUri in listeningClientUris)
                 {
                     service.Poll(
                         serviceUri,
-                        new ServiceEndPoint(clientUriToPoll, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                        new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
                         cancellationToken);
                 }
             }
@@ -232,11 +217,11 @@ namespace Halibut.Tests.Support
             {
                 serviceUri = PollingOverWebSocketTentacleServiceUri;
 
-                foreach (var clientUriToPoll in pollingClientUris)
+                foreach (var listeningClientUri in listeningClientUris)
                 {
                     service.Poll(
                         serviceUri,
-                        new ServiceEndPoint(clientUriToPoll, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                        new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
                         cancellationToken);
                 }
             }
@@ -283,40 +268,6 @@ namespace Halibut.Tests.Support
                     }
                 )
                 .ToCachingLogFactory();
-        }
-
-        public class LatestService : IService
-        {
-            public Uri ServiceUri { get; }
-            
-            public LatestService(
-                HalibutRuntime service,
-                Uri serviceUri,
-                PortForwarder? portForwarder)
-            {
-                Service = service;
-                ServiceUri = serviceUri;
-                PortForwarder = portForwarder;
-            }
-            
-            public HalibutRuntime Service { get; }
-            public PortForwarder? PortForwarder { get; }
-            
-            public async ValueTask DisposeAsync()
-            {
-                var logger = new SerilogLoggerBuilder().Build().ForContext<LatestService>();
-
-                logger.Information("****** ****** ****** ****** ****** ****** ******");
-                logger.Information("****** SERVICE DISPOSE CALLED  ******");
-                logger.Information("*     Subsequent errors should be ignored      *");
-                logger.Information("****** ****** ****** ****** ****** ****** ******");
-
-                void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
-                
-                await Try.DisposingAsync(Service, LogError);
-
-                Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
-            }
         }
     }
 }
