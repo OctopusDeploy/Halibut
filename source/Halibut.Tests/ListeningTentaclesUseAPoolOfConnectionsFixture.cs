@@ -21,12 +21,11 @@ namespace Halibut.Tests
         {
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
+                       .WithPortForwarding(out var portForwarder, port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
                            .Build())
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithPortForwarding(out var portForwarder)
                        .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {

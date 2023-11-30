@@ -16,16 +16,16 @@ namespace Halibut.Tests.Support
 {
     public class LatestClientBuilder : IClientOnlyBuilder
     {
-        public ServiceConnectionType ServiceConnectionType { get; }
+        readonly ServiceConnectionType serviceConnectionType;
 
         readonly CertAndThumbprint clientCertAndThumbprint;
 
         string clientTrustsThumbprint; 
         IRpcObserver? clientRpcObserver;
         Func<int, PortForwarder>? portForwarderFactory;
+        Reference<PortForwarder>? portForwarderReference;
         Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
         Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
-        Reference<PortForwarder>? portForwarderReference;
         ProxyDetails? proxyDetails;
         LogLevel halibutLogLevel = LogLevel.Trace;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
@@ -41,7 +41,7 @@ namespace Halibut.Tests.Support
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint)
         {
-            ServiceConnectionType = serviceConnectionType;
+            this.serviceConnectionType = serviceConnectionType;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
         }
@@ -94,17 +94,7 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public LatestClientBuilder WithPortForwarding()
-        {
-            return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
-        }
-
-        IClientOnlyBuilder IClientOnlyBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
-        {
-            return this.WithPortForwarding(portForwarderFactory);
-        }
-
-        public LatestClientBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
+        public LatestClientBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
             if (this.portForwarderFactory != null)
             {
@@ -112,16 +102,8 @@ namespace Halibut.Tests.Support
             }
 
             this.portForwarderFactory = portForwarderFactory;
-            return this;
-        }
-
-        public LatestClientBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
-        {
-            if(this.portForwarderFactory == null) this.WithPortForwarding();
-
             this.portForwarderReference = new Reference<PortForwarder>();
             portForwarder = this.portForwarderReference;
-
             return this;
         }
         
@@ -218,7 +200,7 @@ namespace Halibut.Tests.Support
             PortForwarder? portForwarder = null;
             Uri? clientPollingUri = null;
 
-            if (ServiceConnectionType == ServiceConnectionType.Polling)
+            if (serviceConnectionType == ServiceConnectionType.Polling)
             {
                 var clientListenPort = client!.Listen();
 
@@ -226,7 +208,7 @@ namespace Halibut.Tests.Support
                 
                 clientPollingUri = new Uri($"https://localhost:{portForwarder?.ListeningPort ?? clientListenPort}");
             }
-            else if (ServiceConnectionType == ServiceConnectionType.PollingOverWebSocket)
+            else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientBuilder>();
                 var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client!, cancellationToken);
@@ -240,7 +222,7 @@ namespace Halibut.Tests.Support
 
                 clientPollingUri = new Uri($"wss://localhost:{portForwarder?.ListeningPort ?? webSocketListeningInfo.WebSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
             }
-            else if (ServiceConnectionType == ServiceConnectionType.Listening)
+            else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 //Do over in other builder?
                 //var dummyTentacle = new TCPListenerWhichKillsNewConnections();
@@ -264,7 +246,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientOnly(client, clientPollingUri, clientTrustsThumbprint, portForwarder, proxyDetails, ServiceConnectionType, disposableCollection);
+            return new ClientOnly(client, clientPollingUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
         }
 
         IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
@@ -335,6 +317,13 @@ namespace Halibut.Tests.Support
             public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri)
             {
                 var serviceEndPoint = GetServiceEndPoint<TService, TAsyncClientService>(serviceUri);
+                return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
+            }
+
+            public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri, Action<ServiceEndPoint> modifyServiceEndpoint)
+            {
+                var serviceEndPoint = GetServiceEndPoint<TService, TAsyncClientService>(serviceUri);
+                modifyServiceEndpoint(serviceEndPoint);
                 return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
             }
 

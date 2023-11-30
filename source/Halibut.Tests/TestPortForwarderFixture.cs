@@ -39,9 +39,10 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
+                       .WithPortForwarding(out var portForwarderRef)
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
 
                 var echo = clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient() ? 
                                 clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>() : 

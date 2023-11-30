@@ -51,11 +51,11 @@ namespace Halibut.Tests.Timeouts
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(expectedTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
-                
+
                 // The polling tentacle, will not reconnect in time since it has a 133s receive control message timeout.
                 // To move it along we, kill the connection here.
                 // Interestingly this tests does not tests the service times out (the below test does).
-                clientAndService.PortForwarder!.CloseExistingConnections();
+                portForwarderRef.Value.CloseExistingConnections();
 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }

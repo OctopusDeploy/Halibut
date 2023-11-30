@@ -30,11 +30,11 @@ namespace Halibut.Tests.Support
         public static Uri PollingOverWebSocketTentacleServiceUri => new("poll://SQ-TENTAPOLL");
         public static Uri ListeningTentacleServiceUri(int port) => new($"https://localhost:{port}");
 
-        public ServiceConnectionType ServiceConnectionType { get; }
+        readonly ServiceConnectionType serviceConnectionType;
+        readonly CertAndThumbprint serviceCertAndThumbprint;
 
         ServiceFactoryBuilder serviceFactoryBuilder = new();
         IServiceFactory? serviceFactory;
-        readonly CertAndThumbprint serviceCertAndThumbprint;
         string serviceTrustsThumbprint;
         
         readonly List<Uri> pollingClientUris = new();
@@ -53,7 +53,7 @@ namespace Halibut.Tests.Support
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint)
         {
-            ServiceConnectionType = serviceConnectionType;
+            this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             serviceTrustsThumbprint = clientCertAndThumbprint.Thumbprint;
         }
@@ -113,12 +113,6 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public LatestServiceBuilder WithAsyncConventionsDisabled()
-        {
-            serviceFactoryBuilder = serviceFactoryBuilder.WithConventionVerificationDisabled();
-            return this;
-        }
-
         public LatestServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
             this.serviceFactory = serviceFactory;
@@ -144,17 +138,7 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public LatestServiceBuilder WithPortForwarding()
-        {
-            return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
-        }
-
-        IServiceOnlyBuilder IServiceOnlyBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
-        {
-            return this.WithPortForwarding(portForwarderFactory);
-        }
-
-        public LatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
+        public LatestServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
             if (this.portForwarderFactory != null)
             {
@@ -162,55 +146,11 @@ namespace Halibut.Tests.Support
             }
 
             this.portForwarderFactory = portForwarderFactory;
-            return this;
-        }
-
-        public LatestServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
-        {
-            if (this.portForwarderFactory == null) this.WithPortForwarding();
 
             this.portForwarderReference = new Reference<PortForwarder>();
             portForwarder = this.portForwarderReference;
 
             return this;
-        }
-
-        IServiceOnlyBuilder IServiceOnlyBuilder.WithStandardServices()
-        {
-            return WithStandardServices();
-        }
-
-        IServiceOnlyBuilder IServiceOnlyBuilder.WithTentacleServices()
-        {
-            return WithTentacleServices();
-        }
-
-        public LatestServiceBuilder WithStandardServices()
-        {
-            return this
-                .WithEchoService()
-                .WithMultipleParametersTestService()
-                .WithCachingService()
-                .WithComplexObjectService()
-                .WithLockService()
-                .WithCountingService()
-                .WithReadDataStreamService();
-        }
-
-        public LatestServiceBuilder WithTentacleServices()
-        {
-            return this
-                .WithAsyncService<IFileTransferService, IAsyncFileTransferService>(() => new AsyncFileTransferService())
-                .WithAsyncService<IScriptService, IAsyncScriptService>(() => new AsyncScriptService())
-                .WithAsyncService<IScriptServiceV2, IAsyncScriptServiceV2>(() => new AsyncScriptServiceV2())
-                .WithAsyncService<ICapabilitiesServiceV2, IAsyncCapabilitiesServiceV2>(() => new AsyncCapabilitiesServiceV2());
-        }
-
-        IServiceOnlyBuilder IServiceOnlyBuilder.WithCachingService() => WithCachingService();
-
-        public LatestServiceBuilder WithCachingService()
-        {
-            return this.WithAsyncService<ICachingService, IAsyncCachingService>(() => new AsyncCachingService());
         }
 
         public LatestServiceBuilder WithProxyDetails(ProxyDetails? proxyDetails)
@@ -273,11 +213,10 @@ namespace Halibut.Tests.Support
             var service = serviceBuilder.Build();
             
 
-            var disposableCollection = new DisposableCollection();
             PortForwarder? portForwarder = null;
             Uri serviceUri;
 
-            if (ServiceConnectionType == ServiceConnectionType.Polling)
+            if (serviceConnectionType == ServiceConnectionType.Polling)
             {
                 serviceUri = PollingTentacleServiceUri;
 
@@ -289,7 +228,7 @@ namespace Halibut.Tests.Support
                         cancellationToken);
                 }
             }
-            else if (ServiceConnectionType == ServiceConnectionType.PollingOverWebSocket)
+            else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
                 serviceUri = PollingOverWebSocketTentacleServiceUri;
 
@@ -301,7 +240,7 @@ namespace Halibut.Tests.Support
                         cancellationToken);
                 }
             }
-            else if (ServiceConnectionType == ServiceConnectionType.Listening)
+            else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 service.Trust(serviceTrustsThumbprint);
                 var listenPort = service.Listen();
@@ -324,7 +263,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ServiceOnly(service, serviceUri, portForwarder, disposableCollection);
+            return new ServiceOnly(service, serviceUri, portForwarder);
         }
         
         ILogFactory BuildServiceLogger()
@@ -349,18 +288,15 @@ namespace Halibut.Tests.Support
         public class ServiceOnly : IServiceOnly
         {
             public Uri ServiceUri { get; }
-            readonly DisposableCollection disposableCollection;
             
             public ServiceOnly(
                 HalibutRuntime service,
                 Uri serviceUri,
-                PortForwarder? portForwarder,
-                DisposableCollection disposableCollection)
+                PortForwarder? portForwarder)
             {
                 Service = service;
                 ServiceUri = serviceUri;
                 PortForwarder = portForwarder;
-                this.disposableCollection = disposableCollection;
             }
             
             public HalibutRuntime Service { get; }
@@ -380,7 +316,6 @@ namespace Halibut.Tests.Support
                 await Try.DisposingAsync(Service, LogError);
 
                 Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
-                Try.CatchingError(disposableCollection.Dispose, LogError);
             }
         }
     }

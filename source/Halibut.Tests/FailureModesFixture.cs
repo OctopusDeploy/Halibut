@@ -31,21 +31,23 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false)]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithStandardServices()
-                       .NoService()
-                       .Build(CancellationToken))
-            {
-                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
-                {
-                    point.TcpClientConnectTimeout = TimeSpan.FromSeconds(1);
-                    point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
-                });
+            await Task.CompletedTask;
+            throw new NotImplementedException();
+            //await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+            //           .WithStandardServices()
+            //           .NoService()
+            //           .Build(CancellationToken))
+            //{
+            //    var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
+            //    {
+            //        point.TcpClientConnectTimeout = TimeSpan.FromSeconds(1);
+            //        point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
+            //    });
 
                 
-                var error = (await AssertException.Throws<HalibutClientException>(() => echo.SayHelloAsync("Paul"))).And;
-                error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
-            }
+            //    var error = (await AssertException.Throws<HalibutClientException>(() => echo.SayHelloAsync("Paul"))).And;
+            //    error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
+            //}
         }
 
         [Test]

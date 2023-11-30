@@ -10,7 +10,6 @@ using Halibut.Tests.Support.ExtensionMethods;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -44,11 +43,11 @@ namespace Halibut.Tests
         async Task CanCancel_ConnectingOrQueuedRequests(ClientAndServiceTestCase clientAndServiceTestCase, CancellationTokenSource tokenSourceToCancel, HalibutProxyRequestOptions halibutRequestOption)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
+                       .WithPortForwarding(out var portForwarderRef, port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
@@ -60,7 +59,7 @@ namespace Halibut.Tests
                 (await AssertException.Throws<Exception>(() => echo.IncrementAsync(halibutRequestOption)))
                     .And.Message.Contains("The operation was canceled");
 
-                clientAndService.PortForwarder.ReturnToNormalMode();
+                portForwarderRef.Value.ReturnToNormalMode();
                 
                 await echo.IncrementAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
 

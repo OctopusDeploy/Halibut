@@ -25,7 +25,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithStandardServices()
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithConnectionObserverOnTcpServer(connectionsObserver)
-                             .WithPortForwarding()
+                             .WithPortForwarding(out var portForwarderRef)
                              .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
@@ -33,7 +33,7 @@ namespace Halibut.Tests.Transport.Observability
                 connectionsObserver.ConnectionAcceptedCount.Should().Be(1);
                 connectionsObserver.ConnectionClosedCount.Should().Be(0);
                 
-                clientAndService.PortForwarder!.CloseExistingConnections();
+                portForwarderRef.Value.CloseExistingConnections();
                 
                 await Try.CatchingError(() => echo.SayHelloAsync("hello"));
                 await echo.SayHelloAsync("hello");
