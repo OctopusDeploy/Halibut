@@ -105,14 +105,9 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket: false)]
             public async Task BecauseThePollingRequestWasNotCollected(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                var services = new DelegateServiceFactory();
-                services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
-
-                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                           .NoService()
-                           .Build(CancellationToken))
+                await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder().Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
+                    var echo = client.CreateClientWithoutService<IEchoService, IAsyncClientEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
 
                     (await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
                         .IsNetworkError()
@@ -125,11 +120,9 @@ namespace Halibut.Tests.Diagnostics
             [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
             public async Task BecauseTheListeningTentacleIsNotResponding(ClientAndServiceTestCase clientAndServiceTestCase)
             {
-                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                           .NoService()
-                           .Build(CancellationToken))
+                await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder().Build(CancellationToken))
                 {
-                    var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
+                    var echo = client.CreateClientWithoutService<IEchoService, IAsyncClientEchoService>(serviceEndPoint => { serviceEndPoint.RetryCountLimit = 1; });
 
                     (await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Hello"))).And
                         .IsNetworkError()

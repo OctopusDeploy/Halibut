@@ -158,5 +158,26 @@ namespace Halibut.Tests.Support.TestCases
 
             throw new Exception($"We don't know what kind of thing to build here: version={version}");
         }
+
+        public static Func<ServiceConnectionType, IClientOnlyBuilder> ForVersionClientOnly(ClientAndServiceTestVersion version)
+        {
+            if (version.IsLatest())
+            {
+                return LatestClientBuilder.ForServiceConnectionType;
+            }
+
+
+            throw new Exception($"We don't know what kind of thing to build here: version={version}");
+        }
+
+        public static Func<ServiceConnectionType, IServiceOnlyBuilder> ForVersionServiceOnly(ClientAndServiceTestVersion version)
+        {
+            if (version.IsLatest())
+            {
+                return LatestServiceBuilder.ForServiceConnectionType;
+            }
+            
+            throw new Exception($"We don't know what kind of thing to build here: version={version}");
+        }
     }
 }

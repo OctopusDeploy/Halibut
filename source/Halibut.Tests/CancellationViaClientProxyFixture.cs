@@ -10,6 +10,7 @@ using Halibut.Tests.Support.ExtensionMethods;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -166,15 +167,11 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task CannotHaveServiceWithHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .As<LatestClientAndLatestServiceBuilder>()
-                       .NoService()
-                       .WithAsyncService<IAmNotAllowed, IAsyncAmNotAllowed>(() => new AsyncAmNotAllowed())
-                       .Build(CancellationToken))
+            await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder().Build(CancellationToken))
             {
                 Assert.Throws<TypeNotAllowedException>(() =>
                 {
-                    clientAndService.Client!.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.GetServiceEndPoint());
+                    client.CreateClientWithoutService<IAmNotAllowed, IAsyncClientAmNotAllowed>();
                 });
             }
         }
@@ -202,22 +199,8 @@ namespace Halibut.Tests
         public void Foo(HalibutProxyRequestOptions opts);
     }
     
-    public interface IAsyncAmNotAllowed
-    {
-        public Task FooAsync(HalibutProxyRequestOptions opts, CancellationToken cancellationToken);
-    }
-    
     public interface IAsyncClientAmNotAllowed
     {
         public Task FooAsync(HalibutProxyRequestOptions opts);
-    }
-
-    public class AsyncAmNotAllowed : IAsyncAmNotAllowed
-    {
-        public async Task FooAsync(HalibutProxyRequestOptions opts, CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-            throw new NotImplementedException();
-        }
     }
 }

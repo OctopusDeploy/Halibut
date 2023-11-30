@@ -21,23 +21,22 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued : BaseTest
         {
             [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ true, false })]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ false, true })]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ true, true })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[] { true, false })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[] { false, true })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[] { true, true })]
             public async Task TheRequestShouldBeCancelled_WhenTheConnectingOrInProgressCancellationTokenIsCancelled_OnAsyncClients(
-                ClientAndServiceTestCase clientAndServiceTestCase, 
+                ClientAndServiceTestCase clientAndServiceTestCase,
                 bool connectingCancellationTokenCancelled,
                 bool inProgressCancellationTokenCancelled)
             {
                 var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions(connectingCancellationTokenCancelled, inProgressCancellationTokenCancelled);
 
-                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                           .AsLatestClientAndLatestServiceBuilder()
-                           .NoService()
-                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, tokenSourcesToCancel)))
-                           .Build(CancellationToken))
+                await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder()
+                                 .AsLatestClientBuilder()
+                                 .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, tokenSourcesToCancel)))
+                                 .Build(CancellationToken))
                 {
-                    var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
+                    var doSomeActionService = client.CreateClientWithoutService<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
                     await AssertException.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
