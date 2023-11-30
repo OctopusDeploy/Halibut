@@ -7,7 +7,7 @@ namespace Halibut.Tests.Support
 {
     public interface IClientAndService : IAsyncDisposable
     {
-        HalibutRuntime Client { get; }
+        HalibutRuntime? Client { get; }
         ServiceEndPoint ServiceEndPoint { get; }
         PortForwarder? PortForwarder { get; }
         HttpProxyService? HttpProxy { get; }

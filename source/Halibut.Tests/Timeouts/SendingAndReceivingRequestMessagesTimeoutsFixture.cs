@@ -44,7 +44,7 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -55,7 +55,7 @@ namespace Halibut.Tests.Timeouts
                 // The polling tentacle, will not reconnect in time since it has a 133s receive control message timeout.
                 // To move it along we, kill the connection here.
                 // Interestingly this tests does not tests the service times out (the below test does).
-                clientAndService.PortForwarder.CloseExistingConnections();
+                clientAndService.PortForwarder!.CloseExistingConnections();
 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
@@ -78,11 +78,11 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
                 
@@ -110,11 +110,11 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
 
@@ -142,7 +142,7 @@ namespace Halibut.Tests.Timeouts
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(() =>
+                var e = (await AssertException.Throws<HalibutClientException>(() =>
                 {
                     var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 20);
                     return echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend);
@@ -151,7 +151,7 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
-                var expectedTimeOut = clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
+                var expectedTimeOut = clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
 
                 sw.Elapsed.Should().BeGreaterThan(
                         expectedTimeOut - TimeSpan.FromSeconds(2), 
@@ -181,7 +181,7 @@ namespace Halibut.Tests.Timeouts
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
                     firstSend: "hello",
                     andThenRun: portForwarderRef.Value!.PauseExistingConnections,
                     thenSend: "All done" + Some.RandomAsciiStringOfLength(10*1024*1024)
@@ -192,7 +192,7 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
-                var expectedTimeout = clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
+                var expectedTimeout = clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(expectedTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
@@ -203,7 +203,7 @@ namespace Halibut.Tests.Timeouts
 
         static void AssertExceptionLooksLikeAWriteTimeout(HalibutClientException? e)
         {
-            e.Message.Should().ContainAny(
+            e!.Message.Should().ContainAny(
                 "Unable to write data to the transport connection: Connection timed out.",
                 " Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
 
@@ -212,7 +212,7 @@ namespace Halibut.Tests.Timeouts
 
         static void AssertExceptionMessageLooksLikeAReadTimeout(HalibutClientException? e)
         {
-            e.Message.Should().ContainAny(
+            e!.Message.Should().ContainAny(
                 "Unable to read data from the transport connection: Connection timed out.",
                 "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
             

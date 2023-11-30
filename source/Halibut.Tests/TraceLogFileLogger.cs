@@ -84,7 +84,7 @@ namespace Halibut.Tests
             // Therefore we go up 5 levels to get to the <REPO ROOT> directory,
             // from which point we can navigate to the artifacts directory.
             var currentDirectory = Directory.GetCurrentDirectory();
-            var rootDirectory = new DirectoryInfo(currentDirectory).Parent.Parent.Parent.Parent.Parent;
+            var rootDirectory = new DirectoryInfo(currentDirectory).Parent!.Parent!.Parent!.Parent!.Parent!;
 
             var traceLogsDirectory = rootDirectory.CreateSubdirectory("artifacts").CreateSubdirectory("trace-logs");
             return traceLogsDirectory;
@@ -93,7 +93,9 @@ namespace Halibut.Tests
         public void Dispose()
         {
             cancellationTokenSource.Cancel();
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
             writeDataToDiskTask.GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
             cancellationTokenSource.Dispose();
         }
     }

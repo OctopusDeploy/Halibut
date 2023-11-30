@@ -16,7 +16,7 @@ namespace Halibut.ServiceModel
             AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<TContract, TAsyncContract>();
             
             var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
+            services.Add(serviceType.Name, () => implementation()!);
             lock (serviceTypes)
             {
                 serviceTypes.Add(serviceType);

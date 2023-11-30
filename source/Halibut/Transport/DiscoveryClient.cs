@@ -65,7 +65,7 @@ namespace Halibut.Transport
             }
         }
 
-        bool ValidateCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
+        bool ValidateCertificate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslpolicyerrors)
         {
             return true;
         }

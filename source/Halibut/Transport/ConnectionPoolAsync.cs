@@ -8,13 +8,14 @@ using Nito.AsyncEx;
 
 namespace Halibut.Transport
 {
-    public class ConnectionPoolAsync<TKey, TPooledResource> : IConnectionPool<TKey, TPooledResource> 
+    public class ConnectionPoolAsync<TKey, TPooledResource> : IConnectionPool<TKey, TPooledResource>
+        where TKey : notnull
         where TPooledResource : class, IPooledResource
     {
         readonly Dictionary<TKey, HashSet<TPooledResource>> pool = new();
         readonly SemaphoreSlim poolLock = new(1, 1);
         
-        public async Task<TPooledResource> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
+        public async Task<TPooledResource?> TakeAsync(TKey endPoint, CancellationToken cancellationToken)
         {
             using (await poolLock.LockAsync(cancellationToken))
             {
@@ -78,7 +79,7 @@ namespace Halibut.Transport
             }
         }
 
-        TPooledResource Take(HashSet<TPooledResource> connections)
+        TPooledResource? Take(HashSet<TPooledResource> connections)
         {
             if (connections.Count == 0)
                 return null;
@@ -99,7 +100,7 @@ namespace Halibut.Transport
             return connections;
         }
         
-        static async Task DestroyConnectionAsync(TPooledResource connection, ILog log)
+        static async Task DestroyConnectionAsync(TPooledResource? connection, ILog? log)
         {
             try
             {

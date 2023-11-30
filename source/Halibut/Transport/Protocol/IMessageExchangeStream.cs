@@ -35,7 +35,7 @@ namespace Halibut.Transport.Protocol
 
         Task SendAsync<T>(T message, CancellationToken cancellationToken);
 
-        Task<RequestMessage> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken);
-        Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken);
+        Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken);
+        Task<ResponseMessage?> ReceiveResponseAsync(CancellationToken cancellationToken);
     }
 }

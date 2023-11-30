@@ -61,7 +61,7 @@ namespace Halibut.Tests
                 {
                     await doSomeActionService.ActionAsync();
                 }
-                catch (HalibutClientException ex)
+                catch (HalibutClientException)
                 {
                     // Work around the known dequeue to a broken tcp connection issue
                     await doSomeActionService.ActionAsync();
@@ -74,7 +74,7 @@ namespace Halibut.Tests
                 {
                     await doSomeActionService.ActionAsync();
                 }
-                catch (HalibutClientException ex)
+                catch (HalibutClientException)
                 {
                     // Work around the known dequeue to a broken tcp connection issue
                     await doSomeActionService.ActionAsync();

@@ -68,7 +68,7 @@ namespace Halibut.Tests.ServiceModel
                 MethodName = nameof(IBrokenConventionService.GetRandomNumberMissingSuffix)
             };
 
-            await AssertAsync.Throws<Exception>(() => sut.InvokeAsync(request));
+            await AssertException.Throws<Exception>(() => sut.InvokeAsync(request));
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace Halibut.Tests.ServiceModel
                 MethodName = nameof(IBrokenConventionService.GetRandomNumberMissingCancellationToken)
             };
 
-            await AssertAsync.Throws<Exception>(() => sut.InvokeAsync(request));
+            await AssertException.Throws<Exception>(() => sut.InvokeAsync(request));
         }
 
         [Test]
@@ -106,7 +106,7 @@ namespace Halibut.Tests.ServiceModel
                 Params = new[] { value }
             };
 
-            await AssertAsync.Throws<Exception>(() => sut.InvokeAsync(request));
+            await AssertException.Throws<Exception>(() => sut.InvokeAsync(request));
         }
 
         [Test]
@@ -124,7 +124,7 @@ namespace Halibut.Tests.ServiceModel
                 MethodName = nameof(IBrokenConventionService.SayHelloMissingCancellationToken)
             };
 
-            await AssertAsync.Throws<Exception>(() => sut.InvokeAsync(request));
+            await AssertException.Throws<Exception>(() => sut.InvokeAsync(request));
         }
     }
 }

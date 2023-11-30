@@ -8,18 +8,18 @@ namespace Halibut
     {
         readonly string baseUriString;
 
-        public ServiceEndPoint(string baseUri, string remoteThumbprint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        public ServiceEndPoint(string baseUri, string? remoteThumbprint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
             : this(new Uri(baseUri), remoteThumbprint, null, halibutTimeoutsAndLimits)
         {
         }
 
-        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        public ServiceEndPoint(Uri baseUri, string? remoteThumbprint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
             : this(baseUri, remoteThumbprint, null, halibutTimeoutsAndLimits)
         {
         }
 
         [JsonConstructor]
-        public ServiceEndPoint(Uri baseUri, string remoteThumbprint, ProxyDetails proxy, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        public ServiceEndPoint(Uri baseUri, string? remoteThumbprint, ProxyDetails? proxy, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             if (IsWebSocketAddress(baseUri))
             {
@@ -80,9 +80,9 @@ namespace Halibut
 
         public Uri BaseUri { get; }
 
-        public string RemoteThumbprint { get; }
+        public string? RemoteThumbprint { get; }
 
-        public ProxyDetails Proxy { get; }
+        public ProxyDetails? Proxy { get; }
 
         public bool IsWebSocketEndpoint => IsWebSocketAddress(BaseUri);
 
@@ -90,14 +90,14 @@ namespace Halibut
 
         public static bool IsWebSocketAddress(Uri baseUri) => baseUri.Scheme.Equals("wss", StringComparison.OrdinalIgnoreCase);
 
-        public bool Equals(ServiceEndPoint other)
+        public bool Equals(ServiceEndPoint? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return string.Equals(RemoteThumbprint, other.RemoteThumbprint) && string.Equals(baseUriString, other.baseUriString) && Equals(Proxy, other.Proxy);
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -111,7 +111,7 @@ namespace Halibut
             {
                 var hashCode = (RemoteThumbprint != null ? RemoteThumbprint.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (baseUriString != null ? baseUriString.GetHashCode() : 0);
-                hashCode = (hashCode*397) ^ (Proxy != null ? Proxy.GetHashCode() : 0);
+                hashCode = (hashCode*397) ^ (Proxy is not null ? Proxy.GetHashCode() : 0);
                 return hashCode;
             }
         }

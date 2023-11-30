@@ -46,8 +46,8 @@ namespace Halibut
 
         Task DisconnectAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken);
 
-        Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-        OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }
+        Func<string, string, UnauthorizedClientConnectResponse>? OnUnauthorizedClientConnect { get; set; }
+        OverrideErrorResponseMessageCachingAction? OverrideErrorResponseMessageCaching { get; set; }
         public HalibutTimeoutsAndLimits TimeoutsAndLimits { get; }
     }
 }

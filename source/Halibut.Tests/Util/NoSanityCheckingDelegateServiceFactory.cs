@@ -16,7 +16,7 @@ namespace Halibut.Tests.Util
         public NoSanityCheckingDelegateServiceFactory Register<TContract, TAsyncContract>(Func<TAsyncContract> implementation)
         {
             var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
+            services.Add(serviceType.Name, () => implementation()!);
             lock (serviceTypes)
             {
                 serviceTypes.Add(serviceType);

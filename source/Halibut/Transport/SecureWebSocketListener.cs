@@ -36,7 +36,9 @@ namespace Halibut.Transport
         {
         }
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             if (!endPoint.EndsWith("/"))
                 endPoint += "/";
@@ -80,7 +82,7 @@ namespace Halibut.Transport
                 while (!cts.IsCancellationRequested)
                 {
 
-                    HttpListenerContext context = null;
+                    HttpListenerContext? context = null;
                     try
                     {
                         context = await listener.GetContextAsync().ConfigureAwait(false);
@@ -137,7 +139,7 @@ namespace Halibut.Transport
             var connectionAuthorizedAndObserved = false;
             var clientName = listenerContext.Request.RemoteEndPoint.ToString();
 
-            WebSocketStream webSocketStream = null;
+            WebSocketStream? webSocketStream = null;
             var errorEventType = EventType.ErrorInInitialisation;
             try
             {
@@ -152,7 +154,7 @@ namespace Halibut.Transport
                     return;
                 }
 
-                if (req.Substring(0, 2) != "MX")
+                if (req!.Substring(0, 2) != "MX")
                 {
                     log.Write(EventType.Diagnostic, "Appears to be a web browser, sending friendly HTML response");
                     return;

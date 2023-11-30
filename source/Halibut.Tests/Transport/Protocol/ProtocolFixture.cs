@@ -261,7 +261,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             readonly StringBuilder output = new();
             readonly Queue<object> nextReadQueue = new();
-            RemoteIdentity remoteIdentity;
+            RemoteIdentity? remoteIdentity;
             int numberOfReads = 3;
 
             public void NextReadReturns(object o)
@@ -353,7 +353,7 @@ namespace Halibut.Tests.Transport.Protocol
                 await Task.CompletedTask;
 
                 output.AppendLine("<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId");
-                return remoteIdentity;
+                return remoteIdentity!;
             }
             
             public async Task SendAsync<T>(T message, CancellationToken cancellationToken)
@@ -363,22 +363,22 @@ namespace Halibut.Tests.Transport.Protocol
                 output.AppendLine("--> " + typeof(T).Name);
             }
 
-            public Task<RequestMessage> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
+            public Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
             {
                 return ReceiveAsync<RequestMessage>();
             }
 
-            public Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
+            public Task<ResponseMessage?> ReceiveResponseAsync(CancellationToken cancellationToken)
             {
                 return ReceiveAsync<ResponseMessage>();
             }
 
-            async Task<T> ReceiveAsync<T>()
+            async Task<T?> ReceiveAsync<T>()
             {
                 await Task.CompletedTask;
 
                 output.AppendLine("<-- " + typeof(T).Name);
-                return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+                return (T?)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
             }
 
             public override string ToString()

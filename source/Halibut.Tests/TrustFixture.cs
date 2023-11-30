@@ -28,7 +28,7 @@ namespace Halibut.Tests
             // Trust no one
             clientAndService.Service!.TrustOnly(Array.Empty<string>());
 
-            await AssertAsync.Throws<Exception>(async () => await echoService.SayHelloAsync("Hello again"));
+            await AssertException.Throws<Exception>(async () => await echoService.SayHelloAsync("Hello again"));
         }
     }
 }

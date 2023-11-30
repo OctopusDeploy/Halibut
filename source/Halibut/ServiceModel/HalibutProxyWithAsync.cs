@@ -13,6 +13,7 @@ namespace Halibut.ServiceModel
 
     public class HalibutProxyWithAsync : DispatchProxyAsync
     {
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         MessageRouter messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
@@ -20,6 +21,7 @@ namespace Halibut.ServiceModel
         bool configured;
         CancellationToken globalCancellationToken;
         ILog logger;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public void Configure(
             MessageRouter messageRouter, 
@@ -56,7 +58,7 @@ namespace Halibut.ServiceModel
                 result = (T)Convert.ChangeType(result, returnType);
             }
 
-            return (T)result;
+            return (T)result!;
         }
 
         async Task<(MethodInfo, object)> MakeRpcCall(MethodInfo asyncMethod, object[] args)
@@ -78,7 +80,7 @@ namespace Halibut.ServiceModel
 
             EnsureNotError(response);
             
-            return (serviceMethod, response.Result);
+            return (serviceMethod, response.Result!);
         }
 
         /// <summary>
@@ -104,7 +106,7 @@ namespace Halibut.ServiceModel
             return request;
         }
 
-        RequestCancellationTokens RequestCancellationTokens(HalibutProxyRequestOptions halibutProxyRequestOptions)
+        RequestCancellationTokens RequestCancellationTokens(HalibutProxyRequestOptions? halibutProxyRequestOptions)
         {
             if (halibutProxyRequestOptions == null)
             {
@@ -129,7 +131,7 @@ namespace Halibut.ServiceModel
 
         internal static void ThrowExceptionFromReceivedError(ServerError error, ILog logger)
         {
-            var realException = error.Details as string;
+            var realException = error.Details!;
 
             try
             {
@@ -139,7 +141,7 @@ namespace Halibut.ServiceModel
                     if (theType != null && theType != typeof(HalibutClientException))
                     {
                         var ctor = theType.GetConstructor(new[] { typeof(string), typeof(string) });
-                        Exception e = (Exception)ctor.Invoke(new object[] { error.Message, realException });
+                        Exception e = (Exception)ctor!.Invoke(new object?[] { error.Message, realException });
                         throw e;
                     }
                 }
@@ -154,7 +156,7 @@ namespace Halibut.ServiceModel
                     throw new MethodNotFoundHalibutClientException(error.Message, realException);
                 }
 
-                if (error.Details.StartsWith("System.Reflection.AmbiguousMatchException: "))
+                if (error.Details!.StartsWith("System.Reflection.AmbiguousMatchException: "))
                 {
                     throw new AmbiguousMethodMatchHalibutClientException(error.Message, realException);
                 }
@@ -176,7 +178,7 @@ namespace Halibut.ServiceModel
 
         }
 
-        internal static (object[] args, HalibutProxyRequestOptions halibutProxyRequestOptions) TrimOffHalibutProxyRequestOptions(object[] args)
+        internal static (object[] args, HalibutProxyRequestOptions? halibutProxyRequestOptions) TrimOffHalibutProxyRequestOptions(object[] args)
         {
             if (args.Length == 0) return (args, null);
             object last = args.Last();

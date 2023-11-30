@@ -10,10 +10,10 @@ namespace Halibut.Tests.Util
         // TODO: This could be async
         public static string ReadAsString(this DataStream stream)
         {
-            string result = null;
+            var result = string.Empty;
+#pragma warning disable VSTHRD002 // Avoid problematic synchronous waits
             stream.Receiver().ReadAsync(async (s, ct) =>
                     {
-                        await Task.CompletedTask;
                         using (var reader = new StreamReader(s))
                         {
                             result = await reader.ReadToEndAsync();
@@ -21,6 +21,7 @@ namespace Halibut.Tests.Util
                     },
                     CancellationToken.None)
                 .GetAwaiter().GetResult();
+#pragma warning restore VSTHRD002 // Avoid problematic synchronous waits
             return result;
         }
     }

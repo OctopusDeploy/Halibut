@@ -45,10 +45,10 @@ namespace Halibut.Tests
                     var response = await service.ProcessAsync(request);
 
                     response.Payload1.Should().NotBeSameAs(request.Payload1);
-                    response.Payload1.ReadAsString().Should().Be(payload1);
+                    response.Payload1!.ReadAsString().Should().Be(payload1);
 
                     response.Payload2.Should().NotBeSameAs(request.Payload2);
-                    response.Payload2.ReadAsString().Should().Be(payload2);
+                    response.Payload2!.ReadAsString().Should().Be(payload2);
                 }
             }
 

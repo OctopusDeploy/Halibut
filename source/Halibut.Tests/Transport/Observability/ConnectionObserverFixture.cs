@@ -86,7 +86,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithConnectionObserverOnTcpServer(connectionsObserver)
                              .Build(CancellationToken))
             {
-                clientAndBuilder.Client.TrustOnly(new List<string>());
+                clientAndBuilder.Client!.TrustOnly(new List<string>());
 
                 using var cts = new CancellationTokenSource();
                 var token = cts.Token;
@@ -99,7 +99,7 @@ namespace Halibut.Tests.Transport.Observability
 
                 cts.Cancel();
 
-                await AssertionExtensions.Should(() => sayHelloTask).ThrowAsync<Exception>();
+                await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);
@@ -132,7 +132,7 @@ namespace Halibut.Tests.Transport.Observability
 
                 cts.Cancel();
 
-                await AssertionExtensions.Should(() => sayHelloTask).ThrowAsync<Exception>();
+                await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);

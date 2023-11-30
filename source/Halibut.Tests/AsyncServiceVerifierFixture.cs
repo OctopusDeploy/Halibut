@@ -10,27 +10,27 @@ namespace Halibut.Tests
     public class AsyncServiceVerifierFixture
     {
         [Test]
-        public async Task AsyncMatchesSync()
+        public void AsyncMatchesSync()
         {
             AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<IGoodService, IAsyncGoodService>();
         }
 
         [Test]
-        public async Task AsyncBreaksCancellationTokenConvention()
+        public void AsyncBreaksCancellationTokenConvention()
         {
             Assert.Throws<NoMatchingServiceOrMethodHalibutClientException>
                 (AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<IGoodService, IAsyncBrokenCancellationTokenConventionService>);
         }
 
         [Test]
-        public async Task AsyncBreaksSuffixConvention()
+        public void AsyncBreaksSuffixConvention()
         {
             Assert.Throws<NoMatchingServiceOrMethodHalibutClientException>
                 (AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<IGoodService, IAsyncBrokenSuffixConventionService>);
         }
 
         [Test]
-        public async Task AsyncBreaksReturnTypeConvention()
+        public void AsyncBreaksReturnTypeConvention()
         {
             Assert.Throws<NoMatchingServiceOrMethodHalibutClientException>
                 (AsyncServiceVerifier.VerifyAsyncSurfaceAreaFollowsConventions<IGoodService, IAsyncBrokenReturnTypeConventionService>);

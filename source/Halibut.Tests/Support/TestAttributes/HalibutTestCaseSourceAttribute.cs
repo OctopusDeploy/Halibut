@@ -199,14 +199,14 @@ namespace Halibut.Tests.Support.TestAttributes
                 var field = member as FieldInfo;
                 if (field != null)
                     return field.IsStatic
-                        ? (MethodParams == null ? (IEnumerable)field.GetValue(null)
+                        ? (MethodParams == null ? (IEnumerable)field.GetValue(null)!
                                                 : ReturnErrorAsParameter(ParamGivenToField))
                         : ReturnErrorAsParameter(SourceMustBeStatic);
 
                 var property = member as PropertyInfo;
                 if (property != null)
-                    return property.GetGetMethod(true).IsStatic
-                        ? (MethodParams == null ? (IEnumerable)property.GetValue(null, null)
+                    return property.GetGetMethod(true)!.IsStatic
+                        ? (MethodParams == null ? (IEnumerable)property.GetValue(null, null)!
                                                 : ReturnErrorAsParameter(ParamGivenToProperty))
                         : ReturnErrorAsParameter(SourceMustBeStatic);
 
@@ -214,7 +214,7 @@ namespace Halibut.Tests.Support.TestAttributes
                 if (m != null)
                     return m.IsStatic
                         ? (MethodParams == null || m.GetParameters().Length == MethodParams.Length
-                            ? (IEnumerable)m.Invoke(null, MethodParams)
+                            ? (IEnumerable)m.Invoke(null, MethodParams)!
                             : ReturnErrorAsParameter(NumberOfArgsDoesNotMatch))
                         : ReturnErrorAsParameter(SourceMustBeStatic);
             }
@@ -267,7 +267,7 @@ namespace Halibut.Tests.Support.TestAttributes
     // ***********************************************************************
     static class ContextUtils
     {
-        public static T DoIsolated<T>(Func<T> func)
+        public static T? DoIsolated<T>(Func<T> func)
         {
             var returnValue = default(T);
             DoIsolated(_ => returnValue = func.Invoke(), state: null);
@@ -275,7 +275,7 @@ namespace Halibut.Tests.Support.TestAttributes
         }
 
         [SecuritySafeCritical]
-        public static void DoIsolated(ContextCallback callback, object state)
+        public static void DoIsolated(ContextCallback callback, object? state)
         {
             var previousState = SandboxedThreadState.Capture();
             try
@@ -354,7 +354,7 @@ namespace Halibut.Tests.Support.TestAttributes
                 CultureInfo.CurrentCulture,
                 CultureInfo.CurrentUICulture,
                 ThreadUtility.GetCurrentThreadPrincipal(),
-                SynchronizationContext.Current);
+                SynchronizationContext.Current!);
         }
 
         /// <summary>

@@ -13,7 +13,7 @@ namespace Halibut.Tests
             const string input = "Hello World!";
             var dataStream = DataStream.FromString(input);
 
-            string result = null;
+            var result = string.Empty;
             await dataStream.Receiver().ReadAsync(async (stream, _) => result = await ReadStreamAsStringAsync(stream), CancellationToken);
 
             result.Should().Be(input);

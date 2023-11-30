@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
     <RootNamespace>Halibut.TestProxy</RootNamespace>
+	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">

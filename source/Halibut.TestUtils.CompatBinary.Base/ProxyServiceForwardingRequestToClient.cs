@@ -25,14 +25,14 @@ namespace Halibut.TestUtils.SampleProgram.Base
             var clientCert = SettingsHelper.GetClientCertificate();
             var proxyDetails = SettingsHelper.GetProxyDetails();
 
-            string proxyClientAddressToPoll = null;
+            var proxyClientAddressToPoll = string.Empty;
             if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
                 proxyClientAddressToPoll = SettingsHelper.GetSetting("octopusservercommsport");
                 Console.WriteLine($"Proxy Service will Poll: {proxyClientAddressToPoll}");
             }
 
-            string serviceAddressToConnectTo = null;
+            var serviceAddressToConnectTo = string.Empty;
             if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 serviceAddressToConnectTo = SettingsHelper.GetSetting("realServiceListenAddress");
@@ -69,7 +69,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                         }
                         break;
                     case ServiceConnectionType.Listening:
-                        realServiceEndpoint = new ServiceEndPoint(new Uri(serviceAddressToConnectTo!), serviceCert.Thumbprint, proxyDetails);
+                        realServiceEndpoint = new ServiceEndPoint(new Uri(serviceAddressToConnectTo), serviceCert.Thumbprint, proxyDetails);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -90,7 +90,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                         case ServiceConnectionType.Polling:
                         case ServiceConnectionType.PollingOverWebSocket:
                             // PollingOverWebsockets exposes a proxy client that is just Polling for simplicity
-                            proxyService.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(proxyClientAddressToPoll!), clientCert.Thumbprint));
+                            proxyService.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(proxyClientAddressToPoll), clientCert.Thumbprint));
                             break;
                         case ServiceConnectionType.Listening:
                             var proxyServiceListeningPort = proxyService.Listen();
@@ -115,7 +115,6 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         public static int WebSocketListeningPort(HalibutRuntime client, out string webSocketListeningUrl, CancellationToken cancellationToken)
         {
-            webSocketListeningUrl = null;
             for (int i = 0; i < 9; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();

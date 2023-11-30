@@ -14,7 +14,7 @@ namespace Halibut
         }
 
         [JsonConstructor]
-        public ProxyDetails(string host, int port, ProxyType type, string userName, string password)
+        public ProxyDetails(string host, int port, ProxyType type, string? userName, string? password)
             : this(host, port, type)
         {
             this.UserName = userName;
@@ -25,20 +25,20 @@ namespace Halibut
 
         public int Port { get; }
 
-        public string UserName { get; }
+        public string? UserName { get; }
 
-        public string Password { get; }
+        public string? Password { get; }
 
         public ProxyType Type { get; }
 
-        public bool Equals(ProxyDetails other)
+        public bool Equals(ProxyDetails? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return string.Equals(Host, other.Host) && Port == other.Port && string.Equals(UserName, other.UserName) && string.Equals(Password, other.Password) && Type == other.Type;
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;

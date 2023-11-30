@@ -93,7 +93,7 @@ namespace Halibut.Transport.Proxy
         /// <param name="proxyUsername">The proxy username.  This parameter is only used by Socks4 and Socks5 proxy objects.</param>
         /// <param name="proxyPassword">The proxy user password.  This parameter is only used Socks5 proxy objects.</param>
         /// <returns>Proxy client object.</returns>
-        public IProxyClient CreateProxyClient(ILog logger, ProxyType type, string proxyHost, int proxyPort, string proxyUsername, string proxyPassword)
+        public IProxyClient CreateProxyClient(ILog logger, ProxyType type, string proxyHost, int proxyPort, string? proxyUsername, string? proxyPassword)
         {
             if (type == ProxyType.None)
                 throw new ArgumentOutOfRangeException(nameof(type));

@@ -83,7 +83,7 @@ namespace Halibut.Tests
                 var listenPort = octopus.Listen();
                 logger.Information("Got port to listen on..");
                 var sw = new Stopwatch();
-                await AssertAsync.Throws<HttpRequestException>(() =>
+                await AssertException.Throws<HttpRequestException>(() =>
                 {
                     logger.Information("Sending request.");
                     sw.Start();

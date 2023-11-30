@@ -18,7 +18,7 @@ namespace Halibut.Transport.Caching
     {
         readonly MemoryCache responseMessageCache = new("ResponseMessageCache");
 
-        public ResponseMessage GetCachedResponse(ServiceEndPoint endPoint, RequestMessage request, MethodInfo methodInfo)
+        public ResponseMessage? GetCachedResponse(ServiceEndPoint endPoint, RequestMessage request, MethodInfo methodInfo)
         {
             var responseCanBeCached = CanBeCached(methodInfo);
             if (!responseCanBeCached) return null;
@@ -30,7 +30,7 @@ namespace Halibut.Transport.Caching
 
         }
 
-        public void CacheResponse(ServiceEndPoint endPoint, RequestMessage request, MethodInfo methodInfo, ResponseMessage response, OverrideErrorResponseMessageCachingAction overrideErrorResponseMessageCachingAction)
+        public void CacheResponse(ServiceEndPoint endPoint, RequestMessage request, MethodInfo methodInfo, ResponseMessage response, OverrideErrorResponseMessageCachingAction? overrideErrorResponseMessageCachingAction)
         {
             var responseCanBeCached = CanBeCached(methodInfo, response, overrideErrorResponseMessageCachingAction);
             if (!responseCanBeCached) return;
@@ -38,11 +38,7 @@ namespace Halibut.Transport.Caching
             var cacheKey = GetCacheKey(endPoint, methodInfo, request);
             var cacheDuration = GetCacheDuration(methodInfo);
 
-            var wrapper = new CacheItemWrapper
-            {
-                ResponseMessage = response,
-                EndPoint = endPoint
-            };
+            var wrapper = new CacheItemWrapper(endPoint, response);
             responseMessageCache.Add(cacheKey, wrapper, new CacheItemPolicy { AbsoluteExpiration = DateTimeOffset.UtcNow.AddSeconds(cacheDuration) });
         }
 
@@ -51,7 +47,7 @@ namespace Halibut.Transport.Caching
             return methodInfo.GetCustomAttribute<CacheResponseAttribute>() != null;
         }
 
-        bool CanBeCached(MethodInfo methodInfo, ResponseMessage response, OverrideErrorResponseMessageCachingAction overrideErrorResponseMessageCachingAction)
+        bool CanBeCached(MethodInfo methodInfo, ResponseMessage response, OverrideErrorResponseMessageCachingAction? overrideErrorResponseMessageCachingAction)
         {
             if (response == null)
             {
@@ -90,8 +86,14 @@ namespace Halibut.Transport.Caching
 
         class CacheItemWrapper
         {
-            public ServiceEndPoint EndPoint { get; set; }
-            public ResponseMessage ResponseMessage { get; set; }
+            public ServiceEndPoint EndPoint { get; }
+            public ResponseMessage ResponseMessage { get; }
+
+            public CacheItemWrapper(ServiceEndPoint endPoint, ResponseMessage responseMessage)
+            {
+                EndPoint = endPoint;
+                ResponseMessage = responseMessage;
+            }
         }
 
         public void Dispose()

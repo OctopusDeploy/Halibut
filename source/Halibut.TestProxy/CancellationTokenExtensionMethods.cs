@@ -24,7 +24,7 @@ namespace Halibut.TestProxy
         {
             var tcs = new TaskCompletionSource<VoidResult>();
 
-            IDisposable registration = null;
+            IDisposable? registration = null;
             registration = cancellationToken.Register(() =>
             {
                 tcs.TrySetCanceled();

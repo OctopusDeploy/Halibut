@@ -12,7 +12,7 @@ namespace Halibut.Transport.Protocol
         readonly HashSet<Type> messageContractTypes = new HashSet<Type>();
         readonly HashSet<Type> allowedTypes = new HashSet<Type>();
 
-        public TypeRegistry(IEnumerable<Assembly> typeAssemblies = null)
+        public TypeRegistry(IEnumerable<Assembly>? typeAssemblies = null)
         {
             this.typeAssemblies = typeAssemblies ?? Array.Empty<Assembly>();
         }
@@ -77,7 +77,7 @@ namespace Halibut.Transport.Protocol
         {
             if (type.HasElementType)
             {
-                yield return type.GetElementType();
+                yield return type.GetElementType()!;
             }
 
             if (type.IsGenericType)

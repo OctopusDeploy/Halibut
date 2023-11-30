@@ -16,7 +16,7 @@ namespace Halibut.TestProxy
         {
             if (TryParse(listenEndpoint, out var ipEndPoint))
             {
-                return new TcpListener(ipEndPoint);
+                return new TcpListener(ipEndPoint!);
             }
             else
             {

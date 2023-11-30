@@ -63,7 +63,7 @@ namespace Halibut.Tests.Timeouts
                 await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000));
                 sw.Stop();
                 Logger.Information("It took: " + sw.Elapsed);
-                sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2)) // -2s since tentacle will begin its countdown on the read which may start just after
+                sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service!.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2)) // -2s since tentacle will begin its countdown on the read which may start just after
                                                                                                                                      // the response to the 'Second last message' is put back into the queue.
                     .And.BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, "Service should not be using this timeout to detect the control message is not coming back, it should use the shorter one.");
             }

@@ -52,14 +52,14 @@ namespace Halibut.Tests.Support
         LogLevel halibutLogLevel = LogLevel.Trace;
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
-        ITrustProvider clientTrustProvider;
-        Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
+        ITrustProvider? clientTrustProvider;
+        Func<string, string, UnauthorizedClientConnectResponse>? clientOnUnauthorizedClientConnect;
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
 
         IStreamFactory? clientStreamFactory;
         IStreamFactory? serviceStreamFactory;
-        IConnectionsObserver serviceConnectionsObserver;
-        IConnectionsObserver clientConnectionsObserver;
+        IConnectionsObserver? serviceConnectionsObserver;
+        IConnectionsObserver? clientConnectionsObserver;
 
         public LatestClientAndLatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
@@ -371,11 +371,11 @@ namespace Halibut.Tests.Support
                     .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                     .WithLogFactory(octopusLogFactory)
                     .WithPendingRequestQueueFactory(factory)
-                    .WithTrustProvider(clientTrustProvider)
+                    .WithTrustProvider(clientTrustProvider!)
                     .WithStreamFactoryIfNotNull(clientStreamFactory)
-                    .WithConnectionsObserver(clientConnectionsObserver)
+                    .WithConnectionsObserver(clientConnectionsObserver!)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                    .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
+                    .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect!);
 
                 if (clientRpcObserver is not null)
                 {
@@ -395,7 +395,7 @@ namespace Halibut.Tests.Support
                     .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                     .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                     .WithStreamFactoryIfNotNull(serviceStreamFactory)
-                    .WithConnectionsObserver(serviceConnectionsObserver)
+                    .WithConnectionsObserver(serviceConnectionsObserver!)
                     .WithLogFactory(BuildServiceLogger());
 
                 if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
@@ -410,7 +410,7 @@ namespace Halibut.Tests.Support
             if (httpProxy != null)
             {
                 await httpProxy.StartAsync();
-                httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint.Port, ProxyType.HTTP);
+                httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint!.Port, ProxyType.HTTP);
             }
 
             Uri serviceUri;
@@ -449,7 +449,7 @@ namespace Halibut.Tests.Support
                 var clientUrsToPoll = pollingClientUris.ToList();
                 if (createClient)
                 {
-                    var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
+                    var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client!, cancellationToken);
 
                     var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketListeningInfo.WebSocketSslCertificateBindingAddress)
                         .WithCertificate(clientCertAndThumbprint)
@@ -578,7 +578,7 @@ namespace Halibut.Tests.Support
             public ClientAndService(
                 HalibutRuntime? client,
                 Uri? clientUri,
-                HalibutRuntime service,
+                HalibutRuntime? service,
                 Uri serviceUri,
                 string thumbprint,
                 PortForwarder? portForwarder,
@@ -609,19 +609,19 @@ namespace Halibut.Tests.Support
 
             public ServiceEndPoint GetServiceEndPoint()
             {
-                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails, Client.TimeoutsAndLimits);
+                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails, Client!.TimeoutsAndLimits);
             }
             
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceEndpoint = GetServiceEndPoint();
                 modifyServiceEndpoint(serviceEndpoint);
-                return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndpoint);
+                return Client!.CreateAsyncClient<TService, TAsyncClientService>(serviceEndpoint);
             }
             
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
             {
-                return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
+                return Client!.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
             }
 
             public async ValueTask DisposeAsync()
