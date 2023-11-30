@@ -275,6 +275,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 throw new NotSupportedException();
             }
 
+            if (portForwarderReference != null && portForwarder != null)
+            {
+                portForwarderReference.Value = portForwarder;
+            }
+
             return new ClientAndService(client, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, portForwarder, disposableCollection, proxy, proxyDetails, cancellationTokenSource);
         }
 

@@ -81,6 +81,13 @@ namespace Halibut.Tests.Support
             }
         }
 
+        public LatestServiceBuilder WithPollingClient(Uri pollingClient)
+        {
+            pollingClientUris.Add(pollingClient);
+
+            return this;
+        }
+
         public LatestServiceBuilder WithPollingClients(IEnumerable<Uri> pollingClientUris)
         {
             this.pollingClientUris.AddRange(pollingClientUris);

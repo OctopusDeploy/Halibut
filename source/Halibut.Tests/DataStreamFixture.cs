@@ -23,7 +23,7 @@ namespace Halibut.Tests
                        .AsLatestClientAndLatestServiceBuilder()
                        .Build(CancellationToken))
             {
-                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+                var echo = clientAndService.Client.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(clientAndService.GetServiceEndPoint());
 
                 var data = new byte[1337];
                 new Random().NextBytes(data);
