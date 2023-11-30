@@ -94,6 +94,11 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        IClientOnlyBuilder IClientOnlyBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
+        {
+            return WithPortForwarding(out portForwarder, portForwarderFactory);
+        }
+
         public LatestClientBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
             if (this.portForwarderFactory != null)
@@ -316,13 +321,13 @@ namespace Halibut.Tests.Support
             
             public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri)
             {
-                var serviceEndPoint = GetServiceEndPoint<TService, TAsyncClientService>(serviceUri);
+                var serviceEndPoint = GetServiceEndPoint(serviceUri);
                 return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
             }
 
             public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri, Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndPoint = GetServiceEndPoint<TService, TAsyncClientService>(serviceUri);
+                var serviceEndPoint = GetServiceEndPoint(serviceUri);
                 modifyServiceEndpoint(serviceEndPoint);
                 return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
             }
@@ -336,12 +341,12 @@ namespace Halibut.Tests.Support
             public TAsyncClientService CreateClientWithoutService<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 var serviceThatDoesNotExistUri = ServiceUriThatDoesNotExist();
-                var serviceEndPoint = GetServiceEndPoint<TService, TAsyncClientService>(serviceThatDoesNotExistUri);
+                var serviceEndPoint = GetServiceEndPoint(serviceThatDoesNotExistUri);
                 modifyServiceEndpoint(serviceEndPoint);
                 return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndPoint);
             }
 
-            ServiceEndPoint GetServiceEndPoint<TService, TAsyncClientService>(Uri serviceUri)
+            public ServiceEndPoint GetServiceEndPoint(Uri serviceUri)
             {
                 var serviceEndPoint = new ServiceEndPoint(serviceUri, thumbprint, proxyDetails, Client.TimeoutsAndLimits);
                 return serviceEndPoint;

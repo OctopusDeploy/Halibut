@@ -9,17 +9,10 @@ using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.TestServices;
-using Halibut.TestUtils.Contracts;
-using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 using Halibut.Util;
-using Octopus.Tentacle.Contracts;
-using Octopus.Tentacle.Contracts.Capabilities;
-using Octopus.Tentacle.Contracts.ScriptServiceV2;
 using Octopus.TestPortForwarder;
-using ICachingService = Halibut.TestUtils.Contracts.ICachingService;
 using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support
@@ -32,8 +25,8 @@ namespace Halibut.Tests.Support
 
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
+        readonly ServiceFactoryBuilder serviceFactoryBuilder = new();
 
-        ServiceFactoryBuilder serviceFactoryBuilder = new();
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
         
@@ -138,6 +131,11 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        IServiceOnlyBuilder IServiceOnlyBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
+        {
+            return WithPortForwarding(out portForwarder, portForwarderFactory);
+        }
+
         public LatestServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
             if (this.portForwarderFactory != null)
@@ -147,8 +145,8 @@ namespace Halibut.Tests.Support
 
             this.portForwarderFactory = portForwarderFactory;
 
-            this.portForwarderReference = new Reference<PortForwarder>();
-            portForwarder = this.portForwarderReference;
+            portForwarderReference = new Reference<PortForwarder>();
+            portForwarder = portForwarderReference;
 
             return this;
         }
@@ -163,11 +161,6 @@ namespace Halibut.Tests.Support
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             return this;
-        }
-
-        IServiceOnlyBuilder IServiceOnlyBuilder.WithHalibutLoggingLevel(LogLevel halibutLogLevel)
-        {
-            return WithHalibutLoggingLevel(halibutLogLevel);
         }
 
         public LatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)

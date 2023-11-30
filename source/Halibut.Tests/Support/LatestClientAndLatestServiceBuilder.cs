@@ -319,7 +319,12 @@ namespace Halibut.Tests.Support
             public HalibutRuntime Client => client.Client;
             public HalibutRuntime Service => service.Service;
             public HttpProxyService? HttpProxy { get; }
-            
+
+            public ServiceEndPoint GetServiceEndPoint()
+            {
+                return client.GetServiceEndPoint(ServiceUri);
+            }
+
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
                 return client.CreateClient<TService, TAsyncClientService>(ServiceUri, modifyServiceEndpoint);

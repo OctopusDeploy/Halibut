@@ -1,4 +1,3 @@
-#nullable enable
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +20,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Reference<PortForwarder>? portForwarderReference;
         ProxyFactory? proxyFactory;
         LogLevel halibutLogLevel = LogLevel.Trace;
-        OldServiceAvailableServices availableServices = new(false, false);
+        readonly OldServiceAvailableServices availableServices = new(false, false);
         bool hasService = true;
 
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
@@ -66,25 +65,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             return this;
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
-        {
-            return WithPortForwarding(portForwarderFactory);
-        }
-
-        public LatestClientAndPreviousServiceVersionBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
-        {
-            if (this.portForwarderFactory != null)
-            {
-                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported");
-            }
-
-            this.portForwarderFactory = portForwarderFactory;
-            return this;
-        }
-
         IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
-            return WithPortForwarding(portForwarderFactory);
+            return WithPortForwarding(out portForwarder, portForwarderFactory);
         }
 
         public LatestClientAndPreviousServiceVersionBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
@@ -95,9 +78,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
 
             this.portForwarderFactory = portForwarderFactory;
+
+            portForwarderReference = new Reference<PortForwarder>();
+            portForwarder = portForwarderReference;
+
             return this;
         }
-
+        
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
             return WithStandardServices();

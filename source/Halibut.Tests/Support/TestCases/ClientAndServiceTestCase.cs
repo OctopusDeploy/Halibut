@@ -48,7 +48,7 @@ namespace Halibut.Tests.Support.TestCases
 
             if (NetworkConditionTestCase.PortForwarderFactory != null)
             {
-                builder.WithPortForwarding(i => NetworkConditionTestCase.PortForwarderFactory(i, logger));
+                builder.WithPortForwarding(out _, i => NetworkConditionTestCase.PortForwarderFactory(i, logger));
             }
 
             return builder;
@@ -61,7 +61,7 @@ namespace Halibut.Tests.Support.TestCases
 
             if (NetworkConditionTestCase.PortForwarderFactory != null)
             {
-                builder.WithPortForwarding(i => NetworkConditionTestCase.PortForwarderFactory(i, logger));
+                builder.WithPortForwarding(out _, i => NetworkConditionTestCase.PortForwarderFactory(i, logger));
             }
 
             return builder;
