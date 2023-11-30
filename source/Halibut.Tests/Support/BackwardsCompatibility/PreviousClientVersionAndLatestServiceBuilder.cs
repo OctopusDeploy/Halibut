@@ -29,7 +29,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly ServiceFactoryBuilder serviceFactoryBuilder = new();
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        Version? version = null;
+        Version? version;
         ProxyFactory? proxyFactory;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;

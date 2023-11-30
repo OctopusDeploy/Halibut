@@ -4,9 +4,9 @@ namespace Halibut.Tests.Support
 {
     public static class ServiceBuilderExtensionMethods
     {
-        public static LatestServiceBuilder AsLatestServiceBuilder(this IServiceOnlyBuilder serviceOnlyBuilder)
+        public static LatestServiceBuilder AsLatestServiceBuilder(this IServiceBuilder serviceBuilder)
         {
-            return (LatestServiceBuilder) serviceOnlyBuilder;
+            return (LatestServiceBuilder) serviceBuilder;
         }
     }
 }

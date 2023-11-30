@@ -4,7 +4,7 @@ namespace Halibut.Tests.Support
 {
     public static class ClientBuilderExtensionMethods
     {
-        public static LatestClientBuilder AsLatestClientBuilder(this IClientOnlyBuilder clientBuilder)
+        public static LatestClientBuilder AsLatestClientBuilder(this IClientBuilder clientBuilder)
         {
             return (LatestClientBuilder) clientBuilder;
         }

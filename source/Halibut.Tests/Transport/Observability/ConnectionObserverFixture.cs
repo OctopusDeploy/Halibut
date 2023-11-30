@@ -86,7 +86,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithConnectionObserverOnTcpServer(connectionsObserver)
                              .Build(CancellationToken))
             {
-                clientAndBuilder.Client!.TrustOnly(new List<string>());
+                clientAndBuilder.Client.TrustOnly(new List<string>());
 
                 using var cts = new CancellationTokenSource();
                 var token = cts.Token;

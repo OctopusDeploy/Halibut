@@ -2,7 +2,7 @@ using System;
 
 namespace Halibut.Tests.Support
 {
-    public interface IClientOnly : IAsyncDisposable
+    public interface IClient : IAsyncDisposable
     {
         HalibutRuntime Client { get; }
         Uri? PollingUri { get; }

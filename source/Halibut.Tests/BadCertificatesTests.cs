@@ -152,7 +152,7 @@ namespace Halibut.Tests
                 await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None));
                 
                 // Act
-                clientAndBuilder.Client?.TrustOnly(new List<string>());
+                clientAndBuilder.Client.TrustOnly(new List<string>());
                 
                 // Assert
                 var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token, CancellationToken.None)), CancellationToken);

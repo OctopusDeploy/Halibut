@@ -14,7 +14,7 @@ using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support
 {
-    public class LatestClientBuilder : IClientOnlyBuilder
+    public class LatestClientBuilder : IClientBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
 
@@ -94,7 +94,7 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        IClientOnlyBuilder IClientOnlyBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
+        IClientBuilder IClientBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
             return WithPortForwarding(out portForwarder, portForwarderFactory);
         }
@@ -130,7 +130,7 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        IClientOnlyBuilder IClientOnlyBuilder.WithHalibutLoggingLevel(LogLevel halibutLogLevel)
+        IClientBuilder IClientBuilder.WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
         }
@@ -172,12 +172,12 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        async Task<IClientOnly> IClientOnlyBuilder.Build(CancellationToken cancellationToken)
+        async Task<IClient> IClientBuilder.Build(CancellationToken cancellationToken)
         {
             return await Build(cancellationToken);
         }
 
-        public async Task<ClientOnly> Build(CancellationToken cancellationToken)
+        public async Task<LatestClient> Build(CancellationToken cancellationToken)
         {
             var octopusLogFactory = BuildClientLogger();
 
@@ -251,7 +251,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientOnly(client, clientPollingUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
+            return new LatestClient(client, clientPollingUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
         }
 
         IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
@@ -291,7 +291,7 @@ namespace Halibut.Tests.Support
                 .ToCachingLogFactory();
         }
         
-        public class ClientOnly : IClientOnly
+        public class LatestClient : IClient
         {
             readonly string thumbprint;
             readonly PortForwarder? portForwarder;
@@ -299,7 +299,7 @@ namespace Halibut.Tests.Support
             readonly ServiceConnectionType serviceConnectionType;
             readonly DisposableCollection disposableCollection;
 
-            public ClientOnly(HalibutRuntime client,
+            public LatestClient(HalibutRuntime client,
                 Uri? pollingUri,
                 string thumbprint,
                 PortForwarder? portForwarder,
@@ -369,7 +369,7 @@ namespace Halibut.Tests.Support
 
             public async ValueTask DisposeAsync()
             {
-                var logger = new SerilogLoggerBuilder().Build().ForContext<ClientOnly>();
+                var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClient>();
 
                 logger.Information("****** ****** ****** ****** ****** ****** ******");
                 logger.Information("****** CLIENT DISPOSE CALLED  ******");

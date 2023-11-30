@@ -17,7 +17,7 @@ using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support
 {
-    public class LatestServiceBuilder : IServiceOnlyBuilder
+    public class LatestServiceBuilder : IServiceBuilder
     {
         public static Uri PollingTentacleServiceUri => new("poll://SQ-TENTAPOLL");
         public static Uri PollingOverWebSocketTentacleServiceUri => new("poll://SQ-TENTAPOLL");
@@ -138,7 +138,7 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        IServiceOnlyBuilder IServiceOnlyBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
+        IServiceBuilder IServiceBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
             return WithPortForwarding(out portForwarder, portForwarderFactory);
         }
@@ -189,12 +189,12 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        async Task<IServiceOnly> IServiceOnlyBuilder.Build(CancellationToken cancellationToken)
+        async Task<IService> IServiceBuilder.Build(CancellationToken cancellationToken)
         {
             return await Build(cancellationToken);
         }
         
-        public async Task<ServiceOnly> Build(CancellationToken cancellationToken)
+        public async Task<LatestService> Build(CancellationToken cancellationToken)
         {
             //TODO: @server-at-scale - We don't need to be async. But this is left here to see if we need to add it back some day. We can decide later if we wish to make this sync.
             await Task.CompletedTask;
@@ -263,7 +263,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ServiceOnly(service, serviceUri, portForwarder);
+            return new LatestService(service, serviceUri, portForwarder);
         }
         
         ILogFactory BuildServiceLogger()
@@ -285,11 +285,11 @@ namespace Halibut.Tests.Support
                 .ToCachingLogFactory();
         }
 
-        public class ServiceOnly : IServiceOnly
+        public class LatestService : IService
         {
             public Uri ServiceUri { get; }
             
-            public ServiceOnly(
+            public LatestService(
                 HalibutRuntime service,
                 Uri serviceUri,
                 PortForwarder? portForwarder)
@@ -304,7 +304,7 @@ namespace Halibut.Tests.Support
             
             public async ValueTask DisposeAsync()
             {
-                var logger = new SerilogLoggerBuilder().Build().ForContext<ServiceOnly>();
+                var logger = new SerilogLoggerBuilder().Build().ForContext<LatestService>();
 
                 logger.Information("****** ****** ****** ****** ****** ****** ******");
                 logger.Information("****** SERVICE DISPOSE CALLED  ******");

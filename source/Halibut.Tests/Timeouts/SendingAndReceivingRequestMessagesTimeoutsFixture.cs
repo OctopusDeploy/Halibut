@@ -82,7 +82,7 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
                 
@@ -114,7 +114,7 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
-                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
+                sw.Elapsed.Should().BeGreaterThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
 
@@ -151,7 +151,7 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
-                var expectedTimeOut = clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
+                var expectedTimeOut = clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
 
                 sw.Elapsed.Should().BeGreaterThan(
                         expectedTimeOut - TimeSpan.FromSeconds(2), 
@@ -192,7 +192,7 @@ namespace Halibut.Tests.Timeouts
                 sw.Stop();
                 Logger.Error(e, "Received error when making the request (as expected)");
                 
-                var expectedTimeout = clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
+                var expectedTimeout = clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.SendTimeout;
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(expectedTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");

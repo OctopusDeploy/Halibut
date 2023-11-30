@@ -15,14 +15,13 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly ServiceConnectionType serviceConnectionType;
         readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
-        Version? version = null;
+        Version? version;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
         ProxyFactory? proxyFactory;
         LogLevel halibutLogLevel = LogLevel.Trace;
         readonly OldServiceAvailableServices availableServices = new(false, false);
-        bool hasService = true;
-
+        
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
@@ -138,19 +137,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             return this;
         }
-
-        /// <summary>
-        ///     Ie no tentacle.
-        ///     In the case of listening, a TCPListenerWhichKillsNewConnections will be created. This will cause connections to
-        ///     that port to be killed immediately.
-        /// </summary>
-        /// <returns></returns>
-        public LatestClientAndPreviousServiceVersionBuilder NoService()
-        {
-            hasService = false;
-            return this;
-        }
-
+        
         async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
             return await Build(cancellationToken);
@@ -199,19 +186,16 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     listenPort = portForwarder.ListeningPort;
                 }
 
-                if (hasService)
-                {
-                    runningOldHalibutBinary = await new HalibutTestBinaryRunner(
-                        serviceConnectionType,
-                        listenPort,
-                        clientCertAndThumbprint,
-                        serviceCertAndThumbprint,
-                        version?.ToString(),
-                        proxyDetails!,
-                        halibutLogLevel,
-                        availableServices,
-                        logger).Run();
-                }
+                runningOldHalibutBinary = await new HalibutTestBinaryRunner(
+                    serviceConnectionType,
+                    listenPort,
+                    clientCertAndThumbprint,
+                    serviceCertAndThumbprint,
+                    version?.ToString(),
+                    proxyDetails!,
+                    halibutLogLevel,
+                    availableServices,
+                    logger).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
             {
@@ -230,43 +214,37 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                     webSocketListeningPort = portForwarder.ListeningPort;
                 }
 
-                if (hasService)
-                {
-                    var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
-                    runningOldHalibutBinary = await new HalibutTestBinaryRunner(
-                        serviceConnectionType,
-                        webSocketServiceEndpointUri,
-                        clientCertAndThumbprint,
-                        serviceCertAndThumbprint,
-                        version?.ToString(),
-                        proxyDetails,
-                        halibutLogLevel,
-                        availableServices,
-                        logger).Run();
-                }
+                var webSocketServiceEndpointUri = new Uri($"wss://localhost:{webSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
+                runningOldHalibutBinary = await new HalibutTestBinaryRunner(
+                    serviceConnectionType,
+                    webSocketServiceEndpointUri,
+                    clientCertAndThumbprint,
+                    serviceCertAndThumbprint,
+                    version?.ToString(),
+                    proxyDetails,
+                    halibutLogLevel,
+                    availableServices,
+                    logger).Run();
             }
             else if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 var listenPort = 6660666;
 
-                if (hasService)
-                {
-                    runningOldHalibutBinary = await new HalibutTestBinaryRunner(
-                        serviceConnectionType,
-                        clientCertAndThumbprint,
-                        serviceCertAndThumbprint,
-                        version?.ToString(),
-                        proxyDetails,
-                        halibutLogLevel,
-                        availableServices,
-                        logger).Run();
+                runningOldHalibutBinary = await new HalibutTestBinaryRunner(
+                    serviceConnectionType,
+                    clientCertAndThumbprint,
+                    serviceCertAndThumbprint,
+                    version?.ToString(),
+                    proxyDetails,
+                    halibutLogLevel,
+                    availableServices,
+                    logger).Run();
 
-                    listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
+                listenPort = (int)runningOldHalibutBinary.ServiceListenPort!;
 
-                    portForwarder = portForwarderFactory?.Invoke(listenPort);
+                portForwarder = portForwarderFactory?.Invoke(listenPort);
 
-                    if (portForwarder != null) listenPort = portForwarder.ListeningPort;
-                }
+                if (portForwarder != null) listenPort = portForwarder.ListeningPort;
 
                 serviceUri = new Uri("https://localhost:" + listenPort);
             }

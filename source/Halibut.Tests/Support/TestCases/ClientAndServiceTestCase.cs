@@ -41,7 +41,7 @@ namespace Halibut.Tests.Support.TestCases
             return builder;
         }
 
-        public IClientOnlyBuilder CreateClientOnlyTestCaseBuilder()
+        public IClientBuilder CreateClientOnlyTestCaseBuilder()
         {
             var logger = new SerilogLoggerBuilder().Build();
             var builder = ClientAndServiceBuilderFactory.ForVersionClientOnly(ClientAndServiceTestVersion)(ServiceConnectionType);
@@ -54,7 +54,7 @@ namespace Halibut.Tests.Support.TestCases
             return builder;
         }
 
-        public IServiceOnlyBuilder CreateServiceOnlyTestCaseBuilder()
+        public IServiceBuilder CreateServiceOnlyTestCaseBuilder()
         {
             var logger = new SerilogLoggerBuilder().Build();
             var builder = ClientAndServiceBuilderFactory.ForVersionServiceOnly(ClientAndServiceTestVersion)(ServiceConnectionType);

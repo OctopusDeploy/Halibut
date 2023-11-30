@@ -2,7 +2,7 @@ using System;
 
 namespace Halibut.Tests.Support
 {
-    public interface IServiceOnly : IAsyncDisposable
+    public interface IService : IAsyncDisposable
     {
     }
 }
