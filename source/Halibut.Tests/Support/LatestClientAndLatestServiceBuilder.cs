@@ -1,16 +1,11 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
-using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
-using Halibut.Tests.Builders;
-using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
@@ -35,6 +30,7 @@ namespace Halibut.Tests.Support
         readonly LatestServiceBuilder serviceBuilder;
 
         ProxyFactory? proxyFactory;
+        Reference<HttpProxyService>? proxyServiceReference;
 
         Reference<PortForwarder>? clientPortForwarderReference;
         Reference<PortForwarder>? servicePortForwarderReference;
@@ -187,14 +183,18 @@ namespace Halibut.Tests.Support
             return this.WithAsyncService<ICachingService, IAsyncCachingService>(() => new AsyncCachingService());
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy(out Reference<HttpProxyService> proxyService)
         {
-            return WithProxy();
+            return WithProxy(out proxyService);
         }
 
-        public LatestClientAndLatestServiceBuilder WithProxy()
+        public LatestClientAndLatestServiceBuilder WithProxy(out Reference<HttpProxyService> proxyService)
         {
             this.proxyFactory = new ProxyFactory();
+
+            proxyServiceReference = new Reference<HttpProxyService>();
+            proxyService = proxyServiceReference;
+
             return this;
         }
 
@@ -286,6 +286,11 @@ namespace Halibut.Tests.Support
 
                 clientBuilder.WithProxyDetails(httpProxyDetails);
                 serviceBuilder.WithProxyDetails(httpProxyDetails);
+
+                if (proxyServiceReference is not null)
+                {
+                    proxyServiceReference.Value = httpProxy;
+                }
             }
 
             var client = await clientBuilder.Build(cancellationToken);
@@ -312,6 +317,7 @@ namespace Halibut.Tests.Support
         {
             readonly LatestClient client;
             readonly LatestService service;
+            readonly HttpProxyService? httpProxy;
 
             public ClientAndService(
                 LatestClient client,
@@ -321,13 +327,12 @@ namespace Halibut.Tests.Support
                 this.client = client;
                 this.service = service;
 
-                HttpProxy = proxy;
+                httpProxy = proxy;
             }
 
             public Uri ServiceUri => service.ServiceUri;
             public HalibutRuntime Client => client.Client;
             public HalibutRuntime Service => service.Service;
-            public HttpProxyService? HttpProxy { get; }
 
             public ServiceEndPoint GetServiceEndPoint()
             {
@@ -352,7 +357,7 @@ namespace Halibut.Tests.Support
                 await service.DisposeAsync();
 
                 void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
-                Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
+                Try.CatchingError(() => httpProxy?.Dispose(), LogError);
             }
         }
     }

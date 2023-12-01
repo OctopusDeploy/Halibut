@@ -40,10 +40,10 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
-                       .WithProxy()
+                       .WithProxy(out var proxyService)
                        .Build(CancellationToken))
             {
-                clientAndService.HttpProxy!.Dispose();
+                proxyService.Value.Dispose();
 
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
@@ -67,10 +67,10 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
-                       .WithProxy()
+                       .WithProxy(out var proxyService)
                        .Build(CancellationToken))
             {
-                clientAndService.HttpProxy!.PauseNewConnections();
+                proxyService.Value.PauseNewConnections();
 
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {

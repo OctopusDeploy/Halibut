@@ -31,6 +31,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         Version? version;
         ProxyFactory? proxyFactory;
+        Reference<HttpProxyService>? proxyServiceReference;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
         LogLevel halibutLogLevel = LogLevel.Trace;
@@ -138,14 +139,17 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 .WithAsyncService<ICapabilitiesServiceV2, IAsyncCapabilitiesServiceV2>(() => new AsyncCapabilitiesServiceV2());
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy(out Reference<HttpProxyService> proxyService)
         {
-            return WithProxy();
+            return WithProxy(out proxyService);
         }
 
-        public PreviousClientVersionAndLatestServiceBuilder WithProxy()
+        public PreviousClientVersionAndLatestServiceBuilder WithProxy(out Reference<HttpProxyService> proxyService)
         {
             this.proxyFactory = new ProxyFactory().WithDelaySendingSectionsOfHttpHeaders(false);
+
+            proxyServiceReference = new Reference<HttpProxyService>();
+            proxyService = proxyServiceReference;
 
             return this;
         }
@@ -207,6 +211,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             {
                 await httpProxy.StartAsync();
                 httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint!.Port, ProxyType.HTTP);
+
+                if (proxyServiceReference is not null)
+                {
+                    proxyServiceReference.Value = httpProxy;
+                }
             }
 
             if (serviceConnectionType == ServiceConnectionType.Polling)
@@ -316,6 +325,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly CancellationTokenSource cancellationTokenSource;
             readonly ILogger logger;
             readonly PortForwarder? portForwarder;
+            readonly HttpProxyService? httpProxy;
 
             public ClientAndService(
                 HalibutRuntime proxyClient,
@@ -330,7 +340,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 ILogger logger)
             {
                 Client = proxyClient;
-                HttpProxy = httpProxy;
+                this.httpProxy = httpProxy;
                 this.portForwarder = portForwarder;
                 this.runningOldHalibutBinary = runningOldHalibutBinary;
                 this.serviceUri = serviceUri;
@@ -348,7 +358,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             public ServiceEndPoint ServiceEndPoint => new ServiceEndPoint(serviceUri, serviceCertAndThumbprint.Thumbprint, Client.TimeoutsAndLimits);
             
-            public HttpProxyService? HttpProxy { get; }
             
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
@@ -373,7 +382,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 await Try.DisposingAsync(Client, LogError);
                 Try.CatchingError(runningOldHalibutBinary.Dispose, LogError);
                 await Try.DisposingAsync(service, LogError);
-                Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
+                Try.CatchingError(() => httpProxy?.Dispose(), LogError);
                 Try.CatchingError(() => portForwarder?.Dispose(), LogError);
                 Try.CatchingError(disposableCollection.Dispose, LogError); ;
                 Try.CatchingError(() => cancellationTokenSource.Dispose(), LogError);
