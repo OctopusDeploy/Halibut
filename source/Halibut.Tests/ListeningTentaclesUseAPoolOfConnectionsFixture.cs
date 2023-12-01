@@ -21,12 +21,11 @@ namespace Halibut.Tests
         {
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
+                       .WithPortForwarding(out var portForwarder, port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
                            .Build())
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithPortForwarding(out var portForwarder)
                        .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {
@@ -53,7 +52,7 @@ namespace Halibut.Tests
                 
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(2, "Since the last connection should not have been put back into the pool.");
 
-                sw.Elapsed.Should().BeLessThan(clientAndService.Service!.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
+                sw.Elapsed.Should().BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout, "we should not be putting the bad connection back into the pool, " +
                                                                                                                                     "then pulling it out detecting it is bad and then attempting to create a new connection");
             }
         }

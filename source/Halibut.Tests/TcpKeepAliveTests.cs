@@ -34,10 +34,10 @@ namespace Halibut.Tests
                 await echoServiceClient.SayHelloAsync("An initial RPC call");
 
                 //Assert
-                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service!);
+                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service);
                 pollingSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(1);
 
-                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client!);
+                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client);
                 listeningSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(1);
             }
         }
@@ -64,10 +64,10 @@ namespace Halibut.Tests
                 await echoServiceClient.SayHelloAsync("An initial RPC call");
 
                 //Assert
-                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service!);
+                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service);
                 pollingSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(0);
 
-                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client!);
+                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client);
                 listeningSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(0);
             }
         }

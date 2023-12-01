@@ -43,11 +43,11 @@ namespace Halibut.Tests
         async Task CanCancel_ConnectingOrQueuedRequests(ClientAndServiceTestCase clientAndServiceTestCase, CancellationTokenSource tokenSourceToCancel, HalibutProxyRequestOptions halibutRequestOption)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
+                       .WithPortForwarding(out var portForwarderRef, port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
                 var data = new byte[1024 * 1024 + 15];
                 new Random().NextBytes(data);
 
@@ -59,7 +59,7 @@ namespace Halibut.Tests
                 (await AssertException.Throws<Exception>(() => echo.IncrementAsync(halibutRequestOption)))
                     .And.Message.Contains("The operation was canceled");
 
-                clientAndService.PortForwarder.ReturnToNormalMode();
+                portForwarderRef.Value.ReturnToNormalMode();
                 
                 await echo.IncrementAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
 
@@ -166,15 +166,11 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling:false)]
         public async Task CannotHaveServiceWithHalibutProxyRequestOptions(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .As<LatestClientAndLatestServiceBuilder>()
-                       .NoService()
-                       .WithAsyncService<IAmNotAllowed, IAsyncAmNotAllowed>(() => new AsyncAmNotAllowed())
-                       .Build(CancellationToken))
+            await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder().Build(CancellationToken))
             {
                 Assert.Throws<TypeNotAllowedException>(() =>
                 {
-                    clientAndService.Client!.CreateAsyncClient<IAmNotAllowed, IAsyncClientAmNotAllowed>(clientAndService.GetServiceEndPoint());
+                    client.CreateClientWithoutService<IAmNotAllowed, IAsyncClientAmNotAllowed>();
                 });
             }
         }
@@ -202,22 +198,8 @@ namespace Halibut.Tests
         public void Foo(HalibutProxyRequestOptions opts);
     }
     
-    public interface IAsyncAmNotAllowed
-    {
-        public Task FooAsync(HalibutProxyRequestOptions opts, CancellationToken cancellationToken);
-    }
-    
     public interface IAsyncClientAmNotAllowed
     {
         public Task FooAsync(HalibutProxyRequestOptions opts);
-    }
-
-    public class AsyncAmNotAllowed : IAsyncAmNotAllowed
-    {
-        public async Task FooAsync(HalibutProxyRequestOptions opts, CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-            throw new NotImplementedException();
-        }
     }
 }

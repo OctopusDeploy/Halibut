@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -25,7 +24,7 @@ namespace Halibut.Tests.Transport
 
             var client = new DiscoveryClient(new StreamFactory());
             var discovered = await client.DiscoverAsync(
-                new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, "", clientAndService.Client!.TimeoutsAndLimits), 
+                new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, "", clientAndService.Client.TimeoutsAndLimits), 
                 clientAndService.Client.TimeoutsAndLimits, 
                 CancellationToken);
 
@@ -50,7 +49,7 @@ namespace Halibut.Tests.Transport
                        .AsLatestClientAndLatestServiceBuilder()
                        .Build(CancellationToken))
             {
-                var info = await clientAndService.Client!.DiscoverAsync(clientAndService.ServiceUri, CancellationToken);
+                var info = await clientAndService.Client.DiscoverAsync(clientAndService.ServiceUri, CancellationToken);
                     
                 info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
             }
@@ -76,13 +75,13 @@ namespace Halibut.Tests.Transport
 
             var sw = Stopwatch.StartNew();
             await AssertionExtensions.Should(() => client.DiscoverAsync(
-                    new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, "", clientAndService.Client!.TimeoutsAndLimits), 
-                    clientAndService.Client!.TimeoutsAndLimits, 
+                    new ServiceEndPoint(clientAndService.GetServiceEndPoint().BaseUri, "", clientAndService.Client.TimeoutsAndLimits), 
+                    clientAndService.Client.TimeoutsAndLimits, 
                     CancellationToken))
                 .ThrowAsync<HalibutClientException>();
 
             sw.Stop();
-            sw.Elapsed.Should().BeCloseTo(clientAndService.Service!.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
+            sw.Elapsed.Should().BeCloseTo(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, TimeSpan.FromSeconds(15), "Since a paused connection early on should not hang forever.");
         }
     }
 }

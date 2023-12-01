@@ -22,7 +22,7 @@ namespace Halibut.Tests
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPortForwarding(port =>
+                       .WithPortForwarding(out var portForwarderRef, port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
                                .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
@@ -34,7 +34,7 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
 
                 var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
@@ -55,7 +55,7 @@ namespace Halibut.Tests
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPortForwarding(port =>
+                       .WithPortForwarding(out var portForwarderRef, port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
                                .WithCountTcpConnectionsCreated(out _)
@@ -67,7 +67,7 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
 
                 var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
@@ -91,7 +91,7 @@ namespace Halibut.Tests
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPortForwarding(port =>
+                       .WithPortForwarding(out var portForwarderRef, port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
                                .WithCountTcpConnectionsCreated(out _)
@@ -103,7 +103,7 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
 
                 var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
@@ -128,7 +128,7 @@ namespace Halibut.Tests
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPortForwarding(port =>
+                       .WithPortForwarding(out var portForwarderRef, port =>
                        {
                            var portForwarder = PortForwarderUtil.ForwardingToLocalPort(port)
                                .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
@@ -140,7 +140,7 @@ namespace Halibut.Tests
                        .WithHalibutLoggingLevel(LogLevel.Fatal)
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
 
                 var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
@@ -155,7 +155,7 @@ namespace Halibut.Tests
                     Logger.Information("TCP count is at: {Count}", tcpConnectionsCreatedCounter.ConnectionsCreatedCount);
                     await Task.Delay(TimeSpan.FromSeconds(1), CancellationToken);
                 }
-                clientAndService.PortForwarder.ReturnToNormalMode();
+                portForwarderRef.Value.ReturnToNormalMode();
 
                 await echoCallThatShouldEventuallySucceed;
             }

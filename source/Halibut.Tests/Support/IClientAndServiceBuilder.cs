@@ -9,12 +9,11 @@ namespace Halibut.Tests.Support
     public interface IClientAndServiceBuilder
     {
         Task<IClientAndService> Build(CancellationToken cancellationToken);
-        IClientAndServiceBuilder WithPortForwarding(Func<int, PortForwarder> func);
+        IClientAndServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory);
         IClientAndServiceBuilder WithProxy();
         IClientAndServiceBuilder WithStandardServices();
         IClientAndServiceBuilder WithTentacleServices();
         IClientAndServiceBuilder WithHalibutLoggingLevel(LogLevel info);
         IClientAndServiceBuilder WithCachingService();
-        IClientAndServiceBuilder NoService();
     }
 }

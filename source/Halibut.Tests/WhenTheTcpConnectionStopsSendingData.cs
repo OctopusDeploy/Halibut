@@ -21,7 +21,7 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithEchoService()
-                       .WithPortForwarding()
+                       .WithPortForwarding(out var portForwarderRef)
                        .Build(CancellationToken))
             {
                 var data = new byte[1024];
@@ -31,13 +31,13 @@ namespace Halibut.Tests
 
                 await echo.SayHelloAsync("Bob");
                 
-                clientAndService.PortForwarder!.PauseExistingConnections();
+                portForwarderRef.Value.PauseExistingConnections();
 
                 var sw = Stopwatch.StartNew();
                 await echo.SayHelloAsync("Bob");
                 sw.Stop();
 
-                sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service!.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout - TimeSpan.FromSeconds(1), // Allow for some slack, don't care if it actually waited just under.  
+                sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout - TimeSpan.FromSeconds(1), // Allow for some slack, don't care if it actually waited just under.  
                     "Since we should test connections in the pool using using the heart beat timeout.")
                     .And.BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, "Since we should test connections in the pool using using the shorter timeout.");
             }

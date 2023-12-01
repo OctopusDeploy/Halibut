@@ -203,7 +203,7 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                clientAndService.Client!.OverrideErrorResponseMessageCaching = response => response.Error!.Message.Contains("CACHE ME");
+                clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error!.Message.Contains("CACHE ME");
 
                 var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
