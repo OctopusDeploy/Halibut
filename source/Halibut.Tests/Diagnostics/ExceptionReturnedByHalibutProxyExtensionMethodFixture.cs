@@ -136,10 +136,10 @@ namespace Halibut.Tests.Diagnostics
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .WithStandardServices()
-                           .WithProxy()
+                           .WithProxy(out var proxyService)
                            .Build(CancellationToken))
                 {
-                    clientAndService.HttpProxy!.Dispose();
+                    proxyService.Value.Dispose();
 
                     var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                     {

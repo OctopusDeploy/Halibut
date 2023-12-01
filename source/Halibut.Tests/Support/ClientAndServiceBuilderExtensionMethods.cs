@@ -26,22 +26,28 @@ namespace Halibut.Tests.Support
             return clientAndServiceBuilder.AsPreviousClientVersionAndLatestServiceBuilder().WithAsyncService<TContract, TClientContract>(implementation);
         }
 
-        public static T WithPortForwarding<T>(this T portForwarderBuilder) where T : IClientAndServiceBuilder
+        public static T WithPortForwarding<T>(this T builder) where T : IClientAndServiceBuilder
         {
-            portForwarderBuilder.WithPortForwarding(out _, CreateDefaultPortForwarder);
-            return portForwarderBuilder;
+            builder.WithPortForwarding(out _, CreateDefaultPortForwarder);
+            return builder;
         }
 
-        public static T WithPortForwarding<T>(this T portForwarderBuilder, Func<int, PortForwarder> portForwarderFactory) where T : IClientAndServiceBuilder
+        public static T WithPortForwarding<T>(this T builder, Func<int, PortForwarder> portForwarderFactory) where T : IClientAndServiceBuilder
         {
-            portForwarderBuilder.WithPortForwarding(out _, portForwarderFactory);
-            return portForwarderBuilder;
+            builder.WithPortForwarding(out _, portForwarderFactory);
+            return builder;
         }
 
-        public static T WithPortForwarding<T>(this T portForwarderBuilder, out Reference<PortForwarder> portForwarder) where T : IClientAndServiceBuilder
+        public static T WithPortForwarding<T>(this T builder, out Reference<PortForwarder> portForwarder) where T : IClientAndServiceBuilder
         {
-            portForwarderBuilder.WithPortForwarding(out portForwarder, CreateDefaultPortForwarder);
-            return portForwarderBuilder;
+            builder.WithPortForwarding(out portForwarder, CreateDefaultPortForwarder);
+            return builder;
+        }
+
+        public static T WithProxy<T>(this T builder) where T : IClientAndServiceBuilder
+        {
+            builder.WithProxy(out _);
+            return builder;
         }
 
         static PortForwarder CreateDefaultPortForwarder(int port)
