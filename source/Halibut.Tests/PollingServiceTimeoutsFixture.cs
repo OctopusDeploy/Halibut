@@ -22,12 +22,12 @@ namespace Halibut.Tests
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
 
-            await using (var clientAndService = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder()
+            await using (var clientOnly = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder()
                              .AsLatestClientBuilder()
                              .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                              .Build(CancellationToken))
             {
-                var client = clientAndService.CreateClientWithoutService<IEchoService, IAsyncClientEchoServiceWithOptions>();
+                var client = clientOnly.CreateClientWithoutService<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
                 (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken, CancellationToken.None))))
