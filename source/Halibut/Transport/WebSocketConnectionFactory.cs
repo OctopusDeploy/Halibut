@@ -58,7 +58,7 @@ namespace Halibut.Transport
             client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));
             client.Options.AddSubProtocol("Octopus");
             client.Options.SetRequestHeader(ServerCertificateInterceptor.Header, connectionId);
-            if (serviceEndpoint.Proxy != null)
+            if (serviceEndpoint.Proxy is not null)
                 client.Options.Proxy = new WebSocketProxy(serviceEndpoint.Proxy);
 
             try
@@ -113,7 +113,7 @@ namespace Halibut.Transport
 
         public bool IsBypassed(Uri host) => false;
 
-        public ICredentials Credentials { get; set; }
+        public ICredentials? Credentials { get; set; }
     }
 }
 #endif

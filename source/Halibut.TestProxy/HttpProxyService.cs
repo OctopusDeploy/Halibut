@@ -104,7 +104,7 @@ namespace Halibut.TestProxy
                         using var socketCancellationTokenSource = new CancellationTokenSource();
                         using (cancellationToken.Register(() => Try.CatchingError(() => socketCancellationTokenSource.Cancel(), _ => { })))
                         {
-                            var cancelTask = socketCancellationTokenSource.Token.AsTask<TcpClient?>();
+                            var cancelTask = socketCancellationTokenSource.Token.AsTask<TcpClient>();
                             var actionTask = Task.Run(async () =>
                             {
                                 using var _ = cancellationToken.Register(() => Try.CatchingError(() =>
@@ -188,7 +188,7 @@ namespace Halibut.TestProxy
                 try
                 {
                     logger.LogInformation("Creating Proxy Connection Forwarder");
-                    await CreateProxyConnectionAndForward(client, connectionRequest, cancellationToken);
+                    CreateProxyConnectionAndForward(client, connectionRequest, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -219,10 +219,10 @@ namespace Halibut.TestProxy
             }
         }
 
-        async Task CreateProxyConnectionAndForward(TcpClient client, HttpProxyConnectionRequest connectionRequest, CancellationToken cancellationToken)
+        void CreateProxyConnectionAndForward(TcpClient client, HttpProxyConnectionRequest connectionRequest, CancellationToken cancellationToken)
         {
             var proxyConnection = proxyConnectionService.GetProxyConnection(connectionRequest.Endpoint);
-            await proxyConnection.Connect(client, cancellationToken);
+            proxyConnection.Connect(client, cancellationToken);
         }
 
         async Task SendConnectResponse(ProxyEndpoint endpoint, string httpVersion, int responseCode, string message, PipeWriter writer, CancellationToken cancellationToken)

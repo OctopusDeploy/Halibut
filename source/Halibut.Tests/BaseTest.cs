@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Halibut.Tests.Support;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
@@ -32,7 +33,7 @@ namespace Halibut.Tests
         }
 
         [TearDown]
-        public void TearDown()
+        public async Task TearDown()
         {
             Logger.Information("Staring Test Tearing Down");
 
@@ -44,7 +45,10 @@ namespace Halibut.Tests
             
 
             Logger.Information("Disposing Trace Log File Logger");
-            traceLogFileLogger?.Dispose();
+            if (traceLogFileLogger != null)
+            {
+                await traceLogFileLogger!.DisposeAsync();
+            }
             Logger.Information("Finished Test Tearing Down");
         }
     }

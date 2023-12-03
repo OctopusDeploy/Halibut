@@ -24,7 +24,7 @@ namespace Halibut.Tests.DotMemory
         static Certificates()
         {
             //jump through hoops to find certs because the nunit test runner is messing with directories
-            var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).Assembly.CodeBase).LocalPath), "Certificates");
+            var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).Assembly.Location).LocalPath)!, "Certificates");
             TentacleListeningPfxPath = Path.Combine(directory, "TentacleListening.pfx");
             TentacleListening = new X509Certificate2(TentacleListeningPfxPath);
             TentacleListeningPublicThumbprint = TentacleListening.Thumbprint;

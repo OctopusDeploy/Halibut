@@ -19,11 +19,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly int? clientServicePort;
         readonly CertAndThumbprint clientCertAndThumbprint;
         readonly CertAndThumbprint serviceCertAndThumbprint;
-        readonly string version;
+        readonly string? version;
         readonly ProxyDetails? proxyDetails;
         readonly LogLevel halibutLogLevel;
         readonly ILogger logger;
-        readonly Uri webSocketServiceEndpointUri;
+        readonly Uri? webSocketServiceEndpointUri;
         readonly OldServiceAvailableServices availableServices;
 
         public HalibutTestBinaryRunner(
@@ -91,7 +91,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty }
             };
 
-            if (proxyDetails != null)
+            if (proxyDetails is not null)
             {
                 settings.Add("proxydetails_host", proxyDetails.Host);
                 settings.Add("proxydetails_password", proxyDetails.Password);
@@ -120,7 +120,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         }
 
         async Task<(Task RunningTentacleTask, int? ServiceListenPort, CancellationTokenSource RunningTentacleCancellationTokenSource)> StartHalibutTestBinary(
-            string version, 
+            string? version, 
             Dictionary<string, string?> settings, 
             TmpDirectory tmp)
         {
@@ -150,7 +150,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                             if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                         }
 
-                        await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version))
+                        await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version!))
                             .WithArguments(new string[0])
                             .WithWorkingDirectory(tmp.FullPath)
                             .WithStandardOutputPipe(PipeTarget.ToDelegate(ProcessLogs))

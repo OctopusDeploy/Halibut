@@ -5,7 +5,7 @@ namespace Halibut.ServiceModel
 {
     public class RequestCancellationTokens : IDisposable
     {
-        CancellationTokenSource linkedCancellationTokenSource;
+        CancellationTokenSource? linkedCancellationTokenSource;
 
         public RequestCancellationTokens(CancellationToken connectingCancellationToken, CancellationToken inProgressRequestCancellationToken)
         {

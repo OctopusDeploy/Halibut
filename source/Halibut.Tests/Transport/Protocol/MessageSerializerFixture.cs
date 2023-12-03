@@ -105,7 +105,7 @@ namespace Halibut.Tests.Transport.Protocol
             {
                 var result = await ReadMessage<ResponseMessage>(sut, stream);
                 result.Error.Should().NotBeNull();
-                result.Error.Message = "foo";
+                result.Error!.Message = "foo";
                 result.Error.HalibutErrorType = "MethodNotFoundHalibutClientException";
             }
         }
@@ -231,13 +231,13 @@ namespace Halibut.Tests.Transport.Protocol
             {
                 await WriteMessage(sut, stream, "Test");
                 var trailingBytes = Encoding.UTF8.GetBytes(trailingData);
-                stream.Write(trailingBytes, 0, trailingBytes.Length);
+                await stream.WriteAsync(trailingBytes, 0, trailingBytes.Length);
                 ms.Position = 0;
 
                 using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
                 {
                     _ = await ReadMessage<string>(sut, stream);
-                    var trailingResult = reader.ReadToEnd();
+                    var trailingResult = await reader.ReadToEndAsync();
                     Assert.AreEqual(trailingData, trailingResult);
                 }
             }
@@ -264,7 +264,7 @@ namespace Halibut.Tests.Transport.Protocol
                 await WriteMessage(writingSerializer, stream, "Repeating phrase that compresses. Repeating phrase that compresses. Repeating phrase that compresses.");
 
                 var trailingBytes = Encoding.UTF8.GetBytes(trailingData);
-                stream.Write(trailingBytes, 0, trailingBytes.Length);
+                await stream.WriteAsync(trailingBytes, 0, trailingBytes.Length);
 
                 stream.Position = 0;
                 await ReadMessage<string>(sut, rewindableStream);

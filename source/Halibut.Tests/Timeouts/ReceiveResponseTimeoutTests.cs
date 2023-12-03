@@ -95,7 +95,7 @@ namespace Halibut.Tests.Timeouts
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(1000));
 
             var largeStringForDataStream = Some.RandomAsciiStringOfLength(1024 * 1024);
 
@@ -105,7 +105,7 @@ namespace Halibut.Tests.Timeouts
                              .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                              .WithReturnSomeDataStreamService(() => DataStreamUtil.From(
                                  firstSend: largeStringForDataStream,
-                                 andThenRun: () => Thread.Sleep(3000),
+                                 andThenRun: () => Thread.Sleep(4000),
                                  thenSend: largeStringForDataStream))
                              .Build(CancellationToken))
             {

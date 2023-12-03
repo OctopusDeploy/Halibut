@@ -21,25 +21,24 @@ namespace Halibut.Tests
         public class AndTheRequestIsStillQueued : BaseTest
         {
             [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ true, false })]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ false, true })]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[]{ true, true })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[] { true, false })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[] { false, true })]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, additionalParameters: new object[] { true, true })]
             public async Task TheRequestShouldBeCancelled_WhenTheConnectingOrInProgressCancellationTokenIsCancelled_OnAsyncClients(
-                ClientAndServiceTestCase clientAndServiceTestCase, 
+                ClientAndServiceTestCase clientAndServiceTestCase,
                 bool connectingCancellationTokenCancelled,
                 bool inProgressCancellationTokenCancelled)
             {
                 var (tokenSourcesToCancel, halibutProxyRequestOptions) = CreateTokenSourceAndHalibutProxyRequestOptions(connectingCancellationTokenCancelled, inProgressCancellationTokenCancelled);
 
-                await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                           .AsLatestClientAndLatestServiceBuilder()
-                           .NoService()
-                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, tokenSourcesToCancel)))
-                           .Build(CancellationToken))
+                await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder()
+                                 .AsLatestClientBuilder()
+                                 .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestQueuedPendingRequestQueueFactory(inner, tokenSourcesToCancel)))
+                                 .Build(CancellationToken))
                 {
-                    var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
+                    var doSomeActionService = client.CreateClientWithoutService<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-                    await AssertAsync.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
+                    await AssertException.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
             }
         }
@@ -109,7 +108,7 @@ namespace Halibut.Tests
                 {
                     var doSomeActionService = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-                    await AssertAsync.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
+                    await AssertException.Throws<OperationCanceledException>(() => doSomeActionService.ActionAsync(halibutProxyRequestOptions));
                 }
 
                 calls.Should().HaveCount(1);
@@ -179,7 +178,7 @@ namespace Halibut.Tests
                 public bool IsEmpty => inner.IsEmpty;
                 public int Count => inner.Count;
                 public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
-                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
+                public async Task<RequestMessage?> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
 
                 public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
                 {
@@ -239,7 +238,7 @@ namespace Halibut.Tests
                 public int Count => inner.Count;
                 public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
                 
-                public async Task<RequestMessage> DequeueAsync(CancellationToken cancellationToken)
+                public async Task<RequestMessage?> DequeueAsync(CancellationToken cancellationToken)
                 {
                     var response = await inner.DequeueAsync(cancellationToken);
                     

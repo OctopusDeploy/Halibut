@@ -30,7 +30,7 @@ namespace Halibut.Tests
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 
-                await AssertAsync.Throws<MethodNotFoundHalibutClientException>(() => echo.SayHelloAsync("Say hello to a service that does not exist."));
+                await AssertException.Throws<MethodNotFoundHalibutClientException>(() => echo.SayHelloAsync("Say hello to a service that does not exist."));
             }
         }
 

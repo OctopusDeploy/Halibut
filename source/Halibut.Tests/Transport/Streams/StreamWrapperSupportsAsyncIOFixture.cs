@@ -89,7 +89,7 @@ namespace Halibut.Tests.Transport.Streams
         public async Task CopyToAsyncUsesAsyncMethods()
         {
             var from = new MemoryStream();
-            from.WriteByteArrayAsync("Hello".GetBytesUtf8(), CancellationToken);
+            await from.WriteByteArrayAsync("Hello".GetBytesUtf8(), CancellationToken);
             from.Position = 0;
 
             var syncIoRecordingStreamFrom = new SyncIoRecordingStream(from);

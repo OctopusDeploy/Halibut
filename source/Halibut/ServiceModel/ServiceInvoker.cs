@@ -42,7 +42,7 @@ namespace Halibut.ServiceModel
 
         static MethodInfo SelectAsyncMethod(IList<MethodInfo> methods, RequestMessage requestMessage)
         {
-            var argumentTypes = requestMessage.Params?.Select(s => s == null ? null : s.GetType()).ToList() ?? new List<Type>();
+            var argumentTypes = requestMessage.Params?.Select(s => s?.GetType()).ToList() ?? new List<Type?>();
 
             var matches = new List<MethodInfo>();
 
@@ -116,7 +116,7 @@ namespace Halibut.ServiceModel
             throw new AmbiguousMethodMatchHalibutClientException(message.ToString(), new AmbiguousMatchException(message.ToString()));
         }
 
-        async Task<object> InvokeAsyncMethod(MethodInfo method, object obj, params object[] parameters)
+        async Task<object?> InvokeAsyncMethod(MethodInfo method, object obj, params object[] parameters)
         {
             var returnType = method.ReturnType;
 
@@ -126,7 +126,7 @@ namespace Halibut.ServiceModel
                 throw new InvalidOperationException($"InvokeAsyncMethod cannot be called on a method that does not return Task or Task<T> ({returnType.Name})");
             }
 
-            var task = (Task)method.Invoke(obj, parameters);
+            var task = (Task)method.Invoke(obj, parameters)!;
             try
             {
                 await task.ConfigureAwait(false);
@@ -145,7 +145,7 @@ namespace Halibut.ServiceModel
 
             // If the return type is not Task, we assume it is Task<T>
             var resultType = returnType.GetGenericArguments().First();
-            var resultProperty = typeof(Task<>).MakeGenericType(resultType).GetProperty("Result");
+            var resultProperty = typeof(Task<>).MakeGenericType(resultType).GetProperty("Result")!;
             return resultProperty.GetValue(task);
         }
 

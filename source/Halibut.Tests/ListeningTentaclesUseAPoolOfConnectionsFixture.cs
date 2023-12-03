@@ -19,14 +19,13 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testPolling: false, testWebSocket: false, testNetworkConditions: false)]
         public async Task TestOnlyHealthConnectionsAreKeptInThePool(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
+            TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
+                       .WithPortForwarding(out var portForwarder, port => PortForwarderUtil.ForwardingToLocalPort(port)
                            .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
                            .Build())
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithPortForwarding(out var portForwarder)
                        .WithDoSomeActionService(() => portForwarder.Value.PauseExistingConnections())
                        .Build(CancellationToken))
             {
@@ -38,12 +37,12 @@ namespace Halibut.Tests
                 var pauseCurrentTcpConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>();
 
                 await echoService.SayHelloAsync("This should make one connection");
-                tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1);
+                tcpConnectionsCreatedCounter!.ConnectionsCreatedCount.Should().Be(1);
                 
                 await echoService.SayHelloAsync("Should re-use the same connection");
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1, "We should use the same connection since the last was healthy");
 
-                await AssertAsync.Throws<HalibutClientException>(() => pauseCurrentTcpConnections.ActionAsync());
+                await AssertException.Throws<HalibutClientException>(() => pauseCurrentTcpConnections.ActionAsync());
                 // Connection should not be put back into the pool
                 tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1, "This should still be using the same connection since it is on this call we break the connection.");
 

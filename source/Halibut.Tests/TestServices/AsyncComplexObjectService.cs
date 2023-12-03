@@ -14,8 +14,8 @@ namespace Halibut.Tests.TestServices
             await Task.CompletedTask;
             return new ComplexObjectMultipleDataStreams
             {
-                Payload1 = ReadIntoNewDataStream(request.Payload1),
-                Payload2 = ReadIntoNewDataStream(request.Payload2)
+                Payload1 = await ReadIntoNewDataStream(request.Payload1, cancellationToken),
+                Payload2 = await ReadIntoNewDataStream(request.Payload2, cancellationToken)
             };
         }
 
@@ -26,15 +26,15 @@ namespace Halibut.Tests.TestServices
             {
                 Child1 = new ComplexChild1
                 {
-                    ChildPayload1 = ReadIntoNewDataStream(request.Child1.ChildPayload1),
-                    ChildPayload2 = ReadIntoNewDataStream(request.Child1.ChildPayload2),
-                    ListOfStreams = request.Child1.ListOfStreams.Select(ReadIntoNewDataStream).ToList(),
-                    DictionaryPayload = request.Child1.DictionaryPayload.ToDictionary(pair => pair.Key, pair => pair.Value),
+                    ChildPayload1 = await ReadIntoNewDataStream(request.Child1!.ChildPayload1, cancellationToken),
+                    ChildPayload2 = await ReadIntoNewDataStream(request.Child1!.ChildPayload2, cancellationToken),
+                    ListOfStreams = await request.Child1.ListOfStreams!.ToAsyncEnumerable().SelectAwait(async ds => await ReadIntoNewDataStream(ds, cancellationToken)).ToListAsync(cancellationToken),
+                    DictionaryPayload = request.Child1.DictionaryPayload!.ToDictionary(pair => pair.Key, pair => pair.Value),
                 },
                 Child2 = new ComplexChild2
                 {
-                    EnumPayload = request.Child2.EnumPayload,
-                    ComplexPayloadSet = request.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, ReadIntoNewDataStream(x.Payload))).ToHashSet()
+                    EnumPayload = request.Child2!.EnumPayload,
+                    ComplexPayloadSet = await request.Child2.ComplexPayloadSet!.ToAsyncEnumerable().SelectAwait(async x => new ComplexPair<DataStream>(x.EnumValue, await ReadIntoNewDataStream(x.Payload, cancellationToken))).ToHashSetAsync(cancellationToken)
                 }
             };
         }
@@ -44,18 +44,18 @@ namespace Halibut.Tests.TestServices
             await Task.CompletedTask;
             return new ComplexObjectWithInheritance
             {
-                Child1 = new ComplexInheritedChild1(request.Child1.Name),
-                Child2 = new ComplexInheritedChild2(request.Child2.Description)
+                Child1 = new ComplexInheritedChild1(request.Child1!.Name),
+                Child2 = new ComplexInheritedChild2(request.Child2!.Description)
             };
         }
 
-        DataStream ReadIntoNewDataStream(DataStream ds)
+        async Task<DataStream> ReadIntoNewDataStream(DataStream? ds, CancellationToken cancellationToken)
         {
             // Read the source DataStream, then write into
             // a new DataStream, to simulate some work.
             // i.e. we don't want to just re-use the exact same
             // DataStream instance
-            return DataStream.FromString(ds.ReadAsString());
+            return DataStream.FromString(await ds!.ReadAsString(cancellationToken));
         }
     }
 }

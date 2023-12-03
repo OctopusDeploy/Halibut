@@ -11,8 +11,7 @@ namespace Halibut.Transport
 {
     public class PollingClient : IPollingClient
     {
-        readonly Func<RequestMessage, ResponseMessage>? handleIncomingRequest;
-        readonly Func<RequestMessage, Task<ResponseMessage>>? handleIncomingRequestAsync;
+        readonly Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequestAsync;
         readonly ILog log;
         readonly ISecureClient secureClient;
         readonly Uri subscription;
@@ -23,17 +22,6 @@ namespace Halibut.Transport
         
         readonly Func<RetryPolicy> createRetryPolicy;
         RequestCancellationTokens? requestCancellationTokens;
-
-        public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, ResponseMessage> handleIncomingRequest, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy)
-        {
-            this.subscription = subscription;
-            this.secureClient = secureClient;
-            this.handleIncomingRequest = handleIncomingRequest;
-            this.log = log;
-            this.cancellationToken = cancellationToken;
-            workingCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            this.createRetryPolicy = createRetryPolicy;
-        }
         
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequestAsync, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy)
         {

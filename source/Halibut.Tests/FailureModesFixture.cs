@@ -28,22 +28,18 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false, testListening: false)]
         public async Task FailsWhenSendingToPollingMachineButNothingPicksItUp(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                       .WithStandardServices()
-                       .NoService()
-                       .Build(CancellationToken))
+            await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder().Build(CancellationToken))
             {
-                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
+                var echo = client.CreateClientWithoutService<IEchoService, IAsyncClientEchoService>(point =>
                 {
                     point.TcpClientConnectTimeout = TimeSpan.FromSeconds(1);
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
                 });
 
-                
-                var error = (await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Paul"))).And;
+
+                var error = (await AssertException.Throws<HalibutClientException>(() => echo.SayHelloAsync("Paul"))).And;
                 error.Message.Should().Contain("the polling endpoint did not collect the request within the allowed time");
             }
         }
@@ -58,7 +54,7 @@ namespace Halibut.Tests
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
-                var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
+                var ex = (await AssertException.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 if (clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousService())
                 {
                     ex.Message.Should().Contain("at Halibut.TestUtils.SampleProgram.Base.Services.EchoService.Crash()").And.Contain("divide by zero");
@@ -89,7 +85,7 @@ namespace Halibut.Tests
                              .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
-                var ex = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
+                var ex = (await AssertException.Throws<ServiceInvocationHalibutClientException>(() => echo.CrashAsync())).And;
                 var expected = "at Halibut.Tests.TestServices.AsyncEchoService.CrashAsync(";
 #if NETFRAMEWORK
                     expected = "at Halibut.Tests.TestServices.AsyncEchoService.<CrashAsync>";
@@ -124,7 +120,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
             {
                 var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000", Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits));
                 var ex = Assert.ThrowsAsync<HalibutClientException>(async () => await echo.CrashAsync());
-                var message = ex.Message;
+                var message = ex!.Message;
 
                 message.Should().Contain("when sending a request to 'https://sduj08ud9382ujd98dw9fh934hdj2389u982:8000/', before the request");
 
@@ -157,7 +153,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                 };
                 var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(endpoint);
                 var ex = Assert.ThrowsAsync<HalibutClientException>(async () => await echo.CrashAsync());
-                ex.Message.Should().Be("An error occurred when sending a request to 'https://google.com:88/', before the request could begin: The client was unable to establish the initial connection within the timeout 00:00:02.");
+                ex!.Message.Should().Be("An error occurred when sending a request to 'https://google.com:88/', before the request could begin: The client was unable to establish the initial connection within the timeout 00:00:02.");
             }
         }
 
@@ -178,7 +174,7 @@ System.Reflection.TargetInvocationException: Exception has been thrown by the ta
                 // This loop ensures (at the time) the test shows the problem.
                 for (var i = 0; i < 128; i++)
                 {
-                    await AssertAsync.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(
+                    await AssertException.Throws<HalibutClientException>(async () => await readDataSteamService.SendDataAsync(
                         new DataStream(10000, 
                             async (_, _) =>
                                 {

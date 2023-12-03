@@ -40,10 +40,10 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
-                       .WithProxy()
+                       .WithProxy(out var proxyService)
                        .Build(CancellationToken))
             {
-                clientAndService.HttpProxy!.Dispose();
+                proxyService.Value.Dispose();
 
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
@@ -52,7 +52,7 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
 
-                (await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Hello")))
+                (await AssertException.Throws<HalibutClientException>(() => echo.SayHelloAsync("Hello")))
                     .And.Message.Should().ContainAny(
                         "No connection could be made because the target machine actively refused it",
                         "the polling endpoint did not collect the request within the allowed time",
@@ -67,10 +67,10 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithHalibutLoggingLevel(LogLevel.Trace)
                        .WithStandardServices()
-                       .WithProxy()
+                       .WithProxy(out var proxyService)
                        .Build(CancellationToken))
             {
-                clientAndService.HttpProxy!.PauseNewConnections();
+                proxyService.Value.PauseNewConnections();
 
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(point =>
                 {
@@ -79,7 +79,7 @@ namespace Halibut.Tests
                     point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(10);
                 });
 
-                var exception = (await AssertAsync.Throws<HalibutClientException>(() => echo.SayHelloAsync("Hello"))).And;
+                var exception = (await AssertException.Throws<HalibutClientException>(() => echo.SayHelloAsync("Hello"))).And;
                 Logger.Information(exception, "Got exception, we were expecting one.");    
                 exception.Message.Should().ContainAny(
                         "No connection could be made because the target machine actively refused it",

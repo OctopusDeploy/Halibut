@@ -10,7 +10,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             var onDiskVersion = version.Replace(".", "_");
             var assemblyDir = new DirectoryInfo(Path.GetDirectoryName(typeof(HalibutTestBinaryRunner).Assembly.Location)!);
-            var upAt = assemblyDir.Parent.Parent.Parent.Parent;
+            var upAt = assemblyDir.Parent!.Parent!.Parent!.Parent!;
             var projectName = $"Halibut.TestUtils.CompatBinary.v{onDiskVersion}";
             var executable = Path.Combine(upAt.FullName, projectName, assemblyDir.Parent.Parent.Name, assemblyDir.Parent.Name, assemblyDir.Name, projectName);
             executable = AddExeForWindows(executable);

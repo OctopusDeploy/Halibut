@@ -67,7 +67,7 @@ namespace Halibut.Tests.Timeouts
         public async Task WhenThePollingQueueHasNoMessagesAndDoesNotReturnNullResponsesPeriodically_ThePollingServiceStartsANewTcpConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var waitForNullMessagesFromQueueTimeout = TimeSpan.FromSeconds(10);
-            TcpConnectionsCreatedCounter tcpConnectionsCreatedCounter = null;
+            TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                                  .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
@@ -88,7 +88,7 @@ namespace Halibut.Tests.Timeouts
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("Check everything is working.");
 
-                tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().Be(1);
+                tcpConnectionsCreatedCounter!.ConnectionsCreatedCount.Should().Be(1);
 
                 Wait.UntilActionSucceeds(() => tcpConnectionsCreatedCounter.ConnectionsCreatedCount.Should().BeGreaterThan(1),
                     waitForNullMessagesFromQueueTimeout + waitForNullMessagesFromQueueTimeout,

@@ -4,6 +4,7 @@
         <LangVersion>9.0</LangVersion>
         <RootNamespace>Octopus.TestPortForwarder</RootNamespace>
         <Nullable>enable</Nullable>
+	    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">

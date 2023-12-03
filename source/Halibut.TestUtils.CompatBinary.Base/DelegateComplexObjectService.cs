@@ -20,8 +20,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         ComplexObjectMultipleDataStreams FixDataStreams(ComplexObjectMultipleDataStreams complexObject)
         {
-            complexObject.Payload1 = complexObject.Payload1.ConfigureWriterOnReceivedDataStream();
-            complexObject.Payload2 = complexObject.Payload2.ConfigureWriterOnReceivedDataStream();
+            complexObject.Payload1 = complexObject.Payload1!.ConfigureWriterOnReceivedDataStream();
+            complexObject.Payload2 = complexObject.Payload2!.ConfigureWriterOnReceivedDataStream();
             return complexObject;
         }
 
@@ -37,10 +37,10 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         ComplexObjectMultipleChildren FixDataStreams(ComplexObjectMultipleChildren complexObject)
         {
-            complexObject.Child1.ChildPayload1 = complexObject.Child1.ChildPayload1.ConfigureWriterOnReceivedDataStream();
-            complexObject.Child1.ChildPayload2 = complexObject.Child1.ChildPayload2.ConfigureWriterOnReceivedDataStream();
-            complexObject.Child1.ListOfStreams = complexObject.Child1.ListOfStreams.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
-            complexObject.Child2.ComplexPayloadSet = complexObject.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
+            complexObject.Child1!.ChildPayload1 = complexObject.Child1.ChildPayload1!.ConfigureWriterOnReceivedDataStream();
+            complexObject.Child1.ChildPayload2 = complexObject.Child1.ChildPayload2!.ConfigureWriterOnReceivedDataStream();
+            complexObject.Child1.ListOfStreams = complexObject.Child1.ListOfStreams!.Select(x => x.ConfigureWriterOnReceivedDataStream()).ToList();
+            complexObject.Child2!.ComplexPayloadSet = complexObject.Child2.ComplexPayloadSet!.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
             complexObject.Child2.ComplexPayloadSet = complexObject.Child2.ComplexPayloadSet.Select(x => new ComplexPair<DataStream>(x.EnumValue, x.Payload.ConfigureWriterOnReceivedDataStream())).ToHashSet();
             return complexObject;
         }

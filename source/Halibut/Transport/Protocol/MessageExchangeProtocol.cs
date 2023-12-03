@@ -40,7 +40,7 @@ namespace Halibut.Transport.Protocol
                 await PrepareExchangeAsClientAsync(cancellationToken);
                 
                 await stream.SendAsync(request, cancellationToken);
-                return await stream.ReceiveResponseAsync(cancellationToken);
+                return (await stream.ReceiveResponseAsync(cancellationToken))!;
             }
             finally
             {
@@ -214,7 +214,7 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest, CancellationToken cancellationToken)
+        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage? nextRequest, CancellationToken cancellationToken)
         {
             try
             {
@@ -276,7 +276,7 @@ namespace Halibut.Transport.Protocol
             try
             {
                 await stream.SendAsync(nextRequest, cancellationToken);
-                return await stream.ReceiveResponseAsync(cancellationToken);
+                return (await stream.ReceiveResponseAsync(cancellationToken))!;
             }
             finally
             {

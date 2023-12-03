@@ -13,7 +13,8 @@ namespace Halibut.Tests.Support.TestAttributes
 
         static object[] CreateValues(Type sourceType)
         {
-            var enumerable = ((IEnumerable) Activator.CreateInstance(sourceType));
+            var instance = Activator.CreateInstance(sourceType)!;
+            var enumerable = ((IEnumerable) instance);
             return enumerable.ToArrayOfObjects();
         }
     }

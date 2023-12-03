@@ -185,7 +185,7 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public async Task<RequestMessage> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
+        public async Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
         {
             await stream.WithReadTimeout(
                 timeoutForReceivingTheFirstByte,
@@ -194,7 +194,7 @@ namespace Halibut.Transport.Protocol
             return await ReceiveAsync<RequestMessage>(cancellationToken);
         }
 
-        public async Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
+        public async Task<ResponseMessage?> ReceiveResponseAsync(CancellationToken cancellationToken)
         {
             // Wait for data to become available using existing timeouts, then once we have data streaming in, use the smaller timeout (so we do not wait as long if an error happens here).
             await stream.WithReadTimeout(
@@ -204,7 +204,7 @@ namespace Halibut.Transport.Protocol
             return await ReceiveAsync<ResponseMessage>(cancellationToken);
         }
 
-        async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
+        async Task<T?> ReceiveAsync<T>(CancellationToken cancellationToken)
         {
             var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
             await ReadStreamsAsync(dataStreams, cancellationToken);
@@ -212,14 +212,9 @@ namespace Halibut.Transport.Protocol
             return result;
         }
 
-        async Task WithTimeout(SendReceiveTimeout timeout, Func<Task> func)
+        async Task WithTimeout(SendReceiveTimeout? timeout, Func<Task> func)
         {
             await stream.WithTimeout(timeout, func);
-        }
-
-        async Task<T> WithTimeout<T>(SendReceiveTimeout timeout, Func<Task<T>> func)
-        {
-            return await stream.WithTimeout(timeout, func);
         }
 
         void SetReadAndWriteTimeouts(SendReceiveTimeout timeout)
@@ -303,7 +298,7 @@ namespace Halibut.Transport.Protocol
         {
             var dataStream = deserializedStreams.FirstOrDefault(d => d.Id == id);
             
-            if (dataStream == null)
+            if (dataStream is null)
             {
                 throw new Exception("Unexpected stream!");
             }

@@ -7,7 +7,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
 {
     static class SettingsHelper
     {
-        public static ProxyDetails GetProxyDetails()
+        public static ProxyDetails? GetProxyDetails()
         {
             var host = GetSetting("proxydetails_host");
 
@@ -39,7 +39,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         public static string GetSetting(string name)
         {
-            return Environment.GetEnvironmentVariable(name);
+            return Environment.GetEnvironmentVariable(name) ?? string.Empty;
         }
         
         static bool GetMandatoryBool(string name)

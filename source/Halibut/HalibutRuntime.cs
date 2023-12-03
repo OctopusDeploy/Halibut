@@ -77,8 +77,8 @@ namespace Halibut
 
         public ILogFactory Logs => logs;
 
-        public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-        public OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }
+        public Func<string, string, UnauthorizedClientConnectResponse>? OnUnauthorizedClientConnect { get; set; }
+        public OverrideErrorResponseMessageCachingAction? OverrideErrorResponseMessageCaching { get; set; }
 
         IPendingRequestQueue GetQueue(Uri target)
         {
@@ -229,7 +229,7 @@ namespace Halibut
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, tcpConnectionFactory);
 
-            ResponseMessage response = null;
+            ResponseMessage response = null!;
 
             await client.ExecuteTransactionAsync(
                 async (protocol, cts) =>

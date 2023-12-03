@@ -13,34 +13,34 @@ namespace Halibut.TestUtils.Contracts
 
     public class ComplexObjectMultipleDataStreams
     {
-        public DataStream Payload1;
-        public DataStream Payload2;
+        public DataStream? Payload1;
+        public DataStream? Payload2;
     }
 
     public class ComplexObjectMultipleChildren
     {
-        public ComplexChild1 Child1;
-        public ComplexChild2 Child2;
+        public ComplexChild1? Child1;
+        public ComplexChild2? Child2;
     }
 
     public class ComplexObjectWithInheritance
     {
-        public IComplexChild Child1 { get; set; }
-        public ComplexChildBase Child2 { get; set; }
+        public IComplexChild? Child1 { get; set; }
+        public ComplexChildBase? Child2 { get; set; }
     }
 
     public class ComplexChild1
     {
-        public DataStream ChildPayload1;
-        public DataStream ChildPayload2;
-        public IList<DataStream> ListOfStreams;
-        public IDictionary<Guid, string> DictionaryPayload;
+        public DataStream? ChildPayload1;
+        public DataStream? ChildPayload2;
+        public IList<DataStream>? ListOfStreams;
+        public IDictionary<Guid, string>? DictionaryPayload;
     }
 
     public class ComplexChild2
     {
         public ComplexEnum EnumPayload;
-        public ISet<ComplexPair<DataStream>> ComplexPayloadSet;
+        public ISet<ComplexPair<DataStream>>? ComplexPayloadSet;
     }
 
     public interface IComplexChild
@@ -93,7 +93,7 @@ namespace Halibut.TestUtils.Contracts
         public readonly ComplexEnum EnumValue;
         public readonly T Payload;
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -101,18 +101,18 @@ namespace Halibut.TestUtils.Contracts
             return Equals((ComplexPair<T>)obj);
         }
 
-        public bool Equals(ComplexPair<T> other)
+        public bool Equals(ComplexPair<T>? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return EnumValue.Equals(other.EnumValue) && Payload.Equals(other.Payload);
+            return EnumValue.Equals(other.EnumValue) && Equals(Payload, other.Payload);
         }
 
         public override int GetHashCode()
         {
             unchecked
             {
-                return (EqualityComparer<ComplexEnum>.Default.GetHashCode(EnumValue) * 397) ^ EqualityComparer<T>.Default.GetHashCode(Payload);
+                return (EqualityComparer<ComplexEnum>.Default.GetHashCode(EnumValue) * 397) ^ EqualityComparer<T>.Default.GetHashCode(Payload!);
             }
         }
     }

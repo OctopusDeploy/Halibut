@@ -7,20 +7,17 @@ namespace Halibut.Tests.Util
 {
     public static class DataStreamExtensionMethods
     {
-        // TODO: This could be async
-        public static string ReadAsString(this DataStream stream)
+        public static async Task<string> ReadAsString(this DataStream stream, CancellationToken cancellationToken)
         {
-            string result = null;
-            stream.Receiver().ReadAsync(async (s, ct) =>
+            var result = string.Empty;
+            await stream.Receiver().ReadAsync(async (s, ct) =>
                     {
-                        await Task.CompletedTask;
                         using (var reader = new StreamReader(s))
                         {
                             result = await reader.ReadToEndAsync();
                         }
                     },
-                    CancellationToken.None)
-                .GetAwaiter().GetResult();
+                    cancellationToken);
             return result;
         }
     }

@@ -42,7 +42,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             var serviceConnectionType = SettingsHelper.GetServiceConnectionType();
             var octopusThumbprint = SettingsHelper.GetClientThumbprint();
 
-            string addressToPoll = null;
+            var addressToPoll = string.Empty;
 
             if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
@@ -62,14 +62,14 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 switch (serviceConnectionType)
                 {
                     case ServiceConnectionType.Polling:
-                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll!), octopusThumbprint, proxyDetails));
+                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), octopusThumbprint, proxyDetails));
                         break;
                     case ServiceConnectionType.PollingOverWebSocket:
                         FixHungWebSocketsHack.EnableHack();
                         var sslThubprint = SettingsHelper.GetSetting("sslthubprint");
                         Console.WriteLine($"Using SSL thumbprint: {sslThubprint}");
 
-                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll!), sslThubprint, proxyDetails));
+                        tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), sslThubprint, proxyDetails));
                         break;
                     case ServiceConnectionType.Listening:
                         var port = tentaclePolling.Listen();

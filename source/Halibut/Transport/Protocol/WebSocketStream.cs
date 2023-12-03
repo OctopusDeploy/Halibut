@@ -59,7 +59,7 @@ namespace Halibut.Transport.Protocol
             return receiveResult.Count;
         }
 
-        public async Task<string> ReadTextMessage(TimeSpan timeout, CancellationToken cancellationToken)
+        public async Task<string?> ReadTextMessage(TimeSpan timeout, CancellationToken cancellationToken)
         {
             AssertCanReadOrWrite();
             var sb = new StringBuilder();

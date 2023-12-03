@@ -19,13 +19,13 @@ namespace Halibut.Transport.Protocol
             foreach (var protocolType in protocolTypes) typeRegistry.RegisterType(protocolType, protocolType.Name, true);
         }
 
-        public Type BindToType(string assemblyName, string typeName)
+        public Type BindToType(string? assemblyName, string typeName)
         {
             var type = baseBinder.BindToType(assemblyName, typeName);
-            return typeRegistry.IsInAllowedTypes(type) ? type : null;
+            return typeRegistry.IsInAllowedTypes(type) ? type : null!;
         }
 
-        public void BindToName(Type serializedType, out string assemblyName, out string typeName)
+        public void BindToName(Type serializedType, out string? assemblyName, out string? typeName)
         {
             baseBinder.BindToName(serializedType, out assemblyName, out typeName);
         }

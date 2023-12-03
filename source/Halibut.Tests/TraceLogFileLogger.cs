@@ -5,10 +5,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
+using IAsyncDisposable = System.IAsyncDisposable;
 
 namespace Halibut.Tests
 {
-    public class TraceLogFileLogger : IDisposable
+    public class TraceLogFileLogger : IAsyncDisposable
     {
         readonly AsyncQueue<string> queue = new();
         public readonly string logFilePath;
@@ -84,16 +85,18 @@ namespace Halibut.Tests
             // Therefore we go up 5 levels to get to the <REPO ROOT> directory,
             // from which point we can navigate to the artifacts directory.
             var currentDirectory = Directory.GetCurrentDirectory();
-            var rootDirectory = new DirectoryInfo(currentDirectory).Parent.Parent.Parent.Parent.Parent;
+            var rootDirectory = new DirectoryInfo(currentDirectory).Parent!.Parent!.Parent!.Parent!.Parent!;
 
             var traceLogsDirectory = rootDirectory.CreateSubdirectory("artifacts").CreateSubdirectory("trace-logs");
             return traceLogsDirectory;
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             cancellationTokenSource.Cancel();
-            writeDataToDiskTask.GetAwaiter().GetResult();
+#pragma warning disable VSTHRD003
+            await writeDataToDiskTask;
+#pragma warning restore VSTHRD003
             cancellationTokenSource.Dispose();
         }
     }
