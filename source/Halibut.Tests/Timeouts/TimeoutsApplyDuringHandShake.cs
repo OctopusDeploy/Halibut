@@ -37,8 +37,10 @@ namespace Halibut.Tests.Timeouts
                 .Build();
             var dataTransferObserverDoNothing = new DataTransferObserverBuilder().Build();
 
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromMinutes(20));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder()
+                .WithAllTcpTimeoutsTo(TimeSpan.FromMinutes(20))
+                .WithTcpClientTimeout(new SendReceiveTimeout(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10)))
+                .Build();
             
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             

@@ -23,9 +23,10 @@ namespace Halibut.Tests.Timeouts
         public async Task WhenRpcExecutionExceedsReceiveResponseTimeout_ThenInitialDataReadShouldTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
-            halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout = TimeSpan.FromMilliseconds(100);
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder()
+                .WithAllTcpTimeoutsTo(TimeSpan.FromHours(1))
+                .WithTcpClientReceiveTimeout(TimeSpan.FromMilliseconds(100))
+                .Build();
             
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .AsLatestClientAndLatestServiceBuilder()
@@ -48,9 +49,10 @@ namespace Halibut.Tests.Timeouts
         public async Task WhenRpcExecutionIsWithinReceiveResponseTimeout_ButSubsequentDataIsDelayed_ThenTimeoutShouldOccur(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
-            halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder()
+                .WithAllTcpTimeoutsTo(TimeSpan.FromHours(1))
+                .WithTcpClientTimeout(new SendReceiveTimeout(sendTimeout: TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100)))
+                .Build();
 
             var enoughDataToCauseMultipleReadOperations = Enumerable.Range(0, 1024 * 1024)
                 .Select(_ => Guid.NewGuid().ToString())
@@ -93,9 +95,10 @@ namespace Halibut.Tests.Timeouts
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
         public async Task WhenRpcExecutionIsWithinReceiveResponseTimeout_ButDataStreamDataIsDelayed_ThenTimeoutShouldOccur(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
-            halibutTimeoutsAndLimits.WithAllTcpTimeoutsTo(TimeSpan.FromHours(1));
-            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(sendTimeout:TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100));
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder()
+                .WithAllTcpTimeoutsTo(TimeSpan.FromHours(1))
+                .WithTcpClientTimeout(new SendReceiveTimeout(sendTimeout: TimeSpan.FromHours(1), TimeSpan.FromMilliseconds(100)))
+                .Build();
 
             var largeStringForDataStream = Some.RandomAsciiStringOfLength(1024 * 1024);
 

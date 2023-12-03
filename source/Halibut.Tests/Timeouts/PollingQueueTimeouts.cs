@@ -79,9 +79,9 @@ namespace Halibut.Tests.Timeouts
                                  .Build()))
                              .WithEchoService()
                              .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder()
-                                 .Build()
                                  .WithAllTcpTimeoutsTo(TimeSpan.FromHours(1))
-                                 .Apply(h => { h.TcpClientReceiveRequestTimeoutForPolling = waitForNullMessagesFromQueueTimeout; })
+                                 .WithAdjustments(h => h.WithOverride(tcpClientReceiveRequestTimeoutForPolling: waitForNullMessagesFromQueueTimeout))
+                                 .Build()
                              )
                              .Build(CancellationToken))
             {

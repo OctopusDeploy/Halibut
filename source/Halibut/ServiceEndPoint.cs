@@ -34,8 +34,6 @@ namespace Halibut
             RemoteThumbprint = remoteThumbprint;
             Proxy = proxy;
 
-            halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
-
             this.PollingRequestQueueTimeout = halibutTimeoutsAndLimits.PollingRequestQueueTimeout;
             this.PollingRequestMaximumMessageProcessingTimeout = halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout;
             this.RetryListeningSleepInterval = halibutTimeoutsAndLimits.RetryListeningSleepInterval;

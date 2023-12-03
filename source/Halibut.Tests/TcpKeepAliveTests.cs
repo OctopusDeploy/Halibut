@@ -47,10 +47,9 @@ namespace Halibut.Tests
         public async Task TcpKeepAliveShouldNotBeSetOnPollingSocketsIfNotEnabled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits
-            {
-                TcpKeepAliveEnabled = false
-            };
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder()
+                .WithTcpKeepAliveEnabled(false)
+                .Build();
             
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithStandardServices()

@@ -121,7 +121,7 @@ namespace Halibut
         public HalibutRuntime Build()
         {
             var halibutTimeoutsAndLimits = this.halibutTimeoutsAndLimits;
-            halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
+            halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimitsBuilder().Build();
 
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));

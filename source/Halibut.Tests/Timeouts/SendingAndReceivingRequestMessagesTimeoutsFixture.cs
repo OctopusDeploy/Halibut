@@ -30,9 +30,10 @@ namespace Halibut.Tests.Timeouts
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
                        .WhenTestingAsyncClient(clientAndServiceTestCase, b =>
                        {
-                           b.WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build()
+                           b.WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder()
                                .WithAllTcpTimeoutsTo(TimeSpan.FromSeconds(133))
-                               .WithTcpClientReceiveTimeout(expectedTimeout));
+                               .WithTcpClientReceiveTimeout(expectedTimeout)
+                               .Build());
                        })
                        .WithInstantReconnectPollingRetryPolicy()
                        .Build(CancellationToken))
