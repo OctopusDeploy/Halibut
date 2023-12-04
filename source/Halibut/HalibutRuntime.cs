@@ -317,6 +317,17 @@ namespace Halibut
             await connectionManager.DisconnectAsync(endpoint, log, cancellationToken);
         }
 
+        /// <summary>
+        /// Dispose has been left in the API for backwards compatibility, but it is recommended to use DisposeAsync instead.
+        /// At the time this change was made, Tentacle (Tentacle Version 7.1.0) still uses this method.
+        /// Care must be taken to ensure all code using HalibutRuntime support and calls DisposeAsync.
+        /// </summary>
+        [Obsolete("Dispose has been left in the API for backwards compatibility, but it is recommended to use DisposeAsync instead.")]
+        public void Dispose()
+        {
+            DisposeAsync().GetAwaiter().GetResult();
+        }
+
         public async ValueTask DisposeAsync()
         {
             pollingClients.Dispose();
