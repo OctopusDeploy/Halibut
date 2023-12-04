@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Net.WebSockets;
-using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 
 namespace Halibut.Tests.Support.Streams.SynIoRecording
@@ -38,7 +37,7 @@ namespace Halibut.Tests.Support.Streams.SynIoRecording
             return s;
         }
 
-        public WebSocketStream CreateStream(WebSocket webSocket)
+        public Stream CreateStream(WebSocket webSocket)
         {
             var wss = new SyncIoRecordingWebSocketStream(webSocket);
             AddRecorder(wss);

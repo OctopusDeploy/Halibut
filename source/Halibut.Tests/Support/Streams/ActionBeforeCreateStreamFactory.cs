@@ -9,8 +9,8 @@ namespace Halibut.Tests.Support.Streams
 {
     public class ActionBeforeCreateStreamFactory : IStreamFactory
     {
-        IStreamFactory streamFactory;
-        Action beforeCreateStream;
+        readonly IStreamFactory streamFactory;
+        readonly Action beforeCreateStream;
 
         public ActionBeforeCreateStreamFactory(IStreamFactory streamFactory, Action beforeCreateStream)
         {
@@ -24,7 +24,7 @@ namespace Halibut.Tests.Support.Streams
             return streamFactory.CreateStream(stream);
         }
 
-        public WebSocketStream CreateStream(WebSocket webSocket)
+        public Stream CreateStream(WebSocket webSocket)
         {
             beforeCreateStream();
             return streamFactory.CreateStream(webSocket);

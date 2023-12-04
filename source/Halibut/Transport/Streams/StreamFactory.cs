@@ -13,9 +13,19 @@ namespace Halibut.Transport.Streams
             return new NetworkTimeoutStream(stream);
         }
 
-        public WebSocketStream CreateStream(WebSocket webSocket)
+        public Stream CreateStream(WebSocket webSocket)
         {
-            return new WebSocketStream(webSocket);
+            var webSocketStream = new WebSocketStream(webSocket);
+            var networkStream = new NetworkTimeoutStream(webSocketStream);
+
+            // When synchronous serialization is performed, it will call the synchronous versions of Read/Write.
+            // This means that the NetworkTimeoutStream cannot actually time out.
+            // Since the underlying WebSocket does not timeout itself, then that means a synchronous Read/Write will never time out.
+            // To make it time out, we simply use a stream wrapper that forced synchronous Read/Write to use the async versions instead. 
+            // Therefore using the async versions of NetworkTimeoutStream, therefore ensuring timeouts occur.
+            var callUnderlyingAsyncMethodsStream = new CallUnderlyingAsyncMethodsStream(networkStream);
+            
+            return callUnderlyingAsyncMethodsStream;
         }
     }
 }
