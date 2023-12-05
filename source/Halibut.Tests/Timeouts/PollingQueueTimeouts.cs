@@ -63,7 +63,7 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task WhenThePollingQueueHasNoMessagesAndDoesNotReturnNullResponsesPeriodically_ThePollingServiceStartsANewTcpConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var waitForNullMessagesFromQueueTimeout = TimeSpan.FromSeconds(10);

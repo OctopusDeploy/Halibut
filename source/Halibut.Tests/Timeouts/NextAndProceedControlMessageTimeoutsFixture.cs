@@ -19,9 +19,8 @@ namespace Halibut.Tests.Timeouts
 {
     public class NextAndProceedControlMessageTimeoutsFixture : BaseTest
     {
-        // TODO breaks on websockets
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening:false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false)]
         public async Task PauseOnPollingTentacleSendingNextControlMessage_ShouldNotHangForEver(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var dataSentSizes = new List<long>();

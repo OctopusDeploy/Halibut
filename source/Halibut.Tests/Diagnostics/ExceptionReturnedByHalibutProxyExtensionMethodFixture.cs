@@ -99,7 +99,7 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket: false)]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false)]
             public async Task BecauseThePollingRequestWasNotCollected(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder().Build(CancellationToken))
