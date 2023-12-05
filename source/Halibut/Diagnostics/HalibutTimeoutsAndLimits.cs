@@ -171,6 +171,8 @@ namespace Halibut.Diagnostics
             {
                 // In general all writes/read calls should take less than a minute.
                 TcpClientTimeout = new(sendTimeout: TimeSpan.FromMinutes(1), receiveTimeout: TimeSpan.FromMinutes(1)),
+                // Sending/receiving control messages like NEXT and PROCEED should be fairly quick, 30s is probably still too high.
+                TcpClientHeartbeatTimeout = new SendReceiveTimeout(sendTimeout: TimeSpan.FromSeconds(30), receiveTimeout: TimeSpan.FromSeconds(30)),
                 TcpClientReceiveResponseTimeout = TimeSpan.FromMinutes(5), // ~ 5 minutes to execute a RPC call
                 TcpClientReceiveRequestTimeoutForPolling = new HalibutTimeoutsAndLimits().PollingQueueWaitTimeout + TimeSpan.FromSeconds(30),
                 TcpClientHeartbeatTimeoutShouldActuallyBeUsed = true
