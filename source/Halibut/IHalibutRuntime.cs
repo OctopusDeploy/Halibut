@@ -9,7 +9,7 @@ using Halibut.Util;
 
 namespace Halibut
 {
-    public interface IHalibutRuntime : IAsyncDisposable
+    public interface IHalibutRuntime : IAsyncDisposable, IDisposable
     {
         ILogFactory Logs { get; }
         int Listen();
