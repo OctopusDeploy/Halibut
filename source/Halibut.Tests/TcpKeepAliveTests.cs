@@ -20,6 +20,7 @@ namespace Halibut.Tests
     {
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket:false)]
+        // TCP Keep alives were for TcpClients, not web sockets
         public async Task TcpKeepAliveShouldBeSetOnPollingSocketsByDefault(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -44,6 +45,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        // TCP Keep alives were for TcpClients, not web sockets
         public async Task TcpKeepAliveShouldNotBeSetOnPollingSocketsIfNotEnabled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -74,6 +76,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        // TCP Keep alives were for TcpClients, not web sockets
         public async Task TcpKeepAliveShouldBeNotDisruptConnectionOnPollingSockets(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange

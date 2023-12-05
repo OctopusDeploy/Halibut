@@ -10,7 +10,6 @@ using Halibut.Diagnostics;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
-using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -170,7 +169,7 @@ namespace Halibut.Transport
                     errorEventType = EventType.Error;
 
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                    await ExchangeMessages(new NetworkTimeoutStream(stream)).ConfigureAwait(false);
+                    await ExchangeMessages(stream).ConfigureAwait(false);
                 }
             }
             catch (TaskCanceledException)

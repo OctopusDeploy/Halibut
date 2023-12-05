@@ -50,7 +50,7 @@ namespace Halibut.Transport.Protocol
         {
             // Serialization of large payloads would revert to 'sync' methods. NetworkTimeoutStream cannot timeout on sync methods.
             // So we wrap web socket streams in a CallUnderlyingAsyncMethodsStream to ensure we only call async methods (and respect timeouts).
-            // This is here to ensure we definitely do not call the sync version.
+            // We throw the exception to ensure we definitely do not call the sync version.
             throw new InvalidOperationException("All web socket communication should be asynchronous.");
         }
 
@@ -58,7 +58,7 @@ namespace Halibut.Transport.Protocol
         {
             // Serialization of large payloads would revert to 'sync' methods. NetworkTimeoutStream cannot timeout on sync methods.
             // So we wrap web socket streams in a CallUnderlyingAsyncMethodsStream to ensure we only call async methods (and respect timeouts).
-            // This is here to ensure we definitely do not call the sync version.
+            // We throw the exception to ensure we definitely do not call the sync version.
             throw new InvalidOperationException("All web socket communication should be asynchronous.");
         }
         
@@ -75,6 +75,8 @@ namespace Halibut.Transport.Protocol
         public override bool CanRead => context.State == WebSocketState.Open;
         public override bool CanSeek => false;
         public override bool CanWrite => context.State == WebSocketState.Open;
+        // This class cannot actually timeout, as WebSocket does not support it. 
+        // But we make the timeout properties available so that we can use this stream with the NetworkTimeoutStream.
         public override bool CanTimeout => true;
         public override int ReadTimeout { get; set; }
         public override int WriteTimeout { get; set; }
