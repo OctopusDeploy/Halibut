@@ -9,7 +9,6 @@ using FluentAssertions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
@@ -132,6 +131,44 @@ namespace Halibut.Tests.ServiceModel
             next.Should().BeNull();
         }
         
+        [Test]
+        public async Task QueueAndWait_WhenRequestIsDequeued_WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_WillWaitForeverUntilResponseIsSet()
+        {
+            // Arrange
+            const string endpoint = "poll://endpoint001";
+
+            var sut = new PendingRequestQueueBuilder()
+                .WithEndpoint(endpoint)
+                .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
+                .WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout(true)
+                .Build();
+            var request = new RequestMessageBuilder(endpoint)
+                .WithServiceEndpoint(seb => seb.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(1000)))
+                //Make PollingRequestMaximumMessageProcessingTimeout super low to prove we are not respecting it
+                .WithServiceEndpoint(seb => seb.WithPollingRequestMaximumMessageProcessingTimeout(TimeSpan.FromMilliseconds(1)))
+                .Build();
+            var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
+
+            // Act
+            var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
+            
+            var delayTask = Task.Delay(TimeSpan.FromSeconds(10));
+            var finishedTask = await Task.WhenAny(queueAndWaitTask, delayTask);
+
+            finishedTask.Should().Be(delayTask);
+            
+            await sut.ApplyResponse(expectedResponse, request.Destination);
+
+            var response = await queueAndWaitTask;
+
+            // Assert
+            dequeued.Should().NotBeNull("We should have removed the item from the queue before it timed out.").And.Be(request);
+            response.Should().Be(expectedResponse);
+
+            var next = await sut.DequeueAsync(CancellationToken);
+            next.Should().BeNull();
+        }
+
         [Test]
         public async Task QueueAndWait_WhenRequestIsDequeued_ButPollingRequestQueueTimeoutIsReached_ShouldWaitTillRequestRespondsAndClearRequest()
         {

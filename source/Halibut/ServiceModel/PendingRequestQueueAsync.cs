@@ -16,22 +16,22 @@ namespace Halibut.ServiceModel
         readonly SemaphoreSlim queueLock = new(1, 1);
         readonly AsyncManualResetEvent itemAddedToQueue = new(false);
         readonly ILog log;
-        readonly TimeSpan pollingQueueWaitTimeout;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
-        public PendingRequestQueueAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log) : this(log, halibutTimeoutsAndLimits.PollingQueueWaitTimeout)
+        public PendingRequestQueueAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log) : this(log, halibutTimeoutsAndLimits)
         {
             this.log = log;
         }
 
-        public PendingRequestQueueAsync(ILog log, TimeSpan pollingQueueWaitTimeout)
+        public PendingRequestQueueAsync(ILog log, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.log = log;
-            this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
         }
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
-            using var pending = new PendingRequest(request, log);
+            using var pending = new PendingRequest(request, halibutTimeoutsAndLimits, log);
 
             using (await queueLock.LockAsync(requestCancellationTokens.LinkedCancellationToken))
             {
@@ -76,7 +76,6 @@ namespace Halibut.ServiceModel
                 {
                     return queue.Count;
                 }
-
             }
         }
 
@@ -86,7 +85,7 @@ namespace Halibut.ServiceModel
 
             while (true)
             {
-                var timeout = pollingQueueWaitTimeout - timer.Elapsed;
+                var timeout = halibutTimeoutsAndLimits.PollingQueueWaitTimeout - timer.Elapsed;
                 var pending = await DequeueNextAsync(timeout, cancellationToken);
                 if (pending == null)
                 {
@@ -164,6 +163,7 @@ namespace Halibut.ServiceModel
         class PendingRequest : IDisposable
         {
             readonly RequestMessage request;
+            readonly HalibutTimeoutsAndLimits timeoutsAndLimits;
             readonly ILog log;
             readonly AsyncManualResetEvent responseWaiter = new(false);
             readonly SemaphoreSlim transferLock = new(1, 1);
@@ -171,9 +171,10 @@ namespace Halibut.ServiceModel
             bool completed;
             ResponseMessage? response;
 
-            public PendingRequest(RequestMessage request, ILog log)
+            public PendingRequest(RequestMessage request, HalibutTimeoutsAndLimits timeoutsAndLimits, ILog log)
             {
                 this.request = request;
+                this.timeoutsAndLimits = timeoutsAndLimits;
                 this.log = log;
             }
 
@@ -235,7 +236,7 @@ namespace Halibut.ServiceModel
                 if (waitForTransferToComplete)
                 {
                     // We cannot use requestCancellationTokens.ConnectingCancellationToken here, because if we were cancelled, and the transfer has begun, we should attempt to wait for it.
-                    responseSet = await WaitForResponseToBeSet(request.Destination.PollingRequestMaximumMessageProcessingTimeout, requestCancellationTokens.InProgressRequestCancellationToken);
+                    responseSet = await WaitForResponseToBeSetForProcessingMessage(request.Destination.PollingRequestMaximumMessageProcessingTimeout, requestCancellationTokens.InProgressRequestCancellationToken);
                     if (responseSet)
                     {
                         // We end up here when the request is cancelled but already being transferred so we need to adjust the log message accordingly
@@ -269,13 +270,24 @@ namespace Halibut.ServiceModel
                 }
             }
 
+            async Task<bool> WaitForResponseToBeSetForProcessingMessage(TimeSpan requestTimeout, CancellationToken cancellationToken)
+            {
+                if (timeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
+                {
+                    await WaitForResponseToBeSet(cancellationToken);
+                    return true;
+                }
+                
+                return await WaitForResponseToBeSet(requestTimeout, cancellationToken);
+            }
+
             async Task<bool> WaitForResponseToBeSet(TimeSpan timeout, CancellationToken cancellationToken)
             {
                 using var cancellationTokenSource = new CancellationTokenSource(timeout);
                 try
                 {
                     using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenSource.Token, cancellationToken);
-                    await responseWaiter.WaitAsync(linkedTokenSource.Token);
+                    await WaitForResponseToBeSet(linkedTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -284,6 +296,11 @@ namespace Halibut.ServiceModel
                 }
 
                 return true;
+            }
+
+            async Task WaitForResponseToBeSet(CancellationToken cancellationToken)
+            {
+                await responseWaiter.WaitAsync(cancellationToken);
             }
 
             public async Task<bool> BeginTransfer()
