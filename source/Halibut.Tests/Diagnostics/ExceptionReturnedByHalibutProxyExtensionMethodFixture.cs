@@ -74,9 +74,7 @@ namespace Halibut.Tests.Diagnostics
                 }
             }
             
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false, 
-                testWebSocket:false // Since websockets do not timeout
-                )]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions:false)]
             public async Task WhenTheConnectionPausesWaitingForAResponse(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -101,7 +99,7 @@ namespace Halibut.Tests.Diagnostics
             }
 
             [Test]
-            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket: false)]
+            [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false)]
             public async Task BecauseThePollingRequestWasNotCollected(ClientAndServiceTestCase clientAndServiceTestCase)
             {
                 await using (var client = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder().Build(CancellationToken))

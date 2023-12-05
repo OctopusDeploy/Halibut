@@ -10,7 +10,6 @@ using Halibut.Diagnostics;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
-using Halibut.Util;
 
 namespace Halibut.Transport
 {
@@ -139,14 +138,14 @@ namespace Halibut.Transport
             var connectionAuthorizedAndObserved = false;
             var clientName = listenerContext.Request.RemoteEndPoint.ToString();
 
-            WebSocketStream? webSocketStream = null;
+            Stream? stream = null;
             var errorEventType = EventType.ErrorInInitialisation;
             try
             {
                 var webSocketContext = await listenerContext.AcceptWebSocketAsync("Octopus").ConfigureAwait(false);
-                webSocketStream = streamFactory.CreateStream(webSocketContext.WebSocket);
+                stream = streamFactory.CreateStream(webSocketContext.WebSocket);
 
-                var req = await webSocketStream.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, cts.Token).ConfigureAwait(false);
+                var req = await webSocketContext.WebSocket.ReadTextMessage(halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, cts.Token).ConfigureAwait(false);
 
                 if (string.IsNullOrEmpty(req))
                 {
@@ -170,7 +169,7 @@ namespace Halibut.Transport
                     errorEventType = EventType.Error;
 
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                    await ExchangeMessages(webSocketStream).ConfigureAwait(false);
+                    await ExchangeMessages(stream).ConfigureAwait(false);
                 }
             }
             catch (TaskCanceledException)
@@ -194,7 +193,7 @@ namespace Halibut.Transport
                 // Closing an already closed stream or client is safe, better not to leak
                 try
                 {
-                    if (webSocketStream is not null) await webSocketStream.DisposeAsync();
+                    if (stream is not null) await stream.DisposeAsync();
                     listenerContext.Response.Close();
                 }
                 finally
@@ -249,7 +248,7 @@ namespace Halibut.Transport
             return true;
         }
 
-        Task ExchangeMessages(WebSocketStream stream)
+        Task ExchangeMessages(Stream stream)
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 

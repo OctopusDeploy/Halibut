@@ -19,7 +19,7 @@ namespace Halibut.Tests.Timeouts
     public class ReceiveResponseTimeoutTests : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenRpcExecutionExceedsReceiveResponseTimeout_ThenInitialDataReadShouldTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -44,7 +44,7 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenRpcExecutionIsWithinReceiveResponseTimeout_ButSubsequentDataIsDelayed_ThenTimeoutShouldOccur(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -90,7 +90,7 @@ namespace Halibut.Tests.Timeouts
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenRpcExecutionIsWithinReceiveResponseTimeout_ButDataStreamDataIsDelayed_ThenTimeoutShouldOccur(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();

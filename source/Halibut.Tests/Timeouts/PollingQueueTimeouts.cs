@@ -19,7 +19,7 @@ namespace Halibut.Tests.Timeouts
     public class PollingQueueTimeouts : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
@@ -63,7 +63,7 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task WhenThePollingQueueHasNoMessagesAndDoesNotReturnNullResponsesPeriodically_ThePollingServiceStartsANewTcpConnection(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var waitForNullMessagesFromQueueTimeout = TimeSpan.FromSeconds(10);

@@ -76,7 +76,7 @@ namespace Halibut.Tests.Transport.Observability
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task ObserveUnauthorizedPollingConnections(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var connectionsObserver = new TestConnectionsObserver();

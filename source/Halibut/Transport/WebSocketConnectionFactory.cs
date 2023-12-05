@@ -10,14 +10,13 @@ using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Proxy.Exceptions;
 using Halibut.Transport.Streams;
-using Halibut.Util;
 
 namespace Halibut.Transport
 {
     public class WebSocketConnectionFactory : IConnectionFactory
     {
         readonly X509Certificate2 clientCertificate;
-        IStreamFactory streamFactory;
+        readonly IStreamFactory streamFactory;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
         public WebSocketConnectionFactory(X509Certificate2 clientCertificate,
@@ -35,14 +34,13 @@ namespace Halibut.Transport
             var client = await CreateConnectedClientAsync(serviceEndpoint, cancellationToken);
 
             log.Write(EventType.Diagnostic, "Connection established");
-
             var stream = streamFactory.CreateStream(client);
 
             log.Write(EventType.Security, "Performing handshake");
-            await stream.WriteTextMessage("MX");
+            await client.WriteTextMessage("MX", halibutTimeoutsAndLimits.TcpClientTimeout.SendTimeout, cancellationToken);
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}", serviceEndpoint.BaseUri, serviceEndpoint.RemoteThumbprint);
-
+            
             return new SecureConnection(client, stream, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
         }
         
