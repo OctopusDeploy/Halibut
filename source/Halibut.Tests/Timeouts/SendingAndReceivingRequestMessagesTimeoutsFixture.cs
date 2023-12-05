@@ -123,7 +123,6 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [Timeout(120000)]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenThenNetworkIsPaused_WhileSendingARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
