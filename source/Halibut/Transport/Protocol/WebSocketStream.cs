@@ -48,18 +48,18 @@ namespace Halibut.Transport.Protocol
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            AssertCanReadOrWrite();
-            var segment = new ArraySegment<byte>(buffer, offset, count);
-            var receiveResult = context.ReceiveAsync(segment, CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-            return receiveResult.Count;
+            // Serialization of large payloads would revert to 'sync' methods. NetworkTimeoutStream cannot timeout on sync methods.
+            // So we wrap web socket streams in a CallUnderlyingAsyncMethodsStream to ensure we only call async methods (and respect timeouts).
+            // This is here to ensure we definitely do not call the sync version.
+            throw new InvalidOperationException("All web socket communication should be asynchronous.");
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            AssertCanReadOrWrite();
-            context.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, false, CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            // Serialization of large payloads would revert to 'sync' methods. NetworkTimeoutStream cannot timeout on sync methods.
+            // So we wrap web socket streams in a CallUnderlyingAsyncMethodsStream to ensure we only call async methods (and respect timeouts).
+            // This is here to ensure we definitely do not call the sync version.
+            throw new InvalidOperationException("All web socket communication should be asynchronous.");
         }
         
         void AssertCanReadOrWrite()
