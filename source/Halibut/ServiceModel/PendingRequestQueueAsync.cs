@@ -282,7 +282,6 @@ namespace Halibut.ServiceModel
                     await WaitForResponseToBeSet(cancellationToken);
                     return true;
                 }
-                
                 return await WaitForResponseToBeSet(requestTimeout, cancellationToken);
             }
 

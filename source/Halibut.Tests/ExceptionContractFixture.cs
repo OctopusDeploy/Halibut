@@ -36,7 +36,7 @@ namespace Halibut.Tests
             (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken, CancellationToken.None))))
                 .And.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out.");
         }
-
+        
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task WhenThePollingRequestMaximumMessageProcessingTimeoutIsReached_AHalibutClientExceptionShouldBeThrown(ClientAndServiceTestCase clientAndServiceTestCase)
@@ -57,6 +57,33 @@ namespace Halibut.Tests
 
             (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None))))
                 .And.Message.Should().Contain("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:06), so the request timed out.");
+
+            waitSemaphore.Release();
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        public async Task WhenThePollingRequestHasBegunTransfer_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_ThenTimeoutIsReached_AHalibutClientExceptionShouldBeThrown_Rename(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
+            halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout = TimeSpan.FromSeconds(6);
+            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = true;
+
+            var waitSemaphore = new SemaphoreSlim(0, 1);
+
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .AsLatestClientAndLatestServiceBuilder()
+                .WithDoSomeActionService(() => waitSemaphore.Wait(CancellationToken))
+                .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                .Build(CancellationToken);
+
+            var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
+
+            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None))))
+                .And.Message.Should().ContainAny(
+                    "Unable to read data from the transport connection: Connection timed out.",
+                    "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
 
             waitSemaphore.Release();
         }
@@ -96,7 +123,32 @@ namespace Halibut.Tests
 
             waitSemaphore.Release();
         }
-        
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        public async Task WhenThePollingRequestIsCancelledWhileDequeued_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_AnOperationCanceledExceptionShouldBeThrown(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = true;
+
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            var waitSemaphore = new SemaphoreSlim(0, 1);
+            
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .AsLatestClientAndLatestServiceBuilder()
+                .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                .WithDoSomeActionService(() => waitSemaphore.Wait(CancellationToken))
+                .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, cancellationTokenSource)))
+                .Build(CancellationToken);
+
+            var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
+
+            await AssertException.Throws<OperationCanceledException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken.None, cancellationTokenSource.Token)));
+
+            waitSemaphore.Release();
+        }
+
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testPolling: false, testWebSocket: false)]
         public async Task WhenTheListeningRequestFailsToBeSent_AsTheServiceDoesNotAcceptTheConnection_AHalibutClientExceptionShouldBeThrown(ClientAndServiceTestCase clientAndServiceTestCase)
