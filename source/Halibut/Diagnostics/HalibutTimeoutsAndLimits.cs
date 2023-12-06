@@ -20,7 +20,11 @@ namespace Halibut.Diagnostics
 
         /// <summary>
         ///     We believe that PollingRequestMaximumMessageProcessingTimeout is redundant.
-        ///     This setting allows us to feature toggle turning off PollingRequestMaximumMessageProcessingTimeout
+        ///     This makes clients talking to polling services have similar behaviour to talking to listening services.
+        ///     In listening we wait for the request to finish or for an error.
+        ///     Enabling this results in the same behaviour as listening.
+        /// 
+        ///     This setting allows us to feature toggle turning off PollingRequestMaximumMessageProcessingTimeout.
         /// </summary>
         public bool RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout { get; set; }
 

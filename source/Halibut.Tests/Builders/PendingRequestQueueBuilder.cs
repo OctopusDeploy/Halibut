@@ -41,10 +41,10 @@ namespace Halibut.Tests.Builders
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             var log = this.log ?? new InMemoryConnectionLog(endpoint);
 
-            halibutTimeoutsAndLimits.PollingQueueWaitTimeout = pollingQueueWaitTimeout ?? halibutTimeoutsAndLimits.PollingQueueWaitTimeout;
-            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout ?? halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
+            var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? halibutTimeoutsAndLimits.PollingQueueWaitTimeout;
+            var relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout ?? halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
 
-            return new PendingRequestQueueAsync(log, halibutTimeoutsAndLimits);
+            return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout, relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout);
         }
     }
 }

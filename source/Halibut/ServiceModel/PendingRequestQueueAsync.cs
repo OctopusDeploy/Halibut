@@ -16,22 +16,27 @@ namespace Halibut.ServiceModel
         readonly SemaphoreSlim queueLock = new(1, 1);
         readonly AsyncManualResetEvent itemAddedToQueue = new(false);
         readonly ILog log;
-        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly TimeSpan pollingQueueWaitTimeout;
+        readonly bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
 
-        public PendingRequestQueueAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log) : this(log, halibutTimeoutsAndLimits)
+        public PendingRequestQueueAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log) : this(
+            log, 
+            halibutTimeoutsAndLimits.PollingQueueWaitTimeout, 
+            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
         {
             this.log = log;
         }
 
-        public PendingRequestQueueAsync(ILog log, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        public PendingRequestQueueAsync(ILog log, TimeSpan pollingQueueWaitTimeout, bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
         {
             this.log = log;
-            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
+            this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
         }
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
         {
-            using var pending = new PendingRequest(request, halibutTimeoutsAndLimits, log);
+            using var pending = new PendingRequest(request, relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout, log);
 
             using (await queueLock.LockAsync(requestCancellationTokens.LinkedCancellationToken))
             {
@@ -85,7 +90,7 @@ namespace Halibut.ServiceModel
 
             while (true)
             {
-                var timeout = halibutTimeoutsAndLimits.PollingQueueWaitTimeout - timer.Elapsed;
+                var timeout = pollingQueueWaitTimeout - timer.Elapsed;
                 var pending = await DequeueNextAsync(timeout, cancellationToken);
                 if (pending == null)
                 {
@@ -163,7 +168,7 @@ namespace Halibut.ServiceModel
         class PendingRequest : IDisposable
         {
             readonly RequestMessage request;
-            readonly HalibutTimeoutsAndLimits timeoutsAndLimits;
+            readonly bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
             readonly ILog log;
             readonly AsyncManualResetEvent responseWaiter = new(false);
             readonly SemaphoreSlim transferLock = new(1, 1);
@@ -171,10 +176,10 @@ namespace Halibut.ServiceModel
             bool completed;
             ResponseMessage? response;
 
-            public PendingRequest(RequestMessage request, HalibutTimeoutsAndLimits timeoutsAndLimits, ILog log)
+            public PendingRequest(RequestMessage request, bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout, ILog log)
             {
                 this.request = request;
-                this.timeoutsAndLimits = timeoutsAndLimits;
+                this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
                 this.log = log;
             }
 
@@ -272,7 +277,7 @@ namespace Halibut.ServiceModel
 
             async Task<bool> WaitForResponseToBeSetForProcessingMessage(TimeSpan requestTimeout, CancellationToken cancellationToken)
             {
-                if (timeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
+                if (relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
                 {
                     await WaitForResponseToBeSet(cancellationToken);
                     return true;
