@@ -344,6 +344,11 @@ namespace Halibut.Tests.Support
                 return client.CreateClient<TService, TAsyncClientService>(ServiceUri, modifyServiceEndpoint);
             }
 
+            public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Func<ServiceEndPoint, ServiceEndPoint> modifyServiceEndpoint)
+            {
+                return client.CreateClient<TService, TAsyncClientService>(ServiceUri, modifyServiceEndpoint);
+            }
+
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
             {
                 return client.CreateClient<TService, TAsyncClientService>(ServiceUri);
