@@ -26,7 +26,7 @@ namespace Halibut.Diagnostics
         /// 
         ///     This setting allows us to feature toggle turning off PollingRequestMaximumMessageProcessingTimeout.
         /// </summary>
-        public bool RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout { get; set; }
+        public bool RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout { get; set; } = true;
 
         /// <summary>
         ///     The amount of time to wait between connection requests to the remote endpoint (applies
