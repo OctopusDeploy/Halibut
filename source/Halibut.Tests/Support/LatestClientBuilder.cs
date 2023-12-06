@@ -236,7 +236,7 @@ namespace Halibut.Tests.Support
                 return pendingRequestQueueFactory(octopusLogFactory);
             }
 
-            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory);
+            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory, halibutTimeoutsAndLimits);
 
             if (this.pendingRequestQueueFactoryBuilder != null)
             {
