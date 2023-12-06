@@ -171,13 +171,10 @@ namespace Halibut.Tests
             halibutTimeoutsAndLimits.TcpClientConnectTimeout = TimeSpan.FromSeconds(5);
             halibutTimeoutsAndLimits.ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(600);
             halibutTimeoutsAndLimits.RetryCountLimit = int.MaxValue;
-
-            var connectionsObserver = new TestConnectionsObserver();
-
+            
             await using var clientAndService = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder()
                 .AsLatestClientBuilder()
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                .WithClientConnectionsObserver(connectionsObserver)
                 .Build(CancellationToken);
 
             var client = clientAndService.CreateClient<IEchoService, IAsyncClientEchoServiceWithOptions>(new Uri("https://20.5.79.31:10933/"));

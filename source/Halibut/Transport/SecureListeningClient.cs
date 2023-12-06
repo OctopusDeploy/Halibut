@@ -128,7 +128,7 @@ namespace Halibut.Transport
                     // against all connections in the pool being bad
                     if (i == 1)
                     {
-                        await connectionManager.ClearPooledConnectionsAsync(ServiceEndpoint, log, requestCancellationTokens.LinkedCancellationToken);
+                        await connectionManager.ClearPooledConnectionsAsync(ServiceEndpoint, log, requestCancellationTokens.InProgressRequestCancellationToken);
                     }
                 }
                 catch (IOException ex) when (ex.IsSocketConnectionReset())
