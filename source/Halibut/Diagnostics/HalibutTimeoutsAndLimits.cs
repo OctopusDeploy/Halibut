@@ -19,6 +19,16 @@ namespace Halibut.Diagnostics
         public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
+        ///     We believe that PollingRequestMaximumMessageProcessingTimeout is redundant.
+        ///     This makes clients talking to polling services have similar behaviour to talking to listening services.
+        ///     In listening we wait for the request to finish or for an error.
+        ///     Enabling this results in the same behaviour as listening.
+        /// 
+        ///     This setting allows us to feature toggle turning off PollingRequestMaximumMessageProcessingTimeout.
+        /// </summary>
+        public bool RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout { get; set; }
+
+        /// <summary>
         ///     The amount of time to wait between connection requests to the remote endpoint (applies
         ///     to both polling and listening connections). Can be overridden via the ServiceEndPoint.
         /// </summary>
@@ -159,7 +169,6 @@ namespace Halibut.Diagnostics
         /// The duration a TCP connection will wait for a keepalive response before sending another keepalive probe.
         /// </summary>
         public TimeSpan TcpKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(5);
-
         
         /// <summary>
         /// In the future these will become the default

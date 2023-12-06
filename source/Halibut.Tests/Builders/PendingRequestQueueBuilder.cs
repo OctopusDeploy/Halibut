@@ -9,6 +9,7 @@ namespace Halibut.Tests.Builders
         ILog? log;
         string? endpoint;
         TimeSpan? pollingQueueWaitTimeout;
+        bool? relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
 
         public PendingRequestQueueBuilder WithEndpoint(string endpoint)
         {
@@ -27,14 +28,23 @@ namespace Halibut.Tests.Builders
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
             return this;
         }
-        
+
+        public PendingRequestQueueBuilder WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout(bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
+        {
+            this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
+            return this;
+        }
+
         public IPendingRequestQueue Build()
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
-            var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? new HalibutTimeoutsAndLimitsForTestsBuilder().Build().PollingQueueWaitTimeout;
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             var log = this.log ?? new InMemoryConnectionLog(endpoint);
 
-            return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout);
+            var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? halibutTimeoutsAndLimits.PollingQueueWaitTimeout;
+            var relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout ?? halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
+
+            return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout, relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout);
         }
     }
 }
