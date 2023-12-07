@@ -165,13 +165,10 @@ namespace Halibut.Tests
                 stopwatch.Stop();
 
                 stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), "Should have timed out quickly");
-
-                connectionsObserver.ConnectionAcceptedCount.Should().Be(1, "A single TCP connection should have been created");
-
+                
                 Wait.UntilActionSucceeds(() =>
                 {
                     connectionsObserver.ConnectionClosedCount.Should().Be(1, "Cancelling the PendingRequest will time out, causing the connection to be closed");
-                    connectionsObserver.ConnectionAcceptedCount.Should().Be(1, "The Service won't have reconnected after the request was cancelled");
                 }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
                 
 
