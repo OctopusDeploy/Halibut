@@ -137,7 +137,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task WhenThePollingRequestMaximumMessageProcessingTimeoutIsReached_TheRequestShouldTimeout_AndTheTransferringPendingRequestCancelled_Rename(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenThePollingRequestHasBegunTransfer_TheRequestShouldTimeout_AndTheTransferringPendingRequestCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
@@ -167,7 +167,13 @@ namespace Halibut.Tests
                 stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), "Should have timed out quickly");
 
                 connectionsObserver.ConnectionAcceptedCount.Should().Be(1, "A single TCP connection should have been created");
-                connectionsObserver.ConnectionClosedCount.Should().Be(1, "Cancelling the PendingRequest will time out, causing the connection to be closed");
+
+                Wait.UntilActionSucceeds(() =>
+                {
+                    connectionsObserver.ConnectionClosedCount.Should().Be(1, "Cancelling the PendingRequest will time out, causing the connection to be closed");
+                    connectionsObserver.ConnectionAcceptedCount.Should().Be(1, "The Service won't have reconnected after the request was cancelled");
+                }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
+                
 
                 waitSemaphore.Release();
             }
