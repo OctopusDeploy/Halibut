@@ -68,13 +68,41 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        public async Task WhenThePollingRequestQueueTimeoutIsReached_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_ButTheResponseIsReceivedAfterPollingRequestQueueTimeout_TheRequestShouldSucceed(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
+            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = true;
+
+            var responseDelay = TimeSpan.FromSeconds(10);
+
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .As<LatestClientAndLatestServiceBuilder>()
+                             .WithDoSomeActionService(() => Thread.Sleep(responseDelay))
+                             .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                             .WithInstantReconnectPollingRetryPolicy()
+                             .Build(CancellationToken))
+            {
+                var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
+
+                var stopwatch = Stopwatch.StartNew();
+                await doSomeActionClient.ActionAsync(new(CancellationToken));
+                stopwatch.Stop();
+
+                stopwatch.Elapsed.Should()
+                    .BeGreaterThan(halibutTimeoutsAndLimits.PollingRequestQueueTimeout, "Should have waited longer than the PollingRequestQueueTimeout");
+            }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task WhenThePollingRequestMaximumMessageProcessingTimeoutIsReached_TheRequestShouldTimeout_AndTheTransferringPendingRequestCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
             halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(6);
 
-            var waitSemaphore = new SemaphoreSlim(0, 1);
+            using var waitSemaphore = new SemaphoreSlim(0, 1);
             var connectionsObserver = new TestConnectionsObserver();
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -103,6 +131,47 @@ namespace Halibut.Tests
                     connectionsObserver.ConnectionClosedCount.Should().Be(1, "Cancelling the PendingRequest should have caused the TCP Connection to be terminated to stop the in-flight request");
                     connectionsObserver.ConnectionAcceptedCount.Should().Be(2, "The Service should have reconnected after the request was cancelled");
                 }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
+            }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        public async Task WhenThePollingRequestHasBegunTransfer_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_AndWeTimeoutWaitingForTheResponse_ThenRpcCallShouldFailWithTimeoutErrorMessage(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
+            halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout = TimeSpan.FromSeconds(6);
+            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = true;
+
+            using var waitSemaphore = new SemaphoreSlim(0, 1);
+            var connectionsObserver = new TestConnectionsObserver();
+
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .As<LatestClientAndLatestServiceBuilder>()
+                             .WithDoSomeActionService(() => waitSemaphore.Wait(CancellationToken))
+                             .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                             .WithInstantReconnectPollingRetryPolicy()
+                             .WithConnectionObserverOnTcpServer(connectionsObserver)
+                             .Build(CancellationToken))
+            {
+                var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
+
+                var stopwatch = Stopwatch.StartNew();
+                (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken))))
+                    .And.Message.Should().ContainAny(
+                        "Unable to read data from the transport connection: Connection timed out.",
+                        "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
+                stopwatch.Stop();
+
+                stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), "Should have timed out quickly");
+                
+                Wait.UntilActionSucceeds(() =>
+                {
+                    connectionsObserver.ConnectionClosedCount.Should().Be(1, "When we time out waiting for the response, then the connection should be closed");
+                }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
+                
+
+                waitSemaphore.Release();
             }
         }
     }
