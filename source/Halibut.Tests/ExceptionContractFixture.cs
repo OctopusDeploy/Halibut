@@ -63,7 +63,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task WhenThePollingRequestHasBegunTransfer_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_ThenTimeoutIsReached_AHalibutClientExceptionShouldBeThrown_Rename(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenThePollingRequestHasBegunTransfer_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_ThenTimeoutIsReached_AHalibutClientExceptionShouldBeThrown(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
@@ -80,7 +80,7 @@ namespace Halibut.Tests
 
             var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None))))
+            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken))))
                 .And.Message.Should().ContainAny(
                     "Unable to read data from the transport connection: Connection timed out.",
                     "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
@@ -144,7 +144,7 @@ namespace Halibut.Tests
 
             var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
-            await AssertException.Throws<OperationCanceledException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken.None, cancellationTokenSource.Token)));
+            await AssertException.Throws<OperationCanceledException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token)));
 
             waitSemaphore.Release();
         }

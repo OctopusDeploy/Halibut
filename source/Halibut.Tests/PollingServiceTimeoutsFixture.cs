@@ -86,7 +86,7 @@ namespace Halibut.Tests
                 var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None));
+                await doSomeActionClient.ActionAsync(new(CancellationToken));
                 stopwatch.Stop();
 
                 stopwatch.Elapsed.Should()
@@ -102,7 +102,7 @@ namespace Halibut.Tests
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
             halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(6);
 
-            var waitSemaphore = new SemaphoreSlim(0, 1);
+            using var waitSemaphore = new SemaphoreSlim(0, 1);
             var connectionsObserver = new TestConnectionsObserver();
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -136,14 +136,14 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task WhenThePollingRequestHasBegunTransfer_TheRequestShouldTimeout_AndTheTransferringPendingRequestCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenThePollingRequestHasBegunTransfer_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_AndWeTimeoutWaitingForTheResponse_ThenRpcCallShouldFailWithTimeoutErrorMessage(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
             halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout = TimeSpan.FromSeconds(6);
             halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = true;
 
-            var waitSemaphore = new SemaphoreSlim(0, 1);
+            using var waitSemaphore = new SemaphoreSlim(0, 1);
             var connectionsObserver = new TestConnectionsObserver();
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -157,7 +157,7 @@ namespace Halibut.Tests
                 var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None))))
+                (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken))))
                     .And.Message.Should().ContainAny(
                         "Unable to read data from the transport connection: Connection timed out.",
                         "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
