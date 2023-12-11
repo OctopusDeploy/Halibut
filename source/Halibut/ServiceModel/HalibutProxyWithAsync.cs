@@ -9,7 +9,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
 {
-    public delegate Task<ResponseMessage> MessageRouter(RequestMessage request, MethodInfo serviceMethod, RequestCancellationTokens requestCancellationTokens);
+    public delegate Task<ResponseMessage> MessageRouter(RequestMessage request, MethodInfo serviceMethod, CancellationToken cancellationToken);
 
     public class HalibutProxyWithAsync : DispatchProxyAsync
     {
@@ -19,7 +19,6 @@ namespace Halibut.ServiceModel
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
-        CancellationToken globalCancellationToken;
         ILog logger;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
@@ -27,13 +26,11 @@ namespace Halibut.ServiceModel
             MessageRouter messageRouter, 
             Type contractType, 
             ServiceEndPoint endPoint,
-            ILog logger, 
-            CancellationToken cancellationToken)
+            ILog logger)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
-            this.globalCancellationToken = cancellationToken;
             this.configured = true;
             this.logger = logger;
         }
@@ -74,9 +71,7 @@ namespace Halibut.ServiceModel
 
             var request = CreateRequest(asyncMethod, serviceMethod, args);
 
-            using var requestCancellationTokens = RequestCancellationTokens(halibutProxyRequestOptions);
-
-            var response = await messageRouter(request, serviceMethod, requestCancellationTokens);
+            var response = await messageRouter(request, serviceMethod, halibutProxyRequestOptions?.RequestCancellationToken ?? CancellationToken.None);
 
             EnsureNotError(response);
             
@@ -105,19 +100,7 @@ namespace Halibut.ServiceModel
             };
             return request;
         }
-
-        RequestCancellationTokens RequestCancellationTokens(HalibutProxyRequestOptions? halibutProxyRequestOptions)
-        {
-            if (halibutProxyRequestOptions == null)
-            {
-                return new RequestCancellationTokens(globalCancellationToken, CancellationToken.None);
-            }
-
-            return new RequestCancellationTokens(
-                halibutProxyRequestOptions.ConnectingCancellationToken ?? CancellationToken.None,
-                halibutProxyRequestOptions.InProgressRequestCancellationToken ?? CancellationToken.None);
-        }
-
+        
         void EnsureNotError(ResponseMessage responseMessage)
         {
             if (responseMessage == null)
@@ -167,7 +150,7 @@ namespace Halibut.ServiceModel
                 }
 
             }
-            catch (Exception exception) when (!(exception is HalibutClientException))
+            catch (Exception exception) when (exception is not HalibutClientException && exception is not RequestCancelledException)
             {
                 // Something went wrong trying to understand the ServerError revert back to the old behaviour of just
                 // throwing a standard halibut client exception.

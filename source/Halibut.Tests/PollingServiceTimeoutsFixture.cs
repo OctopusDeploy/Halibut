@@ -24,13 +24,13 @@ namespace Halibut.Tests
 
             await using (var clientOnly = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder()
                              .AsLatestClientBuilder()
-                             .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                             .Build(CancellationToken))
+                       .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                       .Build(CancellationToken))
             {
                 var client = clientOnly.CreateClientWithoutService<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken, CancellationToken.None))))
+                (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
                     .And.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out.");
                 stopwatch.Stop();
 
@@ -58,7 +58,7 @@ namespace Halibut.Tests
                 var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None));
+                await doSomeActionClient.ActionAsync(new(CancellationToken));
                 stopwatch.Stop();
 
                 stopwatch.Elapsed.Should()
@@ -116,7 +116,7 @@ namespace Halibut.Tests
                 var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken, CancellationToken.None))))
+                (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken))))
                     .And.Message.Should().Contain("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:06), so the request timed out.");
                 stopwatch.Stop();
 
@@ -128,9 +128,8 @@ namespace Halibut.Tests
 
                 Wait.UntilActionSucceeds(() =>
                 {
-                    // Leaving these asserts as when cooperative cancellation is supported it should cause them to fail at which point they can be fixed to assert cancellation to the socket works as expected.
-                    connectionsObserver.ConnectionClosedCount.Should().Be(0, "Cancelling the PendingRequest does not cause the TCP Connection to be cancelled to stop the in-flight request");
-                    connectionsObserver.ConnectionAcceptedCount.Should().Be(1, "The Service won't have reconnected after the request was cancelled");
+                    connectionsObserver.ConnectionClosedCount.Should().Be(1, "Cancelling the PendingRequest should have caused the TCP Connection to be terminated to stop the in-flight request");
+                    connectionsObserver.ConnectionAcceptedCount.Should().Be(2, "The Service should have reconnected after the request was cancelled");
                 }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
             }
         }
