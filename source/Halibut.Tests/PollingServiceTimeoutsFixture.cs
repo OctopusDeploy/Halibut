@@ -167,7 +167,7 @@ namespace Halibut.Tests
                 
                 Wait.UntilActionSucceeds(() =>
                 {
-                    connectionsObserver.ConnectionClosedCount.Should().Be(1, "Cancelling the PendingRequest will time out, causing the connection to be closed");
+                    connectionsObserver.ConnectionClosedCount.Should().Be(1, "When we time out waiting for the response, then the connection should be closed");
                 }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
                 
 
