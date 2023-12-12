@@ -71,7 +71,7 @@ namespace Halibut.Logging
 #else
     public
 #endif
-    delegate bool Logger(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters);
+    delegate bool Logger(LogLevel logLevel, Func<string>? messageFunc, Exception? exception = null, params object[] formatParameters);
 
 #if !LIBLOG_PROVIDERS_ONLY
     /// <summary>
@@ -98,7 +98,7 @@ namespace Halibut.Logging
         /// 
         /// To check IsEnabled call Log with only LogLevel and check the return value, no event will be written.
         /// </remarks>
-        bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters);
+        bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception = null, params object[] formatParameters);
     }
 #endif
 
@@ -429,8 +429,8 @@ namespace Halibut.Logging
         public const string DisableLoggingEnvironmentVariable = "$rootnamespace$_LIBLOG_DISABLE";
         private const string NullLogProvider = "Current Log Provider is not set. Call SetCurrentLogProvider " +
                                                "with a non-null value first.";
-        private static dynamic s_currentLogProvider;
-        private static Action<ILogProvider> s_onCurrentLogProviderSet;
+        private static dynamic? s_currentLogProvider;
+        private static Action<ILogProvider>? s_onCurrentLogProviderSet;
 
         [SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
         static LogProvider()
@@ -472,7 +472,7 @@ namespace Halibut.Logging
             }
         }
 
-        internal static ILogProvider CurrentLogProvider
+        internal static ILogProvider? CurrentLogProvider
         {
             get
             {
@@ -525,7 +525,7 @@ namespace Halibut.Logging
 #endif
         static ILog GetLogger(Type type)
         {
-            return GetLogger(type.FullName);
+            return GetLogger(type.FullName!);
         }
 
         /// <summary>
@@ -540,7 +540,7 @@ namespace Halibut.Logging
 #endif
         static ILog GetLogger(string name)
         {
-            ILogProvider logProvider = CurrentLogProvider ?? ResolveLogProvider();
+            ILogProvider? logProvider = CurrentLogProvider ?? ResolveLogProvider();
             return logProvider == null
                 ? NoOpLogger.Instance
                 : (ILog)new LoggerExecutionWrapper(logProvider.GetLogger(name), () => IsDisabled);
@@ -559,7 +559,7 @@ namespace Halibut.Logging
 #endif
         static IDisposable OpenNestedContext(string message)
         {
-            ILogProvider logProvider = CurrentLogProvider ?? ResolveLogProvider();
+            ILogProvider? logProvider = CurrentLogProvider ?? ResolveLogProvider();
 
             return logProvider == null
                 ? new DisposableAction(() => { })
@@ -580,7 +580,7 @@ namespace Halibut.Logging
 #endif
         static IDisposable OpenMappedContext(string key, string value)
         {
-            ILogProvider logProvider = CurrentLogProvider ?? ResolveLogProvider();
+            ILogProvider? logProvider = CurrentLogProvider ?? ResolveLogProvider();
 
             return logProvider == null
                 ? new DisposableAction(() => { })
@@ -629,7 +629,7 @@ namespace Halibut.Logging
 
         [SuppressMessage("Microsoft.Globalization", "CA1303:Do not pass literals as localized parameters", MessageId = "System.Console.WriteLine(System.String,System.Object,System.Object)")]
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        internal static ILogProvider ResolveLogProvider()
+        internal static ILogProvider? ResolveLogProvider()
         {
             try
             {
@@ -660,7 +660,7 @@ namespace Halibut.Logging
         {
             internal static readonly NoOpLogger Instance = new NoOpLogger();
 
-            public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
+            public bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception, params object[] formatParameters)
             {
                 return false;
             }
@@ -675,7 +675,7 @@ namespace Halibut.Logging
         private readonly Func<bool> _getIsDisabled;
         internal const string FailedToGenerateLogMessage = "Failed to generate log message";
 
-        internal LoggerExecutionWrapper(Logger logger, Func<bool> getIsDisabled = null)
+        internal LoggerExecutionWrapper(Logger logger, Func<bool>? getIsDisabled = null)
         {
             _logger = logger;
             _getIsDisabled = getIsDisabled ?? (() => false);
@@ -687,7 +687,7 @@ namespace Halibut.Logging
         }
 
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
-        public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters)
+        public bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception = null, params object[] formatParameters)
         {
             if (_getIsDisabled())
             {
@@ -717,7 +717,7 @@ namespace Halibut.Logging
                 {
                     Log(LogLevel.Error, () => FailedToGenerateLogMessage, ex);
                 }
-                return null;
+                return null!;
             };
             return _logger(logLevel, wrappedMessageFunc, exception, formatParameters);
         }
@@ -820,7 +820,7 @@ namespace Halibut.Logging.LogProviders
 
         protected override OpenNdc GetOpenNdcMethod()
         {
-            Type ndcContextType = Type.GetType("NLog.NestedDiagnosticsContext, NLog");
+            Type ndcContextType = Type.GetType("NLog.NestedDiagnosticsContext, NLog")!;
             MethodInfo pushMethod = ndcContextType.GetMethodPortable("Push", typeof(string));
             ParameterExpression messageParam = Expression.Parameter(typeof(string), "message");
             MethodCallExpression pushMethodCall = Expression.Call(null, pushMethod, messageParam);
@@ -829,7 +829,7 @@ namespace Halibut.Logging.LogProviders
 
         protected override OpenMdc GetOpenMdcMethod()
         {
-            Type mdcContextType = Type.GetType("NLog.MappedDiagnosticsContext, NLog");
+            Type mdcContextType = Type.GetType("NLog.MappedDiagnosticsContext, NLog")!;
 
             MethodInfo setMethod = mdcContextType.GetMethodPortable("Set", typeof(string), typeof(string));
             MethodInfo removeMethod = mdcContextType.GetMethodPortable("Remove", typeof(string));
@@ -855,7 +855,7 @@ namespace Halibut.Logging.LogProviders
 
         private static Type GetLogManagerType()
         {
-            return Type.GetType("NLog.LogManager, NLog");
+            return Type.GetType("NLog.LogManager, NLog")!;
         }
 
         private static Func<string, object> GetGetLoggerMethodCall()
@@ -877,7 +877,7 @@ namespace Halibut.Logging.LogProviders
             }
 
             [SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
-            public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
+            public bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception, params object[] formatParameters)
             {
                 if (messageFunc == null)
                 {
@@ -1042,7 +1042,7 @@ namespace Halibut.Logging.LogProviders
 
         protected override OpenNdc GetOpenNdcMethod()
         {
-            Type logicalThreadContextType = Type.GetType("log4net.LogicalThreadContext, log4net");
+            Type logicalThreadContextType = Type.GetType("log4net.LogicalThreadContext, log4net")!;
             PropertyInfo stacksProperty = logicalThreadContextType.GetPropertyPortable("Stacks");
             Type logicalThreadContextStacksType = stacksProperty.PropertyType;
             PropertyInfo stacksIndexerProperty = logicalThreadContextStacksType.GetPropertyPortable("Item");
@@ -1070,7 +1070,7 @@ namespace Halibut.Logging.LogProviders
 
         protected override OpenMdc GetOpenMdcMethod()
         {
-            Type logicalThreadContextType = Type.GetType("log4net.LogicalThreadContext, log4net");
+            Type logicalThreadContextType = Type.GetType("log4net.LogicalThreadContext, log4net")!;
             PropertyInfo propertiesProperty = logicalThreadContextType.GetPropertyPortable("Properties");
             Type logicalThreadContextPropertiesType = propertiesProperty.PropertyType;
             PropertyInfo propertiesIndexerProperty = logicalThreadContextPropertiesType.GetPropertyPortable("Item");
@@ -1105,7 +1105,7 @@ namespace Halibut.Logging.LogProviders
 
         private static Type GetLogManagerType()
         {
-            return Type.GetType("log4net.LogManager, log4net");
+            return Type.GetType("log4net.LogManager, log4net")!;
         }
 
         private static Func<string, object> GetGetLoggerMethodCall()
@@ -1120,7 +1120,7 @@ namespace Halibut.Logging.LogProviders
         internal class Log4NetLogger
         {
             private readonly dynamic _logger;
-            private static Type s_callerStackBoundaryType;
+            private static Type? s_callerStackBoundaryType;
             private static readonly object CallerStackBoundaryTypeSync = new object();
 
             private readonly object _levelDebug;
@@ -1143,11 +1143,11 @@ namespace Halibut.Logging.LogProviders
                 }
 
                 var levelFields = logEventLevelType.GetFieldsPortable().ToList();
-                _levelDebug = levelFields.First(x => x.Name == "Debug").GetValue(null);
-                _levelInfo = levelFields.First(x => x.Name == "Info").GetValue(null);
-                _levelWarn = levelFields.First(x => x.Name == "Warn").GetValue(null);
-                _levelError = levelFields.First(x => x.Name == "Error").GetValue(null);
-                _levelFatal = levelFields.First(x => x.Name == "Fatal").GetValue(null);
+                _levelDebug = levelFields.First(x => x.Name == "Debug").GetValue(null)!;
+                _levelInfo = levelFields.First(x => x.Name == "Info").GetValue(null)!;
+                _levelWarn = levelFields.First(x => x.Name == "Warn").GetValue(null)!;
+                _levelError = levelFields.First(x => x.Name == "Error").GetValue(null)!;
+                _levelFatal = levelFields.First(x => x.Name == "Fatal").GetValue(null)!;
 
                 // Func<object, object, bool> isEnabledFor = (logger, level) => { return ((log4net.Core.ILogger)logger).IsEnabled(level); }
                 var loggerType = Type.GetType("log4net.Core.ILogger, log4net");
@@ -1189,7 +1189,7 @@ namespace Halibut.Logging.LogProviders
                     exceptionParam).Compile();
             }
 
-            public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
+            public bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception, params object[] formatParameters)
             {
                 if (messageFunc == null)
                 {
@@ -1282,11 +1282,12 @@ namespace Halibut.Logging.LogProviders
         private static readonly Action<string, string, int> WriteLogEntry;
         private static readonly Func<string, int, bool> ShouldLogEntry;
 
-        [SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         static EntLibLogProvider()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
-            LogEntryType = Type.GetType(string.Format(CultureInfo.InvariantCulture, TypeTemplate, "LogEntry"));
-            LoggerType = Type.GetType(string.Format(CultureInfo.InvariantCulture, TypeTemplate, "Logger"));
+            LogEntryType = Type.GetType(string.Format(CultureInfo.InvariantCulture, TypeTemplate, "LogEntry"))!;
+            LoggerType = Type.GetType(string.Format(CultureInfo.InvariantCulture, TypeTemplate, "Logger"))!;
             TraceEventTypeType = TraceEventTypeValues.Type;
             if (LogEntryType == null
                  || TraceEventTypeType == null
@@ -1401,7 +1402,7 @@ namespace Halibut.Logging.LogProviders
                 _shouldLog = shouldLog;
             }
 
-            public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
+            public bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception, params object[] formatParameters)
             {
                 var severity = MapSeverity(logLevel);
                 if (messageFunc == null)
@@ -1489,7 +1490,7 @@ namespace Halibut.Logging.LogProviders
 
         private static Func<string, string, IDisposable> GetPushProperty()
         {
-            Type ndcContextType = Type.GetType("Serilog.Context.LogContext, Serilog.FullNetFx");
+            Type ndcContextType = Type.GetType("Serilog.Context.LogContext, Serilog.FullNetFx")!;
             MethodInfo pushPropertyMethod = ndcContextType.GetMethodPortable(
                 "PushProperty",
                 typeof(string),
@@ -1513,7 +1514,7 @@ namespace Halibut.Logging.LogProviders
 
         private static Type GetLogManagerType()
         {
-            return Type.GetType("Serilog.Log, Serilog");
+            return Type.GetType("Serilog.Log, Serilog")!;
         }
 
         private static Func<string, object> GetForContextMethodCall()
@@ -1632,7 +1633,7 @@ namespace Halibut.Logging.LogProviders
                 _logger = logger;
             }
 
-            public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
+            public bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception, params object[] formatParameters)
             {
                 var translatedLevel = TranslateLevel(logLevel);
                 if (messageFunc == null)
@@ -1697,12 +1698,12 @@ namespace Halibut.Logging.LogProviders
             int severity,
             string logSystem,
             int skipFrames,
-            Exception exception,
+            Exception? exception,
             bool attributeToException,
             int writeMode,
-            string detailsXml,
+            string? detailsXml,
             string category,
-            string caption,
+            string? caption,
             string description,
             params object[] args
             );
@@ -1744,14 +1745,14 @@ namespace Halibut.Logging.LogProviders
 
         private static Type GetLogManagerType()
         {
-            return Type.GetType("Gibraltar.Agent.Log, Gibraltar.Agent");
+            return Type.GetType("Gibraltar.Agent.Log, Gibraltar.Agent")!;
         }
 
         private static WriteDelegate GetLogWriteDelegate()
         {
             Type logManagerType = GetLogManagerType();
-            Type logMessageSeverityType = Type.GetType("Gibraltar.Agent.LogMessageSeverity, Gibraltar.Agent");
-            Type logWriteModeType = Type.GetType("Gibraltar.Agent.LogWriteMode, Gibraltar.Agent");
+            Type logMessageSeverityType = Type.GetType("Gibraltar.Agent.LogMessageSeverity, Gibraltar.Agent")!;
+            Type logWriteModeType = Type.GetType("Gibraltar.Agent.LogWriteMode, Gibraltar.Agent")!;
 
             MethodInfo method = logManagerType.GetMethodPortable(
                 "Write",
@@ -1781,7 +1782,7 @@ namespace Halibut.Logging.LogProviders
 #endif
             }
 
-            public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception, params object[] formatParameters)
+            public bool Log(LogLevel logLevel, Func<string>? messageFunc, Exception? exception, params object[] formatParameters)
             {
                 if (messageFunc == null)
                 {
@@ -1829,15 +1830,16 @@ namespace Halibut.Logging.LogProviders
         internal static readonly int Error;
         internal static readonly int Critical;
 
-        [SuppressMessage("Microsoft.Performance", "CA1810:InitializeReferenceTypeStaticFieldsInline")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         static TraceEventTypeValues()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             var assembly = typeof(Uri).GetAssemblyPortable(); // This is to get to the System.dll assembly in a PCL compatible way.
             if (assembly == null)
             {
                 return;
             }
-            Type = assembly.GetType("System.Diagnostics.TraceEventType");
+            Type = assembly.GetType("System.Diagnostics.TraceEventType")!;
             if (Type == null) return;
             Verbose = (int)Enum.Parse(Type, "Verbose", false);
             Information = (int)Enum.Parse(Type, "Information", false);
@@ -1908,27 +1910,27 @@ namespace Halibut.Logging.LogProviders
         internal static MethodInfo GetMethodPortable(this Type type, string name)
         {
 #if LIBLOG_PORTABLE
-            return type.GetRuntimeMethods().SingleOrDefault(m => m.Name == name);
+            return type.GetRuntimeMethods().SingleOrDefault(m => m.Name == name)!;
 #else
-            return type.GetMethod(name);
+            return type.GetMethod(name)!;
 #endif
         }
 
         internal static MethodInfo GetMethodPortable(this Type type, string name, params Type[] types)
         {
 #if LIBLOG_PORTABLE
-            return type.GetRuntimeMethod(name, types);
+            return type.GetRuntimeMethod(name, types)!;
 #else
-            return type.GetMethod(name, types);
+            return type.GetMethod(name, types)!;
 #endif
         }
 
         internal static PropertyInfo GetPropertyPortable(this Type type, string name)
         {
 #if LIBLOG_PORTABLE
-            return type.GetRuntimeProperty(name);
+            return type.GetRuntimeProperty(name)!;
 #else
-            return type.GetProperty(name);
+            return type.GetProperty(name)!;
 #endif
         }
 
@@ -1944,21 +1946,21 @@ namespace Halibut.Logging.LogProviders
         internal static Type GetBaseTypePortable(this Type type)
         {
 #if LIBLOG_PORTABLE
-            return type.GetTypeInfo().BaseType;
+            return type.GetTypeInfo().BaseType!;
 #else
-            return type.BaseType;
+            return type.BaseType!;
 #endif
         }
 
 #if LIBLOG_PORTABLE
         internal static MethodInfo GetGetMethod(this PropertyInfo propertyInfo)
         {
-            return propertyInfo.GetMethod;
+            return propertyInfo.GetMethod!;
         }
 
         internal static MethodInfo GetSetMethod(this PropertyInfo propertyInfo)
         {
-            return propertyInfo.SetMethod;
+            return propertyInfo.SetMethod!;
         }
 #endif
 
@@ -1981,9 +1983,9 @@ namespace Halibut.Logging.LogProviders
 
     internal class DisposableAction : IDisposable
     {
-        private readonly Action _onDispose;
+        private readonly Action? _onDispose;
 
-        public DisposableAction(Action onDispose = null)
+        public DisposableAction(Action? onDispose = null)
         {
             _onDispose = onDispose;
         }

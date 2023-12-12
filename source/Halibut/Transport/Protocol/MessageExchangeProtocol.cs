@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Transport.Observability;
 
@@ -18,14 +19,16 @@ namespace Halibut.Transport.Protocol
     {
         readonly IMessageExchangeStream stream;
         readonly IRpcObserver rcpObserver;
+        readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
         {
             this.stream = stream;
             this.rcpObserver = rcpObserver;
+            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.log = log;
         }
 
@@ -38,7 +41,7 @@ namespace Halibut.Transport.Protocol
                 await PrepareExchangeAsClientAsync(cancellationToken);
                 
                 await stream.SendAsync(request, cancellationToken);
-                return await stream.ReceiveResponseAsync(cancellationToken);
+                return (await stream.ReceiveResponseAsync(cancellationToken))!;
             }
             finally
             {
@@ -87,13 +90,13 @@ namespace Halibut.Transport.Protocol
 
             for (var i = 0; i < maxAttempts; i++)
             {
-                await ReceiveAndProcessRequestAsync(stream, incomingRequestProcessor, cancellationToken);
+                await ReceiveAndProcessRequestAsSubscriberAsync(stream, incomingRequestProcessor, cancellationToken);
             }
         }
 
-        static async Task ReceiveAndProcessRequestAsync(IMessageExchangeStream stream, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, CancellationToken cancellationToken)
+        async Task ReceiveAndProcessRequestAsSubscriberAsync(IMessageExchangeStream stream, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, CancellationToken cancellationToken)
         {
-            var request = await stream.ReceiveRequestAsync(cancellationToken);
+            var request = await stream.ReceiveRequestAsync(halibutTimeoutsAndLimits.TcpClientReceiveRequestTimeoutForPolling, cancellationToken);
 
             if (request != null)
             {
@@ -156,7 +159,9 @@ namespace Halibut.Transport.Protocol
         {
             while (acceptClientRequests && !cancellationToken.IsCancellationRequested)
             {
-                var request = await stream.ReceiveRequestAsync(cancellationToken);
+                // This timeout is probably too high since we know that we either just send identification control messages
+                // or we just sent NEXT and PROCEED control messages.
+                var request = await stream.ReceiveRequestAsync(halibutTimeoutsAndLimits.TcpListeningNextRequestIdleTimeout, cancellationToken);
 
                 if (request == null || !acceptClientRequests)
                 {
@@ -174,7 +179,10 @@ namespace Halibut.Transport.Protocol
 
                 try
                 {
-                    if (!acceptClientRequests || cancellationToken.IsCancellationRequested || !await stream.ExpectNextOrEndAsync(cancellationToken))
+                    // This is the location a listening service will wait at when waiting for more work. If the connection (on the client) is
+                    // in the pool then the listening service is waiting here. 
+                    var timeForListeningServiceToWaitForTheNextRequest = halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout;
+                    if (!acceptClientRequests || cancellationToken.IsCancellationRequested || !await stream.ExpectNextOrEndAsync(timeForListeningServiceToWaitForTheNextRequest, cancellationToken))
                     {
                         return;
                     }
@@ -207,26 +215,36 @@ namespace Halibut.Transport.Protocol
             }
         }
         
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessage nextRequest, CancellationToken cancellationToken)
+        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessageWithCancellationToken? nextRequest, CancellationToken cancellationToken)
         {
             try
             {
                 if (nextRequest != null)
                 {
-                    var response = await SendAndReceiveRequest(nextRequest, cancellationToken);
-                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(nextRequest.CancellationToken, cancellationToken);
+                    var linkedCancellationToken = linkedTokenSource.Token;
+
+                    var response = await SendAndReceiveRequest(nextRequest.RequestMessage, linkedCancellationToken);
+                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
                 }
                 else
                 {
-                    await stream.SendAsync(nextRequest, cancellationToken);
+                    await stream.SendAsync<RequestMessage?>(null, cancellationToken);
                 }
             }
             catch (Exception ex)
             {
                 if (nextRequest != null)
                 {
-                    var response = ResponseMessage.FromException(nextRequest, ex);
-                    await pendingRequests.ApplyResponse(response, nextRequest.Destination);
+                    var cancellationException = nextRequest.CancellationToken.IsCancellationRequested ? new TransferringRequestCancelledException(ex) : ex;
+
+                    var response = ResponseMessage.FromException(nextRequest.RequestMessage, cancellationException);
+                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
+
+                    if (nextRequest.CancellationToken.IsCancellationRequested)
+                    {
+                        throw cancellationException;
+                    }
                 }
 
                 return false;
@@ -234,7 +252,16 @@ namespace Halibut.Transport.Protocol
 
             try
             {
-                if (!await stream.ExpectNextOrEndAsync(cancellationToken))
+                // The polling service will send the "NEXT" control message immediately after it has sent the response.
+                // Thus the NEXT control message is likely to have already arrived or will arrive in a very short amount
+                // of time
+                var receiveTimeout = halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout;
+                if (!halibutTimeoutsAndLimits.TcpClientHeartbeatTimeoutShouldActuallyBeUsed)
+                {
+                    receiveTimeout = halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout;
+                }
+                
+                if (!await stream.ExpectNextOrEndAsync(receiveTimeout, cancellationToken))
                 {
                     return false;
                 }
@@ -260,7 +287,7 @@ namespace Halibut.Transport.Protocol
             try
             {
                 await stream.SendAsync(nextRequest, cancellationToken);
-                return await stream.ReceiveResponseAsync(cancellationToken);
+                return (await stream.ReceiveResponseAsync(cancellationToken))!;
             }
             finally
             {

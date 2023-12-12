@@ -59,7 +59,7 @@ namespace Halibut.Transport.Protocol
                 // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
                 var streamCapturingSerializer = createStreamCapturingSerializer();
-                streamCapturingSerializer.Serializer.Serialize(bson, new MessageEnvelope<object> { Message = message });
+                streamCapturingSerializer.Serializer.Serialize(bson, new MessageEnvelope<object> { Message = message! });
 
                 serializedStreams = streamCapturingSerializer.DataStreams;
             }
@@ -75,7 +75,7 @@ namespace Halibut.Transport.Protocol
         {
             await using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {
-                Exception exceptionFromDeserialisation = null;
+                Exception? exceptionFromDeserialisation = null;
                 try
                 {
                     return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream, cancellationToken);
@@ -174,7 +174,9 @@ namespace Halibut.Transport.Protocol
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
         class MessageEnvelope<T>
         {
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
             public T Message { get; set; }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         }
     }
 }

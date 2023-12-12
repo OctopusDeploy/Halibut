@@ -11,6 +11,7 @@ using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests
 {
@@ -24,7 +25,7 @@ namespace Halibut.Tests
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(clientAndServiceTestCase, () =>
+            var (clientAndService, _, doSomeActionService, _) = await SetupPollingServerAndTentacle(clientAndServiceTestCase, () =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -45,7 +46,7 @@ namespace Halibut.Tests
             var started = DateTime.UtcNow;
             var calls = new List<DateTime>();
 
-            var (clientAndService, _, doSomeActionService) = await SetupPollingServerAndTentacle(clientAndServiceTestCase, () =>
+            var (clientAndService, _, doSomeActionService, portForwarderRef) = await SetupPollingServerAndTentacle(clientAndServiceTestCase, () =>
             {
                 calls.Add(DateTime.UtcNow);
             });
@@ -54,27 +55,27 @@ namespace Halibut.Tests
             {
                 await doSomeActionService.ActionAsync();
 
-                clientAndService.PortForwarder!.CloseExistingConnections();
+                portForwarderRef.Value.CloseExistingConnections();
 
                 // First Reconnect
                 try
                 {
                     await doSomeActionService.ActionAsync();
                 }
-                catch (HalibutClientException ex)
+                catch (HalibutClientException)
                 {
                     // Work around the known dequeue to a broken tcp connection issue
                     await doSomeActionService.ActionAsync();
                 }
 
-                clientAndService.PortForwarder!.CloseExistingConnections();
+                portForwarderRef.Value.CloseExistingConnections();
 
                 // Second Reconnect
                 try
                 {
                     await doSomeActionService.ActionAsync();
                 }
-                catch (HalibutClientException ex)
+                catch (HalibutClientException)
                 {
                     // Work around the known dequeue to a broken tcp connection issue
                     await doSomeActionService.ActionAsync();
@@ -96,12 +97,13 @@ namespace Halibut.Tests
 
         async Task<(LatestClientAndLatestServiceBuilder.ClientAndService,
                 IAsyncClientEchoService echoService,
-                IAsyncClientDoSomeActionService doSomeActionService)>
+                IAsyncClientDoSomeActionService doSomeActionService,
+                Reference<PortForwarder> portForwarderRef)>
             SetupPollingServerAndTentacle(ClientAndServiceTestCase clientAndServiceTestCase, Action doSomeActionServiceAction)
         {
             var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .As<LatestClientAndLatestServiceBuilder>()
-                .WithPortForwarding()
+                .WithPortForwarding(out var portForwarderRef)
                 .WithDoSomeActionService(doSomeActionServiceAction)
                 .WithEchoService()
                 .WithPollingReconnectRetryPolicy(() => new RetryPolicy(99999999, TimeSpan.Zero, TimeSpan.FromMinutes(1)))
@@ -112,7 +114,7 @@ namespace Halibut.Tests
 
             await EnsureTentacleIsConnected(echoService);
 
-            return (clientAndService, echoService, doSomeActionService);
+            return (clientAndService, echoService, doSomeActionService, portForwarderRef);
         }
 
         static async Task EnsureTentacleIsConnected(IAsyncClientEchoService echoService)

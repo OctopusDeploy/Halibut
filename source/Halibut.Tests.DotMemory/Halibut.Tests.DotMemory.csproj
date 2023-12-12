@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <VersionPrefix>0.0.0</VersionPrefix>
         <AssemblyName>Halibut.Tests</AssemblyName>
@@ -6,6 +6,8 @@
         <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
         <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
         <LangVersion>9.0</LangVersion>
+	    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+	    <Nullable>enable</Nullable>
     </PropertyGroup>
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
         <TargetFrameworks>net48;net6.0;net8.0</TargetFrameworks>

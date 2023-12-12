@@ -71,7 +71,15 @@ namespace Halibut.Transport.Protocol
 
         public async Task SendProceedAsync(CancellationToken cancellationToken)
         {
-            await SendControlMessageAsync(Proceed, cancellationToken);
+            var sendTimeout = this.stream.GetReadAndWriteTimeouts();
+            if (halibutTimeoutsAndLimits.TcpClientHeartbeatTimeoutShouldActuallyBeUsed)
+            {
+                sendTimeout = halibutTimeoutsAndLimits.TcpClientHeartbeatTimeout;
+            }
+            
+            await WithTimeout(
+                sendTimeout,
+                async () => await SendControlMessageAsync(Proceed, cancellationToken));
         }
 
         public async Task SendEndAsync(CancellationToken cancellationToken)
@@ -81,9 +89,9 @@ namespace Halibut.Transport.Protocol
                 async () => await SendControlMessageAsync(End, cancellationToken));
         }
 
-        public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
+        public async Task<bool> ExpectNextOrEndAsync(TimeSpan readTimeout, CancellationToken cancellationToken)
         {
-            var line = await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken);
+            var line = await stream.WithReadTimeout(readTimeout, async () => await controlMessageReader.ReadUntilNonEmptyControlMessageAsync(stream, cancellationToken));
     
             return line switch
             {
@@ -177,24 +185,26 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
 
-        public async Task<RequestMessage> ReceiveRequestAsync(CancellationToken cancellationToken)
+        public async Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
         {
+            await stream.WithReadTimeout(
+                timeoutForReceivingTheFirstByte,
+                async () => await stream.WaitForDataToBeAvailableAsync(cancellationToken));
+            
             return await ReceiveAsync<RequestMessage>(cancellationToken);
         }
 
-        public async Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
+        public async Task<ResponseMessage?> ReceiveResponseAsync(CancellationToken cancellationToken)
         {
             // Wait for data to become available using existing timeouts, then once we have data streaming in, use the smaller timeout (so we do not wait as long if an error happens here).
             await stream.WithReadTimeout(
                 halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout,
                 async () => await stream.WaitForDataToBeAvailableAsync(cancellationToken));
 
-            return await stream.WithReadTimeout(
-                halibutTimeoutsAndLimits.TcpClientReceiveResponseTransmissionAfterInitialReadTimeout,
-                async () => await ReceiveAsync<ResponseMessage>(cancellationToken));
+            return await ReceiveAsync<ResponseMessage>(cancellationToken);
         }
 
-        async Task<T> ReceiveAsync<T>(CancellationToken cancellationToken)
+        async Task<T?> ReceiveAsync<T>(CancellationToken cancellationToken)
         {
             var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
             await ReadStreamsAsync(dataStreams, cancellationToken);
@@ -202,14 +212,9 @@ namespace Halibut.Transport.Protocol
             return result;
         }
 
-        async Task WithTimeout(SendReceiveTimeout timeout, Func<Task> func)
+        async Task WithTimeout(SendReceiveTimeout? timeout, Func<Task> func)
         {
             await stream.WithTimeout(timeout, func);
-        }
-
-        async Task<T> WithTimeout<T>(SendReceiveTimeout timeout, Func<Task<T>> func)
-        {
-            return await stream.WithTimeout(timeout, func);
         }
 
         void SetReadAndWriteTimeouts(SendReceiveTimeout timeout)
@@ -293,7 +298,7 @@ namespace Halibut.Transport.Protocol
         {
             var dataStream = deserializedStreams.FirstOrDefault(d => d.Id == id);
             
-            if (dataStream == null)
+            if (dataStream is null)
             {
                 throw new Exception("Unexpected stream!");
             }

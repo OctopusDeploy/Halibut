@@ -21,7 +21,7 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
                        .WithEchoService()
-                       .WithPortForwarding()
+                       .WithPortForwarding(out var portForwarderRef)
                        .Build(CancellationToken))
             {
                 var data = new byte[1024];
@@ -31,7 +31,7 @@ namespace Halibut.Tests
 
                 await echo.SayHelloAsync("Bob");
                 
-                clientAndService.PortForwarder!.PauseExistingConnections();
+                portForwarderRef.Value.PauseExistingConnections();
 
                 var sw = Stopwatch.StartNew();
                 await echo.SayHelloAsync("Bob");

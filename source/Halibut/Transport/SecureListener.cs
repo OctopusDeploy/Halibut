@@ -48,9 +48,11 @@ namespace Halibut.Transport
         readonly IConnectionsObserver connectionsObserver;
         ILog log;
         TcpListener listener;
-        Thread backgroundThread;
+        Thread? backgroundThread;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public SecureListener(
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
             IPEndPoint endPoint, 
             X509Certificate2 serverCertificate, 
             ExchangeProtocolBuilder exchangeProtocolBuilder, 
@@ -129,12 +131,12 @@ namespace Halibut.Transport
 
             const int errorThreshold = 3;
 
-            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable) null)
+            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable) null!)
             {
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cts.IsCancellationRequested)
                 {
-                    TcpClient client = null;
+                    TcpClient? client = null;
                     try
                     {
                         if (!IsWindows())
@@ -162,7 +164,7 @@ namespace Halibut.Transport
                     catch (Exception ex)
                     {
                         numberOfFailedAttemptsInRow++;
-                        log.WriteException(EventType.ErrorInInitialisation, "Error accepting TCP client: {0}", ex, client.GetRemoteEndpointString());
+                        log.WriteException(EventType.ErrorInInitialisation, "Error accepting TCP client: {0}", ex, client!.GetRemoteEndpointString());
                         // Slow down the logs in case an exception is immediately encountered after X failed AcceptTcpClient calls
                         if (numberOfFailedAttemptsInRow >= errorThreshold)
                         {
@@ -339,7 +341,7 @@ namespace Halibut.Transport
             await stream.FlushAsync();
         }
 
-        static string GetThumbprint(SslStream stream)
+        static string? GetThumbprint(SslStream stream)
         {
             if (stream.RemoteCertificate == null)
             {
@@ -375,7 +377,7 @@ namespace Halibut.Transport
             return exchangeAction(exchangeProtocolBuilder(stream, log), cancellationToken);
         }
 
-        static bool AcceptAnySslCertificate(object sender, X509Certificate clientCertificate, X509Chain chain, SslPolicyErrors sslpolicyerrors)
+        static bool AcceptAnySslCertificate(object sender, X509Certificate? clientCertificate, X509Chain? chain, SslPolicyErrors sslpolicyerrors)
         {
             return true;
         }

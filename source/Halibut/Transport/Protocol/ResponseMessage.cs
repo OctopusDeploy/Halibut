@@ -1,5 +1,6 @@
 using System;
 using Halibut.Diagnostics;
+using Halibut.Exceptions;
 using Newtonsoft.Json;
 
 namespace Halibut.Transport.Protocol
@@ -7,15 +8,17 @@ namespace Halibut.Transport.Protocol
     public class ResponseMessage
     {
         [JsonProperty("id")]
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public string Id { get; set; }
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         [JsonProperty("error")]
-        public ServerError Error { get; set; }
+        public ServerError? Error { get; set; }
 
         [JsonProperty("result")]
-        public object Result { get; set; }
+        public object? Result { get; set; }
 
-        public static ResponseMessage FromResult(RequestMessage request, object result)
+        public static ResponseMessage FromResult(RequestMessage request, object? result)
         {
             return new ResponseMessage { Id = request.Id, Result = result };
         }
@@ -32,12 +35,14 @@ namespace Halibut.Transport.Protocol
 
         internal static ServerError ServerErrorFromException(Exception ex)
         {
-            string ErrorType = null;
-            if (ex is HalibutClientException)
+            string? errorType = null;
+
+            if (ex is HalibutClientException or RequestCancelledException)
             {
-                ErrorType = ex.GetType().FullName;
+                errorType = ex.GetType().FullName;
             }
-            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), HalibutErrorType = ErrorType };
+
+            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), HalibutErrorType = errorType };
         }
     }
 }

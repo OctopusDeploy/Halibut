@@ -19,6 +19,16 @@ namespace Halibut.Diagnostics
         public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
+        ///     We believe that PollingRequestMaximumMessageProcessingTimeout is redundant.
+        ///     This makes clients talking to polling services have similar behaviour to talking to listening services.
+        ///     In listening we wait for the request to finish or for an error.
+        ///     Enabling this results in the same behaviour as listening.
+        /// 
+        ///     This setting allows us to feature toggle turning off PollingRequestMaximumMessageProcessingTimeout.
+        /// </summary>
+        public bool RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout { get; set; }
+
+        /// <summary>
         ///     The amount of time to wait between connection requests to the remote endpoint (applies
         ///     to both polling and listening connections). Can be overridden via the ServiceEndPoint.
         /// </summary>
@@ -45,19 +55,34 @@ namespace Halibut.Diagnostics
         public int RewindableBufferStreamSize { get; set; } = 8192;
 
         /// <summary>
-        ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully
+        /// Amount of time to wait for a TCP read/write to complete successfully.
+        ///
+        /// This Timeout is used when no other more specific timeout applies.
+        /// 
+        /// This applies to:
+        /// - Initial authentication and identification
+        /// - Sending and receiving of Request/Response messages, except for the first byte in some instances.
+        /// - Sending/receiving data streams. 
         /// </summary>
         public SendReceiveTimeout TcpClientTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
 
         /// <summary>
-        ///     Amount of time to wait for a response from an RPC call.
+        ///    Approximately the amount of time the service can take to execute the RPC call.
+        ///    
+        ///    Specifically the amount of time to wait for the first byte of the response to arrive.
         /// </summary>
         public TimeSpan TcpClientReceiveResponseTimeout { get; set; } = TimeSpan.FromMinutes(10);
-
+        
         /// <summary>
-        ///     Amount of time to wait when receiving a response from an RPC call, after data has started being received.
+        ///     Amount of time the polling service will wait for a request from an RPC call.
+        ///     Specifically the amount of time to wait for the first byte of the request to arrive.
+        ///
+        ///     This value must never be less than the PollingQueueWaitTimeout, of the client, since this
+        ///     is the timeout of the long poll the polling service makes to the client to get the next request.
+        ///
+        ///     Currently set to 10 minutes as that is what the timeout used to be. 
         /// </summary>
-        public TimeSpan TcpClientReceiveResponseTransmissionAfterInitialReadTimeout { get; set; } = TimeSpan.FromMinutes(10);
+        public TimeSpan TcpClientReceiveRequestTimeoutForPolling { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         ///     Amount of time a connection can stay in the pool
@@ -65,9 +90,29 @@ namespace Halibut.Diagnostics
         public TimeSpan TcpClientPooledConnectionTimeout { get; set; } = TimeSpan.FromMinutes(9);
         
         /// <summary>
+        /// The duration that the listening service will wait for the next request (specifically the
+        /// control message NEXT) before closing the connection.
+        ///
+        /// The default is ten minutes, and so the service on an existing TCP connection will wait ten
+        /// minutes for another request before "idling out" and closing the connection.
+        ///
+        /// Connections can be kept idle in the pool (client side) for no more than this timeout, thus 
+        /// TcpClientPooledConnectionTimeout ought to be less than this.
+        /// </summary>
+        public TimeSpan TcpListeningNextRequestIdleTimeout { get; set; } = TimeSpan.FromMinutes(10);
+
+        /// <summary>
         ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully for a control message
+        ///     This applies only to NEXT/PROCEED/END control messages, and not for the NEXT control message for a
+        ///     listening service. 
         /// </summary>
         public SendReceiveTimeout TcpClientHeartbeatTimeout { get; set; } = new(sendTimeout: TimeSpan.FromSeconds(60), receiveTimeout: TimeSpan.FromSeconds(60));
+
+        /// <summary>
+        ///     When true the TcpClientHeartbeatTimeout is used in all places it can be.
+        ///     Will be removed in the future.
+        /// </summary>
+        public bool TcpClientHeartbeatTimeoutShouldActuallyBeUsed { get; set; } = false;
         
         /// <summary>
         ///     Amount of time to wait for a successful TCP or WSS connection
@@ -82,23 +127,26 @@ namespace Halibut.Diagnostics
         public TimeSpan PollingQueueWaitTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         // After a client/server message exchange is complete, the client returns
-        // the connection to the pool but the server continues to block and reads
-        // from the connection until the TcpClientReceiveTimeout.
+        // the connection to the pool but the service continues to block and reads
+        // from the connection until the TcpListeningNextRequestIdleTimeout.
         // If TcpClientPooledConnectionTimeout is greater than TcpClientReceiveTimeout
         // when the client goes to the pool to get a connection for the next
         // exchange it can get one that has timed out, so make sure our pool
         // timeout is smaller than the tcp timeout.
+        // Note that if a timed out connection is picked up, the control messages initially
+        // sent in the exchange will detect the dead connection resulting in a new connection
+        // created for the request.
         public TimeSpan SafeTcpClientPooledConnectionTimeout
         {
             get
             {
-                if (TcpClientPooledConnectionTimeout < TcpClientTimeout.ReceiveTimeout)
+                if (TcpClientPooledConnectionTimeout < TcpListeningNextRequestIdleTimeout)
                 {
                     return TcpClientPooledConnectionTimeout;
                 }
 
-                var timeout = TcpClientTimeout.ReceiveTimeout - TimeSpan.FromSeconds(10);
-                return timeout > TimeSpan.Zero ? timeout : TcpClientTimeout.ReceiveTimeout;
+                var timeout = TcpListeningNextRequestIdleTimeout - TimeSpan.FromSeconds(10);
+                return timeout > TimeSpan.Zero ? timeout : TcpListeningNextRequestIdleTimeout;
             }
         }
 
@@ -121,5 +169,21 @@ namespace Halibut.Diagnostics
         /// The duration a TCP connection will wait for a keepalive response before sending another keepalive probe.
         /// </summary>
         public TimeSpan TcpKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(5);
+        
+        /// <summary>
+        /// In the future these will become the default
+        /// </summary>
+        /// <returns></returns>
+        public static HalibutTimeoutsAndLimits RecommendedValues()
+        {
+            return new HalibutTimeoutsAndLimits()
+            {
+                // In general all writes/read calls should take less than a minute.
+                TcpClientTimeout = new(sendTimeout: TimeSpan.FromMinutes(1), receiveTimeout: TimeSpan.FromMinutes(1)),
+                TcpClientReceiveResponseTimeout = TimeSpan.FromMinutes(5), // ~ 5 minutes to execute a RPC call
+                TcpClientReceiveRequestTimeoutForPolling = new HalibutTimeoutsAndLimits().PollingQueueWaitTimeout + TimeSpan.FromSeconds(30),
+                TcpClientHeartbeatTimeoutShouldActuallyBeUsed = true
+            };
+        }
     }
 }

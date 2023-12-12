@@ -1,16 +1,11 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
-using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
-using Halibut.Tests.Builders;
-using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
@@ -31,46 +26,25 @@ namespace Halibut.Tests.Support
     {
         public ServiceConnectionType ServiceConnectionType { get; }
 
-        ServiceFactoryBuilder serviceFactoryBuilder = new();
-        IServiceFactory? serviceFactory;
-        readonly CertAndThumbprint serviceCertAndThumbprint;
-        string clientTrustsThumbprint; 
-        readonly CertAndThumbprint clientCertAndThumbprint;
-        string serviceTrustsThumbprint;
-        IRpcObserver? clientRpcObserver;
+        readonly LatestClientBuilder clientBuilder;
+        readonly LatestServiceBuilder serviceBuilder;
 
-
-        bool createService = true;
-        bool createClient = true;
-        readonly List<Uri> pollingClientUris = new();
-        Func<int, PortForwarder>? portForwarderFactory;
-        Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
-        Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
-        Reference<PortForwarder>? portForwarderReference;
-        Func<RetryPolicy>? pollingReconnectRetryPolicy;
         ProxyFactory? proxyFactory;
-        LogLevel halibutLogLevel = LogLevel.Trace;
-        ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
-        ConcurrentDictionary<string, ILog>? serviceInMemoryLoggers;
-        ITrustProvider clientTrustProvider;
-        Func<string, string, UnauthorizedClientConnectResponse> clientOnUnauthorizedClientConnect;
-        HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+        Reference<HttpProxyService>? proxyServiceReference;
 
-        IStreamFactory? clientStreamFactory;
-        IStreamFactory? serviceStreamFactory;
-        IConnectionsObserver serviceConnectionsObserver;
-        IConnectionsObserver clientConnectionsObserver;
+        Reference<PortForwarder>? clientPortForwarderReference;
+        Reference<PortForwarder>? servicePortForwarderReference;
+        Reference<PortForwarder>? portForwarderReference;
 
         public LatestClientAndLatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint)
         {
-            this.ServiceConnectionType = serviceConnectionType;
-            this.serviceCertAndThumbprint = serviceCertAndThumbprint;
-            this.clientCertAndThumbprint = clientCertAndThumbprint;
-            clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
-            serviceTrustsThumbprint = clientCertAndThumbprint.Thumbprint;
+            ServiceConnectionType = serviceConnectionType;
+
+            clientBuilder = new LatestClientBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint);
+            serviceBuilder = new LatestServiceBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint);
         }
 
         public static LatestClientAndLatestServiceBuilder Polling()
@@ -102,127 +76,71 @@ namespace Halibut.Tests.Support
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
         }
-        
-        /// <summary>
-        ///     Ie no tentacle.
-        ///     In the case of listening, a TCPListenerWhichKillsNewConnections will be created. This will cause connections to
-        ///     that port to be killed immediately.
-        /// </summary>
-        /// <returns></returns>
-        public LatestClientAndLatestServiceBuilder NoService()
-        {
-            createService = false;
-            return this;
-        }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.NoService()
-        {
-            return NoService();
-        }
-        
-        public LatestClientAndLatestServiceBuilder WithPollingClients(IEnumerable<Uri> pollingClientUris)
-        {
-            createClient = false;
-            this.pollingClientUris.AddRange(pollingClientUris);
-
-            return this;
-        }
 
         public LatestClientAndLatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
-            this.serviceStreamFactory = streamFactory;
-            this.clientStreamFactory = streamFactory;
+            clientBuilder.WithStreamFactory(streamFactory);
+            serviceBuilder.WithStreamFactory(streamFactory);
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithClientStreamFactory(IStreamFactory clientStreamFactory)
         {
-            this.clientStreamFactory = clientStreamFactory;
+            clientBuilder.WithStreamFactory(clientStreamFactory);
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithServiceStreamFactory(IStreamFactory serviceStreamFactory)
         {
-            this.serviceStreamFactory = serviceStreamFactory;
+            serviceBuilder.WithStreamFactory(serviceStreamFactory);
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithServiceConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
-            this.serviceConnectionsObserver = connectionsObserver;
-            return this;
-        }
-        
-        public LatestClientAndLatestServiceBuilder WithClientConnectionsObserver(IConnectionsObserver connectionsObserver)
-        {
-            this.clientConnectionsObserver = connectionsObserver;
-            return this;
-        }
-        
-        public LatestClientAndLatestServiceBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
-        {
-            this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            serviceBuilder.WithServiceConnectionsObserver(connectionsObserver);
             return this;
         }
 
-        public LatestClientAndLatestServiceBuilder WithAsyncConventionsDisabled()
+        public LatestClientAndLatestServiceBuilder WithClientConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
-            serviceFactoryBuilder = serviceFactoryBuilder.WithConventionVerificationDisabled();
+            clientBuilder.WithClientConnectionsObserver(connectionsObserver);
+            return this;
+        }
+
+        public LatestClientAndLatestServiceBuilder WithHalibutTimeoutsAndLimits(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            clientBuilder.WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits);
+            serviceBuilder.WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits);
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithServiceFactory(IServiceFactory serviceFactory)
         {
-            this.serviceFactory = serviceFactory;
+            serviceBuilder.WithServiceFactory(serviceFactory);
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithAsyncService<TContract, TClientContract>(Func<TClientContract> implementation)
         {
-            serviceFactoryBuilder.WithService<TContract, TClientContract>(implementation);
-            
-            if (serviceFactory != null)
-            {
-                if (serviceFactory is DelegateServiceFactory delegateServiceFactory)
-                {
-                    delegateServiceFactory.Register<TContract, TClientContract>(implementation);
-                }
-                else
-                {
-                    throw new Exception("WithService can only be used with a custom ServiceFactory if it is a DelegateServiceFactory");
-                }
-            }
-
+            serviceBuilder.WithAsyncService<TContract, TClientContract>(implementation);
             return this;
         }
 
-        public LatestClientAndLatestServiceBuilder WithPortForwarding()
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
-            return WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).Build());
+            return this.WithPortForwarding(out portForwarder, portForwarderFactory);
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
+        public LatestClientAndLatestServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
         {
-            return this.WithPortForwarding(portForwarderFactory);
-        }
+            // Based on ServiceConnectionType, the port forwarder will be created in either clientBuilder or serviceBuilder.
+            clientBuilder.WithPortForwarding(out clientPortForwarderReference, portForwarderFactory);
+            serviceBuilder.WithPortForwarding(out servicePortForwarderReference, portForwarderFactory);
 
-        public LatestClientAndLatestServiceBuilder WithPortForwarding(Func<int, PortForwarder> portForwarderFactory)
-        {
-            if (this.portForwarderFactory != null)
-            {
-                throw new NotSupportedException("A PortForwarderFactory is already registered with the Builder. Only one PortForwarder is supported.");
-            }
-
-            this.portForwarderFactory = portForwarderFactory;
-            return this;
-        }
-
-        public LatestClientAndLatestServiceBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder)
-        {
-            if(this.portForwarderFactory == null) this.WithPortForwarding();
-
-            this.portForwarderReference = new Reference<PortForwarder>();
-            portForwarder = this.portForwarderReference;
+            portForwarderReference = new Reference<PortForwarder>();
+            portForwarder = portForwarderReference;
 
             return this;
         }
@@ -259,38 +177,42 @@ namespace Halibut.Tests.Support
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
-        
+
         public LatestClientAndLatestServiceBuilder WithCachingService()
         {
             return this.WithAsyncService<ICachingService, IAsyncCachingService>(() => new AsyncCachingService());
         }
 
-        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy()
+        IClientAndServiceBuilder IClientAndServiceBuilder.WithProxy(out Reference<HttpProxyService> proxyService)
         {
-            return WithProxy();
+            return WithProxy(out proxyService);
         }
 
-        public LatestClientAndLatestServiceBuilder WithProxy()
+        public LatestClientAndLatestServiceBuilder WithProxy(out Reference<HttpProxyService> proxyService)
         {
             this.proxyFactory = new ProxyFactory();
+
+            proxyServiceReference = new Reference<HttpProxyService>();
+            proxyService = proxyServiceReference;
+
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
-            this.pendingRequestQueueFactory = pendingRequestQueueFactory;
+            clientBuilder.WithPendingRequestQueueFactory(pendingRequestQueueFactory);
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactoryBuilder(Action<PendingRequestQueueFactoryBuilder> pendingRequestQueueFactoryBuilder)
         {
-            this.pendingRequestQueueFactoryBuilder = pendingRequestQueueFactoryBuilder;
+            clientBuilder.WithPendingRequestQueueFactoryBuilder(pendingRequestQueueFactoryBuilder);
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
-            this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
+            serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
             return this;
         }
 
@@ -298,54 +220,53 @@ namespace Halibut.Tests.Support
         {
             return WithHalibutLoggingLevel(halibutLogLevel);
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithHalibutLoggingLevel(LogLevel halibutLogLevel)
         {
-            this.halibutLogLevel = halibutLogLevel;
+            clientBuilder.WithHalibutLoggingLevel(halibutLogLevel);
+            serviceBuilder.WithHalibutLoggingLevel(halibutLogLevel);
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder RecordingClientLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
         {
-            inMemoryLoggers = new ConcurrentDictionary<string, ILog>();
-            this.clientInMemoryLoggers = inMemoryLoggers;
+            clientBuilder.RecordingClientLogs(out inMemoryLoggers);
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder RecordingServiceLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
         {
-            inMemoryLoggers = new ConcurrentDictionary<string, ILog>(); 
-            this.serviceInMemoryLoggers = inMemoryLoggers;
+            serviceBuilder.RecordingServiceLogs(out inMemoryLoggers);
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithClientOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
         {
-            clientOnUnauthorizedClientConnect = onUnauthorizedClientConnect;
+            clientBuilder.WithClientOnUnauthorizedClientConnect(onUnauthorizedClientConnect);
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithClientTrustProvider(ITrustProvider trustProvider)
         {
-            clientTrustProvider = trustProvider;
+            clientBuilder.WithClientTrustProvider(trustProvider);
             return this;
         }
 
         public LatestClientAndLatestServiceBuilder WithClientTrustingTheWrongCertificate()
         {
-            clientTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
+            clientBuilder.WithClientTrustingTheWrongCertificate();
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithServiceTrustingTheWrongCertificate()
         {
-            serviceTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
+            serviceBuilder.WithServiceTrustingTheWrongCertificate();
             return this;
         }
-        
+
         public LatestClientAndLatestServiceBuilder WithClientRpcObserver(IRpcObserver? clientRpcObserver)
         {
-            this.clientRpcObserver = clientRpcObserver;
+            clientBuilder.WithClientRpcObserver(clientRpcObserver);
             return this;
         }
 
@@ -356,301 +277,92 @@ namespace Halibut.Tests.Support
 
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
-            var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndLatestServiceBuilder>();
-            CancellationTokenSource cancellationTokenSource = new();
-            
-            serviceFactory ??= serviceFactoryBuilder.Build();
-            var octopusLogFactory = BuildClientLogger();
-
-            var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
-
-            HalibutRuntime? client = null;
-            if (createClient)
-            {
-                var clientBuilder = new HalibutRuntimeBuilder()
-                    .WithServerCertificate(clientCertAndThumbprint.Certificate2)
-                    .WithLogFactory(octopusLogFactory)
-                    .WithPendingRequestQueueFactory(factory)
-                    .WithTrustProvider(clientTrustProvider)
-                    .WithStreamFactoryIfNotNull(clientStreamFactory)
-                    .WithConnectionsObserver(clientConnectionsObserver)
-                    .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                    .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect);
-
-                if (clientRpcObserver is not null)
-                {
-                    clientBuilder.WithRpcObserver(clientRpcObserver);
-                }
-
-                client = clientBuilder.Build();
-                client.Trust(clientTrustsThumbprint);
-            }
-            
-
-            HalibutRuntime? service = null;
-            if (createService)
-            {
-                var serviceBuilder = new HalibutRuntimeBuilder()
-                    .WithServiceFactory(serviceFactory)
-                    .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
-                    .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                    .WithStreamFactoryIfNotNull(serviceStreamFactory)
-                    .WithConnectionsObserver(serviceConnectionsObserver)
-                    .WithLogFactory(BuildServiceLogger());
-
-                if(pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
-                service = serviceBuilder.Build();
-            }
-
-            var disposableCollection = new DisposableCollection();
-            PortForwarder? portForwarder = null;
             var httpProxy = proxyFactory?.WithDelaySendingSectionsOfHttpHeaders(true).Build();
-            ProxyDetails? httpProxyDetails = null;
 
             if (httpProxy != null)
             {
                 await httpProxy.StartAsync();
-                httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint.Port, ProxyType.HTTP);
+                var httpProxyDetails = new ProxyDetails("localhost", httpProxy.Endpoint!.Port, ProxyType.HTTP);
+
+                clientBuilder.WithProxyDetails(httpProxyDetails);
+                serviceBuilder.WithProxyDetails(httpProxyDetails);
+
+                if (proxyServiceReference is not null)
+                {
+                    proxyServiceReference.Value = httpProxy;
+                }
             }
 
-            Uri serviceUri;
-            Uri? clientUri = null;
+            var client = await clientBuilder.Build(cancellationToken);
+            if (client.ListeningUri is not null)
+            {
+                serviceBuilder.WithListeningClient(client.ListeningUri);
+            }
             
-            if (ServiceConnectionType == ServiceConnectionType.Polling)
+            var service = await serviceBuilder.Build(cancellationToken);
+
+            if (portForwarderReference != null)
             {
-                serviceUri = new Uri("poll://SQ-TENTAPOLL");
-
-                var clientUrisToPoll = pollingClientUris.ToList();
-                if (createClient)
-                {
-                    var clientListenPort = client!.Listen();
-
-                    portForwarder = portForwarderFactory?.Invoke(clientListenPort);
-                    
-                    clientUri = new Uri($"https://localhost:{portForwarder?.ListeningPort ?? clientListenPort}");
-                    clientUrisToPoll.Add(clientUri);
-                }
-                
-                if (service != null)
-                {
-                    foreach (var clientUriToPoll in clientUrisToPoll)
-                    {
-                        service.Poll(
-                            serviceUri,
-                            new ServiceEndPoint(clientUriToPoll, serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits),
-                            CancellationToken.None);
-                    }
-                }
-            }
-            else if (ServiceConnectionType == ServiceConnectionType.PollingOverWebSocket)
-            {
-                serviceUri = new Uri("poll://SQ-TENTAPOLL");
-                
-                var clientUrsToPoll = pollingClientUris.ToList();
-                if (createClient)
-                {
-                    var webSocketListeningInfo = await TryListenWebSocket.WebSocketListeningPort(logger, client, cancellationToken);
-
-                    var webSocketSslCertificate = new WebSocketSslCertificateBuilder(webSocketListeningInfo.WebSocketSslCertificateBindingAddress)
-                        .WithCertificate(clientCertAndThumbprint)
-                        .Build();
-                    disposableCollection.Add(webSocketSslCertificate);
-
-                    portForwarder = portForwarderFactory?.Invoke(webSocketListeningInfo.WebSocketListeningPort);
-
-                    clientUri = new Uri($"wss://localhost:{portForwarder?.ListeningPort ?? webSocketListeningInfo.WebSocketListeningPort}/{webSocketListeningInfo.WebSocketPath}");
-                    clientUrsToPoll.Add(clientUri);
-                }
-
-                if (service != null)
-                {
-                    foreach (var clientUriToPoll in clientUrsToPoll)
-                    {
-                        service.Poll(
-                            serviceUri,
-                            new ServiceEndPoint(clientUriToPoll, serviceTrustsThumbprint, httpProxyDetails, service.TimeoutsAndLimits),
-                            CancellationToken.None);
-                    }
-                }
-            }
-            else if (ServiceConnectionType == ServiceConnectionType.Listening)
-            {
-                int listenPort;
-                if (service != null)
-                {
-                    service.Trust(serviceTrustsThumbprint);
-                    listenPort = service.Listen();
-                }
-                else
-                {
-                    var dummyTentacle = new TCPListenerWhichKillsNewConnections();
-                    disposableCollection.Add(dummyTentacle);
-                    listenPort = dummyTentacle.Port;
-                }
-
-                portForwarder = portForwarderFactory?.Invoke(listenPort);
+                // Only one of these will have created a port forwarder. Use that one.
+                var portForwarder = clientPortForwarderReference?.Value ?? servicePortForwarderReference?.Value;
                 if (portForwarder != null)
                 {
-                    listenPort = portForwarder.ListeningPort;
+                    portForwarderReference.Value = portForwarder;
                 }
-
-                serviceUri = new Uri("https://localhost:" + listenPort);
             }
-            else
-            {
-                throw new NotSupportedException();
-            }
-
-            if (portForwarderReference != null && portForwarder != null)
-            {
-                portForwarderReference.Value = portForwarder;
-            }
-
-            return new ClientAndService(client, clientUri, service, serviceUri, clientTrustsThumbprint, portForwarder, disposableCollection, httpProxy, httpProxyDetails, cancellationTokenSource);
-        }
-
-        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
-        {
-            if (pendingRequestQueueFactory != null)
-            {
-                return pendingRequestQueueFactory(octopusLogFactory);
-            }
-
-            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory);
-
-            if (this.pendingRequestQueueFactoryBuilder != null)
-            {
-                this.pendingRequestQueueFactoryBuilder(pendingRequestQueueFactoryBuilder);
-            }
-
-            var factory = pendingRequestQueueFactoryBuilder.Build();
-            return factory;
-        }
-
-        ILogFactory BuildClientLogger()
-        {
-            if (clientInMemoryLoggers == null)
-            {
-                return new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory();
-            }
-
-
-
-            return new AggregateLogWriterLogCreator(
-                    new TestContextLogCreator("Client", halibutLogLevel),
-                s =>
-                {
-                    var logger = new InMemoryLogWriter();
-                    clientInMemoryLoggers[s] = logger;
-                    return new[] {logger};
-                }
-            )
-                .ToCachingLogFactory();
-        }
-        
-        ILogFactory BuildServiceLogger()
-        {
-            if (serviceInMemoryLoggers == null)
-            {
-                return new TestContextLogCreator("Service", halibutLogLevel).ToCachingLogFactory();
-            }
-
-            return new AggregateLogWriterLogCreator(
-                    new TestContextLogCreator("Service", halibutLogLevel),
-                    s =>
-                    {
-                        var logger = new InMemoryLogWriter();
-                        serviceInMemoryLoggers[s] = logger;
-                        return new[] {logger};
-                    }
-                )
-                .ToCachingLogFactory();
+            return new ClientAndService(client, service, httpProxy);
         }
 
         public class ClientAndService : IClientAndService
         {
-            public Uri ServiceUri { get; }
-            readonly string thumbprint;
-            readonly DisposableCollection disposableCollection;
-            readonly ProxyDetails? proxyDetails;
-            readonly CancellationTokenSource cancellationTokenSource;
+            readonly LatestClient client;
+            readonly LatestService service;
+            readonly HttpProxyService? httpProxy;
 
             public ClientAndService(
-                HalibutRuntime? client,
-                Uri? clientUri,
-                HalibutRuntime service,
-                Uri serviceUri,
-                string thumbprint,
-                PortForwarder? portForwarder,
-                DisposableCollection disposableCollection,
-                HttpProxyService? proxy,
-                ProxyDetails? proxyDetails,
-                CancellationTokenSource cancellationTokenSource)
+                LatestClient client,
+                LatestService service,
+                HttpProxyService? proxy)
             {
-                Client = client;
-                ClientUri = clientUri;
-                Service = service;
-                ServiceUri = serviceUri;
-                this.thumbprint = thumbprint;
-                PortForwarder = portForwarder;
-                HttpProxy = proxy;
-                this.disposableCollection = disposableCollection;
-                this.proxyDetails = proxyDetails;
-                this.cancellationTokenSource = cancellationTokenSource;
+                this.client = client;
+                this.service = service;
+
+                httpProxy = proxy;
             }
 
-            public HalibutRuntime? Client { get; }
-            public Uri? ClientUri { get; }
-            public ServiceEndPoint ServiceEndPoint => GetServiceEndPoint();
-
-            public HalibutRuntime? Service { get; }
-            public PortForwarder? PortForwarder { get; }
-            public HttpProxyService? HttpProxy { get; }
+            public Uri ServiceUri => service.ServiceUri;
+            public HalibutRuntime Client => client.Client;
+            public HalibutRuntime Service => service.Service;
 
             public ServiceEndPoint GetServiceEndPoint()
             {
-                return new ServiceEndPoint(ServiceUri, thumbprint, proxyDetails, Client.TimeoutsAndLimits);
+                return client.GetServiceEndPoint(ServiceUri);
             }
-            
+
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint)
             {
-                var serviceEndpoint = GetServiceEndPoint();
-                modifyServiceEndpoint(serviceEndpoint);
-                return Client.CreateAsyncClient<TService, TAsyncClientService>(serviceEndpoint);
+                return client.CreateClient<TService, TAsyncClientService>(ServiceUri, modifyServiceEndpoint);
             }
-            
+
+            public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>(Func<ServiceEndPoint, ServiceEndPoint> modifyServiceEndpoint)
+            {
+                return client.CreateClient<TService, TAsyncClientService>(ServiceUri, modifyServiceEndpoint);
+            }
+
             public TAsyncClientService CreateAsyncClient<TService, TAsyncClientService>()
             {
-                return Client.CreateAsyncClient<TService, TAsyncClientService>(ServiceEndPoint);
+                return client.CreateClient<TService, TAsyncClientService>(ServiceUri);
             }
 
             public async ValueTask DisposeAsync()
             {
                 var logger = new SerilogLoggerBuilder().Build().ForContext<ClientAndService>();
 
-                logger.Information("****** ****** ****** ****** ****** ****** ******");
-                logger.Information("****** CLIENT AND SERVICE DISPOSE CALLED  ******");
-                logger.Information("*     Subsequent errors should be ignored      *");
-                logger.Information("****** ****** ****** ****** ****** ****** ******");
+                await client.DisposeAsync();
+                await service.DisposeAsync();
 
                 void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
-
-                Try.CatchingError(() => cancellationTokenSource.Cancel(), LogError);
-
-                if (Client is not null)
-                {
-                    await Try.DisposingAsync(Client, LogError);
-                }
-
-                if (Service is not null)
-                {
-                    await Try.DisposingAsync(Service, LogError);
-                }
-
-                Try.CatchingError(() => HttpProxy?.Dispose(), LogError);
-                Try.CatchingError(() => PortForwarder?.Dispose(), LogError);
-                Try.CatchingError(disposableCollection.Dispose, LogError);
-                Try.CatchingError(() => cancellationTokenSource.Dispose(), LogError);
+                Try.CatchingError(() => httpProxy?.Dispose(), LogError);
             }
         }
     }

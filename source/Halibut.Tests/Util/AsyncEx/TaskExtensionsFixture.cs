@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Tests.Support;
 using Halibut.Util.AsyncEx;
 using NUnit.Framework;
 
@@ -44,8 +45,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 triggered = true;
             });
             var timeWaiting = Stopwatch.StartNew();
-            Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromMilliseconds(1), CancellationToken.None);
-            await act.Should().ThrowAsync<TimeoutException>();
+            await AssertException.Throws<TimeoutException>(task.TimeoutAfter(TimeSpan.FromMilliseconds(1), CancellationToken.None));
             timeWaiting.Stop();
             timeWaiting.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10), "we should have stopped waiting on the task when timeout happened");
             
@@ -78,8 +78,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 triggered = true;
             });
 
-            Func<Task> act = async () => await task.TimeoutAfter(TimeSpan.FromDays(1), ctsForTimeoutAfter.Token);
-            await act.Should().ThrowAsync<OperationCanceledException>();
+            await AssertException.Throws<OperationCanceledException>(task.TimeoutAfter(TimeSpan.FromDays(1), ctsForTimeoutAfter.Token));
             triggered.Should().Be(false, "we should have stopped waiting on the task when cancellation happened");
             taskWillRunUntilThisIsCancelled.Cancel();
             await task;
@@ -92,6 +91,7 @@ namespace Halibut.Tests.Util.AsyncEx
             var msg = "this task threw an exception after timeout " + Guid.NewGuid().ToString();
 
             using var cts = new CancellationTokenSource();
+#pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
             await VerifyNoUnobservedExceptions<TimeoutException>(
                 () => Task.Run(async () =>
                         {
@@ -107,6 +107,7 @@ namespace Halibut.Tests.Util.AsyncEx
                     task => task.TimeoutAfter(TimeSpan.FromMilliseconds(1), CancellationToken.None),
                     () => cts.Cancel(),
                     e => e.Message.Equals(msg));
+#pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
         }
         
         [Test]
@@ -115,6 +116,7 @@ namespace Halibut.Tests.Util.AsyncEx
             using var timeoutAfterCts = new CancellationTokenSource();
             using var taskWaitsOnThis = new CancellationTokenSource();
             var msg = "this task threw an exception after timeout " + Guid.NewGuid().ToString();
+#pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
             await VerifyNoUnobservedExceptions<OperationCanceledException>(
                 () => Task.Run(async () =>
                 {
@@ -134,6 +136,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 () => taskWaitsOnThis.Cancel(),
                 e => e.Message.Equals(msg)
                 );
+#pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
         }
 
         static async Task VerifyNoUnobservedExceptions<T>(Func<Task> createTaskToHaveTimeoutAfterCallInvokedOn,
@@ -144,7 +147,7 @@ namespace Halibut.Tests.Util.AsyncEx
         {
             //inspired by https://stackoverflow.com/a/21269145/779192
             var mre = new ManualResetEvent(initialState: false);
-            void Subscription(object s, UnobservedTaskExceptionEventArgs args)
+            void Subscription(object? s, UnobservedTaskExceptionEventArgs args)
             {
                 if (exceptionThrown(args.Exception) || args.Exception.InnerExceptions.Any(exceptionThrown))
                 {
@@ -156,8 +159,7 @@ namespace Halibut.Tests.Util.AsyncEx
             try
             {
                 var backgroundTask = createTaskToHaveTimeoutAfterCallInvokedOn.Invoke();
-                Func<Task> act = async () => await timeoutAfterCall(backgroundTask);
-                await act.Should().ThrowAsync<T>();
+                await AssertException.Throws<T>(timeoutAfterCall(backgroundTask));
 
                 timeoutAfterCallHasFinished();
                 //delay long enough to ensure the task throws its exception
@@ -167,7 +169,7 @@ namespace Halibut.Tests.Util.AsyncEx
                 }
 
                 //unobserved task exceptions are thrown from the finalizer
-                createTaskToHaveTimeoutAfterCallInvokedOn = null; // Allow the task to be GC'ed
+                createTaskToHaveTimeoutAfterCallInvokedOn = null!; // Allow the task to be GC'ed
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 if (mre.WaitOne(2000))

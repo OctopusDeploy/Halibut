@@ -5,26 +5,26 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
+using IAsyncDisposable = System.IAsyncDisposable;
 
 namespace Halibut.Tests
 {
-    public class TraceLogFileLogger : IDisposable
+    public class TraceLogFileLogger : IAsyncDisposable
     {
         readonly AsyncQueue<string> queue = new();
-        readonly string tempFilePath = Path.GetTempFileName();
-        string testHash;
+        public readonly string logFilePath;
+        readonly string testHash;
 
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly Task writeDataToDiskTask;
 
-        public TraceLogFileLogger()
-        {
-            writeDataToDiskTask = WriteDataToFile();
-        }
-
-        public void SetTestHash(string testHash)
+        public TraceLogFileLogger(string testHash)
         {
             this.testHash = testHash;
+            this.logFilePath = LogFilePath(testHash);
+            File.Delete(logFilePath);
+
+            writeDataToDiskTask = WriteDataToFile();
         }
 
         public void WriteLine(string logMessage)
@@ -55,7 +55,8 @@ namespace Halibut.Tests
                 // So what we can write it down as one chunk.
                 while (queue.TryDequeue(out var log)) list.Add(log);
 
-                using (var fileAppender = new StreamWriter(tempFilePath, true, Encoding.UTF8, 8192))
+                using(var fileWriter = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Delete | FileShare.ReadWrite))
+                using (var fileAppender = new StreamWriter(fileWriter, Encoding.UTF8, 8192))
                 {
                     foreach (var logLine in list) await fileAppender.WriteLineAsync(logLine);
 
@@ -64,16 +65,18 @@ namespace Halibut.Tests
             }
         }
 
-        void FinishWritingLogs()
+        
+
+        static string LogFilePath(string testHash)
         {
-            cancellationTokenSource.Cancel();
-            writeDataToDiskTask.GetAwaiter().GetResult();
-            cancellationTokenSource.Dispose();
+            var traceLogsDirectory = LogFileDirectory();
+            var fileName = $"{testHash}.tracelog";
+            var logFilePath = Path.Combine(traceLogsDirectory.ToString(), fileName);
+            return logFilePath;
         }
 
-        public bool CopyLogFileToArtifacts()
+        public static DirectoryInfo LogFileDirectory()
         {
-            FinishWritingLogs();
             // The current directory is expected to have the following structure
             // (w/ variance depending on Debug/Release and dotnet framework used (net6.0, net48 etc):
             //
@@ -82,33 +85,19 @@ namespace Halibut.Tests
             // Therefore we go up 5 levels to get to the <REPO ROOT> directory,
             // from which point we can navigate to the artifacts directory.
             var currentDirectory = Directory.GetCurrentDirectory();
-            var rootDirectory = new DirectoryInfo(currentDirectory).Parent.Parent.Parent.Parent.Parent;
+            var rootDirectory = new DirectoryInfo(currentDirectory).Parent!.Parent!.Parent!.Parent!.Parent!;
 
             var traceLogsDirectory = rootDirectory.CreateSubdirectory("artifacts").CreateSubdirectory("trace-logs");
-            var fileName = $"{testHash}.tracelog";
-
-            try
-            {
-                File.Copy(tempFilePath, Path.Combine(traceLogsDirectory.ToString(), fileName), true);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            return traceLogsDirectory;
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            try
-            {
-                File.Delete(tempFilePath);
-            }
-            catch
-            {
-                // Best effort clean-up, but we don't want to
-                // fail the test because we couldn't delete this file
-            }
+            cancellationTokenSource.Cancel();
+#pragma warning disable VSTHRD003
+            await writeDataToDiskTask;
+#pragma warning restore VSTHRD003
+            cancellationTokenSource.Dispose();
         }
     }
 }

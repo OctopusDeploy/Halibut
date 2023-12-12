@@ -13,7 +13,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public CompatBaseDelegateServiceFactory Register<TContract>(Func<TContract> implementation)
         {
             var serviceType = typeof(TContract);
-            services.Add(serviceType.Name, () => implementation());
+            services.Add(serviceType.Name, () => implementation()!);
             lock (serviceTypes)
             {
                 serviceTypes.Add(serviceType);

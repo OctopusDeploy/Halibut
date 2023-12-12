@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
+using System.Runtime.Versioning;
 using System.Threading;
 using FluentAssertions;
 using Halibut.Diagnostics;
@@ -20,12 +21,14 @@ namespace Halibut.Tests.Transport
     {
         PerformanceCounter GetCounterForCurrentProcess(string categoryName, string counterName)
         {
+#pragma warning disable CA1416 // Validate platform compatibility
             var pid = Process.GetCurrentProcess().Id;
 
             var instanceName = new PerformanceCounterCategory("Process")
                 .GetInstanceNames()
                 .FirstOrDefault(instance =>
                 {
+
                     using (var counter = new PerformanceCounter("Process", "ID Process", instance, true))
                     {
                         try
@@ -45,6 +48,7 @@ namespace Halibut.Tests.Transport
             }
 
             return new PerformanceCounter(categoryName, counterName, instanceName, true);
+#pragma warning restore CA1416 // Validate platform compatibility
         }
 
         [Test]
@@ -59,8 +63,8 @@ namespace Halibut.Tests.Transport
                 var client = new SecureListener(
                     new IPEndPoint(new IPAddress(new byte[] { 127, 0, 0, 1 }), 0),
                     Certificates.TentacleListening,
-                    null,
-                    null,
+                    null!,
+                    null!,
                     _ => true,
                     new LogFactory(),
                     () => "",
@@ -103,7 +107,9 @@ namespace Halibut.Tests.Transport
             while (true)
             {
                 Thread.Sleep(sleepTime);
+#pragma warning disable CA1416 // Validate platform compatibility
                 yield return counter.NextValue();
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             // ReSharper disable once IteratorNeverReturns : Take is limit
         }

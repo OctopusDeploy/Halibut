@@ -21,7 +21,7 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            IPendingRequestQueue pendingRequestQueue = null;
+            IPendingRequestQueue ?pendingRequestQueue = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
@@ -52,7 +52,9 @@ namespace Halibut.Tests
                 var pollingTentacleKeptBusyRequest = Task.Run(async () => await lockService.WaitForFileToBeDeletedAsync(fileStoppingNewRequests, fileThatLetsUsKnowThePollingTentacleIsBusy));
                 await Wait.For(async () =>
                 {
+#pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
                     await pollingTentacleKeptBusyRequest.AwaitIfFaulted();
+#pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
                     return File.Exists(fileThatLetsUsKnowThePollingTentacleIsBusy);
                 }, CancellationToken);
 
@@ -67,8 +69,10 @@ namespace Halibut.Tests
                     // Wait for the RPC call to get on to the queue before proceeding
                     await Wait.For(async () =>
                     {
+#pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
                         await task.AwaitIfFaulted();
-                        return pendingRequestQueue.Count == i + 1;
+#pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
+                        return pendingRequestQueue!.Count == i + 1;
                     }, CancellationToken);
                 }
 

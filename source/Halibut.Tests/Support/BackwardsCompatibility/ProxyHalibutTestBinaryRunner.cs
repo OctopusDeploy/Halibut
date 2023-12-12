@@ -17,7 +17,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         readonly int? proxyClientListeningPort;
         readonly CertAndThumbprint clientCertAndThumbprint;
         readonly CertAndThumbprint serviceCertAndThumbprint;
-        readonly string version;
+        readonly string? version;
         readonly ProxyDetails? proxyDetails;
         readonly string? webSocketPath;
         readonly LogLevel halibutLogLevel;
@@ -64,7 +64,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { CompatBinaryStayAlive.StayAliveFilePathEnvVarKey, compatBinaryStayAlive.LockFile }
             };
 
-            if (proxyDetails != null)
+            if (proxyDetails is not null)
             {
                 settings.Add("proxydetails_host", proxyDetails.Host);
                 settings.Add("proxydetails_password", proxyDetails.Password);
@@ -91,7 +91,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         }
 
         async Task<(Task RunningTentacleTask, int? ServiceListenPort, int? ProxyClientListenPort, CancellationTokenSource RunningTentacleCancellationTokenSource)> StartHalibutTestBinary(
-            string version, 
+            string? version, 
             Dictionary<string, string?> settings,
             TmpDirectory tmp)
         {
@@ -109,7 +109,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 {
                     try
                     {
-                        await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version))
+                        await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version!))
                             .WithArguments(Array.Empty<string>())
                             .WithWorkingDirectory(tmp.FullPath)
                             .WithStandardOutputPipe(PipeTarget.ToDelegate(ProcessLogs))

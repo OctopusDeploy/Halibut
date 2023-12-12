@@ -1,5 +1,6 @@
 using System;
 using Halibut.Tests.Support.BackwardsCompatibility;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
 {
@@ -23,6 +24,35 @@ namespace Halibut.Tests.Support
             }
 
             return clientAndServiceBuilder.AsPreviousClientVersionAndLatestServiceBuilder().WithAsyncService<TContract, TClientContract>(implementation);
+        }
+
+        public static T WithPortForwarding<T>(this T builder) where T : IClientAndServiceBuilder
+        {
+            builder.WithPortForwarding(out _, CreateDefaultPortForwarder);
+            return builder;
+        }
+
+        public static T WithPortForwarding<T>(this T builder, Func<int, PortForwarder> portForwarderFactory) where T : IClientAndServiceBuilder
+        {
+            builder.WithPortForwarding(out _, portForwarderFactory);
+            return builder;
+        }
+
+        public static T WithPortForwarding<T>(this T builder, out Reference<PortForwarder> portForwarder) where T : IClientAndServiceBuilder
+        {
+            builder.WithPortForwarding(out portForwarder, CreateDefaultPortForwarder);
+            return builder;
+        }
+
+        public static T WithProxy<T>(this T builder) where T : IClientAndServiceBuilder
+        {
+            builder.WithProxy(out _);
+            return builder;
+        }
+
+        static PortForwarder CreateDefaultPortForwarder(int port)
+        {
+            return PortForwarderUtil.ForwardingToLocalPort(port).Build();
         }
     }
 }

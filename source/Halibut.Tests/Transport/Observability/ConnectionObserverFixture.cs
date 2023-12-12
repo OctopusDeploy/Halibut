@@ -25,7 +25,7 @@ namespace Halibut.Tests.Transport.Observability
                              .WithStandardServices()
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithConnectionObserverOnTcpServer(connectionsObserver)
-                             .WithPortForwarding()
+                             .WithPortForwarding(out var portForwarderRef)
                              .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
@@ -33,7 +33,7 @@ namespace Halibut.Tests.Transport.Observability
                 connectionsObserver.ConnectionAcceptedCount.Should().Be(1);
                 connectionsObserver.ConnectionClosedCount.Should().Be(0);
                 
-                clientAndService.PortForwarder!.CloseExistingConnections();
+                portForwarderRef.Value.CloseExistingConnections();
                 
                 await Try.CatchingError(() => echo.SayHelloAsync("hello"));
                 await echo.SayHelloAsync("hello");
@@ -76,7 +76,7 @@ namespace Halibut.Tests.Transport.Observability
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testListening: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task ObserveUnauthorizedPollingConnections(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var connectionsObserver = new TestConnectionsObserver();
@@ -93,13 +93,13 @@ namespace Halibut.Tests.Transport.Observability
                 var echo = clientAndBuilder.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
-                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
+                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 
                 cts.Cancel();
 
-                await AssertionExtensions.Should(() => sayHelloTask).ThrowAsync<Exception>();
+                await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);
@@ -126,13 +126,13 @@ namespace Halibut.Tests.Transport.Observability
                 var echo = clientAndBuilder.CreateAsyncClient<IEchoService, IAsyncClientEchoServiceWithOptions>(
                     point => { point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(2000); });
 
-                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token, CancellationToken.None)), CancellationToken);
+                var sayHelloTask = Task.Run(async () => await echo.SayHelloAsync("hello", new HalibutProxyRequestOptions(token)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
 
                 cts.Cancel();
 
-                await AssertionExtensions.Should(() => sayHelloTask).ThrowAsync<Exception>();
+                await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
                 connectionsObserver.ConnectionClosedCount.Should().BeGreaterOrEqualTo(1);

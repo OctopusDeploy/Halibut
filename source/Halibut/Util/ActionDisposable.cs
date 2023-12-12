@@ -4,9 +4,9 @@ namespace Halibut.Util
 {
     public class ActionDisposable : IDisposable
     {
-        Action action;
+        Action? action;
 
-        public ActionDisposable(Action action)
+        public ActionDisposable(Action? action)
         {
             this.action = action;
         }

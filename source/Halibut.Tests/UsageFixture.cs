@@ -128,7 +128,7 @@ namespace Halibut.Tests
                 (await echo.AmbiguousAsync("a", "b")).Should().Be("Hello string");
                 (await echo.AmbiguousAsync("a", new Tuple<string, string>("a", "b"))).Should().Be("Hello tuple");
 
-                var ex = (await AssertionExtensions.Should(() => echo.AmbiguousAsync("a", (string)null)).ThrowAsync<AmbiguousMethodMatchHalibutClientException>()).And;
+                var ex = (await AssertionExtensions.Should(() => echo.AmbiguousAsync("a", (string)null!)).ThrowAsync<AmbiguousMethodMatchHalibutClientException>()).And;
                 ex.Message.Should().Contain("Ambiguous");
 
                 (await echo.GetLocationAsync(new MapLocation { Latitude = -27, Longitude = 153 })).Should().Match<MapLocation>(x => x.Latitude == 153 && x.Longitude == -27);
@@ -189,10 +189,10 @@ namespace Halibut.Tests
                     var response = await service.ProcessAsync(request);
 
                     response.Payload1.Should().NotBeSameAs(request.Payload1);
-                    response.Payload1.ReadAsString().Should().Be(payload1);
+                    (await response.Payload1!.ReadAsString(CancellationToken)).Should().Be(payload1);
 
                     response.Payload2.Should().NotBeSameAs(request.Payload2);
-                    response.Payload2.ReadAsString().Should().Be(payload2);
+                    (await response.Payload2!.ReadAsString(CancellationToken)).Should().Be(payload2);
                 }
             }
         }
@@ -245,19 +245,27 @@ namespace Halibut.Tests
                 var response = await service.ProcessAsync(request);
 
                 response.Child1.Should().NotBeSameAs(request.Child1);
-                response.Child1.ChildPayload1.Should().NotBeSameAs(request.Child1.ChildPayload1);
-                response.Child1.ChildPayload1.ReadAsString().Should().Be(childPayload1);
+                response.Child1!.ChildPayload1.Should().NotBeSameAs(request.Child1.ChildPayload1);
+                (await response.Child1.ChildPayload1!.ReadAsString(CancellationToken)).Should().Be(childPayload1);
                 response.Child1.ChildPayload2.Should().NotBeSameAs(request.Child1.ChildPayload2);
-                response.Child1.ChildPayload2.ReadAsString().Should().Be(childPayload2);
+                (await response.Child1.ChildPayload2!.ReadAsString(CancellationToken)).Should().Be(childPayload2);
                 response.Child1.ListOfStreams.Should().NotBeSameAs(request.Child1.ListOfStreams);
-                response.Child1.ListOfStreams.Select(x => x.ReadAsString()).ToList().Should().BeEquivalentTo(list);
+                (await response.Child1.ListOfStreams!.ToAsyncEnumerable()
+                    .SelectAwait(async x => await x.ReadAsString(CancellationToken))
+                    .ToListAsync(CancellationToken))
+                    .Should().BeEquivalentTo(list);
                 response.Child1.DictionaryPayload.Should().NotBeSameAs(request.Child1.DictionaryPayload);
                 response.Child1.DictionaryPayload.Should().BeEquivalentTo(dictionary);
 
                 response.Child2.Should().NotBeSameAs(request.Child2);
-                response.Child2.EnumPayload.Should().Be(enumValue);
+                response.Child2!.EnumPayload.Should().Be(enumValue);
                 response.Child2.ComplexPayloadSet.Should().NotBeSameAs(request.Child2.ComplexPayloadSet);
-                response.Child2.ComplexPayloadSet.Select(x => new ComplexPair<string>(x.EnumValue, x.Payload.ReadAsString())).ToHashSet().Should().BeEquivalentTo(set);
+                (await response.Child2.ComplexPayloadSet!.ToAsyncEnumerable()
+                    .SelectAwait(async x => new ComplexPair<string>(x.EnumValue, await x.Payload.ReadAsString(CancellationToken)))
+                    .ToArrayAsync())
+                    .ToHashSet()
+                    .Should()
+                    .BeEquivalentTo(set);
             }
         }
 
@@ -284,11 +292,11 @@ namespace Halibut.Tests
             var response = await service.ProcessAsync(request);
 
             response.Child1.Should().NotBeSameAs(request.Child1);
-            response.Child1.Name.Should().Be(childPayload1);
+            response.Child1!.Name.Should().Be(childPayload1);
             response.Child1.Name.Should().Be(request.Child1.Name);
 
             response.Child2.Should().NotBeSameAs(request.Child2);
-            response.Child2.Description.Should().Be(childPayload2);
+            response.Child2!.Description.Should().Be(childPayload2);
             response.Child2.Description.Should().Be(request.Child2.Description);
         }
     }

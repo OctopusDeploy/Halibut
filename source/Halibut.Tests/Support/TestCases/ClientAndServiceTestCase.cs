@@ -40,7 +40,33 @@ namespace Halibut.Tests.Support.TestCases
 
             return builder;
         }
-        
+
+        public IClientBuilder CreateClientOnlyTestCaseBuilder()
+        {
+            var logger = new SerilogLoggerBuilder().Build();
+            var builder = ClientAndServiceBuilderFactory.ForVersionClientOnly(ClientAndServiceTestVersion)(ServiceConnectionType);
+
+            if (NetworkConditionTestCase.PortForwarderFactory != null)
+            {
+                builder.WithPortForwarding(out _, i => NetworkConditionTestCase.PortForwarderFactory(i, logger));
+            }
+
+            return builder;
+        }
+
+        public IServiceBuilder CreateServiceOnlyTestCaseBuilder()
+        {
+            var logger = new SerilogLoggerBuilder().Build();
+            var builder = ClientAndServiceBuilderFactory.ForVersionServiceOnly(ClientAndServiceTestVersion)(ServiceConnectionType);
+
+            if (NetworkConditionTestCase.PortForwarderFactory != null)
+            {
+                builder.WithPortForwarding(out _, i => NetworkConditionTestCase.PortForwarderFactory(i, logger));
+            }
+
+            return builder;
+        }
+
         public override string ToString()
         {
             // This is used as the test parameter name, so make this something someone can understand in teamcity or their IDE.

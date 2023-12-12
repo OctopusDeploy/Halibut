@@ -102,14 +102,14 @@ namespace Halibut.Tests.Transport.Streams
             memoryStream.WriteString("not enough");
             memoryStream.Position = 0;
             
-            await AssertAsync.Throws<EndOfStreamException>(async () => await memoryStream.ReadBytesAsync(1000, CancellationToken));
+            await AssertException.Throws<EndOfStreamException>(async () => await memoryStream.ReadBytesAsync(1000, CancellationToken));
         }
 
         [Test]
         public async Task WithTemporaryReadTimeoutSetsAndRestoresReadTimeout()
         {
             var currentTimeOut = TimeSpan.FromMilliseconds(42);
-            using var stream = new SupportsTimeoutsStream(new MemoryStream(), currentTimeOut, TimeSpan.FromMilliseconds(13));
+            await using var stream = new SupportsTimeoutsStream(new MemoryStream(), currentTimeOut, TimeSpan.FromMilliseconds(13));
             using (var _ = stream.WithTemporaryReadTimeout(34))
             {
                 stream.ReadTimeout.Should().Be(34);

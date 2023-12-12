@@ -34,7 +34,7 @@ namespace Halibut.Tests
             // It's hard to see the data in the sender's buffers being dropped, however we can observe a TCP RST is received
             // by the receiver, so we assert on that.
             // An ordinary Close will not result in the receiver receiving a TCP RST.
-            await AssertAsync.Throws<IOException>(async () => {
+            await AssertException.Throws<IOException>(async () => {
                 while (await serverStream.ReadAsync(received, 0, received.Length, CancellationToken) != 0)
                 {
                     // If there's more data (i.e. non-zero data was just read), keep reading

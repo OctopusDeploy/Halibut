@@ -13,28 +13,23 @@ using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
+using LogLevel = Halibut.Logging.LogLevel;
 
 namespace Halibut.Tests.Timeouts
 {
     public class SendingAndReceivingRequestMessagesTimeoutsFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task HalibutTimeoutsAndLimits_AppliesToTcpClientReceiveTimeout(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var expectedTimeout = TimeSpan.FromSeconds(10);
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .As<LatestClientAndLatestServiceBuilder>()
-                       .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port).WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType).Build())
-                       .WithPortForwarding(out var portForwarderRef)
+                       .WithPortForwarding(out var portForwarderRef, port => PortForwarderUtil.ForwardingToLocalPort(port).WithPortForwarderDataLogging(clientAndServiceTestCase.ServiceConnectionType).Build())
                        .WithEchoService()
                        .WithDoSomeActionService(() => portForwarderRef.Value.PauseExistingConnections())
-                       .WhenTestingAsyncClient(clientAndServiceTestCase, b =>
-                       {
-                           b.WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build()
-                               .WithAllTcpTimeoutsTo(TimeSpan.FromSeconds(133))
-                               .WithTcpClientReceiveTimeout(expectedTimeout));
-                       })
+                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromSeconds(133)).WithTcpClientReceiveTimeout(expectedTimeout))
                        .WithInstantReconnectPollingRetryPolicy()
                        .Build(CancellationToken))
             {
@@ -44,25 +39,26 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
+
                 sw.Elapsed.Should().BeGreaterThan(expectedTimeout - TimeSpan.FromSeconds(2), "The receive timeout should apply, not the shorter heart beat timeout") // -2s give it a little slack to avoid it timed out slightly too early.
                     .And
                     .BeLessThan(expectedTimeout + HalibutTimeoutsAndLimitsForTestsBuilder.HalfTheTcpReceiveTimeout, "We should be timing out on the tcp receive timeout");
-                
+
                 // The polling tentacle, will not reconnect in time since it has a 133s receive control message timeout.
                 // To move it along we, kill the connection here.
                 // Interestingly this tests does not tests the service times out (the below test does).
-                clientAndService.PortForwarder.CloseExistingConnections();
+                portForwarderRef.Value.CloseExistingConnections();
 
                 await echo.SayHelloAsync("A new request can be made on a new unpaused TCP connection");
             }
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessage_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -78,7 +74,7 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.ActionAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -91,7 +87,7 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenThenNetworkIsPaused_WhileReadingAResponseMessageDataStream_ATcpReadTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -110,7 +106,7 @@ namespace Halibut.Tests.Timeouts
                 var pauseConnections = clientAndService.CreateAsyncClient<IReturnSomeDataStreamService, IAsyncClientReturnSomeDataStreamService>(IncreasePollingQueueTimeout());
 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await pauseConnections.SomeDataStreamAsync())).And;
                 sw.Stop();
                 Logger.Error(e, "Received error");
                 AssertExceptionMessageLooksLikeAReadTimeout(e);
@@ -123,7 +119,7 @@ namespace Halibut.Tests.Timeouts
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenThenNetworkIsPaused_WhileSendingARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var numberOfBytesBeforePausingAStream = 1024 * 1024; // 1MB
@@ -134,6 +130,7 @@ namespace Halibut.Tests.Timeouts
                            .PauseSingleStreamAfterANumberOfBytesHaveBeenSet(numberOfBytesBeforePausingAStream)
                            .Build())
                        .WithEchoService()
+                       .WithHalibutLoggingLevel(LogLevel.Trace)
                        .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
@@ -142,7 +139,7 @@ namespace Halibut.Tests.Timeouts
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(() =>
+                var e = (await AssertException.Throws<HalibutClientException>(() =>
                 {
                     var stringToSend = Some.RandomAsciiStringOfLength(numberOfBytesBeforePausingAStream * 20);
                     return echoServiceTheErrorWillHappenOn.SayHelloAsync(stringToSend);
@@ -166,7 +163,7 @@ namespace Halibut.Tests.Timeouts
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
         public async Task WhenThenNetworkIsPaused_WhileSendingADataStreamAsPartOfARequestMessage_ATcpWriteTimeoutOccurs_and_FurtherRequestsCanBeMade(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -181,7 +178,7 @@ namespace Halibut.Tests.Timeouts
                 var echoServiceTheErrorWillHappenOn = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(IncreasePollingQueueTimeout());
                 
                 var sw = Stopwatch.StartNew();
-                var e = (await AssertAsync.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
+                var e = (await AssertException.Throws<HalibutClientException>(async () => await echoServiceTheErrorWillHappenOn.CountBytesAsync(DataStreamUtil.From(
                     firstSend: "hello",
                     andThenRun: portForwarderRef.Value!.PauseExistingConnections,
                     thenSend: "All done" + Some.RandomAsciiStringOfLength(10*1024*1024)
@@ -203,7 +200,7 @@ namespace Halibut.Tests.Timeouts
 
         static void AssertExceptionLooksLikeAWriteTimeout(HalibutClientException? e)
         {
-            e.Message.Should().ContainAny(
+            e!.Message.Should().ContainAny(
                 "Unable to write data to the transport connection: Connection timed out.",
                 " Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
 
@@ -212,7 +209,7 @@ namespace Halibut.Tests.Timeouts
 
         static void AssertExceptionMessageLooksLikeAReadTimeout(HalibutClientException? e)
         {
-            e.Message.Should().ContainAny(
+            e!.Message.Should().ContainAny(
                 "Unable to read data from the transport connection: Connection timed out.",
                 "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
             

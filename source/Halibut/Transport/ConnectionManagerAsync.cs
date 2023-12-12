@@ -187,7 +187,7 @@ namespace Halibut.Transport
             }
         }
 
-        static async Task SafelyDisposeConnectionAsync(IConnection connection, ILog log)
+        static async Task SafelyDisposeConnectionAsync(IConnection connection, ILog? log)
         {
             try
             {

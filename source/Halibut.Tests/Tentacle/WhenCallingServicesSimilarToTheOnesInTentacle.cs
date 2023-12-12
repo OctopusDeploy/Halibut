@@ -109,7 +109,7 @@ namespace Halibut.Tests.Tentacle
                 var capabilitiesService = clientAndService.CreateAsyncClient<ICapabilitiesServiceV2, IAsyncClientCapabilitiesServiceV2>();
 
                 var scriptBody = GetRandomMultiLineString();
-                var startScriptCommand = new StartScriptCommand(scriptBody, ScriptIsolationLevel.NoIsolation, TimeSpan.MaxValue, null, null, taskId: Guid.NewGuid().ToString());
+                var startScriptCommand = new StartScriptCommand(scriptBody, ScriptIsolationLevel.NoIsolation, TimeSpan.MaxValue, null, Array.Empty<string>(), taskId: Guid.NewGuid().ToString());
 
                 await capabilitiesService.GetCapabilitiesAsync();
 
@@ -151,7 +151,7 @@ namespace Halibut.Tests.Tentacle
 
                 var scriptBody = GetRandomMultiLineString();
                 var scriptTicket = new ScriptTicket(Guid.NewGuid().ToString());
-                var startScriptCommand = new StartScriptCommandV2(scriptBody, ScriptIsolationLevel.NoIsolation, TimeSpan.MaxValue, null, null, scriptTicket.TaskId, scriptTicket, TimeSpan.Zero);
+                var startScriptCommand = new StartScriptCommandV2(scriptBody, ScriptIsolationLevel.NoIsolation, TimeSpan.MaxValue, null, Array.Empty<string>(), scriptTicket.TaskId, scriptTicket, TimeSpan.Zero);
 
                 var complete = false;
                 var logs = new List<ProcessOutput>();

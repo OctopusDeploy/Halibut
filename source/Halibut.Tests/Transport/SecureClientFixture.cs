@@ -23,9 +23,11 @@ namespace Halibut.Tests.Transport
 {
     public class SecureClientFixture : IAsyncDisposable
     {
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
         ILog log;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         [SetUp]
         public void SetUp()
@@ -63,7 +65,7 @@ namespace Halibut.Tests.Transport
             for (int i = 0; i < halibutTimeoutsAndLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream, new NoRpcObserver(), log));
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, new NoRpcObserver(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), log));
 
                 await connectionManager.ReleaseConnectionAsync(endpoint, connection, CancellationToken.None);
             }
@@ -80,9 +82,7 @@ namespace Halibut.Tests.Transport
             var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l), endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
 
-            using var requestCancellationTokens = new RequestCancellationTokens(CancellationToken.None, CancellationToken.None);
-
-            await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), requestCancellationTokens);
+            await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None);
 
             // The pool should be cleared after the second failure
             await stream.Received(2).IdentifyAsClientAsync(Arg.Any<CancellationToken>());
@@ -92,7 +92,7 @@ namespace Halibut.Tests.Transport
 
         public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger), new NoRpcObserver(), logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger), new NoRpcObserver(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger);
         }
     }
 }

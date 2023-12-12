@@ -77,8 +77,8 @@ namespace Halibut
 
         public ILogFactory Logs => logs;
 
-        public Func<string, string, UnauthorizedClientConnectResponse> OnUnauthorizedClientConnect { get; set; }
-        public OverrideErrorResponseMessageCachingAction OverrideErrorResponseMessageCaching { get; set; }
+        public Func<string, string, UnauthorizedClientConnectResponse>? OnUnauthorizedClientConnect { get; set; }
+        public OverrideErrorResponseMessageCachingAction? OverrideErrorResponseMessageCaching { get; set; }
 
         IPendingRequestQueue GetQueue(Uri target)
         {
@@ -101,7 +101,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), rpcObserver, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), rpcObserver, TimeoutsAndLimits, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -192,11 +192,11 @@ namespace Halibut
             var logger = logs.ForEndpoint(endpoint.BaseUri);
 
             var proxy = DispatchProxyAsync.Create<TAsyncClientService, HalibutProxyWithAsync>();
-            (proxy as HalibutProxyWithAsync)!.Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger, CancellationToken.None);
+            (proxy as HalibutProxyWithAsync)!.Configure(SendOutgoingRequestAsync, typeof(TService), endpoint, logger);
             return proxy;
         }
 
-        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, RequestCancellationTokens requestCancellationTokens)
+        async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
             var endPoint = request.Destination;
 
@@ -212,10 +212,10 @@ namespace Halibut
             switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
             {
                 case "https":
-                    response = await SendOutgoingHttpsRequestAsync(request, requestCancellationTokens).ConfigureAwait(false);
+                    response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
                     break;
                 case "poll":
-                    response = await SendOutgoingPollingRequestAsync(request, requestCancellationTokens).ConfigureAwait(false);
+                    response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
                     break;
                 default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
             }
@@ -225,26 +225,26 @@ namespace Halibut
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
+        async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var client = new SecureListeningClient(ExchangeProtocolBuilder(), request.Destination, serverCertificate, logs.ForEndpoint(request.Destination.BaseUri), connectionManager, tcpConnectionFactory);
 
-            ResponseMessage response = null;
+            ResponseMessage response = null!;
 
             await client.ExecuteTransactionAsync(
                 async (protocol, cts) =>
                 {
                     response = await protocol.ExchangeAsClientAsync(request, cts).ConfigureAwait(false);
                 }, 
-                requestCancellationTokens).ConfigureAwait(false);
+                cancellationToken).ConfigureAwait(false);
 
             return response;
         }
 
-        async Task<ResponseMessage> SendOutgoingPollingRequestAsync(RequestMessage request, RequestCancellationTokens requestCancellationTokens)
+        async Task<ResponseMessage> SendOutgoingPollingRequestAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             var queue = GetQueue(request.Destination.BaseUri);
-            return await queue.QueueAndWaitAsync(request, requestCancellationTokens);
+            return await queue.QueueAndWaitAsync(request, cancellationToken);
         }
 
         async Task<ResponseMessage> HandleIncomingRequestAsync(RequestMessage request)
@@ -315,6 +315,17 @@ namespace Halibut
         {
             var log = logs.ForEndpoint(endpoint.BaseUri);
             await connectionManager.DisconnectAsync(endpoint, log, cancellationToken);
+        }
+
+        /// <summary>
+        /// Dispose has been left in the API for backwards compatibility, but it is recommended to use DisposeAsync instead.
+        /// At the time this change was made, Tentacle (Tentacle Version 7.1.0) still uses this method.
+        /// Care must be taken to ensure all code using HalibutRuntime support and calls DisposeAsync.
+        /// </summary>
+        [Obsolete("Dispose has been left in the API for backwards compatibility, but it is recommended to use DisposeAsync instead.")]
+        public void Dispose()
+        {
+            DisposeAsync().GetAwaiter().GetResult();
         }
 
         public async ValueTask DisposeAsync()

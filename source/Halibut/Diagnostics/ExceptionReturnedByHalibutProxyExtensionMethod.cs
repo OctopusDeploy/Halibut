@@ -42,9 +42,9 @@ namespace Halibut.Diagnostics
                 return HalibutNetworkExceptionType.IsNetworkError;
             }
 
-            if (exception is ProxyException)
+            if (exception is ProxyException proxyException)
             {
-                if ((exception as ProxyException).CausedByNetworkError) return HalibutNetworkExceptionType.IsNetworkError;
+                if (proxyException.CausedByNetworkError) return HalibutNetworkExceptionType.IsNetworkError;
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
 

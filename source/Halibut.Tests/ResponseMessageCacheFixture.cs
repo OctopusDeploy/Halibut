@@ -48,8 +48,8 @@ namespace Halibut.Tests
             {
                 var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingServiceWithOptions>();
 
-                var result1 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
-                var result2 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
+                var result1 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken));
+                var result2 = await client.NonCachableCallAsync(new HalibutProxyRequestOptions(CancellationToken));
 
                 result1.Should().NotBe(result2);
             }
@@ -84,8 +84,8 @@ namespace Halibut.Tests
             {
                 var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingServiceWithOptions>();
 
-                var result1 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
-                var result2 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken, CancellationToken.None));
+                var result1 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken));
+                var result2 = await client.CachableCallAsync(new HalibutProxyRequestOptions(CancellationToken));
 
                 result1.Should().Be(result2);
             }
@@ -203,17 +203,17 @@ namespace Halibut.Tests
                        .WithCachingService()
                        .Build(CancellationToken))
             {
-                clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error.Message.Contains("CACHE ME");
+                clientAndService.Client.OverrideErrorResponseMessageCaching = response => response.Error!.Message.Contains("CACHE ME");
 
                 var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
-                var exception1 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"UNCACHED"))).And;
-                var exception2 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"UNCACHED"))).And;
+                var exception1 = (await AssertException.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"UNCACHED"))).And;
+                var exception2 = (await AssertException.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"UNCACHED"))).And;
                 exception1!.Message.Should().NotBe(exception2!.Message);
 
 
-                var exception3 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"CACHE ME"))).And;
-                var exception4 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"CACHE ME"))).And;
+                var exception3 = (await AssertException.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"CACHE ME"))).And;
+                var exception4 = (await AssertException.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"CACHE ME"))).And;
                 exception3!.Message.Should().Be(exception4!.Message);
             }
         }
@@ -229,8 +229,8 @@ namespace Halibut.Tests
             {
                 var client = clientAndService.CreateAsyncClient<ICachingService, IAsyncClientCachingService>();
 
-                var exception1 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;
-                var exception2 = (await AssertAsync.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;
+                var exception1 = (await AssertException.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;
+                var exception2 = (await AssertException.Throws<ServiceInvocationHalibutClientException>(async () => await client.CachableCallThatThrowsAnExceptionWithARandomExceptionMessageAsync($"Exception"))).And;
 
                 exception1!.Message.Should().StartWith("Exception");
                 exception2!.Message.Should().StartWith("Exception");
@@ -249,7 +249,7 @@ namespace Halibut.Tests
             OverrideErrorResponseMessageCachingAction action = message => false;
             
             // Actual test, testing a null response.
-            cache.CacheResponse(serviceEndpoint, request, methodInfo, null, action);
+            cache.CacheResponse(serviceEndpoint, request, methodInfo, null!, action);
             cache.GetCachedResponse(serviceEndpoint, request, methodInfo).Should().BeNull();
             
             // This just checks we are using the cache correctly, ensuring the above is valid.

@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Logging;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -38,10 +37,10 @@ namespace Halibut.Tests
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
-                       .WithPortForwarding(i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
+                       .WithPortForwarding(out var portForwarderRef, i => PortForwarderUtil.ForwardingToLocalPort(i).Build())
                        .Build(CancellationToken))
             {
-                clientAndService.PortForwarder!.EnterKillNewAndExistingConnectionsMode();
+                portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
 
                 var echo = clientAndServiceTestCase.ClientAndServiceTestVersion.IsPreviousClient() ? 
                                 clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>() : 
@@ -50,7 +49,7 @@ namespace Halibut.Tests
                                     serviceEndPoint.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
                                 });
 
-                await AssertAsync.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Deploy package A"));
+                await AssertException.Throws<HalibutClientException>(async () => await echo.SayHelloAsync("Deploy package A"));
             }
         }
 

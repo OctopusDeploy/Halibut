@@ -24,7 +24,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
-            protocol = new MessageExchangeProtocol(stream, Substitute.For<IRpcObserver>(), Substitute.For<ILog>());
+            protocol = new MessageExchangeProtocol(stream, Substitute.For<IRpcObserver>(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), Substitute.For<ILog>());
         }
 
         // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation
@@ -146,9 +146,9 @@ namespace Halibut.Tests.Transport.Protocol
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
-            var queue = new Queue<RequestMessage>();
-            queue.Enqueue(new RequestMessage());
-            queue.Enqueue(new RequestMessage());
+            var queue = new Queue<RequestMessageWithCancellationToken>();
+            queue.Enqueue(new (new RequestMessage(), CancellationToken.None));
+            queue.Enqueue(new (new RequestMessage(), CancellationToken.None));
             requestQueue.DequeueAsync(CancellationToken.None).Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
@@ -219,16 +219,16 @@ namespace Halibut.Tests.Transport.Protocol
         {
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
             var requestQueue = Substitute.For<IPendingRequestQueue>();
-            var queue = new Queue<RequestMessage>();
+            var queue = new Queue<RequestMessageWithCancellationToken>();
             requestQueue.DequeueAsync(CancellationToken.None).Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
 
-            queue.Enqueue(new RequestMessage());
-            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new (new RequestMessage(), CancellationToken.None));
+            queue.Enqueue(new (new RequestMessage(), CancellationToken.None));
             stream.SetNumberOfReads(2);
 
             await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, CancellationToken.None);
 
-            queue.Enqueue(new RequestMessage());
+            queue.Enqueue(new (new RequestMessage(), CancellationToken.None));
 
             stream.SetNumberOfReads(1);
 
@@ -261,7 +261,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             readonly StringBuilder output = new();
             readonly Queue<object> nextReadQueue = new();
-            RemoteIdentity remoteIdentity;
+            RemoteIdentity? remoteIdentity;
             int numberOfReads = 3;
 
             public void NextReadReturns(object o)
@@ -313,7 +313,7 @@ namespace Halibut.Tests.Transport.Protocol
                 output.AppendLine("--> END");
             }
 
-            public async Task<bool> ExpectNextOrEndAsync(CancellationToken cancellationToken)
+            public async Task<bool> ExpectNextOrEndAsync(TimeSpan readTimeout, CancellationToken cancellationToken)
             {
                 await Task.CompletedTask;
 
@@ -353,7 +353,7 @@ namespace Halibut.Tests.Transport.Protocol
                 await Task.CompletedTask;
 
                 output.AppendLine("<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId");
-                return remoteIdentity;
+                return remoteIdentity!;
             }
             
             public async Task SendAsync<T>(T message, CancellationToken cancellationToken)
@@ -363,22 +363,22 @@ namespace Halibut.Tests.Transport.Protocol
                 output.AppendLine("--> " + typeof(T).Name);
             }
 
-            public Task<RequestMessage> ReceiveRequestAsync(CancellationToken cancellationToken)
+            public Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
             {
                 return ReceiveAsync<RequestMessage>();
             }
 
-            public Task<ResponseMessage> ReceiveResponseAsync(CancellationToken cancellationToken)
+            public Task<ResponseMessage?> ReceiveResponseAsync(CancellationToken cancellationToken)
             {
                 return ReceiveAsync<ResponseMessage>();
             }
 
-            async Task<T> ReceiveAsync<T>()
+            async Task<T?> ReceiveAsync<T>()
             {
                 await Task.CompletedTask;
 
                 output.AppendLine("<-- " + typeof(T).Name);
-                return (T)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
+                return (T?)(nextReadQueue.Count > 0 ? nextReadQueue.Dequeue() : default(T));
             }
 
             public override string ToString()

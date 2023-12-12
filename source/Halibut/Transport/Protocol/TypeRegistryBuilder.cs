@@ -4,7 +4,7 @@ namespace Halibut.Transport.Protocol
 {
     public class TypeRegistryBuilder
     {
-        Assembly[] typeAssemblies;
+        Assembly[]? typeAssemblies;
 
         /// <summary>
         /// Adds a list of assemblies to the <see cref="ITypeRegistry"/>. Used to search for contract types for derived types.

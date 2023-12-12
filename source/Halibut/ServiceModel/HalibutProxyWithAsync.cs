@@ -9,29 +9,28 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
 {
-    public delegate Task<ResponseMessage> MessageRouter(RequestMessage request, MethodInfo serviceMethod, RequestCancellationTokens requestCancellationTokens);
+    public delegate Task<ResponseMessage> MessageRouter(RequestMessage request, MethodInfo serviceMethod, CancellationToken cancellationToken);
 
     public class HalibutProxyWithAsync : DispatchProxyAsync
     {
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         MessageRouter messageRouter;
         Type contractType;
         ServiceEndPoint endPoint;
         long callId;
         bool configured;
-        CancellationToken globalCancellationToken;
         ILog logger;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public void Configure(
             MessageRouter messageRouter, 
             Type contractType, 
             ServiceEndPoint endPoint,
-            ILog logger, 
-            CancellationToken cancellationToken)
+            ILog logger)
         {
             this.messageRouter = messageRouter;
             this.contractType = contractType;
             this.endPoint = endPoint;
-            this.globalCancellationToken = cancellationToken;
             this.configured = true;
             this.logger = logger;
         }
@@ -56,7 +55,7 @@ namespace Halibut.ServiceModel
                 result = (T)Convert.ChangeType(result, returnType);
             }
 
-            return (T)result;
+            return (T)result!;
         }
 
         async Task<(MethodInfo, object)> MakeRpcCall(MethodInfo asyncMethod, object[] args)
@@ -72,13 +71,11 @@ namespace Halibut.ServiceModel
 
             var request = CreateRequest(asyncMethod, serviceMethod, args);
 
-            using var requestCancellationTokens = RequestCancellationTokens(halibutProxyRequestOptions);
-
-            var response = await messageRouter(request, serviceMethod, requestCancellationTokens);
+            var response = await messageRouter(request, serviceMethod, halibutProxyRequestOptions?.RequestCancellationToken ?? CancellationToken.None);
 
             EnsureNotError(response);
             
-            return (serviceMethod, response.Result);
+            return (serviceMethod, response.Result!);
         }
 
         /// <summary>
@@ -103,19 +100,7 @@ namespace Halibut.ServiceModel
             };
             return request;
         }
-
-        RequestCancellationTokens RequestCancellationTokens(HalibutProxyRequestOptions halibutProxyRequestOptions)
-        {
-            if (halibutProxyRequestOptions == null)
-            {
-                return new RequestCancellationTokens(globalCancellationToken, CancellationToken.None);
-            }
-
-            return new RequestCancellationTokens(
-                halibutProxyRequestOptions.ConnectingCancellationToken ?? CancellationToken.None,
-                halibutProxyRequestOptions.InProgressRequestCancellationToken ?? CancellationToken.None);
-        }
-
+        
         void EnsureNotError(ResponseMessage responseMessage)
         {
             if (responseMessage == null)
@@ -129,7 +114,7 @@ namespace Halibut.ServiceModel
 
         internal static void ThrowExceptionFromReceivedError(ServerError error, ILog logger)
         {
-            var realException = error.Details as string;
+            var realException = error.Details!;
 
             try
             {
@@ -139,7 +124,7 @@ namespace Halibut.ServiceModel
                     if (theType != null && theType != typeof(HalibutClientException))
                     {
                         var ctor = theType.GetConstructor(new[] { typeof(string), typeof(string) });
-                        Exception e = (Exception)ctor.Invoke(new object[] { error.Message, realException });
+                        Exception e = (Exception)ctor!.Invoke(new object?[] { error.Message, realException });
                         throw e;
                     }
                 }
@@ -154,7 +139,7 @@ namespace Halibut.ServiceModel
                     throw new MethodNotFoundHalibutClientException(error.Message, realException);
                 }
 
-                if (error.Details.StartsWith("System.Reflection.AmbiguousMatchException: "))
+                if (error.Details!.StartsWith("System.Reflection.AmbiguousMatchException: "))
                 {
                     throw new AmbiguousMethodMatchHalibutClientException(error.Message, realException);
                 }
@@ -165,7 +150,7 @@ namespace Halibut.ServiceModel
                 }
 
             }
-            catch (Exception exception) when (!(exception is HalibutClientException))
+            catch (Exception exception) when (exception is not HalibutClientException && exception is not RequestCancelledException)
             {
                 // Something went wrong trying to understand the ServerError revert back to the old behaviour of just
                 // throwing a standard halibut client exception.
@@ -176,7 +161,7 @@ namespace Halibut.ServiceModel
 
         }
 
-        internal static (object[] args, HalibutProxyRequestOptions halibutProxyRequestOptions) TrimOffHalibutProxyRequestOptions(object[] args)
+        internal static (object[] args, HalibutProxyRequestOptions? halibutProxyRequestOptions) TrimOffHalibutProxyRequestOptions(object[] args)
         {
             if (args.Length == 0) return (args, null);
             object last = args.Last();

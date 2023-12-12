@@ -128,7 +128,7 @@ namespace Halibut.Tests.Transport.Streams
                         await Task.Delay(10, CancellationToken);
                     }
 
-                    Assert.AreEqual("Test"[0], readData.ToCharArray()[0]);
+                    Assert.AreEqual("Test"[0], readData!.ToCharArray()[0]);
                 }
                 else
                 {
@@ -243,7 +243,9 @@ namespace Halibut.Tests.Transport.Streams
 
             using (disposables)
             {
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                 sut.Dispose();
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
 
                 Action read = () => sut.Read(new byte[1], 0, 1);
                 read.Should().Throw<ObjectDisposedException>("Because the stream is closed");
@@ -271,7 +273,9 @@ namespace Halibut.Tests.Transport.Streams
 
             using (disposables)
             {
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                 sut.Flush();
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                 callCountingStream.FlushCallCount.Should().Be(1);
             }
         }
@@ -304,7 +308,7 @@ namespace Halibut.Tests.Transport.Streams
                 // NetworkStream implementation of Flush and FlushAsync is a NoOp so pause to make sure our wrapper is working
                 pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
 
-                (await AssertAsync.Throws<IOException>(async () => await sut.FlushAsync(CancellationToken)))
+                (await AssertException.Throws<IOException>(async () => await sut.FlushAsync(CancellationToken)))
                     .And.Message.Should().ContainAny(
                     "Unable to write data to the transport connection: Connection timed out.",
                     "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
@@ -328,8 +332,8 @@ namespace Halibut.Tests.Transport.Streams
 
                 // NetworkStream implementation of Flush and FlushAsync is a NoOp so pause to make sure our wrapper is working
                 pausingStream.PauseUntilTimeout(CancellationToken, pauseDisposeOrClose: false);
-
-                (await AssertAsync.Throws<IOException>(async () => sut.Flush()))
+                
+                AssertException.Throws<IOException>(() => sut.Flush())
                     .And.Message.Should().ContainAny(
                         "Unable to write data to the transport connection: Connection timed out.",
                         "Unable to write data to the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.");
@@ -501,12 +505,12 @@ namespace Halibut.Tests.Transport.Streams
                 sut.WriteTimeout = (int)TimeSpan.FromSeconds(1).TotalMilliseconds;
                 sut.ReadTimeout = (int)TimeSpan.FromSeconds(1).TotalMilliseconds;
 
-                var exception = await Try.CatchingError(async () => await sut.ReadFromStream(streamMethod, new byte[19], 0, 19, CancellationToken));
+                var exception = (await Try.CatchingError(async () => await sut.ReadFromStream(streamMethod, new byte[19], 0, 19, CancellationToken)))!;
 
                 callCountingStream.Reset();
 
                 exception.Should().NotBeNull();
-                AssertExceptionsAreEqual(exception!, AssertionExtensions.Should(() => sut.Position).Throw<Exception>().And);
+                AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.Position).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.Position = 0).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.CanRead).Throw<Exception>().And);
                 AssertExceptionsAreEqual(exception, AssertionExtensions.Should(() => sut.CanSeek).Throw<Exception>().And);
@@ -573,7 +577,9 @@ namespace Halibut.Tests.Transport.Streams
                 // Close and Dispose should not re-throw on timeout as callers do not expect these to throw 
                 // e.g. if using ... throw it makes the stream difficult to use
                 sut.Close();
+#pragma warning disable VSTHRD103 // Call async methods when in an async method
                 sut.Dispose();
+#pragma warning restore VSTHRD103 // Call async methods when in an async method
                 await sut.DisposeAsync();
 
                 callCountingStream.CloseCallCount.Should().Be(2);

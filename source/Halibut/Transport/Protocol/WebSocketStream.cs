@@ -1,11 +1,8 @@
 using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Net.WebSockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Diagnostics;
 using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Protocol
@@ -15,9 +12,7 @@ namespace Halibut.Transport.Protocol
         readonly WebSocket context;
         bool isDisposed;
         readonly CancellationTokenSource cancel = new();
-
-        static readonly TimeSpan SendCancelTimeout = TimeSpan.FromSeconds(1);
-
+        
         public WebSocketStream(WebSocket context)
         {
             this.context = context;
@@ -53,81 +48,38 @@ namespace Halibut.Transport.Protocol
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            AssertCanReadOrWrite();
-            var segment = new ArraySegment<byte>(buffer, offset, count);
-            var receiveResult = context.ReceiveAsync(segment, CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
-            return receiveResult.Count;
-        }
-
-        public async Task<string> ReadTextMessage(TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            AssertCanReadOrWrite();
-            var sb = new StringBuilder();
-            var buffer = new ArraySegment<byte>(new byte[10000]);
-
-            while (true)
-            {
-                var readResult = await CancellationAndTimeoutTaskWrapper.WrapWithCancellationAndTimeout(async ct =>
-                    {
-                        var result = await context.ReceiveAsync(buffer, ct).ConfigureAwait(false);
-                        if (result.MessageType == WebSocketMessageType.Close)
-                        {
-                            using var sendCancel = new CancellationTokenSource(SendCancelTimeout);
-                            await context.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Close received", sendCancel.Token).ConfigureAwait(false);
-                            return new { Completed = true, Successful = false };
-                        }
-
-                        if (result.MessageType != WebSocketMessageType.Text)
-                            throw new Exception($"Encountered an unexpected message type {result.MessageType}");
-
-                        sb.Append(Encoding.UTF8.GetString(buffer.Array!, 0, result.Count));
-
-                        return new { Completed = result.EndOfMessage, Successful = true };
-                    },
-                    onCancellationAction: null,
-                    onActionTaskExceptionAction: null,
-                    getExceptionOnTimeout: () =>
-                    {
-                        var socketException = new SocketException(10060);
-                        return new IOException($"Unable to read data from the transport connection: {socketException.Message}.", socketException);
-                    },
-                    timeout,
-                    nameof(ReadTextMessage),
-                    cancellationToken);
-
-                if (readResult.Completed)
-                {
-                    return readResult.Successful ? sb.ToString() : null;
-                }
-            }
+            // Serialization of large payloads would revert to 'sync' methods. NetworkTimeoutStream cannot timeout on sync methods.
+            // So we wrap web socket streams in a CallUnderlyingAsyncMethodsStream to ensure we only call async methods (and respect timeouts).
+            // We throw the exception to ensure we definitely do not call the sync version.
+            throw new InvalidOperationException("All web socket communication should be asynchronous.");
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            AssertCanReadOrWrite();
-            context.SendAsync(new ArraySegment<byte>(buffer, offset, count), WebSocketMessageType.Binary, false, CancellationToken.None)
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            // Serialization of large payloads would revert to 'sync' methods. NetworkTimeoutStream cannot timeout on sync methods.
+            // So we wrap web socket streams in a CallUnderlyingAsyncMethodsStream to ensure we only call async methods (and respect timeouts).
+            // We throw the exception to ensure we definitely do not call the sync version.
+            throw new InvalidOperationException("All web socket communication should be asynchronous.");
         }
-
-        public async Task WriteTextMessage(string message)
-        {
-            AssertCanReadOrWrite();
-            var buffer = new ArraySegment<byte>(Encoding.UTF8.GetBytes(message));
-            await context.SendAsync(buffer, WebSocketMessageType.Text, true, CancellationToken.None);
-        }
-
+        
         void AssertCanReadOrWrite()
         {
             if (isDisposed)
+            {
                 throw new InvalidOperationException("Can not read or write a disposed stream");
-            if (context.CloseStatus.HasValue)
-                throw new Exception("Remote endpoint closed the stream");
+            }
+
+            context.AssertCanReadOrWrite();
         }
 
         public override bool CanRead => context.State == WebSocketState.Open;
         public override bool CanSeek => false;
         public override bool CanWrite => context.State == WebSocketState.Open;
+        // This class cannot actually timeout, as WebSocket does not support it. 
+        // But we make the timeout properties available so that we can use this stream with the NetworkTimeoutStream.
+        public override bool CanTimeout => true;
+        public override int ReadTimeout { get; set; }
+        public override int WriteTimeout { get; set; }
 
         public override long Length => throw new NotImplementedException();
 
@@ -163,6 +115,11 @@ namespace Halibut.Transport.Protocol
             var buffer = new byte[bufferSize];
             var readLength = await ReadAsync(buffer, 0, bufferSize, cancellationToken);
             await destination.WriteAsync(buffer, 0, readLength, cancellationToken);
+        }
+
+        public override void Close()
+        {
+            context.Dispose();
         }
 
         protected override void Dispose(bool disposing)

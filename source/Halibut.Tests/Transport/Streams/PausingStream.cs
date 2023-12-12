@@ -15,8 +15,8 @@ namespace Halibut.Tests.Transport.Streams
     {
         readonly Stream inner;
         bool paused;
-        CancellationTokenSource syncReadPauseCancellationTokenSource;
-        CancellationTokenSource syncWritePauseCancellationTokenSource;
+        CancellationTokenSource? syncReadPauseCancellationTokenSource;
+        CancellationTokenSource? syncWritePauseCancellationTokenSource;
         CancellationToken asyncCancellationToken;
 
         bool pauseDisposeOrClose;

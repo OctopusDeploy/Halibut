@@ -174,7 +174,7 @@ namespace Halibut.Tests.Transport.Streams
 
             sut.WriteString("Some");
 
-            await AssertAsync.Throws<Exception>(async () => await sut.WriteBufferToUnderlyingStream(CancellationToken));
+            await AssertException.Throws<Exception>(async () => await sut.WriteBufferToUnderlyingStream(CancellationToken));
             
             memoryStream.Length.Should().Be(0);
 
@@ -194,7 +194,7 @@ namespace Halibut.Tests.Transport.Streams
             var bytes = "Some".GetBytesUtf8();
             await sut.WriteToStream(streamMethod, bytes, 0, bytes.Length, CancellationToken);
 
-            await AssertAsync.Throws<Exception>(async () => await sut.WriteToStream(streamMethod, bytes, 0, bytes.Length, CancellationToken));
+            await AssertException.Throws<Exception>(async () => await sut.WriteToStream(streamMethod, bytes, 0, bytes.Length, CancellationToken));
             
             memoryStream.Length.Should().Be(0);
 

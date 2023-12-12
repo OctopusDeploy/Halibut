@@ -20,6 +20,7 @@ namespace Halibut.Tests
     {
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening:false, testWebSocket:false)]
+        // TCP Keep alives were for TcpClients, not web sockets
         public async Task TcpKeepAliveShouldBeSetOnPollingSocketsByDefault(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -34,16 +35,17 @@ namespace Halibut.Tests
                 await echoServiceClient.SayHelloAsync("An initial RPC call");
 
                 //Assert
-                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service!);
+                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service);
                 pollingSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(1);
 
-                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client!);
+                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client);
                 listeningSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(1);
             }
         }
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        // TCP Keep alives were for TcpClients, not web sockets
         public async Task TcpKeepAliveShouldNotBeSetOnPollingSocketsIfNotEnabled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
@@ -64,16 +66,17 @@ namespace Halibut.Tests
                 await echoServiceClient.SayHelloAsync("An initial RPC call");
 
                 //Assert
-                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service!);
+                var pollingSocket = GetConnectionManagerActiveConnectionSocket(clientAndService.Service);
                 pollingSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(0);
 
-                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client!);
+                var listeningSocket = GetSecureListenerActiveClientSocket(clientAndService.Client);
                 listeningSocket.GetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive).Should().Be(0);
             }
         }
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        // TCP Keep alives were for TcpClients, not web sockets
         public async Task TcpKeepAliveShouldBeNotDisruptConnectionOnPollingSockets(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             // Arrange
