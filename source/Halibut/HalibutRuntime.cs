@@ -101,7 +101,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), rpcObserver, TimeoutsAndLimits, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), TimeoutsAndLimits, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -198,31 +198,39 @@ namespace Halibut
 
         async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
-            var endPoint = request.Destination;
-
-            var cachedResponse = responseCache.Value.GetCachedResponse(endPoint, request, methodInfo);
-
-            if (cachedResponse != null)
+            rpcObserver.StartCall(request);
+            try
             {
-                return cachedResponse;
+                var endPoint = request.Destination;
+
+                var cachedResponse = responseCache.Value.GetCachedResponse(endPoint, request, methodInfo);
+
+                if (cachedResponse != null)
+                {
+                    return cachedResponse;
+                }
+
+                ResponseMessage response;
+
+                switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
+                {
+                    case "https":
+                        response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case "poll":
+                        response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                        break;
+                    default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
+                }
+
+                responseCache.Value.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
+
+                return response;
             }
-
-            ResponseMessage response;
-
-            switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
+            finally
             {
-                case "https":
-                    response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
-                    break;
-                case "poll":
-                    response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
-                    break;
-                default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
+                rpcObserver.StopCall(request);
             }
-
-            responseCache.Value.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
-
-            return response;
         }
 
         async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, CancellationToken cancellationToken)

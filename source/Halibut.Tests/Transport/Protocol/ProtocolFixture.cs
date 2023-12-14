@@ -24,7 +24,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
-            protocol = new MessageExchangeProtocol(stream, Substitute.For<IRpcObserver>(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), Substitute.For<ILog>());
+            protocol = new MessageExchangeProtocol(stream, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), Substitute.For<ILog>());
         }
 
         // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation
