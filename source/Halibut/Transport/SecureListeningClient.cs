@@ -183,7 +183,9 @@ namespace Halibut.Transport
         void HandleError(Exception? lastError, bool retryAllowed, bool hasConnected)
         {
             if (lastError == null)
+            {
                 return;
+            }
 
             lastError = lastError.UnpackFromContainers();
 
@@ -191,15 +193,25 @@ namespace Halibut.Transport
             error.Append("An error occurred when sending a request to '").Append(ServiceEndpoint.BaseUri).Append("', ");
             error.Append(retryAllowed ? "before the request could begin: " : "after the request began: ");
             error.Append(lastError.Message);
-
-            var inner = lastError as SocketException;
-            if (inner != null)
+            
+            
+            switch (lastError)
             {
-                if ((inner.SocketErrorCode == SocketError.ConnectionAborted || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
-                {
-                    error.Append("The server aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '");
-                    error.Append(clientCertificate.Thumbprint + "'.");
-                }
+                case SocketException inner:
+                    if ((inner.SocketErrorCode == SocketError.ConnectionAborted || inner.SocketErrorCode == SocketError.ConnectionReset) && retryAllowed)
+                    {
+                        error.Append("The server aborted the connection before it was fully established. This usually means that the server rejected the certificate that we provided. We provided a certificate with a thumbprint of '");
+                        error.Append(clientCertificate.Thumbprint + "'.");
+                    }
+                    break;
+
+                // We want to handle cancellation exceptions explicitly from the tentacle client. 
+                case ConnectingRequestCancelledException:
+                    throw new ConnectingRequestCancelledException(error.ToString(), lastError);
+                case TransferringRequestCancelledException:
+                    throw new TransferringRequestCancelledException(error.ToString(), lastError);
+                case OperationCanceledException:
+                    throw new OperationCanceledException(error.ToString(), lastError);
             }
 
             throw new HalibutClientException(
