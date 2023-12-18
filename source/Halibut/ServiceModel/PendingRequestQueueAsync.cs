@@ -249,7 +249,7 @@ namespace Halibut.ServiceModel
                 if (waitForTransferToComplete)
                 {
                     responseSet = await WaitForResponseToBeSet(
-                        request.Destination.PollingRequestMaximumMessageProcessingTimeout, 
+                        relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout ? null : request.Destination.PollingRequestMaximumMessageProcessingTimeout,
                         // Cancel the dequeued request to force Reads and Writes to be cancelled
                         cancelTheRequestWhenTransferHasBegun: true,
                         cancellationToken);
@@ -287,9 +287,12 @@ namespace Halibut.ServiceModel
                 }
             }
             
-            async Task<bool> WaitForResponseToBeSet(TimeSpan timeout, bool cancelTheRequestWhenTransferHasBegun, CancellationToken cancellationToken)
+            async Task<bool> WaitForResponseToBeSet(
+                TimeSpan? timeout, 
+                bool cancelTheRequestWhenTransferHasBegun, 
+                CancellationToken cancellationToken)
             {
-                using var timeoutCancellationTokenSource = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout ? new CancellationTokenSource() : new CancellationTokenSource(timeout);
+                using var timeoutCancellationTokenSource = timeout.HasValue ? new CancellationTokenSource(timeout.Value) : new CancellationTokenSource();
                 using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCancellationTokenSource.Token, cancellationToken);
 
                 try

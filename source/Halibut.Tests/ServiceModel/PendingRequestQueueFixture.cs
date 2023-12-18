@@ -101,6 +101,35 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
+        public async Task QueueAndWait_WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_WhenPollingRequestQueueTimeoutIsReached_WillStopWaitingAndClearRequest()
+        {
+            // Arrange
+            const string endpoint = "poll://endpoint001";
+
+            var sut = new PendingRequestQueueBuilder()
+                .WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout(true)
+                .WithEndpoint(endpoint)
+                .Build();
+            var request = new RequestMessageBuilder(endpoint)
+                .WithServiceEndpoint(seb => seb.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(1000)))
+                .Build();
+
+            // Act
+            var stopwatch = Stopwatch.StartNew();
+            var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, CancellationToken);
+            var response = await queueAndWaitTask;
+
+            // Assert
+            // Although we sleep for 1 second, sometimes it can be just under. So be generous with the buffer.
+            stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
+            response.Id.Should().Be(request.Id);
+            response.Error!.Message.Should().Be("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:01), so the request timed out.");
+
+            var next = await sut.DequeueAsync(CancellationToken);
+            next.Should().BeNull();
+        }
+
+        [Test]
         public async Task QueueAndWait_WhenRequestIsDequeued_ButPollingRequestQueueTimeoutIsReached_AndPollingRequestMaximumMessageProcessingTimeoutIsReached_WillStopWaitingAndClearRequest()
         {
             // Arrange

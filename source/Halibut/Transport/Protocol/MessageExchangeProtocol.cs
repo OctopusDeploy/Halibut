@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
-using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
@@ -18,35 +17,24 @@ namespace Halibut.Transport.Protocol
     public class MessageExchangeProtocol
     {
         readonly IMessageExchangeStream stream;
-        readonly IRpcObserver rcpObserver;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, IRpcObserver rcpObserver, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
         {
             this.stream = stream;
-            this.rcpObserver = rcpObserver;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.log = log;
         }
 
         public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
         {
-            rcpObserver.StartCall(request);
-
-            try
-            {
-                await PrepareExchangeAsClientAsync(cancellationToken);
-                
-                await stream.SendAsync(request, cancellationToken);
-                return (await stream.ReceiveResponseAsync(cancellationToken))!;
-            }
-            finally
-            {
-                rcpObserver.StopCall(request);
-            }
+            await PrepareExchangeAsClientAsync(cancellationToken);
+            
+            await stream.SendAsync(request, cancellationToken);
+            return (await stream.ReceiveResponseAsync(cancellationToken))!;
         }
 
         public void StopAcceptingClientRequests()
@@ -282,17 +270,8 @@ namespace Halibut.Transport.Protocol
         
         async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
         {
-            rcpObserver.StartCall(nextRequest);
-
-            try
-            {
-                await stream.SendAsync(nextRequest, cancellationToken);
-                return (await stream.ReceiveResponseAsync(cancellationToken))!;
-            }
-            finally
-            {
-                rcpObserver.StopCall(nextRequest);
-            }
+            await stream.SendAsync(nextRequest, cancellationToken);
+            return (await stream.ReceiveResponseAsync(cancellationToken))!;
         }
         
         static async Task<ResponseMessage> InvokeAndWrapAnyExceptionsAsync(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
