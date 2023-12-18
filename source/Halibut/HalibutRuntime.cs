@@ -198,18 +198,18 @@ namespace Halibut
 
         async Task<ResponseMessage> SendOutgoingRequestAsync(RequestMessage request, MethodInfo methodInfo, CancellationToken cancellationToken)
         {
+            var endPoint = request.Destination;
+
+            var cachedResponse = responseCache.Value.GetCachedResponse(endPoint, request, methodInfo);
+
+            if (cachedResponse != null)
+            {
+                return cachedResponse;
+            }
+
             rpcObserver.StartCall(request);
             try
             {
-                var endPoint = request.Destination;
-
-                var cachedResponse = responseCache.Value.GetCachedResponse(endPoint, request, methodInfo);
-
-                if (cachedResponse != null)
-                {
-                    return cachedResponse;
-                }
-
                 ResponseMessage response;
 
                 switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
