@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
@@ -37,7 +38,7 @@ namespace Halibut.Tests.Transport.Observability
         
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        public async Task RpcCallsShouldBeObserved_RegardlessOfSuccessOrFailure(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task RpcCallsShouldBeObserved_EvenWhenRpcCallFails(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var rpcObserver = new TestRpcObserver();
 
@@ -53,6 +54,26 @@ namespace Halibut.Tests.Transport.Observability
 
                 ThenShouldContainOneCall(rpcObserver.StartCalls, nameof(IEchoService), nameof(IEchoService.Crash));
                 ThenShouldContainOneCall(rpcObserver.EndCalls, nameof(IEchoService), nameof(IEchoService.Crash));
+            }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        public async Task RpcCallsShouldBeObserved_EvenIfServiceDoesNotExist(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var rpcObserver = new TestRpcObserver();
+
+            await using (var clientAndService = await clientAndServiceTestCase.CreateClientOnlyTestCaseBuilder()
+                             .AsLatestClientBuilder()
+                             .WithClientRpcObserver(rpcObserver)
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateClientWithoutService<IEchoService, IAsyncClientEchoService>(point => point.PollingRequestQueueTimeout = TimeSpan.FromSeconds(1));
+
+                await AssertionExtensions.Should(() => echo.SayHelloAsync("Hello")).ThrowAsync<HalibutClientException>();
+
+                ThenShouldContainOneCall(rpcObserver.StartCalls, nameof(IEchoService), nameof(IEchoService.SayHello));
+                ThenShouldContainOneCall(rpcObserver.EndCalls, nameof(IEchoService), nameof(IEchoService.SayHello));
             }
         }
 

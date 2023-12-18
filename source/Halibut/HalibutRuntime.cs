@@ -101,7 +101,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), rpcObserver, TimeoutsAndLimits, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), TimeoutsAndLimits, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -207,22 +207,30 @@ namespace Halibut
                 return cachedResponse;
             }
 
-            ResponseMessage response;
-
-            switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
+            rpcObserver.StartCall(request);
+            try
             {
-                case "https":
-                    response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
-                    break;
-                case "poll":
-                    response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
-                    break;
-                default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
+                ResponseMessage response;
+
+                switch (endPoint.BaseUri.Scheme.ToLowerInvariant())
+                {
+                    case "https":
+                        response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case "poll":
+                        response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                        break;
+                    default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
+                }
+
+                responseCache.Value.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
+
+                return response;
             }
-
-            responseCache.Value.CacheResponse(endPoint, request, methodInfo, response, OverrideErrorResponseMessageCaching);
-
-            return response;
+            finally
+            {
+                rpcObserver.StopCall(request);
+            }
         }
 
         async Task<ResponseMessage> SendOutgoingHttpsRequestAsync(RequestMessage request, CancellationToken cancellationToken)
