@@ -9,6 +9,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
+using Halibut.Transport;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -30,8 +31,11 @@ namespace Halibut.Tests
                 var client = clientOnly.CreateClientWithoutService<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
-                    .And.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out.");
+                var exception = (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken)))).And;
+
+                exception.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out.");
+                exception.ConnectionState.Should().Be(ConnectionState.Connecting);
+
                 stopwatch.Stop();
 
                 stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(8), "Should have timed out quickly");
@@ -116,8 +120,10 @@ namespace Halibut.Tests
                 var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken))))
-                    .And.Message.Should().Contain("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:06), so the request timed out.");
+                var exception = (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken)))).And;
+                exception.Message.Should().Contain("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:06), so the request timed out.");
+                exception.ConnectionState.Should().Be(ConnectionState.Unknown);
+
                 stopwatch.Stop();
 
                 stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), "Should have timed out quickly");
@@ -157,10 +163,11 @@ namespace Halibut.Tests
                 var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
 
                 var stopwatch = Stopwatch.StartNew();
-                (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken))))
-                    .And.Message.Should().ContainAny(
+                var exception = (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken)))).And;
+                exception.Message.Should().ContainAny(
                         "Unable to read data from the transport connection: Connection timed out.",
                         "Unable to read data from the transport connection: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond");
+                exception.ConnectionState.Should().Be(ConnectionState.Unknown);
                 stopwatch.Stop();
 
                 stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), "Should have timed out quickly");
