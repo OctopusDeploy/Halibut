@@ -14,5 +14,8 @@ namespace Halibut.Transport.Protocol
         public string? Details { get; set; }
         
         public string? HalibutErrorType { get; set; }
+
+        [JsonIgnore]
+        public ConnectionState ConnectionState { get; set; } = ConnectionState.Unknown;
     }
 }

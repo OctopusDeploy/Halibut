@@ -3,6 +3,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
 

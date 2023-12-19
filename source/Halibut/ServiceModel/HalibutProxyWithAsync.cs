@@ -157,8 +157,7 @@ namespace Halibut.ServiceModel
                 logger.Write(EventType.Error, "Error {0} when processing ServerError", exception);
             }
 
-            throw new HalibutClientException(error.Message, realException);
-
+            throw new HalibutClientException(error.Message, realException, error.ConnectionState);
         }
 
         internal static (object[] args, HalibutProxyRequestOptions? halibutProxyRequestOptions) TrimOffHalibutProxyRequestOptions(object[] args)

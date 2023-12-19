@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
+using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using Nito.AsyncEx;
 
@@ -271,19 +272,27 @@ namespace Halibut.ServiceModel
                         if (cancellationToken.IsCancellationRequested)
                         {
                             log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received", request);
-                            SetResponse(ResponseMessage.FromException(request, new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded.")));
+                            SetResponse(ResponseMessage.FromException(
+                                request, 
+                                new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded."),
+                                ConnectionState.Connecting));
                         }
                         else
                         {
                             log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
-                            SetResponse(ResponseMessage.FromException(request, new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({request.Destination.PollingRequestMaximumMessageProcessingTimeout}), so the request timed out.")));
+                            SetResponse(ResponseMessage.FromException(
+                                request, 
+                                new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({request.Destination.PollingRequestMaximumMessageProcessingTimeout}), so the request timed out.")));
                         }
                     }
                 }
                 else
                 {
                     log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
-                    SetResponse(ResponseMessage.FromException(request, new TimeoutException($"A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({request.Destination.PollingRequestQueueTimeout}), so the request timed out.")));
+                    SetResponse(ResponseMessage.FromException(
+                        request, 
+                        new TimeoutException($"A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({request.Destination.PollingRequestQueueTimeout}), so the request timed out."),
+                        ConnectionState.Connecting));
                 }
             }
             

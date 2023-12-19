@@ -28,12 +28,12 @@ namespace Halibut.Transport.Protocol
             return new ResponseMessage { Id = request.Id, Error = new ServerError { Message = message } };
         }
 
-        public static ResponseMessage FromException(RequestMessage request, Exception ex)
+        public static ResponseMessage FromException(RequestMessage request, Exception ex, ConnectionState connectionState = ConnectionState.Unknown)
         {
-            return new ResponseMessage {Id = request.Id, Error = ServerErrorFromException(ex)};
+            return new ResponseMessage { Id = request.Id, Error = ServerErrorFromException(ex, connectionState) };
         }
 
-        internal static ServerError ServerErrorFromException(Exception ex)
+        internal static ServerError ServerErrorFromException(Exception ex, ConnectionState connectionState = ConnectionState.Unknown)
         {
             string? errorType = null;
 
@@ -42,7 +42,13 @@ namespace Halibut.Transport.Protocol
                 errorType = ex.GetType().FullName;
             }
 
-            return new ServerError { Message = ex.UnpackFromContainers().Message, Details = ex.ToString(), HalibutErrorType = errorType };
+            return new ServerError
+            {
+                Message = ex.UnpackFromContainers().Message, 
+                Details = ex.ToString(), 
+                HalibutErrorType = errorType,
+                ConnectionState = connectionState
+            };
         }
     }
 }

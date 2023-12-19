@@ -18,7 +18,7 @@ namespace Halibut
         }
 
         public HalibutClientException(string message, Exception inner, ConnectionState connectionState)
-            : base(message, inner)
+            : this(message, inner)
         {
             ConnectionState = connectionState;
         }
@@ -26,6 +26,12 @@ namespace Halibut
         public HalibutClientException(string message, string serverException)
             : base(message + Environment.NewLine + Environment.NewLine + "Server exception: " + Environment.NewLine + serverException)
         {
+        }
+
+        public HalibutClientException(string message, string serverException, ConnectionState connectionState)
+            : this(message, serverException)
+        {
+            ConnectionState = connectionState;
         }
     }
 }
