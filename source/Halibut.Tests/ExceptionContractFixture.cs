@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Exceptions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PendingRequestQueueFactories;
 using Halibut.Tests.Support.TestAttributes;
@@ -88,7 +89,8 @@ namespace Halibut.Tests
             waitSemaphore.Release();
         }
 
-        [Test] [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        [Test] 
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task WhenThePollingRequestIsCancelledWhileQueued_AnOperationCanceledExceptionShouldBeThrown(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var cancellationTokenSource = new CancellationTokenSource();
@@ -235,7 +237,7 @@ namespace Halibut.Tests
 
             var cancellationTokenSource = new CancellationTokenSource();
             
-            (await AssertException.Throws<HalibutClientException>(async () =>
+            (await AssertException.Throws<ConnectingRequestCancelledException>(async () =>
             {
                 var task = client.SayHelloAsync("Hello", new(cancellationTokenSource.Token));
                 cancellationTokenSource.Cancel();
@@ -266,7 +268,7 @@ namespace Halibut.Tests
 
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-            (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token))))
+            (await AssertException.Throws<ConnectingRequestCancelledException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token))))
                 .And.Message.Should().Contain("An error occurred when sending a request to 'https://20.5.79.31:10933/', after the request began: The Request was cancelled while Connecting.");
         }
 
@@ -291,7 +293,7 @@ namespace Halibut.Tests
 
             var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
-            var exception = (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token)))).And;
+            var exception = (await AssertException.Throws<ConnectingRequestCancelledException>(async () => await client.SayHelloAsync("Hello", new(cancellationTokenSource.Token)))).And;
             exception.Message.Should().Be($"An error occurred when sending a request to '{clientAndService.ServiceUri}', after the request began: The Request was cancelled while Connecting.");
         }
         
@@ -323,7 +325,7 @@ namespace Halibut.Tests
                 cancellationTokenSource.Cancel();
             });
 
-            (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token))))
+            (await AssertException.Throws<TransferringRequestCancelledException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token))))
                 .And.Message.Should().Contain($"An error occurred when sending a request to '{clientAndService.ServiceUri}', after the request began: The Request was cancelled while Transferring.");
 
             waitSemaphore.Release();
