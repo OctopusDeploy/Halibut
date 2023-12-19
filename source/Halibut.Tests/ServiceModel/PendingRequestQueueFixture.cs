@@ -366,8 +366,8 @@ namespace Halibut.Tests.ServiceModel
 
                     if (currentIndex % 2 == 0)
                     {
-                        Interlocked.Increment(ref cancelled);
                         queueAndWaitTasksInOrder.ElementAt(index - 1).Item2.Cancel();
+                        Interlocked.Increment(ref cancelled);
                     }
                 }
             });
