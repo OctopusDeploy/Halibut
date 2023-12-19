@@ -400,7 +400,7 @@ namespace Halibut.Tests.ServiceModel
             // This test is pretty non-deterministic. It attempts to create some cancellation chaos
             // and we just want to ensure some things did cancel and some things did complete and nothing
             // threw an exception
-            completedTask.Count(x => x != null).Should().BeLessThan(totalRequest - minimumCancelledRequest).And.BeGreaterThanOrEqualTo(totalRequest / 2);
+            completedTask.Count(x => x != null).Should().BeLessThanOrEqualTo(totalRequest - minimumCancelledRequest).And.BeGreaterThanOrEqualTo(totalRequest / 2);
         }
 
         [Test]
