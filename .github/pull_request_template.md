@@ -12,7 +12,7 @@ Fixes https://github.com/OctopusDeploy/Issues/issues/... _(optional public issue
 
 Fixes https://github.com/OctopusDeploy/ResearchAndDevelopment/issues/... _(optional private issue)_
 
-See [How we use GitHub Issues](https://github.com/OctopusDeploy/Issues/blob/master/docs/CONTRIBUTING.internal.md) (including [this flowchart](https://whimsical.com/r-d-incoming-work-workflow-aug-21-NsDnGQXcwBLwU66a88Zhue) 
+See [How we use GitHub Issues](https://github.com/OctopusDeploy/Issues/blob/main/docs/CONTRIBUTING.internal.md) (including [this flowchart](https://whimsical.com/r-d-incoming-work-workflow-aug-21-NsDnGQXcwBLwU66a88Zhue) 
 
 ## Before
 
@@ -39,6 +39,6 @@ Quality :heavy_check_mark:
 
 # Pre-requisites
 
-- [ ] I have read [How we use GitHub Issues](https://github.com/OctopusDeploy/Issues/blob/master/docs/CONTRIBUTING.internal.md) for help deciding when and where it's appropriate to make an issue.
+- [ ] I have read [How we use GitHub Issues](https://github.com/OctopusDeploy/Issues/blob/main/docs/CONTRIBUTING.internal.md) for help deciding when and where it's appropriate to make an issue.
 - [ ] I have considered informing or consulting the right people, according to the [ownership map](https://whimsical.com/ownership-map-NzbiD4HJyvhC9jNJNfS6TG).
 - [ ] I have considered appropriate testing for my change.
