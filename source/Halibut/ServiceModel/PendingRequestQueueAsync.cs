@@ -11,7 +11,7 @@ using Nito.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
-    public class PendingRequestQueueAsync : IPendingRequestQueue
+    public class PendingRequestQueueAsync : IPendingRequestQueue, IAsyncDisposable
     {
         readonly List<PendingRequest> queue = new();
         readonly Dictionary<string, PendingRequest> inProgress = new();
@@ -19,26 +19,27 @@ namespace Halibut.ServiceModel
         readonly AsyncManualResetEvent itemAddedToQueue = new(false);
         readonly ILog log;
         readonly TimeSpan pollingQueueWaitTimeout;
-        readonly bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
+        readonly CancellationTokenSource entireQueueCancellationTokenSource = new();
 
         public PendingRequestQueueAsync(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log) : this(
             log, 
-            halibutTimeoutsAndLimits.PollingQueueWaitTimeout, 
-            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
+            halibutTimeoutsAndLimits.PollingQueueWaitTimeout)
         {
             this.log = log;
         }
 
-        public PendingRequestQueueAsync(ILog log, TimeSpan pollingQueueWaitTimeout, bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
+        public PendingRequestQueueAsync(ILog log, TimeSpan pollingQueueWaitTimeout)
         {
             this.log = log;
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
-            this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
         }
 
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken ct)
         {
-            using var pending = new PendingRequest(request, relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout, log);
+            using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct, this.entireQueueCancellationTokenSource.Token);
+            var cancellationToken = cancellationTokenSource.Token;
+            
+            using var pending = new PendingRequest(request, log);
 
             try
             {
@@ -177,7 +178,6 @@ namespace Halibut.ServiceModel
         class PendingRequest : IDisposable
         {
             readonly RequestMessage request;
-            readonly bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
             readonly ILog log;
             readonly AsyncManualResetEvent responseWaiter = new(false);
             readonly SemaphoreSlim transferLock = new(1, 1);
@@ -186,10 +186,9 @@ namespace Halibut.ServiceModel
             readonly CancellationTokenSource pendingRequestCancellationTokenSource;
             ResponseMessage? response;
 
-            public PendingRequest(RequestMessage request, bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout, ILog log)
+            public PendingRequest(RequestMessage request, ILog log)
             {
                 this.request = request;
-                this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
                 this.log = log;
 
                 pendingRequestCancellationTokenSource = new CancellationTokenSource();
@@ -250,7 +249,7 @@ namespace Halibut.ServiceModel
                 if (waitForTransferToComplete)
                 {
                     responseSet = await WaitForResponseToBeSet(
-                        relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout ? null : request.Destination.PollingRequestMaximumMessageProcessingTimeout,
+                        null,
                         // Cancel the dequeued request to force Reads and Writes to be cancelled
                         cancelTheRequestWhenTransferHasBegun: true,
                         cancellationToken);
@@ -279,10 +278,11 @@ namespace Halibut.ServiceModel
                         }
                         else
                         {
-                            log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
+                            // This should never happen.
+                            log.Write(EventType.MessageExchange, "Request {0} had an internal error, unexpectedly stopped waiting for the response.", request);
                             SetResponse(ResponseMessage.FromException(
                                 request, 
-                                new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time ({request.Destination.PollingRequestMaximumMessageProcessingTimeout}), so the request timed out.")));
+                                new PendingRequestQueueInternalException($"Request {request.Id} had an internal error, unexpectedly stopped waiting for the response.")));
                         }
                     }
                 }
@@ -377,6 +377,13 @@ namespace Halibut.ServiceModel
                 pendingRequestCancellationTokenSource?.Dispose();
                 transferLock?.Dispose();
             }
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            entireQueueCancellationTokenSource.Cancel();
+            entireQueueCancellationTokenSource.Dispose();
+            return ValueTask.CompletedTask;
         }
     }
 }

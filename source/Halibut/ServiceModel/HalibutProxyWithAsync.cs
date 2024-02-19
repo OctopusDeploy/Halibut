@@ -71,7 +71,9 @@ namespace Halibut.ServiceModel
 
             var request = CreateRequest(asyncMethod, serviceMethod, args);
 
-            var response = await messageRouter(request, serviceMethod, halibutProxyRequestOptions?.RequestCancellationToken ?? CancellationToken.None);
+            var requestCancellationToken = halibutProxyRequestOptions?.RequestCancellationToken ?? CancellationToken.None;
+            
+            var response = await messageRouter(request, serviceMethod, requestCancellationToken);
 
             EnsureNotError(response);
             

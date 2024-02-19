@@ -67,6 +67,11 @@ namespace Halibut.Tests.Support.PendingRequestQueueFactories
 
             public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
                 => await inner.QueueAndWaitAsync(request, requestCancellationToken);
+
+            public ValueTask DisposeAsync()
+            {
+                return inner.DisposeAsync();
+            }
         }
     }
 }

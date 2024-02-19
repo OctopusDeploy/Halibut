@@ -15,7 +15,6 @@ namespace Halibut.Tests
                 // The following 4 can be overriden, so set them high and let the test author drop the values as needed.
                 // Also set to a "weird value" to make it more obvious which timeout is at play in tests.
                 PollingRequestQueueTimeout = TimeSpan.FromSeconds(66),
-                PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(66),
                 RetryListeningSleepInterval = TimeSpan.FromSeconds(1),
                 ConnectionErrorRetryTimeout = TimeSpan.FromSeconds(66), // Must always be greater than the heartbeat timeout.
             

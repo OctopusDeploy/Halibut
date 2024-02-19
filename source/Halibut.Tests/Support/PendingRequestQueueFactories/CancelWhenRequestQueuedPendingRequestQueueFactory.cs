@@ -61,6 +61,11 @@ namespace Halibut.Tests.Support.PendingRequestQueueFactories
                 await task;
                 return result;
             }
+
+            public ValueTask DisposeAsync()
+            {
+                return this.inner.DisposeAsync();
+            }
         }
     }
 }

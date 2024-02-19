@@ -22,7 +22,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
             var request = new RequestMessageBuilder(endpoint).Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
@@ -46,7 +46,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
             var request = new RequestMessageBuilder(endpoint).Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
             var unexpectedResponse = new ResponseMessageBuilder(Guid.NewGuid().ToString()).Build();
@@ -80,7 +80,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
             var request = new RequestMessageBuilder(endpoint)
                 .WithServiceEndpoint(seb => seb.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(1000)))
                 .Build();
@@ -106,7 +106,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout(true)
                 .WithEndpoint(endpoint)
                 .Build();
@@ -135,7 +135,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -167,7 +167,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout(true)
@@ -205,7 +205,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -240,7 +240,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
 
             var requestsInOrder = Enumerable.Range(0, 3)
                 .Select(_ => new RequestMessageBuilder(endpoint).Build())
@@ -270,7 +270,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
 
             var requestsInOrder = Enumerable.Range(0, 30)
                 .Select(_ => new RequestMessageBuilder(endpoint).Build())
@@ -302,7 +302,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
 
             // Choose a number large enough that it will fail when doing the 'synchronous' version.
             var requestsInOrder = Enumerable.Range(0, 5000)
@@ -335,7 +335,7 @@ namespace Halibut.Tests.ServiceModel
             const int totalRequest = 500;
             const int minimumCancelledRequest = 100;
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
 
             var requestsInOrder = Enumerable.Range(0, totalRequest)
                 .Select(_ => new RequestMessageBuilder(endpoint).Build())
@@ -409,7 +409,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
             var request = new RequestMessageBuilder(endpoint).Build();
 
             var cancellationTokenSource = new CancellationTokenSource();
@@ -432,7 +432,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -466,7 +466,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
                 .Build();
@@ -487,7 +487,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
                 .Build();
@@ -517,7 +517,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
             var request = new RequestMessageBuilder(endpoint).Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
@@ -549,7 +549,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var sut = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
             var request = new RequestMessageBuilder(endpoint).Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
 
@@ -578,7 +578,7 @@ namespace Halibut.Tests.ServiceModel
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            var sut = new PendingRequestQueueBuilder()
+            await using var sut = new PendingRequestQueueBuilder()
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
