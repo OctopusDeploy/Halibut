@@ -34,10 +34,10 @@ namespace Halibut.ServiceModel
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
         }
 
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken ct)
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
         {
-            using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(ct, this.entireQueueCancellationTokenSource.Token);
-            var cancellationToken = cancellationTokenSource.Token;
+            using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, this.entireQueueCancellationTokenSource.Token);
+            cancellationToken = cancellationTokenSource.Token;
             
             using var pending = new PendingRequest(request, log);
 
