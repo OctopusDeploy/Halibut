@@ -383,7 +383,7 @@ namespace Halibut.ServiceModel
         {
             entireQueueCancellationTokenSource.Cancel();
             entireQueueCancellationTokenSource.Dispose();
-            return ValueTask.CompletedTask;
+            return new ValueTask();
         }
     }
 }
