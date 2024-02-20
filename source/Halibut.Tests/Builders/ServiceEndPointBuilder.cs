@@ -21,11 +21,6 @@ namespace Halibut.Tests.Builders
             return this;
         }
 
-        public ServiceEndPointBuilder WithPollingRequestMaximumMessageProcessingTimeout(TimeSpan timeout)
-        {
-            return this;
-        }
-
         public ServiceEndPoint Build()
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
