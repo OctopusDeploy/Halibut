@@ -95,7 +95,6 @@ namespace Halibut.Tests.Timeouts
         static void IncreasePollingQueueTimeout(ServiceEndPoint point)
         {
             // We don't want to measure the polling queue timeouts.
-            point.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromMinutes(10);
             point.PollingRequestQueueTimeout = TimeSpan.FromMinutes(10);
             point.RetryCountLimit = 1;
         }

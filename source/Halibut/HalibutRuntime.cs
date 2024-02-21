@@ -338,6 +338,16 @@ namespace Halibut
 
         public async ValueTask DisposeAsync()
         {
+            foreach (var pendingRequestQueue in this.queues.Values)
+            {
+                try
+                {
+                    await pendingRequestQueue.DisposeAsync();
+                }
+                catch (Exception)
+                {
+                }
+            }
             pollingClients.Dispose();
             await connectionManager.DisposeAsync();
             

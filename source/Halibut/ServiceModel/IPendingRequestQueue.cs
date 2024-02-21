@@ -5,7 +5,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.ServiceModel
 {
-    public interface IPendingRequestQueue
+    public interface IPendingRequestQueue : IAsyncDisposable
     {
         bool IsEmpty { get; }
         int Count { get; }

@@ -8,7 +8,6 @@ namespace Halibut.Tests.Builders
     {
         string? endpoint;
         TimeSpan? pollingRequestQueueTimeout;
-        TimeSpan? pollingRequestMaximumMessageProcessingTimeout;
 
         public ServiceEndPointBuilder WithEndpoint(string endpoint)
         {
@@ -22,12 +21,6 @@ namespace Halibut.Tests.Builders
             return this;
         }
 
-        public ServiceEndPointBuilder WithPollingRequestMaximumMessageProcessingTimeout(TimeSpan timeout)
-        {
-            pollingRequestMaximumMessageProcessingTimeout = timeout;
-            return this;
-        }
-
         public ServiceEndPoint Build()
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
@@ -36,10 +29,6 @@ namespace Halibut.Tests.Builders
             if (pollingRequestQueueTimeout is not null)
             {
                 serviceEndPoint.PollingRequestQueueTimeout = pollingRequestQueueTimeout.Value;
-            }
-            if (pollingRequestMaximumMessageProcessingTimeout is not null)
-            {
-                serviceEndPoint.PollingRequestMaximumMessageProcessingTimeout = pollingRequestMaximumMessageProcessingTimeout.Value;
             }
 
             return serviceEndPoint;

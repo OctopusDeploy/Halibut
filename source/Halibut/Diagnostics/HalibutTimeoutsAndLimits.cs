@@ -13,22 +13,6 @@ namespace Halibut.Diagnostics
         public TimeSpan PollingRequestQueueTimeout { get; set; } = TimeSpan.FromMinutes(2);
 
         /// <summary>
-        ///     The default amount of time the client will wait for the server to process a message collected
-        ///     from the polling request queue before it raises a TimeoutException. Can be overridden via the ServiceEndPoint.
-        /// </summary>
-        public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; } = TimeSpan.FromMinutes(10);
-
-        /// <summary>
-        ///     We believe that PollingRequestMaximumMessageProcessingTimeout is redundant.
-        ///     This makes clients talking to polling services have similar behaviour to talking to listening services.
-        ///     In listening we wait for the request to finish or for an error.
-        ///     Enabling this results in the same behaviour as listening.
-        /// 
-        ///     This setting allows us to feature toggle turning off PollingRequestMaximumMessageProcessingTimeout.
-        /// </summary>
-        public bool RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout { get; set; }
-
-        /// <summary>
         ///     The amount of time to wait between connection requests to the remote endpoint (applies
         ///     to both polling and listening connections). Can be overridden via the ServiceEndPoint.
         /// </summary>
