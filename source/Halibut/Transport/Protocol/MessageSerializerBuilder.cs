@@ -17,6 +17,8 @@ namespace Halibut.Transport.Protocol
         // Initial prod telemetry indicated values < 7K would be fine. But to be safe, 64K to future proof, and stay below the LOH threshold of 85K.
         long writeIntoMemoryLimitBytes = 1024L * 64L;
 
+        bool useGenericMessageEnvelope;
+
         public MessageSerializerBuilder(ILogFactory logFactory)
         {
             this.logFactory = logFactory;
@@ -47,6 +49,12 @@ namespace Halibut.Transport.Protocol
             return this;
         }
 
+        public MessageSerializerBuilder WithGenericMessageEnvelope()
+        {
+            useGenericMessageEnvelope = true;
+            return this;
+        }
+
         public MessageSerializer Build()
         {
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
@@ -68,7 +76,8 @@ namespace Halibut.Transport.Protocol
                 messageSerializerObserver,
                 readIntoMemoryLimitBytes,
                 writeIntoMemoryLimitBytes,
-                logFactory);
+                logFactory,
+                useGenericMessageEnvelope);
 
             return messageSerializer;
         }

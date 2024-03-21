@@ -20,6 +20,7 @@ namespace Halibut.Transport.Protocol
         readonly long readIntoMemoryLimitBytes;
         readonly long writeIntoMemoryLimitBytes;
         readonly DeflateStreamInputBufferReflector deflateReflector;
+        readonly bool useGenericMessageEnvelope;
         
         internal MessageSerializer(
             ITypeRegistry typeRegistry,
@@ -27,7 +28,8 @@ namespace Halibut.Transport.Protocol
             IMessageSerializerObserver observer,
             long readIntoMemoryLimitBytes,
             long writeIntoMemoryLimitBytes,
-            ILogFactory logFactory)
+            ILogFactory logFactory,
+            bool useGenericMessageEnvelope)
         {
             this.typeRegistry = typeRegistry;
             this.createStreamCapturingSerializer = createStreamCapturingSerializer;
@@ -35,6 +37,7 @@ namespace Halibut.Transport.Protocol
             this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
             deflateReflector = new DeflateStreamInputBufferReflector(logFactory.ForPrefix(nameof(MessageSerializer)));
+            this.useGenericMessageEnvelope = useGenericMessageEnvelope;
         }
 
         public void AddToMessageContract(params Type[] types) // kept for backwards compatibility
@@ -59,7 +62,14 @@ namespace Halibut.Transport.Protocol
                 // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
                 var streamCapturingSerializer = createStreamCapturingSerializer();
-                streamCapturingSerializer.Serializer.Serialize(bson, new MessageEnvelope<object> { Message = message! });
+                if (useGenericMessageEnvelope)
+                {
+                    streamCapturingSerializer.Serializer.Serialize(bson, new MessageEnvelope<T> { Message = message! });
+                }
+                else
+                {
+                    streamCapturingSerializer.Serializer.Serialize(bson, new MessageEnvelope<object> { Message = message! });
+                }
 
                 serializedStreams = streamCapturingSerializer.DataStreams;
             }
