@@ -270,6 +270,17 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public LatestClientAndLatestServiceBuilder WithServiceOpeningMultiplePollingConnections(int count)
+        {
+            if(ServiceConnectionType != ServiceConnectionType.Polling)
+            {
+                return this;
+            }
+
+            serviceBuilder.WithMultiplePollingConnections(count);
+            return this;
+        }
+
         async Task<IClientAndService> IClientAndServiceBuilder.Build(CancellationToken cancellationToken)
         {
             return await Build(cancellationToken);
@@ -298,7 +309,7 @@ namespace Halibut.Tests.Support
             {
                 serviceBuilder.WithListeningClient(client.ListeningUri);
             }
-            
+
             var service = await serviceBuilder.Build(cancellationToken);
 
             if (portForwarderReference != null)

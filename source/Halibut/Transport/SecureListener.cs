@@ -271,7 +271,7 @@ namespace Halibut.Transport
             }
             catch (AuthorizedTcpConnectionsExceededException)
             {
-                log.Write(EventType.Diagnostic, "A client at {0} has exceeded the maximum number of authorized connections ({1}). New connections will be rejected", clientName, halibutTimeoutsAndLimits.MaximumAuthorisedTcpConnectionsPerThumbprint);
+                log.Write(EventType.ErrorInInitialisation, "A client at {0} has exceeded the maximum number of authorized connections ({1}). New connections will be rejected", clientName, halibutTimeoutsAndLimits.MaximumAuthorisedTcpConnectionsPerThumbprint);
             }
             catch (IOException ex) when (ex.InnerException is SocketException)
             {

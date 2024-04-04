@@ -29,7 +29,7 @@ namespace Halibut.Tests.Support
 
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
-        
+
         readonly List<Uri> listeningClientUris = new();
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
@@ -40,6 +40,7 @@ namespace Halibut.Tests.Support
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
         IStreamFactory? serviceStreamFactory;
         IConnectionsObserver? serviceConnectionsObserver;
+        int pollingConnectionCount = 1;
 
         public LatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
@@ -50,7 +51,7 @@ namespace Halibut.Tests.Support
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             serviceTrustsThumbprint = clientCertAndThumbprint.Thumbprint;
         }
-        
+
         public static LatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
         {
             switch (serviceConnectionType)
@@ -85,7 +86,7 @@ namespace Halibut.Tests.Support
             this.serviceStreamFactory = streamFactory;
             return this;
         }
-        
+
         public LatestServiceBuilder WithServiceConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
             this.serviceConnectionsObserver = connectionsObserver;
@@ -148,7 +149,7 @@ namespace Halibut.Tests.Support
             this.proxyDetails = proxyDetails;
             return this;
         }
-        
+
         public LatestServiceBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
@@ -160,14 +161,14 @@ namespace Halibut.Tests.Support
             this.halibutLogLevel = halibutLogLevel;
             return this;
         }
-        
+
         public LatestServiceBuilder RecordingServiceLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
         {
             inMemoryLoggers = new ConcurrentDictionary<string, ILog>();
             this.serviceInMemoryLoggers = inMemoryLoggers;
             return this;
         }
-        
+
         public LatestServiceBuilder WithServiceTrustingTheWrongCertificate()
         {
             serviceTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
@@ -178,14 +179,14 @@ namespace Halibut.Tests.Support
         {
             return await Build(cancellationToken);
         }
-        
+
         public async Task<LatestService> Build(CancellationToken cancellationToken)
         {
             //TODO: @server-at-scale - We don't need to be async. But this is left here to see if we need to add it back some day. We can decide later if we wish to make this sync.
             await Task.CompletedTask;
 
             serviceFactory ??= serviceFactoryBuilder.Build();
-            
+
             var serviceBuilder = new HalibutRuntimeBuilder()
                 .WithServiceFactory(serviceFactory)
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
@@ -196,7 +197,6 @@ namespace Halibut.Tests.Support
 
             if (pollingReconnectRetryPolicy != null) serviceBuilder.WithPollingReconnectRetryPolicy(pollingReconnectRetryPolicy);
             var service = serviceBuilder.Build();
-            
 
             PortForwarder? portForwarder = null;
             Uri serviceUri;
@@ -207,10 +207,13 @@ namespace Halibut.Tests.Support
 
                 foreach (var listeningClientUri in listeningClientUris)
                 {
-                    service.Poll(
-                        serviceUri,
-                        new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
-                        cancellationToken);
+                    for (var i = 0; i < pollingConnectionCount; i++)
+                    {
+                        service.Poll(
+                            serviceUri,
+                            new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                            cancellationToken);
+                    }
                 }
             }
             else if (serviceConnectionType == ServiceConnectionType.PollingOverWebSocket)
@@ -229,7 +232,7 @@ namespace Halibut.Tests.Support
             {
                 service.Trust(serviceTrustsThumbprint);
                 var listenPort = service.Listen();
-                
+
                 portForwarder = portForwarderFactory?.Invoke(listenPort);
                 if (portForwarder != null)
                 {
@@ -250,7 +253,7 @@ namespace Halibut.Tests.Support
 
             return new LatestService(service, serviceUri, portForwarder);
         }
-        
+
         ILogFactory BuildServiceLogger()
         {
             if (serviceInMemoryLoggers == null)
@@ -268,6 +271,15 @@ namespace Halibut.Tests.Support
                     }
                 )
                 .ToCachingLogFactory();
+        }
+
+        public LatestServiceBuilder WithMultiplePollingConnections(int count)
+        {
+            if (serviceConnectionType != ServiceConnectionType.Polling)
+                return this;
+
+            pollingConnectionCount = count;
+            return this;
         }
     }
 }

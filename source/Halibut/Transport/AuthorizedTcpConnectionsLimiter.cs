@@ -53,14 +53,18 @@ namespace Halibut.Transport
                 this.thumbprint = thumbprint;
                 this.authorizedConnectionCountPerThumbprint = authorizedConnectionCountPerThumbprint;
 
-                var count = this.authorizedConnectionCountPerThumbprint.GetOrAdd(thumbprint, _ => new StrongBox<int>(1));
+                var count = this.authorizedConnectionCountPerThumbprint.GetOrAdd(thumbprint, _ => new StrongBox<int>(0));
 
                 //increment the count via an interlock
                 var resultCount = Interlocked.Increment(ref count.Value);
 
                 //validate the new count. If this throws an exception, it'll
                 if (resultCount > maximumAcceptedTcpConnectionsPerThumbprint)
+                {
+                    //decrement as this connection has been rejected
+                    Interlocked.Decrement(ref count.Value);
                     throw new AuthorizedTcpConnectionsExceededException($"Exceeded the maximum number ({maximumAcceptedTcpConnectionsPerThumbprint}) of authorised TCP connections for thumbprint {thumbprint}");
+                }
             }
 
             public void Dispose()
