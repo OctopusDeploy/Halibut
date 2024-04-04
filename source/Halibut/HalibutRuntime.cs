@@ -43,6 +43,7 @@ namespace Halibut
         readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly IAuthorizedTcpConnectionsLimiter _authorizedTcpConnectionsLimiter;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -73,6 +74,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManagerAsync();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
+            _authorizedTcpConnectionsLimiter = new AuthorizedTcpConnectionsLimiter(TimeoutsAndLimits);
         }
 
         public ILogFactory Logs => logs;
@@ -106,19 +108,20 @@ namespace Halibut
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, 
-                serverCertificate, 
-                ExchangeProtocolBuilder(), 
-                HandleMessageAsync, 
-                IsTrusted, 
-                logs, 
-                () => friendlyHtmlPageContent, 
-                () => friendlyHtmlPageHeaders, 
-                HandleUnauthorizedClientConnect, 
-                TimeoutsAndLimits, 
+            var listener = new SecureListener(endpoint,
+                serverCertificate,
+                ExchangeProtocolBuilder(),
+                HandleMessageAsync,
+                IsTrusted,
+                logs,
+                () => friendlyHtmlPageContent,
+                () => friendlyHtmlPageHeaders,
+                HandleUnauthorizedClientConnect,
+                TimeoutsAndLimits,
                 streamFactory,
-                connectionsObserver);
-            
+                connectionsObserver,
+                _authorizedTcpConnectionsLimiter);
+
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -129,19 +132,19 @@ namespace Halibut
 
         public void ListenWebSocket(string endpoint)
         {
-            var listener = new SecureWebSocketListener(endpoint, 
-                serverCertificate, 
-                ExchangeProtocolBuilder(), 
-                HandleMessageAsync, 
-                IsTrusted, 
-                logs, 
+            var listener = new SecureWebSocketListener(endpoint,
+                serverCertificate,
+                ExchangeProtocolBuilder(),
+                HandleMessageAsync,
+                IsTrusted,
+                logs,
                 () => friendlyHtmlPageContent,
                 () => friendlyHtmlPageHeaders,
                 HandleUnauthorizedClientConnect,
                 TimeoutsAndLimits,
                 streamFactory,
                 connectionsObserver);
-            
+
             lock (listeners)
             {
                 listeners.Add(listener);
@@ -243,7 +246,7 @@ namespace Halibut
                 async (protocol, cts) =>
                 {
                     response = await protocol.ExchangeAsClientAsync(request, cts).ConfigureAwait(false);
-                }, 
+                },
                 cancellationToken).ConfigureAwait(false);
 
             return response;
@@ -350,7 +353,7 @@ namespace Halibut
             }
             pollingClients.Dispose();
             await connectionManager.DisposeAsync();
-            
+
             if (responseCache.IsValueCreated)
             {
                 responseCache.Value?.Dispose();

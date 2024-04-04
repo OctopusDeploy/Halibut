@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -11,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Exceptions;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
@@ -46,6 +48,7 @@ namespace Halibut.Transport
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly IAuthorizedTcpConnectionsLimiter authorizedTcpConnectionsLimiter;
         ILog log;
         TcpListener listener;
         Thread? backgroundThread;
@@ -53,18 +56,19 @@ namespace Halibut.Transport
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public SecureListener(
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-            IPEndPoint endPoint, 
-            X509Certificate2 serverCertificate, 
-            ExchangeProtocolBuilder exchangeProtocolBuilder, 
-            ExchangeActionAsync exchangeAction, 
-            Predicate<string> verifyClientThumbprint, 
-            ILogFactory logFactory, 
-            Func<string> getFriendlyHtmlPageContent, 
+            IPEndPoint endPoint,
+            X509Certificate2 serverCertificate,
+            ExchangeProtocolBuilder exchangeProtocolBuilder,
+            ExchangeActionAsync exchangeAction,
+            Predicate<string> verifyClientThumbprint,
+            ILogFactory logFactory,
+            Func<string> getFriendlyHtmlPageContent,
             Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
-            IStreamFactory streamFactory, 
-            IConnectionsObserver connectionsObserver)
+            IStreamFactory streamFactory,
+            IConnectionsObserver connectionsObserver,
+            IAuthorizedTcpConnectionsLimiter authorizedTcpConnectionsLimiter)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -78,6 +82,7 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
+            this.authorizedTcpConnectionsLimiter = authorizedTcpConnectionsLimiter;
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
@@ -91,6 +96,7 @@ namespace Halibut.Transport
             {
                 listener.Server.DualMode = true;
             }
+
             listener.Start();
 
             if (IsWindows())
@@ -131,7 +137,7 @@ namespace Halibut.Transport
 
             const int errorThreshold = 3;
 
-            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable) null!)
+            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable)null!)
             {
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cts.IsCancellationRequested)
@@ -248,17 +254,24 @@ namespace Halibut.Transport
 
                     if (Authorize(thumbprint, clientName))
                     {
-                        connectionAuthorizedAndObserved = true;
-                        connectionsObserver.ConnectionAccepted(true);
-                        tcpClientManager.AddActiveClient(thumbprint, client);
-                        errorEventType = EventType.Error;
-                        await ExchangeMessages(ssl).ConfigureAwait(false);
+                        using (var _ = authorizedTcpConnectionsLimiter.ClaimAuthorizedTcpConnection(thumbprint))
+                        {
+                            connectionAuthorizedAndObserved = true;
+                            connectionsObserver.ConnectionAccepted(true);
+                            tcpClientManager.AddActiveClient(thumbprint, client);
+                            errorEventType = EventType.Error;
+                            await ExchangeMessages(ssl).ConfigureAwait(false);
+                        }
                     }
                 }
             }
             catch (AuthenticationException ex)
             {
                 log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
+            }
+            catch (AuthorizedTcpConnectionsExceededException)
+            {
+                log.Write(EventType.Diagnostic, "A client at {0} has exceeded the maximum number of authorized connections ({1}). New connections will be rejected", clientName, halibutTimeoutsAndLimits.MaximumAuthorisedTcpConnectionsPerThumbprint);
             }
             catch (IOException ex) when (ex.InnerException is SocketException)
             {
@@ -422,6 +435,7 @@ namespace Halibut.Transport
                     builder.Append(c);
                 }
             }
+
             return builder.ToString();
         }
 
