@@ -15,7 +15,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
@@ -76,12 +75,15 @@ namespace Halibut.Transport
                 if (authorizedConnectionCountPerThumbprint.TryGetValue(thumbprint, out var count))
                 {
                     //decrement the count of authorized connections
-                    Interlocked.Decrement(ref count.Count);
+                    var result = Interlocked.Decrement(ref count.Count);
 
                     // Remove the key from the dictionary if the value is 0
-                    // this will only remove the item if there is a value that matches this key & value
-                    // so if it's been incremented after the Decrement, then this will not find a match and not remove anything
-                    authorizedConnectionCountPerThumbprint.TryRemove(new KeyValuePair<string, ConnectionCount>(thumbprint, new ConnectionCount(0)));
+                    if (result == 0)
+                    {
+                        // this will only remove the item if there is a value that matches this key & value
+                        // so if it's been incremented after the Decrement, then this will not find a match and not remove anything
+                        authorizedConnectionCountPerThumbprint.TryRemove(new KeyValuePair<string, ConnectionCount>(thumbprint, new ConnectionCount(0)));
+                    }
                 }
             }
         }
