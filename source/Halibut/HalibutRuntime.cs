@@ -43,7 +43,7 @@ namespace Halibut
         readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
-        readonly IAuthorizedTcpConnectionsLimiter _authorizedTcpConnectionsLimiter;
+        readonly IAuthorizedTcpConnectionsLimiter authorizedTcpConnectionsLimiter;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -74,7 +74,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManagerAsync();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
-            _authorizedTcpConnectionsLimiter = new AuthorizedTcpConnectionsLimiter(TimeoutsAndLimits);
+            authorizedTcpConnectionsLimiter = new AuthorizedTcpConnectionsLimiter(TimeoutsAndLimits);
         }
 
         public ILogFactory Logs => logs;
@@ -120,7 +120,7 @@ namespace Halibut
                 TimeoutsAndLimits,
                 streamFactory,
                 connectionsObserver,
-                _authorizedTcpConnectionsLimiter);
+                authorizedTcpConnectionsLimiter);
 
             lock (listeners)
             {
