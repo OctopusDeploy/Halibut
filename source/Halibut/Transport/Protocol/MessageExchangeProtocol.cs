@@ -106,8 +106,7 @@ namespace Halibut.Transport.Protocol
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
 
-            //We need to check to see if 
-            //by default, we create an unlimited connection lease
+            //We might need to limit the connection, so by default, we create an unlimited connection lease
             var limitedConnectionLease = activeTcpConnectionsLimiter.CreateUnlimitedLease();
             
             //if the remote identity is a subscriber, we might need to limit their active TCP connections
