@@ -12,7 +12,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
-    public class MaximumAuthorizedTcpConnectionsFixture : BaseTest
+    public class MaximumActiveTcpConnectionsFixture : BaseTest
     {
         [Test]
         [LatestClientAndLatestServiceTestCases(testListening: false, testPolling: true, testWebSocket: false, testNetworkConditions: false)]

@@ -1,18 +1,4 @@
-﻿// Copyright 2012-2013 Octopus Deploy Pty. Ltd.
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//   http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,7 +11,7 @@ using NUnit.Framework;
 namespace Halibut.Tests.Transport
 {
     [TestFixture]
-    public class AuthorizedTcpConnectionsLimiterFixture : BaseTest
+    public class ActiveTcpConnectionsLimiterFixture : BaseTest
     {
         [Test]
         public void LimitsConcurrentConnectionsForSingleSubscription()
@@ -39,17 +25,17 @@ namespace Halibut.Tests.Transport
 
             // Act
             //we create a new URI each time to make sure we aren't doing object reference checks
-            limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
-            limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
-            limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
+            limiter.LeaseActiveTcpConnection(new Uri("poll://abc"));
+            limiter.LeaseActiveTcpConnection(new Uri("poll://abc"));
+            limiter.LeaseActiveTcpConnection(new Uri("poll://abc"));
 
             //this should throw
-            Action x = () => limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
+            Action x = () => limiter.LeaseActiveTcpConnection(new Uri("poll://abc"));
 
             // Assert
             x.Should().Throw<ActiveTcpConnectionsExceededException>();
         }
-        
+
         [Test]
         public void CompletedLeasesAreRemovedFromTheCount()
         {
@@ -62,21 +48,23 @@ namespace Halibut.Tests.Transport
             });
 
             // Act
-            limiter.ClaimAuthorizedTcpConnection(subscription);
-            limiter.ClaimAuthorizedTcpConnection(subscription);
-            
+            limiter.LeaseActiveTcpConnection(subscription);
+            limiter.LeaseActiveTcpConnection(subscription);
+
             //this will decrement the current count in the dispose
-            using ( limiter.ClaimAuthorizedTcpConnection(subscription))
+            using (limiter.LeaseActiveTcpConnection(subscription))
             {
-            };
+            }
+
+            ;
 
             //this should not throw
-            Action x = () => limiter.ClaimAuthorizedTcpConnection(subscription);
+            Action x = () => limiter.LeaseActiveTcpConnection(subscription);
 
             // Assert
             x.Should().NotThrow<ActiveTcpConnectionsExceededException>();
         }
-        
+
         [Test]
         public void DoesNotLimitConcurrentConnectionsForDifferentSubscriptions()
         {
@@ -90,17 +78,17 @@ namespace Halibut.Tests.Transport
             });
 
             // Act
-            limiter.ClaimAuthorizedTcpConnection(subscription1);
-            limiter.ClaimAuthorizedTcpConnection(subscription1);
-            limiter.ClaimAuthorizedTcpConnection(subscription1);
+            limiter.LeaseActiveTcpConnection(subscription1);
+            limiter.LeaseActiveTcpConnection(subscription1);
+            limiter.LeaseActiveTcpConnection(subscription1);
 
             //this should not throw
-            Action x = () => limiter.ClaimAuthorizedTcpConnection(subscription2);
+            Action x = () => limiter.LeaseActiveTcpConnection(subscription2);
 
             // Assert
             x.Should().NotThrow<ActiveTcpConnectionsExceededException>();
         }
-        
+
         [Test]
         public async Task ShouldHandleMultiThreading()
         {
@@ -111,7 +99,7 @@ namespace Halibut.Tests.Transport
             {
                 MaximumActiveTcpConnectionsPerPollingSubscription = limit
             });
-            
+
             // Capture how many claims fail with the exception
             var failures = 0;
 
@@ -119,16 +107,19 @@ namespace Halibut.Tests.Transport
             var tasks = new List<Task>();
             for (var i = 0; i < 20; i++)
             {
-                var x = i;
                 tasks.Add(Task.Run(() =>
                 {
-                    try
+                    //we do an extra bunch of work here to validate that the multi-threading is working
+                    for (var j = 0; j < 100; j++)
                     {
-                        limiter.ClaimAuthorizedTcpConnection(subscription);
-                    }
-                    catch (ActiveTcpConnectionsExceededException)
-                    {
-                        var count = Interlocked.Increment(ref failures);
+                        try
+                        {
+                            limiter.LeaseActiveTcpConnection(subscription);
+                        }
+                        catch (ActiveTcpConnectionsExceededException)
+                        {
+                            Interlocked.Increment(ref failures);
+                        }
                     }
                 }));
             }
@@ -136,9 +127,9 @@ namespace Halibut.Tests.Transport
             await Task.WhenAll(tasks);
 
             // Assert
-            failures.Should().Be(10);
+            failures.Should().Be(1990); // 20 x 100 - limit of 10
         }
-        
+
         [Test]
         public async Task ShouldHandleMultiThreadingWithFakeWorkDuringLease()
         {
@@ -149,23 +140,22 @@ namespace Halibut.Tests.Transport
             {
                 MaximumActiveTcpConnectionsPerPollingSubscription = limit
             });
-            
+
             // Capture how many claims fail with the exception
             var failures = 0;
 
             // Act
             var tasks = new List<Task>();
-            
+
             //We spawn 25 with a 1s delay in the work
             //these will claim all the available leases
             for (var i = 0; i < 25; i++)
             {
-                var x = i;
                 tasks.Add(Task.Run(async () =>
                 {
                     try
                     {
-                        using (limiter.ClaimAuthorizedTcpConnection(subscription))
+                        using (limiter.LeaseActiveTcpConnection(subscription))
                         {
                             await Task.Delay(TimeSpan.FromSeconds(1));
                         }
@@ -176,7 +166,7 @@ namespace Halibut.Tests.Transport
                     }
                 }));
             }
-            
+
             //now we claim another 20, which should all fail
             for (var i = 0; i < 20; i++)
             {
@@ -185,7 +175,7 @@ namespace Halibut.Tests.Transport
                 {
                     try
                     {
-                        using (limiter.ClaimAuthorizedTcpConnection(subscription))
+                        using (limiter.LeaseActiveTcpConnection(subscription))
                         {
                             await Task.Delay(TimeSpan.FromSeconds(1));
                         }
@@ -200,7 +190,7 @@ namespace Halibut.Tests.Transport
             //wait for everything to complete
             await Task.WhenAll(tasks);
             tasks.Clear();
-            
+
             //try another 20 which should all succeed
             for (var i = 0; i < 20; i++)
             {
@@ -209,8 +199,9 @@ namespace Halibut.Tests.Transport
                 {
                     try
                     {
-                        using (limiter.ClaimAuthorizedTcpConnection(subscription))
-                        { }
+                        using (limiter.LeaseActiveTcpConnection(subscription))
+                        {
+                        }
                     }
                     catch (ActiveTcpConnectionsExceededException)
                     {

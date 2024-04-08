@@ -113,7 +113,7 @@ namespace Halibut.Transport.Protocol
             //if the remote identity is a subscriber, we might need to limit their active TCP connections
             if (identity.IdentityType == RemoteIdentityType.Subscriber)
             {
-                limitedConnectionLease = activeTcpConnectionsLimiter.ClaimAuthorizedTcpConnection(identity.SubscriptionId);
+                limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
             }
 
             using (limitedConnectionLease)
