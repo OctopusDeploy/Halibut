@@ -1,34 +1,44 @@
 ﻿using System;
+using System.Threading;
 using Halibut.Util;
 
 namespace Halibut.Tests.Support
 {
     public class CountingRetryPolicy : RetryPolicy
     {
-        public int TryCount { get; private set; }
-        public int SuccessCount { get; private set; }
-        public int GetSleepPeriodCount { get; private set; }
+        int tryCount;
+        int successCount;
+        int getSleepPeriodCount;
+
+        public int TryCount => tryCount;
+        public int SuccessCount => successCount;
+        public int GetSleepPeriodCount => getSleepPeriodCount;
 
         public CountingRetryPolicy()
-            : base(1, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10))
+            : this(1, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10))
+        {
+        }
+
+        public CountingRetryPolicy(double backoffMultiplier, TimeSpan minimumDelay, TimeSpan maximumDelay)
+            : base(backoffMultiplier, minimumDelay, maximumDelay)
         {
         }
 
         public override void Try()
         {
-            TryCount++;
+            Interlocked.Increment(ref tryCount);
             base.Try();
         }
 
         public override void Success()
         {
-            SuccessCount++;
+            Interlocked.Increment(ref successCount);
             base.Success();
         }
 
         public override TimeSpan GetSleepPeriod()
         {
-            GetSleepPeriodCount++;
+            Interlocked.Increment(ref getSleepPeriodCount);
             return base.GetSleepPeriod();
         }
     }

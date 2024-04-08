@@ -18,7 +18,8 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testListening: false, testPolling: true, testWebSocket: false, testNetworkConditions: false)]
         public async Task WhenLimitIsExceededSubsequentConnectionsAreRejected(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var countingRetryPolicy = new CountingRetryPolicy();
+            //we don't want this to have a second loop
+            var countingRetryPolicy = new CountingRetryPolicy(1, TimeSpan.FromMinutes(1), TimeSpan.MaxValue);
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder()
                 .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits
@@ -40,9 +41,9 @@ namespace Halibut.Tests
                 .Where(msg => msg.Contains("has exceeded the maximum number of active connections"))
                 .Should()
                 .HaveCount(2);
-
+            
             countingRetryPolicy.TryCount.Should().Be(5);
-            countingRetryPolicy.SuccessCount.Should().Be(6); //each active connection has 2 success calls :shrug:
+            countingRetryPolicy.SuccessCount.Should().Be(3);
         }
     }
 }
