@@ -43,7 +43,7 @@ namespace Halibut
         readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
-        readonly IAuthorizedTcpConnectionsLimiter authorizedTcpConnectionsLimiter;
+        readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -74,7 +74,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManagerAsync();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
-            authorizedTcpConnectionsLimiter = new AuthorizedTcpConnectionsLimiter(TimeoutsAndLimits);
+            activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits);
         }
 
         public ILogFactory Logs => logs;
@@ -103,7 +103,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), TimeoutsAndLimits, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -119,8 +119,7 @@ namespace Halibut
                 HandleUnauthorizedClientConnect,
                 TimeoutsAndLimits,
                 streamFactory,
-                connectionsObserver,
-                authorizedTcpConnectionsLimiter);
+                connectionsObserver);
 
             lock (listeners)
             {

@@ -48,7 +48,6 @@ namespace Halibut.Transport
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
-        readonly IAuthorizedTcpConnectionsLimiter authorizedTcpConnectionsLimiter;
         ILog log;
         TcpListener listener;
         Thread? backgroundThread;
@@ -67,8 +66,7 @@ namespace Halibut.Transport
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
-            IConnectionsObserver connectionsObserver,
-            IAuthorizedTcpConnectionsLimiter authorizedTcpConnectionsLimiter)
+            IConnectionsObserver connectionsObserver)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -82,7 +80,6 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
-            this.authorizedTcpConnectionsLimiter = authorizedTcpConnectionsLimiter;
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
@@ -254,14 +251,11 @@ namespace Halibut.Transport
 
                     if (Authorize(thumbprint, clientName))
                     {
-                        using (var _ = authorizedTcpConnectionsLimiter.ClaimAuthorizedTcpConnection(thumbprint))
-                        {
-                            connectionAuthorizedAndObserved = true;
-                            connectionsObserver.ConnectionAccepted(true);
-                            tcpClientManager.AddActiveClient(thumbprint, client);
-                            errorEventType = EventType.Error;
-                            await ExchangeMessages(ssl).ConfigureAwait(false);
-                        }
+                        connectionAuthorizedAndObserved = true;
+                        connectionsObserver.ConnectionAccepted(true);
+                        tcpClientManager.AddActiveClient(thumbprint, client);
+                        errorEventType = EventType.Error;
+                        await ExchangeMessages(ssl).ConfigureAwait(false);
                     }
                 }
             }
@@ -271,7 +265,7 @@ namespace Halibut.Transport
             }
             catch (AuthorizedTcpConnectionsExceededException)
             {
-                log.Write(EventType.ErrorInInitialisation, "A client at {0} has exceeded the maximum number of authorized connections ({1}). New connections will be rejected", clientName, halibutTimeoutsAndLimits.MaximumAuthorisedTcpConnectionsPerThumbprint);
+                log.Write(EventType.ErrorInInitialisation, "A polling client at {0} has exceeded the maximum number of active connections ({1}). New connections will be rejected", clientName, halibutTimeoutsAndLimits.MaximumActiveTcpConnectionsPerPollingSubscription);
             }
             catch (IOException ex) when (ex.InnerException is SocketException)
             {

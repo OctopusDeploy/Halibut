@@ -28,23 +28,23 @@ namespace Halibut.Tests.Transport
     public class AuthorizedTcpConnectionsLimiterFixture : BaseTest
     {
         [Test]
-        public void LimitsConcurrentConnectionsForSingleThumbprint()
+        public void LimitsConcurrentConnectionsForSingleSubscription()
         {
             // Arrange
             const int limit = 3;
-            const string thumbprint = "tp-1";
-            var limiter = new AuthorizedTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
+            var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
-                MaximumAuthorisedTcpConnectionsPerThumbprint = limit
+                MaximumActiveTcpConnectionsPerPollingSubscription = limit
             });
 
             // Act
-            limiter.ClaimAuthorizedTcpConnection(thumbprint);
-            limiter.ClaimAuthorizedTcpConnection(thumbprint);
-            limiter.ClaimAuthorizedTcpConnection(thumbprint);
+            //we create a new URI each time to make sure we aren't doing object reference checks
+            limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
+            limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
+            limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
 
             //this should throw
-            Action x = () => limiter.ClaimAuthorizedTcpConnection(thumbprint);
+            Action x = () => limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
 
             // Assert
             x.Should().Throw<AuthorizedTcpConnectionsExceededException>();
@@ -55,47 +55,47 @@ namespace Halibut.Tests.Transport
         {
             // Arrange
             const int limit = 3;
-            const string thumbprint = "tp-1";
-            var limiter = new AuthorizedTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
+            var subscription = new Uri("poll://abc");
+            var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
-                MaximumAuthorisedTcpConnectionsPerThumbprint = limit
+                MaximumActiveTcpConnectionsPerPollingSubscription = limit
             });
 
             // Act
-            limiter.ClaimAuthorizedTcpConnection(thumbprint);
-            limiter.ClaimAuthorizedTcpConnection(thumbprint);
+            limiter.ClaimAuthorizedTcpConnection(subscription);
+            limiter.ClaimAuthorizedTcpConnection(subscription);
             
             //this will decrement the current count in the dispose
-            using ( limiter.ClaimAuthorizedTcpConnection(thumbprint))
+            using ( limiter.ClaimAuthorizedTcpConnection(subscription))
             {
             };
 
             //this should not throw
-            Action x = () => limiter.ClaimAuthorizedTcpConnection(thumbprint);
+            Action x = () => limiter.ClaimAuthorizedTcpConnection(subscription);
 
             // Assert
             x.Should().NotThrow<AuthorizedTcpConnectionsExceededException>();
         }
         
         [Test]
-        public void DoesNotLimitConcurrentConnectionsForDifferentThumbprints()
+        public void DoesNotLimitConcurrentConnectionsForDifferentSubscriptions()
         {
             // Arrange
             const int limit = 3;
-            const string thumbprint1 = "tp-1";
-            const string thumbprint2 = "tp-2";
-            var limiter = new AuthorizedTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
+            var subscription1 = new Uri("poll://abc");
+            var subscription2 = new Uri("poll://dev");
+            var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
-                MaximumAuthorisedTcpConnectionsPerThumbprint = limit
+                MaximumActiveTcpConnectionsPerPollingSubscription = limit
             });
 
             // Act
-            limiter.ClaimAuthorizedTcpConnection(thumbprint1);
-            limiter.ClaimAuthorizedTcpConnection(thumbprint1);
-            limiter.ClaimAuthorizedTcpConnection(thumbprint1);
+            limiter.ClaimAuthorizedTcpConnection(subscription1);
+            limiter.ClaimAuthorizedTcpConnection(subscription1);
+            limiter.ClaimAuthorizedTcpConnection(subscription1);
 
             //this should not throw
-            Action x = () => limiter.ClaimAuthorizedTcpConnection(thumbprint2);
+            Action x = () => limiter.ClaimAuthorizedTcpConnection(subscription2);
 
             // Assert
             x.Should().NotThrow<AuthorizedTcpConnectionsExceededException>();
@@ -106,10 +106,10 @@ namespace Halibut.Tests.Transport
         {
             // Arrange
             const int limit = 10;
-            const string thumbprint = "tp-1";
-            var limiter = new AuthorizedTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
+            var subscription = new Uri("poll://abc");
+            var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
-                MaximumAuthorisedTcpConnectionsPerThumbprint = limit
+                MaximumActiveTcpConnectionsPerPollingSubscription = limit
             });
             
             // Capture how many claims fail with the exception
@@ -124,7 +124,7 @@ namespace Halibut.Tests.Transport
                 {
                     try
                     {
-                        limiter.ClaimAuthorizedTcpConnection(thumbprint);
+                        limiter.ClaimAuthorizedTcpConnection(subscription);
                     }
                     catch (AuthorizedTcpConnectionsExceededException)
                     {
@@ -144,10 +144,10 @@ namespace Halibut.Tests.Transport
         {
             // Arrange
             const int limit = 25;
-            const string thumbprint = "tp-1";
-            var limiter = new AuthorizedTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
+            var subscription = new Uri("poll://abc");
+            var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
-                MaximumAuthorisedTcpConnectionsPerThumbprint = limit
+                MaximumActiveTcpConnectionsPerPollingSubscription = limit
             });
             
             // Capture how many claims fail with the exception
@@ -165,7 +165,7 @@ namespace Halibut.Tests.Transport
                 {
                     try
                     {
-                        using (limiter.ClaimAuthorizedTcpConnection(thumbprint))
+                        using (limiter.ClaimAuthorizedTcpConnection(subscription))
                         {
                             await Task.Delay(TimeSpan.FromSeconds(1));
                         }
@@ -185,7 +185,7 @@ namespace Halibut.Tests.Transport
                 {
                     try
                     {
-                        using (limiter.ClaimAuthorizedTcpConnection(thumbprint))
+                        using (limiter.ClaimAuthorizedTcpConnection(subscription))
                         {
                             await Task.Delay(TimeSpan.FromSeconds(1));
                         }
@@ -209,7 +209,7 @@ namespace Halibut.Tests.Transport
                 {
                     try
                     {
-                        using (limiter.ClaimAuthorizedTcpConnection(thumbprint))
+                        using (limiter.ClaimAuthorizedTcpConnection(subscription))
                         { }
                     }
                     catch (AuthorizedTcpConnectionsExceededException)

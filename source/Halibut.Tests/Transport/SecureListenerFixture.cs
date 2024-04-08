@@ -73,8 +73,7 @@ namespace Halibut.Tests.Transport
                     (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
                     timeoutsAndLimits,
                     new StreamFactory(),
-                    NoOpConnectionsObserver.Instance,
-                    new AuthorizedTcpConnectionsLimiter(timeoutsAndLimits)
+                    NoOpConnectionsObserver.Instance
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)

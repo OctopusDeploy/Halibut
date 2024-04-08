@@ -8,11 +8,11 @@ namespace Halibut.Tests
         public static readonly TimeSpan HalfTheTcpReceiveTimeout = TimeSpan.FromSeconds(22.5);
         static readonly TimeSpan TcpReceiveTimeout = HalfTheTcpReceiveTimeout + HalfTheTcpReceiveTimeout;
 
-        int? maximumAuthorisedTcpConnectionsPerThumbprint;
+        int? maximumActiveTcpConnectionsPerPollingSubscription;
 
-        public HalibutTimeoutsAndLimitsForTestsBuilder WithMaximumAuthorisedTcpConnectionsPerThumbprint(int max)
+        public HalibutTimeoutsAndLimitsForTestsBuilder WithMaximumActiveTcpConnectionsPerPollingSubscription(int max)
         {
-            maximumAuthorisedTcpConnectionsPerThumbprint = max;
+            maximumActiveTcpConnectionsPerPollingSubscription = max;
             return this;
         }
 
@@ -44,9 +44,9 @@ namespace Halibut.Tests
                 TcpClientHeartbeatTimeoutShouldActuallyBeUsed = true
             };
 
-            if (maximumAuthorisedTcpConnectionsPerThumbprint.HasValue)
+            if (maximumActiveTcpConnectionsPerPollingSubscription.HasValue)
             {
-                limits.MaximumAuthorisedTcpConnectionsPerThumbprint = maximumAuthorisedTcpConnectionsPerThumbprint.Value;
+                limits.MaximumActiveTcpConnectionsPerPollingSubscription = maximumActiveTcpConnectionsPerPollingSubscription.Value;
             }
 
             return limits;
