@@ -263,7 +263,7 @@ namespace Halibut.Transport
             {
                 log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
             }
-            catch (AuthorizedTcpConnectionsExceededException)
+            catch (ActiveTcpConnectionsExceededException)
             {
                 log.Write(EventType.ErrorInInitialisation, "A polling client at {0} has exceeded the maximum number of active connections ({1}). New connections will be rejected", clientName, halibutTimeoutsAndLimits.MaximumActiveTcpConnectionsPerPollingSubscription);
             }

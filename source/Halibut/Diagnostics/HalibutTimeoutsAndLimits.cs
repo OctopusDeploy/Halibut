@@ -155,12 +155,11 @@ namespace Halibut.Diagnostics
         public TimeSpan TcpKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
-        /// The maximum number of authorised TCP connections per thumbprint. <c>null</c> indicates there is no limit.
+        /// The maximum number of active TCP connections per polling subscription. <c>null</c> indicates there is no limit.
         /// </summary>
         /// <remarks>
-        /// This setting is used to prevent denial-of-service/connection exhaustion due to too many incoming connections from a single client.
-        /// The number of authorized, active connections are aggregated per thumbprint, and new connections that exceed the limit are rejected.
-        /// This settings affects both listening and polling connections.
+        /// This setting is used to prevent denial-of-service/connection exhaustion due to too many incoming connections from a single polling subscription.
+        /// The number of authorized, active connections are aggregated per polling subscription, and new connections that exceed the limit are rejected.
         /// </remarks>
         public int? MaximumActiveTcpConnectionsPerPollingSubscription { get; set; }
 

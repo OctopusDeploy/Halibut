@@ -16,13 +16,13 @@ using System;
 
 namespace Halibut.Exceptions
 {
-    public class AuthorizedTcpConnectionsExceededException : Exception
+    public class ActiveTcpConnectionsExceededException : Exception
     {
-        public AuthorizedTcpConnectionsExceededException(string message) : base(message)
+        public ActiveTcpConnectionsExceededException(string message) : base(message)
         {
         }
 
-        public AuthorizedTcpConnectionsExceededException(string message, Exception innerException) : base(message, innerException)
+        public ActiveTcpConnectionsExceededException(string message, Exception innerException) : base(message, innerException)
         {
         }
     }

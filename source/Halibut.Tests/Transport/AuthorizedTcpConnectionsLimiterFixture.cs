@@ -47,7 +47,7 @@ namespace Halibut.Tests.Transport
             Action x = () => limiter.ClaimAuthorizedTcpConnection(new Uri("poll://abc"));
 
             // Assert
-            x.Should().Throw<AuthorizedTcpConnectionsExceededException>();
+            x.Should().Throw<ActiveTcpConnectionsExceededException>();
         }
         
         [Test]
@@ -74,7 +74,7 @@ namespace Halibut.Tests.Transport
             Action x = () => limiter.ClaimAuthorizedTcpConnection(subscription);
 
             // Assert
-            x.Should().NotThrow<AuthorizedTcpConnectionsExceededException>();
+            x.Should().NotThrow<ActiveTcpConnectionsExceededException>();
         }
         
         [Test]
@@ -98,7 +98,7 @@ namespace Halibut.Tests.Transport
             Action x = () => limiter.ClaimAuthorizedTcpConnection(subscription2);
 
             // Assert
-            x.Should().NotThrow<AuthorizedTcpConnectionsExceededException>();
+            x.Should().NotThrow<ActiveTcpConnectionsExceededException>();
         }
         
         [Test]
@@ -126,7 +126,7 @@ namespace Halibut.Tests.Transport
                     {
                         limiter.ClaimAuthorizedTcpConnection(subscription);
                     }
-                    catch (AuthorizedTcpConnectionsExceededException)
+                    catch (ActiveTcpConnectionsExceededException)
                     {
                         var count = Interlocked.Increment(ref failures);
                     }
@@ -170,7 +170,7 @@ namespace Halibut.Tests.Transport
                             await Task.Delay(TimeSpan.FromSeconds(1));
                         }
                     }
-                    catch (AuthorizedTcpConnectionsExceededException)
+                    catch (ActiveTcpConnectionsExceededException)
                     {
                         Interlocked.Increment(ref failures);
                     }
@@ -190,7 +190,7 @@ namespace Halibut.Tests.Transport
                             await Task.Delay(TimeSpan.FromSeconds(1));
                         }
                     }
-                    catch (AuthorizedTcpConnectionsExceededException)
+                    catch (ActiveTcpConnectionsExceededException)
                     {
                         Interlocked.Increment(ref failures);
                     }
@@ -212,7 +212,7 @@ namespace Halibut.Tests.Transport
                         using (limiter.ClaimAuthorizedTcpConnection(subscription))
                         { }
                     }
-                    catch (AuthorizedTcpConnectionsExceededException)
+                    catch (ActiveTcpConnectionsExceededException)
                     {
                         Interlocked.Increment(ref failures);
                     }

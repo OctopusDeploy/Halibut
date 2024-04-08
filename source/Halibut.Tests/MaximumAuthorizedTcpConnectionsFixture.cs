@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
