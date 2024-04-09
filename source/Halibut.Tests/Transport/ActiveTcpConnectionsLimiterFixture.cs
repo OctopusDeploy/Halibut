@@ -11,6 +11,7 @@ using NUnit.Framework;
 namespace Halibut.Tests.Transport
 {
     [TestFixture]
+    [NonParallelizable]
     public class ActiveTcpConnectionsLimiterFixture : BaseTest
     {
         [Test]
