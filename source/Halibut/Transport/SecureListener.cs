@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -11,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Exceptions;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
@@ -53,17 +55,17 @@ namespace Halibut.Transport
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public SecureListener(
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-            IPEndPoint endPoint, 
-            X509Certificate2 serverCertificate, 
-            ExchangeProtocolBuilder exchangeProtocolBuilder, 
-            ExchangeActionAsync exchangeAction, 
-            Predicate<string> verifyClientThumbprint, 
-            ILogFactory logFactory, 
-            Func<string> getFriendlyHtmlPageContent, 
+            IPEndPoint endPoint,
+            X509Certificate2 serverCertificate,
+            ExchangeProtocolBuilder exchangeProtocolBuilder,
+            ExchangeActionAsync exchangeAction,
+            Predicate<string> verifyClientThumbprint,
+            ILogFactory logFactory,
+            Func<string> getFriendlyHtmlPageContent,
             Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders,
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
-            IStreamFactory streamFactory, 
+            IStreamFactory streamFactory,
             IConnectionsObserver connectionsObserver)
         {
             this.endPoint = endPoint;
@@ -91,6 +93,7 @@ namespace Halibut.Transport
             {
                 listener.Server.DualMode = true;
             }
+
             listener.Start();
 
             if (IsWindows())
@@ -131,7 +134,7 @@ namespace Halibut.Transport
 
             const int errorThreshold = 3;
 
-            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable) null!)
+            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable)null!)
             {
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cts.IsCancellationRequested)
@@ -259,6 +262,10 @@ namespace Halibut.Transport
             catch (AuthenticationException ex)
             {
                 log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
+            }
+            catch (ActiveTcpConnectionsExceededException)
+            {
+                log.Write(EventType.ErrorInInitialisation, "A polling client at {0} has exceeded the maximum number of active connections ({1}). New connections will be rejected", clientName, halibutTimeoutsAndLimits.MaximumActiveTcpConnectionsPerPollingSubscription);
             }
             catch (IOException ex) when (ex.InnerException is SocketException)
             {
@@ -422,6 +429,7 @@ namespace Halibut.Transport
                     builder.Append(c);
                 }
             }
+
             return builder.ToString();
         }
 

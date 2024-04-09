@@ -11,6 +11,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
+using Halibut.Util;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
 
@@ -56,6 +57,7 @@ namespace Halibut.Tests.Timeouts
                            .WithLog(logFactory.ForEndpoint(uri))
                            .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
                            .Build()))
+                       .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero,  TimeSpan.Zero))
                        .WithEchoService()
                        .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                        .Build(CancellationToken))

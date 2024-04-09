@@ -18,7 +18,7 @@ namespace Halibut.Transport
         Task? pollingClientLoopTask;
         readonly CancellationTokenSource cancellationTokenSource;
         readonly Func<RetryPolicy> createRetryPolicy;
-        
+
         public PollingClient(Uri subscription, ISecureClient secureClient, Func<RequestMessage, Task<ResponseMessage>> handleIncomingRequestAsync, ILog log, CancellationToken cancellationToken, Func<RetryPolicy> createRetryPolicy)
         {
             this.subscription = subscription;
@@ -70,10 +70,12 @@ namespace Halibut.Transport
                         retry.Try();
                         await secureClient.ExecuteTransactionAsync(async (protocol, ct) =>
                         {
-                            // We have successfully connected at this point so reset the retry policy
-                            // Subsequent connection issues will try and reconnect quickly and then back-off
-                            retry.Success();
-                            await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequestAsync, int.MaxValue, ct);
+                            await protocol.ExchangeAsSubscriberAsync(subscription, handleIncomingRequestAsync, int.MaxValue, () =>
+                            {
+                                // We have successfully connected and been identified at this point so reset the retry policy
+                                // Subsequent connection issues will try and reconnect quickly and then back-off
+                                retry.Success();
+                            }, ct);
                         }, cancellationToken);
                         retry.Success();
                     }

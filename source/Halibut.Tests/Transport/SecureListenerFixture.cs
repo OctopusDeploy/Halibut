@@ -60,6 +60,7 @@ namespace Halibut.Tests.Transport
 
             using (var opsPerSec = GetCounterForCurrentProcess("Process", "IO Other Operations/sec"))
             {
+                var timeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
                 var client = new SecureListener(
                     new IPEndPoint(new IPAddress(new byte[] { 127, 0, 0, 1 }), 0),
                     Certificates.TentacleListening,
@@ -70,7 +71,7 @@ namespace Halibut.Tests.Transport
                     () => "",
                     () => new Dictionary<string, string>(),
                     (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
-                    new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
+                    timeoutsAndLimits,
                     new StreamFactory(),
                     NoOpConnectionsObserver.Instance
                 );

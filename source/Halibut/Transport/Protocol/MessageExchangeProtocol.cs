@@ -9,6 +9,7 @@ using Halibut.ServiceModel;
 namespace Halibut.Transport.Protocol
 {
     public delegate MessageExchangeProtocol ExchangeProtocolBuilder(Stream stream, ILog log);
+
     public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken);
 
     /// <summary>
@@ -18,21 +19,23 @@ namespace Halibut.Transport.Protocol
     {
         readonly IMessageExchangeStream stream;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, ILog log)
         {
             this.stream = stream;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.activeTcpConnectionsLimiter = activeTcpConnectionsLimiter;
             this.log = log;
         }
 
         public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
         {
             await PrepareExchangeAsClientAsync(cancellationToken);
-            
+
             await stream.SendAsync(request, cancellationToken);
             return (await stream.ReceiveResponseAsync(cancellationToken))!;
         }
@@ -68,13 +71,16 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        public async Task ExchangeAsSubscriberAsync(Uri subscriptionId, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, int maxAttempts, CancellationToken cancellationToken)
+        public async Task ExchangeAsSubscriberAsync(Uri subscriptionId, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, int maxAttempts, Action onSuccessfulIdentification, CancellationToken cancellationToken)
         {
             if (!identified)
             {
                 await stream.IdentifyAsSubscriberAsync(subscriptionId.ToString(), cancellationToken);
                 identified = true;
             }
+
+            //Notify that we have successfully identified as a subscriber
+            onSuccessfulIdentification();
 
             for (var i = 0; i < maxAttempts; i++)
             {
@@ -99,20 +105,33 @@ namespace Halibut.Transport.Protocol
         public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
-            await IdentifyAsServerAsync(identity, cancellationToken);
 
-            switch (identity.IdentityType)
+            //We might need to limit the connection, so by default, we create an unlimited connection lease
+            var limitedConnectionLease = activeTcpConnectionsLimiter.CreateUnlimitedLease();
+            
+            //if the remote identity is a subscriber, we might need to limit their active TCP connections
+            if (identity.IdentityType == RemoteIdentityType.Subscriber)
             {
-                case RemoteIdentityType.Client:
-                    await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
-                    break;
-                case RemoteIdentityType.Subscriber:
-                    var pendingRequestQueue = pendingRequests(identity);
-                    await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
-                    break;
-                default:
-                    log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
-                    throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
+                limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
+            }
+
+            using (limitedConnectionLease)
+            {
+                await IdentifyAsServerAsync(identity, cancellationToken);
+
+                switch (identity.IdentityType)
+                {
+                    case RemoteIdentityType.Client:
+                        await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
+                        break;
+                    case RemoteIdentityType.Subscriber:
+                        var pendingRequestQueue = pendingRequests(identity);
+                        await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
+                        break;
+                    default:
+                        log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
+                        throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
+                }
             }
         }
 
@@ -162,7 +181,7 @@ namespace Halibut.Transport.Protocol
                 {
                     return;
                 }
-                
+
                 await stream.SendAsync(response, cancellationToken);
 
                 try
@@ -180,7 +199,7 @@ namespace Halibut.Transport.Protocol
                     // We get socket timeout on the Listening side (a Listening Tentacle in Octopus use) as part of normal operation
                     // if we don't hear from the other end within our TcpRx Timeout.
                     log.Write(EventType.Diagnostic, "No messages received from client for timeout period. Connection closed and will be re-opened when required");
-                    
+
                     return;
                 }
 
@@ -195,14 +214,14 @@ namespace Halibut.Transport.Protocol
                 var nextRequest = await pendingRequests.DequeueAsync(cancellationToken);
 
                 var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest, cancellationToken);
-                
+
                 if (!success)
                 {
                     return;
                 }
             }
         }
-        
+
         async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessageWithCancellationToken? nextRequest, CancellationToken cancellationToken)
         {
             try
@@ -248,7 +267,7 @@ namespace Halibut.Transport.Protocol
                 {
                     receiveTimeout = halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout;
                 }
-                
+
                 if (!await stream.ExpectNextOrEndAsync(receiveTimeout, cancellationToken))
                 {
                     return false;
@@ -267,13 +286,13 @@ namespace Halibut.Transport.Protocol
             await stream.SendProceedAsync(cancellationToken);
             return true;
         }
-        
+
         async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
         {
             await stream.SendAsync(nextRequest, cancellationToken);
             return (await stream.ReceiveResponseAsync(cancellationToken))!;
         }
-        
+
         static async Task<ResponseMessage> InvokeAndWrapAnyExceptionsAsync(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)
         {
             try

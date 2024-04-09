@@ -42,21 +42,21 @@ namespace Halibut.Diagnostics
         /// Amount of time to wait for a TCP read/write to complete successfully.
         ///
         /// This Timeout is used when no other more specific timeout applies.
-        /// 
+        ///
         /// This applies to:
         /// - Initial authentication and identification
         /// - Sending and receiving of Request/Response messages, except for the first byte in some instances.
-        /// - Sending/receiving data streams. 
+        /// - Sending/receiving data streams.
         /// </summary>
         public SendReceiveTimeout TcpClientTimeout { get; set; } = new(sendTimeout: TimeSpan.FromMinutes(10), receiveTimeout: TimeSpan.FromMinutes(10));
 
         /// <summary>
         ///    Approximately the amount of time the service can take to execute the RPC call.
-        ///    
+        ///
         ///    Specifically the amount of time to wait for the first byte of the response to arrive.
         /// </summary>
         public TimeSpan TcpClientReceiveResponseTimeout { get; set; } = TimeSpan.FromMinutes(10);
-        
+
         /// <summary>
         ///     Amount of time the polling service will wait for a request from an RPC call.
         ///     Specifically the amount of time to wait for the first byte of the request to arrive.
@@ -64,7 +64,7 @@ namespace Halibut.Diagnostics
         ///     This value must never be less than the PollingQueueWaitTimeout, of the client, since this
         ///     is the timeout of the long poll the polling service makes to the client to get the next request.
         ///
-        ///     Currently set to 10 minutes as that is what the timeout used to be. 
+        ///     Currently set to 10 minutes as that is what the timeout used to be.
         /// </summary>
         public TimeSpan TcpClientReceiveRequestTimeoutForPolling { get; set; } = TimeSpan.FromMinutes(10);
 
@@ -72,7 +72,7 @@ namespace Halibut.Diagnostics
         ///     Amount of time a connection can stay in the pool
         /// </summary>
         public TimeSpan TcpClientPooledConnectionTimeout { get; set; } = TimeSpan.FromMinutes(9);
-        
+
         /// <summary>
         /// The duration that the listening service will wait for the next request (specifically the
         /// control message NEXT) before closing the connection.
@@ -80,7 +80,7 @@ namespace Halibut.Diagnostics
         /// The default is ten minutes, and so the service on an existing TCP connection will wait ten
         /// minutes for another request before "idling out" and closing the connection.
         ///
-        /// Connections can be kept idle in the pool (client side) for no more than this timeout, thus 
+        /// Connections can be kept idle in the pool (client side) for no more than this timeout, thus
         /// TcpClientPooledConnectionTimeout ought to be less than this.
         /// </summary>
         public TimeSpan TcpListeningNextRequestIdleTimeout { get; set; } = TimeSpan.FromMinutes(10);
@@ -88,7 +88,7 @@ namespace Halibut.Diagnostics
         /// <summary>
         ///     Amount of time to wait for a TCP or SslStream read/write to complete successfully for a control message
         ///     This applies only to NEXT/PROCEED/END control messages, and not for the NEXT control message for a
-        ///     listening service. 
+        ///     listening service.
         /// </summary>
         public SendReceiveTimeout TcpClientHeartbeatTimeout { get; set; } = new(sendTimeout: TimeSpan.FromSeconds(60), receiveTimeout: TimeSpan.FromSeconds(60));
 
@@ -97,7 +97,7 @@ namespace Halibut.Diagnostics
         ///     Will be removed in the future.
         /// </summary>
         public bool TcpClientHeartbeatTimeoutShouldActuallyBeUsed { get; set; } = false;
-        
+
         /// <summary>
         ///     Amount of time to wait for a successful TCP or WSS connection
         /// </summary>
@@ -153,7 +153,16 @@ namespace Halibut.Diagnostics
         /// The duration a TCP connection will wait for a keepalive response before sending another keepalive probe.
         /// </summary>
         public TimeSpan TcpKeepAliveInterval { get; set; } = TimeSpan.FromSeconds(5);
-        
+
+        /// <summary>
+        /// The maximum number of active TCP connections per polling subscription. <c>null</c> indicates there is no limit.
+        /// </summary>
+        /// <remarks>
+        /// This setting is used to prevent denial-of-service/connection exhaustion due to too many incoming connections from a single polling subscription.
+        /// The number of authorized, active connections are aggregated per polling subscription, and new connections that exceed the limit are rejected.
+        /// </remarks>
+        public int? MaximumActiveTcpConnectionsPerPollingSubscription { get; set; }
+
         /// <summary>
         /// In the future these will become the default
         /// </summary>

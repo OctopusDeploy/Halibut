@@ -28,17 +28,17 @@ namespace Halibut.Util
             return new RetryPolicy(backoffMultiplier, minimumDelay, maximumDelay);
         }
 
-        public void Try()
+        public virtual void Try()
         {
             stopwatch.Start();
         }
 
-        public void Success()
+        public virtual void Success()
         {
             stopwatch.Reset();
         }
 
-        public TimeSpan GetSleepPeriod()
+        public virtual TimeSpan GetSleepPeriod()
         {
             var elapsed = stopwatch.Elapsed;
             var delay = CalculateDelay(elapsed);
