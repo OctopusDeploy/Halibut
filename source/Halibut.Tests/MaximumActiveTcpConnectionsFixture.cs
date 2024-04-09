@@ -24,7 +24,8 @@ namespace Halibut.Tests
                 .AsLatestClientAndLatestServiceBuilder()
                 .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits
                 {
-                    MaximumActiveTcpConnectionsPerPollingSubscription = 3
+                    MaximumActiveTcpConnectionsPerPollingSubscription = 3,
+                    RetryCountLimit = 1
                 })
                 .WithServiceOpeningMultiplePollingConnections(5)
                 .WithStandardServices()
