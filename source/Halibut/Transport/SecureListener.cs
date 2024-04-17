@@ -210,6 +210,9 @@ namespace Halibut.Transport
 
             const int errorThreshold = 3;
             
+            // Don't call listener.Stop until we sure we are not doing an Accept
+            // See: https://github.com/OctopusDeploy/Issues/issues/6035
+            // See: https://github.com/dotnet/corefx/issues/26034
             using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable)null!)
             {
                 var numberOfFailedAttemptsInRow = 0;
@@ -218,8 +221,12 @@ namespace Halibut.Transport
                     TcpClient? client = null;
                     try
                     {
-                        client = await listener.AcceptTcpClientAsync(this.cancellationToken);
-
+#if !NETFRAMEWORK
+            client = await listener.AcceptTcpClientAsync(this.cancellationToken);
+#else
+            // This only works because in the using we stop the listener which should work on windows
+            client = await listener.AcceptTcpClientAsync();
+#endif
                         var _ = Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }
