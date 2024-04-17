@@ -209,8 +209,8 @@ namespace Halibut.Transport
         {
 
             const int errorThreshold = 3;
-
-            using (cancellationToken.Register(listener.Stop))
+            
+            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable)null!)
             {
                 var numberOfFailedAttemptsInRow = 0;
                 while (!cancellationToken.IsCancellationRequested)
