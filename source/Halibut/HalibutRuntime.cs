@@ -25,7 +25,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new();
         readonly IPendingRequestQueueFactory queueFactory;
         readonly X509Certificate2 serverCertificate;
-        readonly List<IDisposable> listeners = new();
+        readonly MutexedItem<List<IAsyncDisposable>> listeners = new MutexedItem<List<IAsyncDisposable>>(new List<IAsyncDisposable>());
         readonly ITrustProvider trustProvider;
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new();
         readonly IServiceInvoker invoker;
@@ -121,10 +121,10 @@ namespace Halibut
                 streamFactory,
                 connectionsObserver);
 
-            lock (listeners)
+            listeners.DoWithExclusiveAccess(l =>
             {
-                listeners.Add(listener);
-            }
+                l.Add(listener);
+            });
 
             return listener.Start();
         }
@@ -144,10 +144,11 @@ namespace Halibut
                 streamFactory,
                 connectionsObserver);
 
-            lock (listeners)
+            
+            listeners.DoWithExclusiveAccess(l =>
             {
-                listeners.Add(listener);
-            }
+                l.Add(listener);
+            });
 
             listener.Start();
         }
@@ -292,13 +293,13 @@ namespace Halibut
 
         void DisconnectFromAllListeners(string thumbprint)
         {
-            lock (listeners)
+            listeners.DoWithExclusiveAccess(l =>
             {
-                foreach (var secureListener in listeners.OfType<SecureListener>())
+                foreach (var secureListener in l.OfType<SecureListener>())
                 {
                     secureListener.Disconnect(thumbprint);
                 }
-            }
+            });
         }
 
         public bool IsTrusted(string remoteThumbprint)
@@ -358,13 +359,16 @@ namespace Halibut
                 responseCache.Value?.Dispose();
             }
 
-            lock (listeners)
+            await listeners.DoWithExclusiveAccess(async l =>
             {
-                foreach (var listener in listeners)
+                foreach (var listener in l)
                 {
-                    listener?.Dispose();
+                    if (listener != null)
+                    {
+                        await listener.DisposeAsync();
+                    }
                 }
-            }
+            });
         }
 
         protected UnauthorizedClientConnectResponse HandleUnauthorizedClientConnect(string clientName, string thumbPrint)

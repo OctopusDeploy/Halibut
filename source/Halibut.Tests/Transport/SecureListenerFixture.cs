@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Runtime.Versioning;
 using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
@@ -53,7 +52,7 @@ namespace Halibut.Tests.Transport
 
         [Test]
         [WindowsTest]
-        public void SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows()
+        public async Task SecureListenerDoesNotCreateHundredsOfIoEventsPerSecondOnWindows()
         {
             var logger = new SerilogLoggerBuilder().Build();
             const int secondsToSample = 5;
@@ -82,7 +81,7 @@ namespace Halibut.Tests.Transport
 
                 float listeningAverage;
 
-                using (client)
+                await using (client)
                 {
                     client.Start();
 

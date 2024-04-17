@@ -12,6 +12,7 @@ using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -98,13 +99,16 @@ namespace Halibut.Tests
 
         static Socket GetSecureListenerActiveClientSocket(HalibutRuntime halibutRuntime)
         {
-            var listeners = halibutRuntime.ReflectionGetFieldValue<List<IDisposable>>("listeners");
-            var secureListener = listeners.Should().ContainSingle().Subject;
-            var tcpClientManager = secureListener.ReflectionGetFieldValue<TcpClientManager>("tcpClientManager");
-            var activeClients = tcpClientManager.ReflectionGetFieldValue<Dictionary<string, HashSet<TcpClient>>>("activeClients");
-            var activeClient = activeClients.Should().ContainSingle().Subject.Value;
-            var tcpClient = activeClient.Should().ContainSingle().Subject;
-            return tcpClient.Client;
+            var listenersMutexedItem = halibutRuntime.ReflectionGetFieldValue<MutexedItem<List<IAsyncDisposable>>>("listeners");
+            return listenersMutexedItem.DoWithExclusiveAccess((listeners) =>
+            {
+                var secureListener = listeners.Should().ContainSingle().Subject;
+                var tcpClientManager = secureListener.ReflectionGetFieldValue<TcpClientManager>("tcpClientManager");
+                var activeClients = tcpClientManager.ReflectionGetFieldValue<Dictionary<string, HashSet<TcpClient>>>("activeClients");
+                var activeClient = activeClients.Should().ContainSingle().Subject.Value;
+                var tcpClient = activeClient.Should().ContainSingle().Subject;
+                return tcpClient.Client;
+            });
         }
 
         static Socket GetConnectionManagerActiveConnectionSocket(HalibutRuntime halibutRuntime)
