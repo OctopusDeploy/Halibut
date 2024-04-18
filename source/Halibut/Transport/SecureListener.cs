@@ -249,7 +249,7 @@ namespace Halibut.Transport
                                 EventType.ErrorInInitialisation,
                                 $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
                             );
-                            Thread.Sleep(millisecondsTimeout);
+                            await Task.Delay(millisecondsTimeout, cancellationToken);
                         }
                     }
                 }
