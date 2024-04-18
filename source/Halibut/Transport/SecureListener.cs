@@ -28,7 +28,7 @@ namespace Halibut.Transport
         PROTECT_FROM_CLOSE = 2
     }
 
-    public class SecureListener : IDisposable
+    public class SecureListener : IAsyncDisposable
     {
         [DllImport("kernel32.dll", SetLastError = true)]
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
@@ -51,6 +51,7 @@ namespace Halibut.Transport
         ILog log;
         TcpListener listener;
         Thread? backgroundThread;
+        Task? backgroundTask;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public SecureListener(
@@ -106,12 +107,21 @@ namespace Halibut.Transport
             log = logFactory.ForEndpoint(new Uri("listen://" + listener.LocalEndpoint));
             log.Write(EventType.ListenerStarted, "Listener started");
 
-            backgroundThread = new Thread(Accept)
+            if (halibutTimeoutsAndLimits.UseAsyncListener)
             {
-                Name = "Accept connections on " + listener.LocalEndpoint
-            };
-            backgroundThread.IsBackground = true;
-            backgroundThread.Start();
+                backgroundTask = Task.Run(() => AcceptAsyncIgnoringExceptions(cancellationToken));
+            }
+            else
+            {
+#pragma warning disable CS0612 // Type or member is obsolete
+                backgroundThread = new Thread(Accept)
+#pragma warning restore CS0612 // Type or member is obsolete
+                {
+                    Name = "Accept connections on " + listener.LocalEndpoint
+                };
+                backgroundThread.IsBackground = true;
+                backgroundThread.Start();
+            }
 
             return ((IPEndPoint)listener.LocalEndpoint).Port;
         }
@@ -122,6 +132,7 @@ namespace Halibut.Transport
             tcpClientManager.Disconnect(thumbprint);
         }
 
+        [Obsolete]
         void Accept()
         {
             // See: https://github.com/OctopusDeploy/Issues/issues/6035
@@ -177,6 +188,68 @@ namespace Halibut.Transport
                                 $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
                             );
                             Thread.Sleep(millisecondsTimeout);
+                        }
+                    }
+                }
+            }
+        }
+
+        async Task AcceptAsyncIgnoringExceptions(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await AcceptAsync(cancellationToken);
+            }
+            catch (Exception)
+            {
+                // This matches what we did before, in theory this will never happen.
+            }
+        }
+        async Task AcceptAsync(CancellationToken cancellationToken)
+        {
+
+            const int errorThreshold = 3;
+            
+            // Don't call listener.Stop until we sure we are not doing an Accept
+            // See: https://github.com/OctopusDeploy/Issues/issues/6035
+            // See: https://github.com/dotnet/corefx/issues/26034
+            using (IsWindows() ? cancellationToken.Register(listener.Stop) : (IDisposable)null!)
+            {
+                var numberOfFailedAttemptsInRow = 0;
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    TcpClient? client = null;
+                    try
+                    {
+#if !NETFRAMEWORK
+            client = await listener.AcceptTcpClientAsync(this.cancellationToken);
+#else
+            // This only works because in the using we stop the listener which should work on windows
+            client = await listener.AcceptTcpClientAsync();
+#endif
+                        var _ = Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
+                        numberOfFailedAttemptsInRow = 0;
+                    }
+                    catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
+                    {
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // Happens on shutdown
+                    }
+                    catch (Exception ex)
+                    {
+                        numberOfFailedAttemptsInRow++;
+                        log.WriteException(EventType.ErrorInInitialisation, "Error accepting TCP client: {0}", ex, client!.GetRemoteEndpointString());
+                        // Slow down the logs in case an exception is immediately encountered after X failed AcceptTcpClient calls
+                        if (numberOfFailedAttemptsInRow >= errorThreshold)
+                        {
+                            var millisecondsTimeout = Math.Max(0, Math.Min(numberOfFailedAttemptsInRow - errorThreshold, 100)) * 10;
+                            log.Write(
+                                EventType.ErrorInInitialisation,
+                                $"Accepting a connection has failed {numberOfFailedAttemptsInRow} times in a row. Waiting {millisecondsTimeout}ms before attempting to accept another connection. For a detailed troubleshooting guide go to https://g.octopushq.com/TentacleTroubleshooting"
+                            );
+                            await Task.Delay(millisecondsTimeout, cancellationToken);
                         }
                     }
                 }
@@ -433,10 +506,11 @@ namespace Halibut.Transport
             return builder.ToString();
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             cts.Cancel();
             backgroundThread?.Join();
+            if (backgroundTask != null) await backgroundTask; 
             listener?.Stop();
             tcpClientManager.Dispose();
             cts.Dispose();

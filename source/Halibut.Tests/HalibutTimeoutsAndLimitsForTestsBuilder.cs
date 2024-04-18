@@ -49,6 +49,8 @@ namespace Halibut.Tests
                 limits.MaximumActiveTcpConnectionsPerPollingSubscription = maximumActiveTcpConnectionsPerPollingSubscription.Value;
             }
 
+            limits.UseAsyncListener = true;
+
             return limits;
         }
     }

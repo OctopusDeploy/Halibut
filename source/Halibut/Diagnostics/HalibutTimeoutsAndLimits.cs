@@ -162,6 +162,8 @@ namespace Halibut.Diagnostics
         /// The number of authorized, active connections are aggregated per polling subscription, and new connections that exceed the limit are rejected.
         /// </remarks>
         public int? MaximumActiveTcpConnectionsPerPollingSubscription { get; set; }
+        
+        public bool UseAsyncListener { get; set; }
 
         /// <summary>
         /// In the future these will become the default

@@ -13,7 +13,7 @@ using Halibut.Transport.Streams;
 
 namespace Halibut.Transport
 {
-    public class SecureWebSocketListener : IDisposable
+    public class SecureWebSocketListener : IAsyncDisposable
     {
         readonly string endPoint;
         readonly ExchangeProtocolBuilder exchangeProtocolBuilder;
@@ -266,8 +266,9 @@ namespace Halibut.Transport
             }
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
+            await Task.CompletedTask;
             cts.Cancel();
             cts.Dispose();
             log.Write(EventType.ListenerStopped, "Listener stopped");
