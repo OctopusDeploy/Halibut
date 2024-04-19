@@ -35,13 +35,17 @@ namespace Halibut.Tests
             
             var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
             await echoService.SayHelloAsync("Hello");
-
-            //we should have 2 log messages saying that a client exceeded the max number of authorized connections
-            clientLogs.SelectMany(kvp => kvp.Value.GetLogs())
-                .Select(l => l.FormattedMessage)
-                .Where(msg => msg.Contains("has exceeded the maximum number of active connections"))
-                .Should()
-                .HaveCount(2);
+            
+            Wait.UntilActionSucceeds(() =>
+            {
+                //we should have 2 log messages saying that a client exceeded the max number of authorized connections
+                clientLogs.SelectMany(kvp => kvp.Value.GetLogs())
+                    .Select(l => l.FormattedMessage)
+                    .Where(msg => msg.Contains("has exceeded the maximum number of active connections"))
+                    .ToList()
+                    .Should()
+                    .HaveCount(2); 
+            }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
             
             countingRetryPolicy.TryCount.Should().Be(5);
             countingRetryPolicy.SuccessCount.Should().Be(3);
