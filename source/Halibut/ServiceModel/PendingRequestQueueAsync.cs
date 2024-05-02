@@ -291,7 +291,7 @@ namespace Halibut.ServiceModel
                     log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
                     SetResponse(ResponseMessage.FromException(
                         request, 
-                        new TimeoutException($"A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({request.Destination.PollingRequestQueueTimeout}), so the request timed out."),
+                        new TimeoutException($"A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({request.Destination.PollingRequestQueueTimeout}), so the request timed out. Please check the tentacle logs to investigate this timeout."),
                         ConnectionState.Connecting));
                 }
             }
