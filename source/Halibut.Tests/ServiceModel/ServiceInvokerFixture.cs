@@ -54,6 +54,26 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
+        public async Task AsyncInvokeWithNullableParamsOnAsyncService()
+        {
+            var serviceFactory = new ServiceFactoryBuilder()
+                .WithConventionVerificationDisabled()
+                .WithService<ICountingService, IAsyncCountingService>(() => new AsyncCountingService())
+                .Build();
+
+            var sut = new ServiceInvoker(serviceFactory);
+            var request = new RequestMessage()
+            {
+                ServiceName = nameof(ICountingService),
+                MethodName = nameof(ICountingService.Increment),
+                Params = new object[] { null! },
+            };
+
+            var response = await sut.InvokeAsync(request);
+            response.Result.Should().Be(1);
+        }
+
+        [Test]
         public async Task AsyncInvokeWithNoParams_AsyncServiceMissingSuffix()
         {
             var serviceFactory = new ServiceFactoryBuilder()

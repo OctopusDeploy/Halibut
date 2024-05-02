@@ -16,6 +16,11 @@ namespace Halibut.TestUtils.SampleProgram.Base
             return countingService.Increment();
         }
 
+        public int Increment(int? number)
+        {
+            return countingService.Increment(number);
+        }
+
         public int GetCurrentValue()
         {
             return countingService.GetCurrentValue();
