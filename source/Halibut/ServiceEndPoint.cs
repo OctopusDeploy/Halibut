@@ -86,7 +86,9 @@ namespace Halibut
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return string.Equals(RemoteThumbprint, other.RemoteThumbprint) && string.Equals(baseUriString, other.baseUriString) && Equals(Proxy, other.Proxy);
+            return StringComparer.OrdinalIgnoreCase.Equals(RemoteThumbprint, other.RemoteThumbprint)
+                && string.Equals(baseUriString, other.baseUriString)
+                && Equals(Proxy, other.Proxy);
         }
 
         public override bool Equals(object? obj)
@@ -101,7 +103,7 @@ namespace Halibut
         {
             unchecked
             {
-                var hashCode = (RemoteThumbprint != null ? RemoteThumbprint.GetHashCode() : 0);
+                var hashCode = (RemoteThumbprint != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(RemoteThumbprint) : 0);
                 hashCode = (hashCode*397) ^ (baseUriString != null ? baseUriString.GetHashCode() : 0);
                 hashCode = (hashCode*397) ^ (Proxy is not null ? Proxy.GetHashCode() : 0);
                 return hashCode;

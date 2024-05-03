@@ -18,7 +18,7 @@ namespace Halibut.Transport
             var providedCert = new X509Certificate2(certificate!.Export(X509ContentType.Cert), (string)null!); // Copy the cert so that we can reference it later
             var providedThumbprint = providedCert.Thumbprint;
 
-            if (providedThumbprint == endPoint.RemoteThumbprint)
+            if (string.Equals(providedThumbprint, endPoint.RemoteThumbprint, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

@@ -64,7 +64,7 @@ namespace Halibut.Transport
                 if (!certificates.TryGetValue(connectionId, out providedCertificate))
                     throw new Exception("Did not recieve a certificate from the server");
 
-            if (providedCertificate?.Thumbprint != endPoint.RemoteThumbprint)
+            if (!string.Equals(providedCertificate?.Thumbprint, endPoint.RemoteThumbprint, StringComparison.OrdinalIgnoreCase))
                 throw new UnexpectedCertificateException(providedCertificate!, endPoint);
         }
     }
