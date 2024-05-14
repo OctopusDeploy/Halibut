@@ -97,8 +97,8 @@ namespace Halibut.Transport
                         }
                         catch (ConnectionInitializationFailedException)
                         {
-                            // ConnectionInitializationFailedException is thrown while performing pre-exchange. I.e., we are not actually started sending the request.
-                            // This is considered part of 'connecting', and as such, we should maintain that position. 
+                            // ConnectionInitializationFailedException is thrown while performing pre-exchange. I.e., we have not actually started sending the request.
+                            // Therefore, this is considered part of 'connecting'. 
                             hasConnected = false;
                             throw;
                         }
