@@ -4,12 +4,16 @@ namespace Halibut.Exceptions
 {
     public class ActiveTcpConnectionsExceededException : Exception
     {
-        public ActiveTcpConnectionsExceededException(string message) : base(message)
+        public Uri SubscriptionId { get; }
+        
+        public ActiveTcpConnectionsExceededException(Uri subscriptionId, string message) : base(message)
         {
+            SubscriptionId = subscriptionId;
         }
 
-        public ActiveTcpConnectionsExceededException(string message, Exception innerException) : base(message, innerException)
+        public ActiveTcpConnectionsExceededException(Uri subscriptionId, string message, Exception innerException) : base(message, innerException)
         {
+            SubscriptionId = subscriptionId;
         }
     }
 }

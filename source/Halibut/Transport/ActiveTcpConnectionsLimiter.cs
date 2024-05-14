@@ -74,7 +74,7 @@ namespace Halibut.Transport
                         count.Value--;
 
                         //throw an exception, bailing on the connection
-                        throw new ActiveTcpConnectionsExceededException($"Exceeded the maximum number ({maximumAcceptedTcpConnectionsPerThumbprint}) of active TCP connections for subscription {subscriptionId}");
+                        throw new ActiveTcpConnectionsExceededException(this.subscriptionId, $"Exceeded the maximum number ({maximumAcceptedTcpConnectionsPerThumbprint}) of active TCP connections for subscription {subscriptionId}");
                     }
                 }
             }

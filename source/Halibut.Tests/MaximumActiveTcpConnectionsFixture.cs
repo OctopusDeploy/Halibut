@@ -41,7 +41,7 @@ namespace Halibut.Tests
                 //we should have 2 log messages saying that a client exceeded the max number of authorized connections
                 clientLogs.SelectMany(kvp => kvp.Value.GetLogs())
                     .Select(l => l.FormattedMessage)
-                    .Where(msg => msg.Contains("has exceeded the maximum number of active connections"))
+                    .Where(msg => msg.Contains("has exceeded the maximum number of active connections") && msg.Contains(LatestServiceBuilder.PollingTentacleServiceUri.ToString()))
                     .ToList()
                     .Should()
                     .HaveCount(2); 
