@@ -47,6 +47,8 @@ namespace Halibut.Transport
 
             // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
+            // It is important to know if an exception happens while connecting or while transmitting a request, 
+            // as it determines what we do in Tentacle (for example, if we are cancelling).
             var hasConnected = false;
             var watch = Stopwatch.StartNew();
             for (var i = 0; i < ServiceEndpoint.RetryCountLimit && retryAllowed && watch.Elapsed < ServiceEndpoint.ConnectionErrorRetryTimeout; i++)
@@ -92,6 +94,13 @@ namespace Halibut.Transport
                         try
                         {
                             await protocolHandler(connection.Protocol, cancellationToken).ConfigureAwait(false);
+                        }
+                        catch (ConnectionInitializationFailedException)
+                        {
+                            // ConnectionInitializationFailedException is thrown while performing pre-exchange. I.e., we are not actually started sending the request.
+                            // This is considered part of 'connecting', and as such, we should maintain that position. 
+                            hasConnected = false;
+                            throw;
                         }
                         catch (Exception ex) when (cancellationToken.IsCancellationRequested)
                         {
