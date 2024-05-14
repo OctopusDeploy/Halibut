@@ -80,7 +80,7 @@ namespace Halibut.Tests.Transport
                     point.RetryCountLimit = 5;
                 });
                 
-                //Get the connection cached into the connection manager.
+                //Cached the connection into the connection manager, so we fail after the connection phase (i.e. within "prepare exchange")
                 await echoService.SayHelloAsync("hello");
 
                 portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
