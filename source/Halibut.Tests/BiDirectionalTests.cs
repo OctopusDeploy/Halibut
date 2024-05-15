@@ -12,6 +12,7 @@ namespace Halibut.Tests
 {
     public class BiDirectionalTests : BaseTest
     {
+        // Setting these local variables to avoid Octopus/Tentacle terminology in the test setup
         readonly X509Certificate2 _endpointACertificate = Certificates.Octopus;
         readonly X509Certificate2 _endpointBCertificate = Certificates.TentacleListening;
         readonly string _endpointAThumbprint = Certificates.OctopusPublicThumbprint;
