@@ -17,7 +17,6 @@ using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Transport
 {

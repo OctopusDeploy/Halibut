@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Halibut.Util;
 using Halibut.Diagnostics;
 using Halibut.Util.AsyncEx;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Transport
 {
