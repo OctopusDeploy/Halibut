@@ -288,7 +288,7 @@ namespace Halibut.Transport
             var clientName = client.GetRemoteEndpointString();
 
             var stream = streamFactory.CreateStream(client);
-            client.EnableTcpKeepAlive(halibutTimeoutsAndLimits);
+            client.ConfigureTcpOptions(halibutTimeoutsAndLimits);
 
             var errorEventType = EventType.ErrorInInitialisation;
             try
