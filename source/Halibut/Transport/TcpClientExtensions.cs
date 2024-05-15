@@ -82,7 +82,7 @@ namespace Halibut.Transport
         /// </summary>
         internal static void EnableTcpKeepAlive(this TcpClient tcpClient, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
-            tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+            tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, false);
             if (!halibutTimeoutsAndLimits.TcpKeepAliveEnabled)
             {
                 return;
