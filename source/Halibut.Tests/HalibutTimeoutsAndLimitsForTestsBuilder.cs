@@ -50,6 +50,8 @@ namespace Halibut.Tests
             }
 
             limits.UseAsyncListener = true;
+            
+            limits.TcpNoDelay = true;
 
             return limits;
         }

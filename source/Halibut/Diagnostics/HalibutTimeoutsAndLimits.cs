@@ -1,4 +1,5 @@
 using System;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Diagnostics
 {
@@ -164,6 +165,12 @@ namespace Halibut.Diagnostics
         public int? MaximumActiveTcpConnectionsPerPollingSubscription { get; set; }
         
         public bool UseAsyncListener { get; set; }
+        
+        /// <summary>
+        /// Sets https://learn.microsoft.com/en-us/dotnet/api/system.net.sockets.tcpclient.nodelay?view=net-8.0
+        /// Previous value was false, we will be moving to true
+        /// </summary>
+        public bool TcpNoDelay { get; set; }
 
         /// <summary>
         /// In the future these will become the default
