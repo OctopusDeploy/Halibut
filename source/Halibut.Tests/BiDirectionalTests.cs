@@ -15,13 +15,12 @@ namespace Halibut.Tests
 {
     public class BiDirectionalTests : BaseTest
     {
-        /// <summary>
-        /// Test is redundant but kept around since we really want the security part to work. 
-        /// </summary>
-        [Test]
-        public async Task ClientCanRespondToServerRequests()
+        [TestCase(MyEnum.Listening)]
+        [TestCase(MyEnum.Polling)]
+        public async Task ClientCanRespondToServerRequests(MyEnum isPolling)
         {
-            await SetupBiDirectionalClients(async (octopusEchoClient, tentacleEchoClient) =>
+            var builder = GetClientBuilder(isPolling);
+            await builder(async (octopusEchoClient, tentacleEchoClient) =>
             {
                 var octopusResponse = await octopusEchoClient.SayHelloAsync("Hello");
                 var tentacleResponse = await tentacleEchoClient.SayHelloAsync("World");
@@ -31,10 +30,12 @@ namespace Halibut.Tests
             });
         }
 
-        [Test]
-        public async Task ConcurrentTasksDoNotBlock()
+        [TestCase(MyEnum.Listening)]
+        [TestCase(MyEnum.Polling)]
+        public async Task ConcurrentTasksDoNotBlock(MyEnum isPolling)
         {
-            await SetupBiDirectionalClients(async (octopusEchoClient, tentacleEchoClient) =>
+            var builder = GetClientBuilder(isPolling);
+            await builder(async (octopusEchoClient, tentacleEchoClient) =>
             {
                 var sw = Stopwatch.StartNew();
                 var t1 = Task.Run(async () => await RunLongRunningTask(octopusEchoClient)).WithTimeout(TimeSpan.FromSeconds(12));
@@ -55,10 +56,12 @@ namespace Halibut.Tests
             }
         }
 
-        [Test]
-        public async Task ConcurrentClientAndServerRequestsCorrectlyInterleaved()
+        [TestCase(MyEnum.Listening)]
+        [TestCase(MyEnum.Polling)]
+        public async Task ConcurrentClientAndServerRequestsCorrectlyInterleaved(MyEnum isPolling)
         {
-            await SetupBiDirectionalClients(async (octopusEchoClient, tentacleEchoClient) =>
+            var builder = GetClientBuilder(isPolling);
+            await builder(async (octopusEchoClient, tentacleEchoClient) =>
             {
                 var t1 = Task.Run(async () => await RunEchoTask(octopusEchoClient)).WithTimeout(TimeSpan.FromSeconds(5));
                 var t2 = Task.Run(async () => await RunEchoTask(tentacleEchoClient)).WithTimeout(TimeSpan.FromSeconds(5));
@@ -80,7 +83,14 @@ namespace Halibut.Tests
             }
         }
         
-        async Task SetupBiDirectionalClients(Func<IAsyncClientEchoService, IAsyncClientEchoService, Task> thing)
+        Func<Func<IAsyncClientEchoService, IAsyncClientEchoService, Task>, Task> GetClientBuilder(MyEnum isPolling)
+        {
+            return isPolling == MyEnum.Listening ? 
+                SetupBiDirectionalListeningTentacleClients : SetupBiDirectionalPollingClients;
+        }
+
+
+        async Task SetupBiDirectionalListeningTentacleClients(Func<IAsyncClientEchoService, IAsyncClientEchoService, Task> thing)
         {
             var services = new DelegateServiceFactory();
             services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
@@ -95,9 +105,9 @@ namespace Halibut.Tests
                 .WithServiceFactory(services)
                 .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
                 .Build();
-            
-            var tentaclePort = tentacleListening.Listen(); 
+
             tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+            var tentaclePort = tentacleListening.Listen(); 
 
             octopus.Poll(new Uri("poll://foobar"), new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits), CancellationToken.None);
                 
@@ -105,6 +115,40 @@ namespace Halibut.Tests
             var tentacleEchoClient = tentacleListening.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint(new Uri("poll://foobar"), Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits));
                 
             await thing(octopusEchoClient, tentacleEchoClient);
+        }
+
+        async Task SetupBiDirectionalPollingClients(Func<IAsyncClientEchoService, IAsyncClientEchoService, Task> thing)
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
+
+            await using var octopus = new HalibutRuntimeBuilder()
+                .WithServerCertificate(Certificates.Octopus)
+                .WithServiceFactory(services)
+                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                .Build();
+            
+            await using var tentaclePoller = new HalibutRuntimeBuilder()
+                .WithServerCertificate(Certificates.TentacleListening)
+                .WithServiceFactory(services)
+                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                .Build();
+            
+            octopus.Trust(Certificates.TentacleListeningPublicThumbprint);
+            var port = octopus.Listen();
+            
+            tentaclePoller.Poll(new Uri("poll://foobar"), new ServiceEndPoint("https://localhost:" + port, Certificates.OctopusPublicThumbprint, octopus.TimeoutsAndLimits), CancellationToken.None);
+            
+            var tentacleEchoClient = tentaclePoller.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint(new Uri("https://localhost:" + port), Certificates.OctopusPublicThumbprint, octopus.TimeoutsAndLimits));
+            var octopusEchoClient = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint(new Uri("poll://foobar"), Certificates.TentacleListeningPublicThumbprint, octopus.TimeoutsAndLimits));
+            
+            await thing(octopusEchoClient, tentacleEchoClient);
+        }
+
+        public enum MyEnum
+        {
+            Polling,
+            Listening
         }
     }
 }
