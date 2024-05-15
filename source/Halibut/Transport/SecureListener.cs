@@ -17,6 +17,7 @@ using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
 using Halibut.Util;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Transport
 {
@@ -227,6 +228,7 @@ namespace Halibut.Transport
             // This only works because in the using we stop the listener which should work on windows
             client = await listener.AcceptTcpClientAsync();
 #endif
+                        client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, PortForwarder.NoDelay);
                         var _ = Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }

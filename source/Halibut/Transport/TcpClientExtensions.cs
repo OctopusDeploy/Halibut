@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Halibut.Util;
 using Halibut.Diagnostics;
 using Halibut.Util.AsyncEx;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Transport
 {
@@ -82,7 +83,7 @@ namespace Halibut.Transport
         /// </summary>
         internal static void EnableTcpKeepAlive(this TcpClient tcpClient, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
-            tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, true);
+            tcpClient.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, PortForwarder.NoDelay);
             if (!halibutTimeoutsAndLimits.TcpKeepAliveEnabled)
             {
                 return;

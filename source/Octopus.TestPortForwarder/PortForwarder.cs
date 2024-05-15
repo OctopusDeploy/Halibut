@@ -13,6 +13,8 @@ namespace Octopus.TestPortForwarder
 {
     public class PortForwarder : IDisposable
     {
+
+        public static bool NoDelay = true;
         readonly Uri originServer;
         Socket? listeningSocket;
         readonly CancellationTokenSource cancellationTokenSource = new();
@@ -67,6 +69,7 @@ namespace Octopus.TestPortForwarder
             }
 
             listeningSocket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            listeningSocket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, NoDelay);
 
             listeningSocket!.Bind(new IPEndPoint(IPAddress.Loopback, ListeningPort));
 
@@ -143,6 +146,7 @@ namespace Octopus.TestPortForwarder
 
                             var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                             var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                            originSocket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.NoDelay, NoDelay);
 
                             var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, biDirectionalDataTransferObserver, numberOfBytesToDelaySending, logger);
 
