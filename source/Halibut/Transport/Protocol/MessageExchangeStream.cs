@@ -67,8 +67,7 @@ namespace Halibut.Transport.Protocol
         {
             // The identity line and the additional empty line must be sent together as a single write operation when using a stream to mimic the 
             // buffering behaviour of the StreamWriter. When sent as 2 writes to the Stream, old Halibut Services e.g. 4.4.8 will often fail when reading the identity line.
-            await stream.WriteControlLineAsync(
-                identityLine + StreamExtensionMethods.ControlMessageNewLine, cancellationToken);
+            await stream.WriteControlLineAsync(identityLine + StreamExtensionMethods.ControlMessageNewLine, cancellationToken);
             await stream.FlushAsync(cancellationToken);
         }
 
