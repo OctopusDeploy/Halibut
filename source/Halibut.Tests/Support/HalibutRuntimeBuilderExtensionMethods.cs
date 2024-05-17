@@ -1,4 +1,5 @@
-﻿using Halibut.Transport.Streams;
+﻿using Halibut.Transport.Observability;
+using Halibut.Transport.Streams;
 
 namespace Halibut.Tests.Support
 {
@@ -7,6 +8,12 @@ namespace Halibut.Tests.Support
         public static HalibutRuntimeBuilder WithStreamFactoryIfNotNull(this HalibutRuntimeBuilder halibutRuntimeBuilder, IStreamFactory? streamFactory)
         {
             if (streamFactory != null) halibutRuntimeBuilder.WithStreamFactory(streamFactory);
+            return halibutRuntimeBuilder;
+        }
+        
+        public static HalibutRuntimeBuilder WithControlMessageObserverIfNotNull(this HalibutRuntimeBuilder halibutRuntimeBuilder, IControlMessageObserver? controlMessageObserver)
+        {
+            if (controlMessageObserver != null) halibutRuntimeBuilder.WithControlMessageObserver(controlMessageObserver);
             return halibutRuntimeBuilder;
         }
     }

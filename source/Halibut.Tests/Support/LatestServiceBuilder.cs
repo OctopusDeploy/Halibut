@@ -41,6 +41,7 @@ namespace Halibut.Tests.Support
         IStreamFactory? serviceStreamFactory;
         IConnectionsObserver? serviceConnectionsObserver;
         int pollingConnectionCount = 1;
+        IControlMessageObserver? controlMessageObserver;
 
         public LatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
@@ -192,6 +193,7 @@ namespace Halibut.Tests.Support
                 .WithServerCertificate(serviceCertAndThumbprint.Certificate2)
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithStreamFactoryIfNotNull(serviceStreamFactory)
+                .WithControlMessageObserverIfNotNull(controlMessageObserver)
                 .WithConnectionsObserver(serviceConnectionsObserver!)
                 .WithLogFactory(BuildServiceLogger());
 
@@ -279,6 +281,12 @@ namespace Halibut.Tests.Support
                 return this;
 
             pollingConnectionCount = count;
+            return this;
+        }
+
+        public LatestServiceBuilder WithControlMessageObserver(IControlMessageObserver controlMessageObserver)
+        {
+            this.controlMessageObserver = controlMessageObserver;
             return this;
         }
     }

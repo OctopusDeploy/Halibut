@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Logging;
 using Halibut.TestProxy;
+using Halibut.Transport.Observability;
 using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
