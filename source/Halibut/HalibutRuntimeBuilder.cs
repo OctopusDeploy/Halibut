@@ -26,6 +26,7 @@ namespace Halibut
         IStreamFactory? streamFactory;
         IRpcObserver? rpcObserver;
         IConnectionsObserver? connectionsObserver;
+        IControlMessageObserver? controlMessageObserver;
 
         public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
@@ -106,6 +107,12 @@ namespace Halibut
             return this;
         }
 
+        internal HalibutRuntimeBuilder WithControlMessageObserver(IControlMessageObserver controlMessageObserver)
+        {
+            this.controlMessageObserver = controlMessageObserver;
+            return this;
+        }
+
         public HalibutRuntimeBuilder WithOnUnauthorizedClientConnect(Func<string, string, UnauthorizedClientConnectResponse> onUnauthorizedClientConnect)
         {
             this.onUnauthorizedClientConnect = onUnauthorizedClientConnect;
@@ -149,6 +156,7 @@ namespace Halibut
             var streamFactory = this.streamFactory ?? new StreamFactory();
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
+            var controlMessageObserver = this.controlMessageObserver ?? new NoOpControlMessageObserver();
 
             var halibutRuntime = new HalibutRuntime(
                 serviceFactory,
@@ -162,7 +170,8 @@ namespace Halibut
                 halibutTimeoutsAndLimits,
                 streamFactory,
                 rpcObserver,
-                connectionsObserver);
+                connectionsObserver,
+                controlMessageObserver);
 
             if (onUnauthorizedClientConnect is not null)
             {

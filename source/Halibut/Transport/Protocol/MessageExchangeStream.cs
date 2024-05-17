@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 
 namespace Halibut.Transport.Protocol
@@ -26,14 +27,20 @@ namespace Halibut.Transport.Protocol
         readonly Version currentVersion = new(1, 0);
         readonly ControlMessageReader controlMessageReader;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly IControlMessageObserver controlMessageObserver;
 
-        public MessageExchangeStream(Stream stream, IMessageSerializer serializer, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, ILog log)
+        public MessageExchangeStream(Stream stream, 
+            IMessageSerializer serializer, 
+            IControlMessageObserver controlMessageObserver, 
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, 
+            ILog log)
         {
             this.stream = new RewindableBufferStream(stream, halibutTimeoutsAndLimits.RewindableBufferStreamSize);
             
             this.log = log;
+            this.controlMessageObserver = controlMessageObserver;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
-            this.controlMessageReader = new ControlMessageReader(halibutTimeoutsAndLimits);
+            this.controlMessageReader = new ControlMessageReader(controlMessageObserver, halibutTimeoutsAndLimits);
             this.serializer = serializer;
 
             SetReadAndWriteTimeouts(halibutTimeoutsAndLimits.TcpClientTimeout);
@@ -50,15 +57,18 @@ namespace Halibut.Transport.Protocol
 
         async Task SendControlMessageAsync(string message, CancellationToken cancellationToken)
         {
+            controlMessageObserver.BeforeSendingControlMessage(message);
             await stream.WriteControlLineAsync(message, cancellationToken);
             await stream.FlushAsync(cancellationToken);
+            controlMessageObserver.FinishSendingControlMessage(message);
         }
 
         async Task SendIdentityMessageAsync(string identityLine, CancellationToken cancellationToken)
         {
             // The identity line and the additional empty line must be sent together as a single write operation when using a stream to mimic the 
             // buffering behaviour of the StreamWriter. When sent as 2 writes to the Stream, old Halibut Services e.g. 4.4.8 will often fail when reading the identity line.
-            await stream.WriteControlLineAsync(identityLine + StreamExtensionMethods.ControlMessageNewLine, cancellationToken);
+            await stream.WriteControlLineAsync(
+                identityLine + StreamExtensionMethods.ControlMessageNewLine, cancellationToken);
             await stream.FlushAsync(cancellationToken);
         }
 
