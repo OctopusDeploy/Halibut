@@ -12,7 +12,7 @@ namespace Halibut.Tests
 {
     public class BiDirectionalTests : BaseTest
     {
-        // Setting these local variables to avoid Octopus/Tentacle terminology in the test setup
+        // Setting local variables to avoid Octopus/Tentacle terminology in the test setup
         readonly X509Certificate2 _endpointACertificate = Certificates.Octopus;
         readonly X509Certificate2 _endpointBCertificate = Certificates.TentacleListening;
         readonly string _endpointAThumbprint = Certificates.OctopusPublicThumbprint;
@@ -163,7 +163,7 @@ namespace Halibut.Tests
             public static int SharedState = 0;
             public async Task BlockWaitingForSharedStateIncrementAsync(CancellationToken cancellationToken)
             {
-                SharedState++;
+                Interlocked.Increment(ref SharedState);
                 while (SharedState != 2)
                 {
                     await Task.Delay(100, cancellationToken);
