@@ -44,11 +44,10 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task WhenThePollingRequestQueueTimeoutIsReached_ButTheResponseIsReceivedBeforeThePollingRequestMaximumMessageProcessingTimeoutIsReached_TheRequestShouldSucceed(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenThePollingRequestQueueTimeoutIsReached_ButTheResponseTriggersNoTcpTimeouts_TheRequestShouldSucceed(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
-            halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(100);
 
             var responseDelay = TimeSpan.FromSeconds(10);
 
@@ -72,11 +71,10 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task WhenThePollingRequestQueueTimeoutIsReached_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_ButTheResponseIsReceivedAfterPollingRequestQueueTimeout_TheRequestShouldSucceed(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenThePollingRequestQueueTimeoutIsReached_ButTheResponseIsReceivedAfterPollingRequestQueueTimeout_TheRequestShouldSucceed(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
-            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = true;
 
             var responseDelay = TimeSpan.FromSeconds(10);
 
@@ -100,54 +98,11 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task WhenThePollingRequestMaximumMessageProcessingTimeoutIsReached_TheRequestShouldTimeout_AndTheTransferringPendingRequestCancelled(ClientAndServiceTestCase clientAndServiceTestCase)
-        {
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
-            halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
-            halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout = TimeSpan.FromSeconds(6);
-
-            using var waitSemaphore = new SemaphoreSlim(0, 1);
-            var connectionsObserver = new TestConnectionsObserver();
-
-            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
-                             .As<LatestClientAndLatestServiceBuilder>()
-                             .WithDoSomeActionService(() => waitSemaphore.Wait(CancellationToken))
-                             .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
-                             .WithInstantReconnectPollingRetryPolicy()
-                             .WithConnectionObserverOnTcpServer(connectionsObserver)
-                             .Build(CancellationToken))
-            {
-                var doSomeActionClient = clientAndService.CreateAsyncClient<IDoSomeActionService, IAsyncClientDoSomeActionServiceWithOptions>();
-
-                var stopwatch = Stopwatch.StartNew();
-                var exception = (await AssertException.Throws<HalibutClientException>(async () => await doSomeActionClient.ActionAsync(new(CancellationToken)))).And;
-                exception.Message.Should().Contain("A request was sent to a polling endpoint, the polling endpoint collected it but did not respond in the allowed time (00:00:06), so the request timed out.");
-                exception.ConnectionState.Should().Be(ConnectionState.Unknown);
-
-                stopwatch.Stop();
-
-                stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(15), "Should have timed out quickly");
-
-                connectionsObserver.ConnectionAcceptedCount.Should().Be(1, "A single TCP connection should have been created");
-
-                waitSemaphore.Release();
-
-                Wait.UntilActionSucceeds(() =>
-                {
-                    connectionsObserver.ConnectionClosedCount.Should().Be(1, "Cancelling the PendingRequest should have caused the TCP Connection to be terminated to stop the in-flight request");
-                    connectionsObserver.ConnectionAcceptedCount.Should().Be(2, "The Service should have reconnected after the request was cancelled");
-                }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
-            }
-        }
-
-        [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
-        public async Task WhenThePollingRequestHasBegunTransfer_AndRelyingOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_AndWeTimeoutWaitingForTheResponse_ThenRpcCallShouldFailWithTimeoutErrorMessage(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenThePollingRequestHasBegunTransfer_AndWeTimeoutWaitingForTheResponse_ThenRpcCallShouldFailWithTimeoutErrorMessage(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
             halibutTimeoutsAndLimits.TcpClientReceiveResponseTimeout = TimeSpan.FromSeconds(6);
-            halibutTimeoutsAndLimits.RelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = true;
 
             using var waitSemaphore = new SemaphoreSlim(0, 1);
             var connectionsObserver = new TestConnectionsObserver();

@@ -55,7 +55,7 @@ namespace Halibut.Tests
                 // So what we can write it down as one chunk.
                 while (queue.TryDequeue(out var log)) list.Add(log);
 
-                using(var fileWriter = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Delete | FileShare.ReadWrite))
+                using(var fileWriter = await OpenLogFile())
                 using (var fileAppender = new StreamWriter(fileWriter, Encoding.UTF8, 8192))
                 {
                     foreach (var logLine in list) await fileAppender.WriteLineAsync(logLine);
@@ -65,7 +65,27 @@ namespace Halibut.Tests
             }
         }
 
-        
+        /// <summary>
+        /// Try multiple times to get around virus scanners
+        /// </summary>
+        /// <returns></returns>
+        async Task<FileStream> OpenLogFile()
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                try
+                {
+                    return new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Delete | FileShare.ReadWrite);
+                }
+                catch
+                {
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+            
+            return new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Delete | FileShare.ReadWrite);
+        }
 
         static string LogFilePath(string testHash)
         {

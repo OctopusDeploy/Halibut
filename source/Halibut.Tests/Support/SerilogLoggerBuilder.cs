@@ -75,7 +75,12 @@ namespace Halibut.Tests.Support
         {
             using (SHA256 mySHA256 = SHA256.Create())
             {
-                return Convert.ToBase64String(mySHA256.ComputeHash(TestContext.CurrentContext.Test.FullName.GetUTF8Bytes()))
+                string s = TestContext.CurrentContext.Test.FullName;
+#if NETFRAMEWORK
+                // Allow net6 and net48 tests to run at the same time by giving them different test hashes.
+                s += "Net48";
+#endif
+                return Convert.ToBase64String(mySHA256.ComputeHash(s.GetUTF8Bytes()))
                     .Replace("=", "")
                     .Replace("+", "")
                     .Replace("/", "")

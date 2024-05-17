@@ -25,7 +25,7 @@ namespace Halibut
         readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new();
         readonly IPendingRequestQueueFactory queueFactory;
         readonly X509Certificate2 serverCertificate;
-        readonly List<IDisposable> listeners = new();
+        readonly MutexedItem<List<IAsyncDisposable>> listeners = new MutexedItem<List<IAsyncDisposable>>(new List<IAsyncDisposable>());
         readonly ITrustProvider trustProvider;
         readonly ConcurrentDictionary<Uri, ServiceEndPoint> routeTable = new();
         readonly IServiceInvoker invoker;
@@ -43,6 +43,7 @@ namespace Halibut
         readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -73,6 +74,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManagerAsync();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
+            activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits);
         }
 
         public ILogFactory Logs => logs;
@@ -101,51 +103,52 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), TimeoutsAndLimits, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, log);
         }
 
         public int Listen(IPEndPoint endpoint)
         {
-            var listener = new SecureListener(endpoint, 
-                serverCertificate, 
-                ExchangeProtocolBuilder(), 
-                HandleMessageAsync, 
-                IsTrusted, 
-                logs, 
-                () => friendlyHtmlPageContent, 
-                () => friendlyHtmlPageHeaders, 
-                HandleUnauthorizedClientConnect, 
-                TimeoutsAndLimits, 
-                streamFactory,
-                connectionsObserver);
-            
-            lock (listeners)
-            {
-                listeners.Add(listener);
-            }
-
-            return listener.Start();
-        }
-
-        public void ListenWebSocket(string endpoint)
-        {
-            var listener = new SecureWebSocketListener(endpoint, 
-                serverCertificate, 
-                ExchangeProtocolBuilder(), 
-                HandleMessageAsync, 
-                IsTrusted, 
-                logs, 
+            var listener = new SecureListener(endpoint,
+                serverCertificate,
+                ExchangeProtocolBuilder(),
+                HandleMessageAsync,
+                IsTrusted,
+                logs,
                 () => friendlyHtmlPageContent,
                 () => friendlyHtmlPageHeaders,
                 HandleUnauthorizedClientConnect,
                 TimeoutsAndLimits,
                 streamFactory,
                 connectionsObserver);
-            
-            lock (listeners)
+
+            listeners.DoWithExclusiveAccess(l =>
             {
-                listeners.Add(listener);
-            }
+                l.Add(listener);
+            });
+
+            return listener.Start();
+        }
+
+        public void ListenWebSocket(string endpoint)
+        {
+            var listener = new SecureWebSocketListener(endpoint,
+                serverCertificate,
+                ExchangeProtocolBuilder(),
+                HandleMessageAsync,
+                IsTrusted,
+                logs,
+                () => friendlyHtmlPageContent,
+                () => friendlyHtmlPageHeaders,
+                HandleUnauthorizedClientConnect,
+                TimeoutsAndLimits,
+                streamFactory,
+                connectionsObserver);
+
+            
+            listeners.DoWithExclusiveAccess(l =>
+            {
+                l.Add(listener);
+            });
 
             listener.Start();
         }
@@ -243,7 +246,7 @@ namespace Halibut
                 async (protocol, cts) =>
                 {
                     response = await protocol.ExchangeAsClientAsync(request, cts).ConfigureAwait(false);
-                }, 
+                },
                 cancellationToken).ConfigureAwait(false);
 
             return response;
@@ -290,13 +293,13 @@ namespace Halibut
 
         void DisconnectFromAllListeners(string thumbprint)
         {
-            lock (listeners)
+            listeners.DoWithExclusiveAccess(l =>
             {
-                foreach (var secureListener in listeners.OfType<SecureListener>())
+                foreach (var secureListener in l.OfType<SecureListener>())
                 {
                     secureListener.Disconnect(thumbprint);
                 }
-            }
+            });
         }
 
         public bool IsTrusted(string remoteThumbprint)
@@ -338,21 +341,34 @@ namespace Halibut
 
         public async ValueTask DisposeAsync()
         {
+            foreach (var pendingRequestQueue in this.queues.Values)
+            {
+                try
+                {
+                    await pendingRequestQueue.DisposeAsync();
+                }
+                catch (Exception)
+                {
+                }
+            }
             pollingClients.Dispose();
             await connectionManager.DisposeAsync();
-            
+
             if (responseCache.IsValueCreated)
             {
                 responseCache.Value?.Dispose();
             }
 
-            lock (listeners)
+            await listeners.DoWithExclusiveAccess(async l =>
             {
-                foreach (var listener in listeners)
+                foreach (var listener in l)
                 {
-                    listener?.Dispose();
+                    if (listener != null)
+                    {
+                        await listener.DisposeAsync();
+                    }
                 }
-            }
+            });
         }
 
         protected UnauthorizedClientConnectResponse HandleUnauthorizedClientConnect(string clientName, string thumbPrint)

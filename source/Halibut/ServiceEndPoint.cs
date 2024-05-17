@@ -37,7 +37,6 @@ namespace Halibut
             halibutTimeoutsAndLimits ??= new HalibutTimeoutsAndLimits();
 
             this.PollingRequestQueueTimeout = halibutTimeoutsAndLimits.PollingRequestQueueTimeout;
-            this.PollingRequestMaximumMessageProcessingTimeout = halibutTimeoutsAndLimits.PollingRequestMaximumMessageProcessingTimeout;
             this.RetryListeningSleepInterval = halibutTimeoutsAndLimits.RetryListeningSleepInterval;
             this.RetryCountLimit = halibutTimeoutsAndLimits.RetryCountLimit;
             this.ConnectionErrorRetryTimeout = halibutTimeoutsAndLimits.ConnectionErrorRetryTimeout;
@@ -49,13 +48,6 @@ namespace Halibut
         /// polling request queue before raising a TimeoutException
         /// </summary>
         public TimeSpan PollingRequestQueueTimeout { get; set; }
-
-
-        /// <summary>
-        /// The amount of time the client will wait for the server to process a message collected
-        /// from the polling request queue before it raises a TimeoutException
-        /// </summary>
-        public TimeSpan PollingRequestMaximumMessageProcessingTimeout { get; set; }
 
         /// <summary>
         /// The amount of time to wait between connection requests to the remote endpoint (applies

@@ -61,11 +61,13 @@ namespace Halibut.Tests.Transport
             await using var connectionManager = new ConnectionManagerAsync();
             var stream = Substitute.For<IMessageExchangeStream>();
             stream.IdentifyAsClientAsync(Arg.Any<CancellationToken>()).Returns(Task.FromException(new ConnectionInitializationFailedException("")));
-            
+
             for (int i = 0; i < halibutTimeoutsAndLimits.RetryCountLimit; i++)
             {
                 var connection = Substitute.For<IConnection>();
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), log));
+                var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+                var activeConnectionLimiter = new ActiveTcpConnectionsLimiter(limits);
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, limits, activeConnectionLimiter, log));
 
                 await connectionManager.ReleaseConnectionAsync(endpoint, connection, CancellationToken.None);
             }
@@ -79,7 +81,7 @@ namespace Halibut.Tests.Transport
             };
 
             var tcpConnectionFactory = new TcpConnectionFactory(Certificates.Octopus, halibutTimeoutsAndLimits, new StreamFactory());
-            var secureClient = new SecureListeningClient((s, l)  => GetProtocol(s, l), endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
+            var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
 
             await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None);
@@ -90,9 +92,11 @@ namespace Halibut.Tests.Transport
             response.Result.Should().Be("Fred...");
         }
 
-        public MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
+        static MessageExchangeProtocol GetProtocol(Stream stream, ILog logger)
         {
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger), new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), logger);
+            var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            var activeConnectionLimiter = new ActiveTcpConnectionsLimiter(limits);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), limits, logger), limits, activeConnectionLimiter, logger);
         }
     }
 }

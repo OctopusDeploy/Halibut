@@ -62,6 +62,7 @@ namespace Halibut.Diagnostics
                 case EventType.MessageExchange:
                     return LogLevel.Trace;
                 case EventType.OpeningNewConnection:
+                case EventType.ClientDenied:
                     return LogLevel.Debug;
                 default:
                     return LogLevel.Info;
