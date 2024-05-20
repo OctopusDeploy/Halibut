@@ -44,6 +44,7 @@ namespace Halibut
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
+        readonly IControlMessageObserver controlMessageObserver;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -57,7 +58,8 @@ namespace Halibut
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
             IRpcObserver rpcObserver,
-            IConnectionsObserver connectionsObserver)
+            IConnectionsObserver connectionsObserver, 
+            IControlMessageObserver controlMessageObserver)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -71,6 +73,7 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.connectionsObserver = connectionsObserver;
+            this.controlMessageObserver = controlMessageObserver;
 
             connectionManager = new ConnectionManagerAsync();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
@@ -103,7 +106,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, log);
         }
 
         public int Listen(IPEndPoint endpoint)

@@ -4,26 +4,31 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
     internal class ControlMessageReader
     {
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        IControlMessageObserver controlMessageObserver;
 
-        public ControlMessageReader(HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        public ControlMessageReader(IControlMessageObserver controlMessageObserver, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.controlMessageObserver = controlMessageObserver;
         }
 
         internal async Task<string> ReadUntilNonEmptyControlMessageAsync(Stream stream, CancellationToken cancellationToken)
         {
+            controlMessageObserver.WaitingForControlMessage();
             while (true)
             {
                 var line = await ReadControlMessageAsync(stream, cancellationToken);
                 
                 if (line.Length > 0)
                 {
+                    controlMessageObserver.ReceivedControlMessage(line);
                     return line;
                 }
             }

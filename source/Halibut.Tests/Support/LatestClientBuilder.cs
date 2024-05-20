@@ -34,7 +34,7 @@ namespace Halibut.Tests.Support
         HalibutTimeoutsAndLimits halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
         IStreamFactory? clientStreamFactory;
         IConnectionsObserver? clientConnectionsObserver;
-        
+        IControlMessageObserver? controlMessageObserver;
 
         public LatestClientBuilder(
             ServiceConnectionType serviceConnectionType,
@@ -64,6 +64,12 @@ namespace Halibut.Tests.Support
         public LatestClientBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
             this.clientStreamFactory = streamFactory;
+            return this;
+        }
+
+        public LatestClientBuilder WithControlMessageObserver(IControlMessageObserver controlMessageObserver)
+        {
+            this.controlMessageObserver = controlMessageObserver;
             return this;
         }
         
@@ -174,6 +180,7 @@ namespace Halibut.Tests.Support
                 .WithPendingRequestQueueFactory(factory)
                 .WithTrustProvider(clientTrustProvider!)
                 .WithStreamFactoryIfNotNull(clientStreamFactory)
+                .WithControlMessageObserverIfNotNull(controlMessageObserver)
                 .WithConnectionsObserver(clientConnectionsObserver!)
                 .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                 .WithOnUnauthorizedClientConnect(clientOnUnauthorizedClientConnect!);

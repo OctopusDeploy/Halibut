@@ -97,6 +97,18 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public IClientAndServiceBuilder WithClientControlMessageObserver(IControlMessageObserver controlMessageObserver)
+        {
+            clientBuilder.WithControlMessageObserver(controlMessageObserver);
+            return this;
+        }
+        
+        public IClientAndServiceBuilder WithServiceControlMessageObserver(IControlMessageObserver controlMessageObserver)
+        {
+            serviceBuilder.WithControlMessageObserver(controlMessageObserver);
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithServiceConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
             serviceBuilder.WithServiceConnectionsObserver(connectionsObserver);
