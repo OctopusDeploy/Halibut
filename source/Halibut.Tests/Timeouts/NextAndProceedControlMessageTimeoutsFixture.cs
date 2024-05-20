@@ -92,7 +92,7 @@ namespace Halibut.Tests.Timeouts
                 // When the port forwarder is paused the stopwatch is started,
                 // we time the length it takes for recovery on that paused connection
                 await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000));
-                await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000)); // Do a second call just in case we missed the NEXT control message
+                await echo.SayHelloAsync(Some.RandomAsciiStringOfLength(2000)); // Do a second call just in case we missed the NEXT control message, since the polling tentacle can come back with a "NEXT" ctrl message before we have a request ready for it.
                 sw.Stop();
                 Logger.Information("It took: " + sw.Elapsed);
                 sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2)) // -2s since tentacle will begin its countdown on the read which may start just after
