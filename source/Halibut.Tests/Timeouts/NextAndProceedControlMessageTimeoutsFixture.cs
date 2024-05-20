@@ -1,15 +1,20 @@
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.PortForwarding;
+using Halibut.Tests.Support.Streams;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
+using Halibut.Transport.Streams;
 using Halibut.Util;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Timeouts
 {
@@ -21,19 +26,56 @@ namespace Halibut.Tests.Timeouts
         {
             var shouldPausePumpOnNextNextControlMessage = false;
             var sw = new Stopwatch();
+            
+            ByteCountingStream? bytesSentFromService = null;
+            ByteCountingStream? bytesRecievedByClient = null; 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithPortForwarding(out var portForwarder)
+                             .WithServiceStreamFactory(new StreamWrappingStreamFactory()
+                             {
+                                 WrapStreamWith = s =>
+                                 {
+                                     var wrapped = new ByteCountingStream(s, OnDispose.DisposeInputStream);
+                                     bytesSentFromService ??= wrapped;
+                                     return wrapped;
+                                 }
+                             })
+                             .WithClientStreamFactory(new StreamWrappingStreamFactory()
+                             {
+                                 WrapStreamWith = s =>
+                                 {
+                                     var wrapped = new ByteCountingStream(s, OnDispose.DisposeInputStream);
+                                     bytesRecievedByClient ??= wrapped;
+                                     return wrapped;
+                                 }
+                             })
                              .WithServiceControlMessageObserver(new FuncControlMessageObserver
                              {
                                  BeforeSendingControlMessageAction = controlMessage =>
                                  {
                                      if (shouldPausePumpOnNextNextControlMessage && controlMessage.Equals("NEXT"))
                                      {
-                                         Logger.Information("Pausing pump");
+                                         // Wait until the client has received everything the service has sent
+                                         while (true)
+                                         {
+                                             var currentBytesSentFromService = bytesSentFromService!.BytesWritten;
+                                             var currentBytesRecievedByClient = bytesRecievedByClient!.BytesRead;
+                                             Logger.Information("The service has sent {BytesSentFromService} bytes, The client has received {Bytes} bytes. Will wait until those equals.", currentBytesSentFromService, currentBytesRecievedByClient);
+                                             if (currentBytesRecievedByClient == currentBytesSentFromService) break;
+                                             CancellationToken.ThrowIfCancellationRequested();
+                                             Thread.Sleep(1);
+                                         }
+                                         
+                                         // Now the client is waiting for "NEXT" and the service is just about to send next, lets pause all existing connections
+                                         // to verify we can recover.
+                                         
                                          shouldPausePumpOnNextNextControlMessage = false;
-                                         portForwarder.Value!.PauseExistingConnections();
+                                         portForwarder.Value.PauseExistingConnections();
                                          sw.Start();
+                                         
+                                         Logger.Information("Existing connections on the port forwarder have been paused");
+                                         
                                      }
                                  }
                              })
