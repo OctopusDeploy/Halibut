@@ -77,10 +77,16 @@ namespace Halibut.Transport
             }
         }
 
+        internal static void ConfigureTcpOptions(this TcpClient tcpClient, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        {
+            tcpClient.NoDelay = halibutTimeoutsAndLimits.TcpNoDelay;
+            tcpClient.EnableTcpKeepAlive(halibutTimeoutsAndLimits);
+        }
+
         /// <summary>
         /// Enable KeepAlive fot the TcpClient
         /// </summary>
-        internal static void EnableTcpKeepAlive(this TcpClient tcpClient, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
+        static void EnableTcpKeepAlive(this TcpClient tcpClient, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             if (!halibutTimeoutsAndLimits.TcpKeepAliveEnabled)
             {

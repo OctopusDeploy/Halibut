@@ -227,6 +227,7 @@ namespace Halibut.Transport
             // This only works because in the using we stop the listener which should work on windows
             client = await listener.AcceptTcpClientAsync();
 #endif
+                        client.NoDelay = halibutTimeoutsAndLimits.TcpNoDelay;
                         var _ = Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }
@@ -287,7 +288,7 @@ namespace Halibut.Transport
             var clientName = client.GetRemoteEndpointString();
 
             var stream = streamFactory.CreateStream(client);
-            client.EnableTcpKeepAlive(halibutTimeoutsAndLimits);
+            client.ConfigureTcpOptions(halibutTimeoutsAndLimits);
 
             var errorEventType = EventType.ErrorInInitialisation;
             try

@@ -67,6 +67,7 @@ namespace Octopus.TestPortForwarder
             }
 
             listeningSocket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            listeningSocket.NoDelay = true;
 
             listeningSocket!.Bind(new IPEndPoint(IPAddress.Loopback, ListeningPort));
 
@@ -143,6 +144,7 @@ namespace Octopus.TestPortForwarder
 
                             var originEndPoint = new DnsEndPoint(originServer.Host, originServer.Port);
                             var originSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                            originSocket.NoDelay = true;
 
                             var pump = new TcpPump(clientSocket, originSocket, originEndPoint, sendDelay, biDirectionalDataTransferObserver, numberOfBytesToDelaySending, logger);
 

@@ -38,7 +38,7 @@ namespace Halibut.Transport
             
             var networkTimeoutStream = streamFactory.CreateStream(client);
 
-            client.EnableTcpKeepAlive(halibutTimeoutsAndLimits);
+            client.ConfigureTcpOptions(halibutTimeoutsAndLimits);
 
             var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
 
