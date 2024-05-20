@@ -17,7 +17,7 @@ namespace Halibut.Tests.Support.Streams
 
         public Stream CreateStream(WebSocket webSocket)
         {
-            return new StreamFactory().CreateStream(webSocket);
+            return WrapStreamWith(new StreamFactory().CreateStream(webSocket));
         }
     }
 }
