@@ -28,7 +28,7 @@ namespace Halibut.Tests.Timeouts
             var sw = new Stopwatch();
             
             ByteCountingStream? bytesSentFromService = null;
-            ByteCountingStream? bytesRecievedByClient = null; 
+            ByteCountingStream? bytesReceivedByClient = null; 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .AsLatestClientAndLatestServiceBuilder()
                              .WithPortForwarding(out var portForwarder)
@@ -46,7 +46,7 @@ namespace Halibut.Tests.Timeouts
                                  WrapStreamWith = s =>
                                  {
                                      var wrapped = new ByteCountingStream(s, OnDispose.DisposeInputStream);
-                                     bytesRecievedByClient ??= wrapped;
+                                     bytesReceivedByClient ??= wrapped;
                                      return wrapped;
                                  }
                              })
@@ -60,7 +60,7 @@ namespace Halibut.Tests.Timeouts
                                          while (true)
                                          {
                                              var currentBytesSentFromService = bytesSentFromService!.BytesWritten;
-                                             var currentBytesRecievedByClient = bytesRecievedByClient!.BytesRead;
+                                             var currentBytesRecievedByClient = bytesReceivedByClient!.BytesRead;
                                              Logger.Information("The service has sent {BytesSentFromService} bytes, The client has received {Bytes} bytes. Will wait until those equals.", currentBytesSentFromService, currentBytesRecievedByClient);
                                              if (currentBytesRecievedByClient == currentBytesSentFromService) break;
                                              CancellationToken.ThrowIfCancellationRequested();
@@ -98,6 +98,9 @@ namespace Halibut.Tests.Timeouts
                 sw.Elapsed.Should().BeGreaterThanOrEqualTo(clientAndService.Service.TimeoutsAndLimits.TcpClientHeartbeatTimeout.ReceiveTimeout - TimeSpan.FromSeconds(2)) // -2s since tentacle will begin its countdown on the read which may start just after
                     // the response to the 'Second last message' is put back into the queue.
                     .And.BeLessThan(clientAndService.Service.TimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout, "Service should not be using this timeout to detect the control message is not coming back, it should use the shorter one.");
+                
+                
+                Logger.Information("The service has sent {BytesSentFromService} bytes, The client has received {Bytes} bytes. Will wait until those equals.", bytesSentFromService!.BytesWritten, bytesReceivedByClient!.BytesRead);
             }
         }
     }
