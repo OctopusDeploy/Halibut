@@ -68,7 +68,7 @@ namespace Halibut.ServiceModel
                 {
                     var paramType = parameters[i].ParameterType;
                     var argType = argumentTypes[i];
-                    if (argType == null && paramType.IsValueType())
+                    if (argType == null && !paramType.IsNullable())
                     {
                         isMatch = false;
                         break;
