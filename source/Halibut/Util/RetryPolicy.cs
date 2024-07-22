@@ -7,7 +7,7 @@ namespace Halibut.Util
     {
         readonly Stopwatch stopwatch = new Stopwatch();
 
-        internal RetryPolicy(double backoffMultiplier, TimeSpan minimumDelay, TimeSpan maximumDelay)
+        public RetryPolicy(double backoffMultiplier, TimeSpan minimumDelay, TimeSpan maximumDelay)
         {
             if (backoffMultiplier <= 0) throw new ArgumentOutOfRangeException(nameof(backoffMultiplier), "Must be greater than zero");
 
