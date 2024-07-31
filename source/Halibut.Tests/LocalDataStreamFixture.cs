@@ -29,7 +29,7 @@ namespace Halibut.Tests
             {
                 await dataStream.Receiver().SaveToAsync(filePath, CancellationToken);
 
-                File.ReadAllText(filePath).Should().Be(input);
+                (await File.ReadAllTextAsync(filePath)).Should().Be(input);
             }
             finally
             {

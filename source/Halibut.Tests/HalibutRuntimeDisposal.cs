@@ -31,7 +31,7 @@ namespace Halibut.Tests
 
 #pragma warning disable VSTHRD103
 #pragma warning disable CS0618 // Type or member is obsolete
-            clientAndService.Service.Dispose();
+            await clientAndService.Service.DisposeAsync();
 #pragma warning restore CS0618 // Type or member is obsolete
 #pragma warning restore VSTHRD103
 
@@ -42,7 +42,7 @@ namespace Halibut.Tests
 
 #pragma warning disable VSTHRD103
 #pragma warning disable CS0618 // Type or member is obsolete
-            clientAndService.Client.Dispose();
+            await clientAndService.Client.DisposeAsync();
 #pragma warning restore CS0618 // Type or member is obsolete
 #pragma warning restore VSTHRD103
         }

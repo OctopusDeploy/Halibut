@@ -9,6 +9,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.TestServices.SyncClientWithOptions;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -97,7 +98,7 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 await AssertException.Throws<Exception>(sayHelloTask);
 
@@ -130,7 +131,7 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 await AssertException.Throws<Exception>(sayHelloTask);
 

@@ -244,7 +244,7 @@ namespace Halibut.Tests.Transport.Streams
             using (disposables)
             {
 #pragma warning disable VSTHRD103 // Call async methods when in an async method
-                sut.Dispose();
+                await sut.DisposeAsync();
 #pragma warning restore VSTHRD103 // Call async methods when in an async method
 
                 Action read = () => sut.Read(new byte[1], 0, 1);
@@ -578,7 +578,7 @@ namespace Halibut.Tests.Transport.Streams
                 // e.g. if using ... throw it makes the stream difficult to use
                 sut.Close();
 #pragma warning disable VSTHRD103 // Call async methods when in an async method
-                sut.Dispose();
+                await sut.DisposeAsync();
 #pragma warning restore VSTHRD103 // Call async methods when in an async method
                 await sut.DisposeAsync();
 

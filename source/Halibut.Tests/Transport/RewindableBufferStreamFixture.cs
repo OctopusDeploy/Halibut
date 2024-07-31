@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Transport.Streams;
+using Halibut.Tests.Util;
 using Halibut.Transport;
 using Halibut.Transport.Streams;
 using NUnit.Framework;
@@ -63,7 +64,7 @@ namespace Halibut.Tests.Transport
 
                 var readBuffer = new byte[inputBuffer.Length];
                 var cts = new CancellationTokenSource();
-                cts.Cancel();
+                await cts.CancelAsync();
                 
                 Func<Task<int>> readAsyncCall = async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
 

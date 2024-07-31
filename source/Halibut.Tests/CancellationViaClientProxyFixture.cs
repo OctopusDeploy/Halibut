@@ -10,6 +10,7 @@ using Halibut.Tests.Support.ExtensionMethods;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -90,7 +91,7 @@ namespace Halibut.Tests
                 }
                 
                 // The call is now in flight. Call cancel on the cancellation token for that in flight request.
-                tokenSourceToCancel.Cancel();
+                await tokenSourceToCancel.CancelAsync();
                 
                 // Give time for the cancellation to do something
                 await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);

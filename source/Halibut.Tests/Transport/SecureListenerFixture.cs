@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
+using Halibut.Tests.Util;
 using Halibut.Transport;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
@@ -163,7 +164,7 @@ namespace Halibut.Tests.Transport
                 await Task.Delay(TimeSpan.FromMilliseconds(30));
             } // Here is the test we dispose/stop the listner. We should not hang here forever.
             
-            cts.Cancel();
+            await cts.CancelAsync();
             foreach (var connectTask in connectTasks)
             {
                 await connectTask;
