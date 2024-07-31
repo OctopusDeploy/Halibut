@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "title": "Build Schema",
   "$ref": "#/definitions/build",
+  "title": "Build Schema",
   "definitions": {
     "build": {
       "type": "object",
@@ -88,15 +88,18 @@
               "Compile",
               "CompileNet48",
               "CompileNet60",
+              "CompileNet80",
               "CopyToLocalPackages",
               "Default",
               "Pack",
               "PackTestPortForwarder",
               "Restore",
               "TestLinux",
+              "TestLinuxNet80",
               "TestWindows",
               "TestWindowsNet48",
-              "TestWindowsNet60"
+              "TestWindowsNet60",
+              "TestWindowsNet80"
             ]
           }
         },
@@ -114,15 +117,18 @@
               "Compile",
               "CompileNet48",
               "CompileNet60",
+              "CompileNet80",
               "CopyToLocalPackages",
               "Default",
               "Pack",
               "PackTestPortForwarder",
               "Restore",
               "TestLinux",
+              "TestLinuxNet80",
               "TestWindows",
               "TestWindowsNet48",
-              "TestWindowsNet60"
+              "TestWindowsNet60",
+              "TestWindowsNet80"
             ]
           }
         },
