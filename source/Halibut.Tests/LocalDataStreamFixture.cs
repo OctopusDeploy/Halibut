@@ -29,7 +29,11 @@ namespace Halibut.Tests
             {
                 await dataStream.Receiver().SaveToAsync(filePath, CancellationToken);
 
+#if NET8_0_OR_GREATER
                 (await File.ReadAllTextAsync(filePath)).Should().Be(input);
+#else
+                File.ReadAllText(filePath).Should().Be(input);
+#endif
             }
             finally
             {
