@@ -62,8 +62,8 @@ class Build : NukeBuild
     Target Clean => _ => _
         .Executes(() =>
         {
-            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(DeleteDirectory);
-            EnsureCleanDirectory(ArtifactsDirectory);
+            SourceDirectory.GlobDirectories("**/bin", "**/obj").ForEach(d => d.DeleteDirectory());
+            ArtifactsDirectory.CreateOrCleanDirectory();
         });
 
     Target Restore => _ => _
@@ -81,6 +81,8 @@ class Build : NukeBuild
     Target CompileNet48 => _ => CompileDefinition(_, "net48");
 
     Target CompileNet60 => _ => CompileDefinition(_, "net6.0");
+
+    Target CompileNet80 => _ => CompileDefinition(_, "net8.0");
 
     ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
     {
@@ -109,6 +111,12 @@ class Build : NukeBuild
 
     [PublicAPI]
     Target TestWindowsNet60 => _ => TestDefinition(_, CompileNet60, "net6.0", runDotMemoryTests: true);
+
+    [PublicAPI]
+    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: true);
+
+    [PublicAPI]
+    Target TestLinuxNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
 
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {
@@ -155,7 +163,7 @@ class Build : NukeBuild
                 .SetOutputDirectory(ArtifactsDirectory)
                 .EnableNoBuild()
                 .DisableIncludeSymbols()
-                .SetVerbosity(DotNetVerbosity.Normal));
+                .SetVerbosity(DotNetVerbosity.normal));
         });
 
     Target CopyToLocalPackages => _ => _
@@ -163,7 +171,7 @@ class Build : NukeBuild
         .TriggeredBy(Pack)
         .Executes(() =>
         {
-            EnsureExistingDirectory(LocalPackagesDirectory);
+            LocalPackagesDirectory.CreateDirectory();
             ArtifactsDirectory.GlobFiles("*.nupkg")
                 .ForEach(package => CopyFileToDirectory(package, LocalPackagesDirectory, FileExistsPolicy.Overwrite));
         });
@@ -178,7 +186,7 @@ class Build : NukeBuild
                 .SetVersion(FullSemVer)
                 .SetConfiguration(Configuration)
                 .SetOutputDirectory(ArtifactsDirectory)
-                .SetVerbosity(DotNetVerbosity.Normal));
+                .SetVerbosity(DotNetVerbosity.normal));
         });
 
     Target Default => _ => _
