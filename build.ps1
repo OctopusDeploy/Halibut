@@ -40,10 +40,13 @@ if ($null -eq $env:TEAMCITY_VERSION -and $null -ne (Get-Command "dotnet" -ErrorA
 }
 else {
     # Download install script
-    $DotNetInstallFile = "$TempDirectory\dotnet-install.ps1"
-    New-Item -ItemType Directory -Path $TempDirectory -Force | Out-Null
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    (New-Object System.Net.WebClient).DownloadFile($DotNetInstallUrl, $DotNetInstallFile)
+    #$DotNetInstallFile = "$TempDirectory\dotnet-install.ps1"
+    #New-Item -ItemType Directory -Path $TempDirectory -Force | Out-Null
+    #[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    #(New-Object System.Net.WebClient).DownloadFile($DotNetInstallUrl, $DotNetInstallFile)
+
+    # Octopus modification to use version of the script configured to support TLS 1.2
+    $DotNetInstallFile = Join-Path $PSScriptRoot "dotnet-install.ps1"
 
     # If global.json exists, load expected version
     if (Test-Path $DotNetGlobalFile) {
