@@ -6,11 +6,6 @@
 # Duplicated from https://dot.net/v1/dotnet-install.ps1 @ 2024-07-01
 # Modified to apply TLS 1.2 Support to allow running on old Windows versions
 
-Write-Host "Enabling TLS 1.2"
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-
-# End of modifications
-
 <#
 .SYNOPSIS
     Installs dotnet cli
@@ -144,6 +139,13 @@ param(
    [string]$ZipPath=[System.IO.Path]::combine([System.IO.Path]::GetTempPath(), [System.IO.Path]::GetRandomFileName()),
    [switch]$Help
 )
+
+# Modifications to enable TLS 1.2
+
+Write-Host "Enabling TLS 1.2"
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+
+# End of modifications
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference="Stop"
