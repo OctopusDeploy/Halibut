@@ -74,7 +74,7 @@ namespace Halibut.Transport.Proxy.Exceptions
         /// <param name="info">Serialization information.</param>
         /// <param name="context">Stream context information.</param>
 #if NET8_0_OR_GREATER
-        [Obsolete(DiagnosticId = "SYSLIB005")]
+        [Obsolete(DiagnosticId = "SYSLIB0051")]
 #endif
         protected ProxyException(SerializationInfo info, StreamingContext context)
             : base(info, context)
