@@ -29,7 +29,7 @@ function FirstJsonValue {
 }
 
 # If dotnet CLI is installed globally and it matches requested version, use for execution
-if [ -x "$(command -v dotnet)" ] && dotnet --version &>/dev/null; then
+if [ -z "$TEAMCITY_VERSION" ] && [ -x "$(command -v dotnet)" ] && dotnet --version &>/dev/null; then
     export DOTNET_EXE="$(command -v dotnet)"
 else
     # Download install script
