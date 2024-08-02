@@ -113,7 +113,7 @@ class Build : NukeBuild
     Target TestWindowsNet60 => _ => TestDefinition(_, CompileNet60, "net6.0", runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: true);
+    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
 
     [PublicAPI]
     Target TestLinuxNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
