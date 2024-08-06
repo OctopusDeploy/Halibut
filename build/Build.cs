@@ -138,8 +138,8 @@ class Build : NukeBuild
                     .SetFilter(TestFilter)
                     .EnableNoBuild()
                     .EnableNoRestore()
-                    .EnableBlameCrash()
-                    .SetBlameCrashDumpType("none") // TODO: Restore to 'full' after Windows 2012 issue is resolved
+                    // .EnableBlameCrash()
+                    // .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
                     // This is set high since when a hang dump is collected it is saved into /tmp/
                     // On windows the dump collecting utility appears to be missing and so nothing is collected.
