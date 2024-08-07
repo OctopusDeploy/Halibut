@@ -130,8 +130,8 @@ class Build : NukeBuild
                     .SetFilter(TestFilter)
                     .EnableNoBuild()
                     .EnableNoRestore()
-                    // .EnableBlameCrash()
-                    // .SetBlameCrashDumpType("full")
+                    .EnableBlameCrash()
+                    .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
                     // This is set high since when a hang dump is collected it is saved into /tmp/
                     // On windows the dump collecting utility appears to be missing and so nothing is collected.
