@@ -56,7 +56,7 @@ else
 
     # Octopus Modification
     # Install the .NET 6.0 runtime as well
-    #"$DOTNET_INSTALL_FILE" --install-dir "$DOTNET_DIRECTORY" --runtime dotnet --channel 6.0 --no-path
+    "$DOTNET_INSTALL_FILE" --install-dir "$DOTNET_DIRECTORY" --runtime dotnet --channel 6.0 --no-path
     # End Octopus Modification
     export DOTNET_EXE="$DOTNET_DIRECTORY/dotnet"
 fi
