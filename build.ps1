@@ -33,17 +33,22 @@ function ExecSafe([scriptblock] $cmd) {
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
 }
 
+# Octopus modification to ensure dotnet-install is always used in TeamCity builds
 # If dotnet CLI is installed globally and it matches requested version, use for execution
-if ($null -ne (Get-Command "dotnet" -ErrorAction SilentlyContinue) -and `
+if ($null -eq $env:TEAMCITY_VERSION -and $null -ne (Get-Command "dotnet" -ErrorAction SilentlyContinue) -and `
      $(dotnet --version) -and $LASTEXITCODE -eq 0) {
     $env:DOTNET_EXE = (Get-Command "dotnet").Path
 }
 else {
     # Download install script
-    $DotNetInstallFile = "$TempDirectory\dotnet-install.ps1"
-    New-Item -ItemType Directory -Path $TempDirectory -Force | Out-Null
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    (New-Object System.Net.WebClient).DownloadFile($DotNetInstallUrl, $DotNetInstallFile)
+    # Octopus modification to comment out the download of the install script
+    #$DotNetInstallFile = "$TempDirectory\dotnet-install.ps1"
+    #New-Item -ItemType Directory -Path $TempDirectory -Force | Out-Null
+    #[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    #(New-Object System.Net.WebClient).DownloadFile($DotNetInstallUrl, $DotNetInstallFile)
+
+    # Octopus modification to use version of the script configured to support TLS 1.2
+    $DotNetInstallFile = Join-Path $PSScriptRoot "dotnet-install.ps1"
 
     # If global.json exists, load expected version
     if (Test-Path $DotNetGlobalFile) {
@@ -60,6 +65,10 @@ else {
     } else {
         ExecSafe { & powershell $DotNetInstallFile -InstallDir $DotNetDirectory -Version $DotNetVersion -NoPath }
     }
+    # Octopus Modification
+    # Install the .NET 6.0 runtime as well (this is required to run the tests)
+    ExecSafe { & powershell $DotNetInstallFile -InstallDir $DotNetDirectory -Runtime dotnet -Channel 6.0 -NoPath }
+    # End Octopus Modification
     $env:DOTNET_EXE = "$DotNetDirectory\dotnet.exe"
 }
 
