@@ -103,7 +103,7 @@ class Build : NukeBuild
     Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestLinux => _ => TestDefinition(_, Compile, "net6.0", runDotMemoryTests: false);
+    Target TestLinux => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
 
     [PublicAPI]
     Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
