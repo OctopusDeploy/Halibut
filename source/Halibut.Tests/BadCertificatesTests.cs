@@ -110,7 +110,9 @@ namespace Halibut.Tests
                     Logger,
                     CancellationToken);
                 
+#pragma warning disable VSTHRD103
                 cts.Cancel();
+#pragma warning restore VSTHRD103
 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
 
@@ -159,7 +161,9 @@ namespace Halibut.Tests
 
                 await Task.Delay(3000, CancellationToken);
 
+#pragma warning disable VSTHRD103
                 cts.Cancel();
+#pragma warning restore VSTHRD103
 
                 var exception = await AssertException.Throws<Exception>(incrementCount);
 
@@ -223,7 +227,9 @@ namespace Halibut.Tests
                     Logger,
                     CancellationToken);
                 
+#pragma warning disable VSTHRD103
                 cts.Cancel();
+#pragma warning restore VSTHRD103
                 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
                 
@@ -279,7 +285,9 @@ namespace Halibut.Tests
                     CancellationToken);
                 
 
+#pragma warning disable VSTHRD103
                 cts.Cancel();
+#pragma warning restore VSTHRD103
 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
 

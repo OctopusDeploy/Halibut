@@ -63,7 +63,9 @@ namespace Halibut.Tests.Transport
 
                 var readBuffer = new byte[inputBuffer.Length];
                 var cts = new CancellationTokenSource();
+#pragma warning disable VSTHRD103
                 cts.Cancel();
+#pragma warning restore VSTHRD103
                 
                 Func<Task<int>> readAsyncCall = async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
 

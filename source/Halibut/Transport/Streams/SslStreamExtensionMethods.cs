@@ -23,7 +23,9 @@ namespace Halibut.Transport.Streams
             {
                 TargetHost = serviceEndpoint.BaseUri.Host,
                 ClientCertificates = clientCertificates,
+#pragma warning disable SYSLIB0039
                 EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
+#pragma warning restore SYSLIB0039
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck
             };
 

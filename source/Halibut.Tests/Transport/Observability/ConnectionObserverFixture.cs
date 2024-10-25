@@ -97,7 +97,9 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
+#pragma warning disable VSTHRD103
                 cts.Cancel();
+#pragma warning restore VSTHRD103
 
                 await AssertException.Throws<Exception>(sayHelloTask);
 
@@ -130,7 +132,9 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
+#pragma warning disable VSTHRD103
                 cts.Cancel();
+#pragma warning restore VSTHRD103
 
                 await AssertException.Throws<Exception>(sayHelloTask);
 

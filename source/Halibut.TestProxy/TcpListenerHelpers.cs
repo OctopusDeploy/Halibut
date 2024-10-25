@@ -36,7 +36,7 @@ namespace Halibut.TestProxy
             throw new ArgumentException($"Listening endpoint '{listenEndpoint}' could not be parsed");
         }
 
-        // Taken from net6.0 and adapted to support net48
+        // Taken from net8.0 and adapted to support net48
         public static bool TryParse(string s, out IPEndPoint? result)
         {
             int addressLength = s.Length;  // If there's no port then send the entire string to the address parser

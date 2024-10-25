@@ -38,7 +38,9 @@ namespace Halibut.Tests
             Logger.Information("Staring Test Tearing Down");
 
             Logger.Information("Cancelling CancellationTokenSource");
+#pragma warning disable VSTHRD103
             cancellationTokenSource?.Cancel();
+#pragma warning restore VSTHRD103
             Logger.Information("Disposing CancellationTokenSource");
             cancellationTokenSource?.Dispose();
 

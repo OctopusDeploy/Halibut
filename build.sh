@@ -55,8 +55,8 @@ else
     fi
 
     # Octopus Modification
-    # Install the .NET 6.0 runtime as well (this is required to run the tests)
-    "$DOTNET_INSTALL_FILE" --install-dir "$DOTNET_DIRECTORY" --runtime dotnet --channel 6.0 --no-path
+    # Install the .NET 8.0 runtime as well (this is required to run the tests)
+    "$DOTNET_INSTALL_FILE" --install-dir "$DOTNET_DIRECTORY" --runtime dotnet --channel 8.0 --no-path
     # End Octopus Modification
     export DOTNET_EXE="$DOTNET_DIRECTORY/dotnet"
 fi

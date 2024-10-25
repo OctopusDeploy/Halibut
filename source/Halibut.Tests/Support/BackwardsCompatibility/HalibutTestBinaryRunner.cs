@@ -176,26 +176,34 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 
                 if (completedTask == runningTentacle)
                 {
+#pragma warning disable VSTHRD103
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
+#pragma warning restore VSTHRD103
                     // Will throw the startup exception.
                     await runningTentacle;
                 }
 
                 if (!hasTentacleStarted.IsSet)
                 {
+#pragma warning disable VSTHRD103
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
+#pragma warning restore VSTHRD103
                     throw new Exception("Halibut test binary did not appear to start correctly");
                 }
 
+#pragma warning disable VSTHRD103
                 whenAnyCleanupCancellationTokenSource.Cancel();
+#pragma warning restore VSTHRD103
 
                 return (runningTentacle, serviceListenPort, runningTentacleCancellationTokenSource);
             }
             catch (Exception)
             {
+#pragma warning disable VSTHRD103
                 runningTentacleCancellationTokenSource.Cancel();
+#pragma warning restore VSTHRD103
                 runningTentacleCancellationTokenSource.Dispose();
                 throw;
             }

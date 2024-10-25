@@ -15,7 +15,9 @@ namespace Halibut.Transport.Protocol
         {
             Serializer = JsonSerializer.Create(settings);
             streamCaptureContext = new StreamCaptureContext();
+#pragma warning disable SYSLIB0050
             Serializer.Context = new StreamingContext(default, streamCaptureContext);
+#pragma warning restore SYSLIB0050
         }
 
         public class StreamCaptureContext

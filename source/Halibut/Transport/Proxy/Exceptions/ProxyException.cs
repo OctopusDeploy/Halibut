@@ -73,7 +73,9 @@ namespace Halibut.Transport.Proxy.Exceptions
         /// <param name="info">Serialization information.</param>
         /// <param name="context">Stream context information.</param>
         protected ProxyException(SerializationInfo info, StreamingContext context)
+#pragma warning disable SYSLIB0051
             : base(info, context)
+#pragma warning restore SYSLIB0051
         {
         }
     }

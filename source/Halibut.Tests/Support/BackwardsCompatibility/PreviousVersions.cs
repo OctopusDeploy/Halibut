@@ -7,7 +7,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         // The earliest release with a stable WebSocket implementation
         static readonly Version v6_0_658_WebSocket_Stability_Fixes = new("6.0.658");
 
-        // The earliest release with a stable streams where communication won't hang sometimes on net6.0
+        // The earliest release with a stable streams where communication won't hang sometimes on net8.0
         static readonly Version v5_0_236_Stable_Streams = new("5.0.236");
 
         // The last release with meaningful changes prior to Script Service V2
@@ -16,8 +16,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 #if NETFRAMEWORK
         public static readonly HalibutVersions v4_4_8 = new(new Version("4.4.8"), pollingOverWebSocketServiceVersion: v6_0_658_WebSocket_Stability_Fixes);
 #else
-        // A net6.0 client causes an older halibut service without buffer over-read changes to be prone to hanging or erroring when reading the stream.
-        // This instability means we cannot really have automated tests for net6.0 and older these older Halibut Services
+        // A net8.0 client causes an older halibut service without buffer over-read changes to be prone to hanging or erroring when reading the stream.
+        // This instability means we cannot really have automated tests for net8.0 and older these older Halibut Services
         public static readonly HalibutVersions v4_4_8 = new(new Version("4.4.8"), pollingOverWebSocketServiceVersion: v6_0_658_WebSocket_Stability_Fixes, pollingServiceVersion: v5_0_236_Stable_Streams, listeningServiceVersion: v5_0_236_Stable_Streams);
 #endif
     }

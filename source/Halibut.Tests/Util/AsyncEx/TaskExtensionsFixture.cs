@@ -49,7 +49,9 @@ namespace Halibut.Tests.Util.AsyncEx
             timeWaiting.Stop();
             timeWaiting.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(10), "we should have stopped waiting on the task when timeout happened");
             
+#pragma warning disable VSTHRD103
             cts.Cancel();
+#pragma warning restore VSTHRD103
             await task;
             triggered.Should().Be(true, "task should have continued executing in the background");
         }
@@ -65,7 +67,9 @@ namespace Halibut.Tests.Util.AsyncEx
             var task = Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromMilliseconds(50));
+#pragma warning disable VSTHRD103
                 ctsForTimeoutAfter.Cancel();
+#pragma warning restore VSTHRD103
 
                 try
                 {
@@ -80,7 +84,9 @@ namespace Halibut.Tests.Util.AsyncEx
 
             await AssertException.Throws<OperationCanceledException>(task.TimeoutAfter(TimeSpan.FromDays(1), ctsForTimeoutAfter.Token));
             triggered.Should().Be(false, "we should have stopped waiting on the task when cancellation happened");
+#pragma warning disable VSTHRD103
             taskWillRunUntilThisIsCancelled.Cancel();
+#pragma warning restore VSTHRD103
             await task;
             triggered.Should().Be(true, "task should have continued executing in the background (not entirely ideal, but this task is designed to handle non-cancelable tasks)");
         }
@@ -121,8 +127,10 @@ namespace Halibut.Tests.Util.AsyncEx
                 () => Task.Run(async () =>
                 {
                     await Task.Delay(100);
+#pragma warning disable VSTHRD103
                     timeoutAfterCts.Cancel();
-                        try
+#pragma warning restore VSTHRD103
+                    try
                         {
                             await Task.Delay(TimeSpan.FromDays(1), taskWaitsOnThis.Token);
                         }
