@@ -163,9 +163,11 @@ namespace Halibut.Tests.Transport
                 await Task.Delay(TimeSpan.FromMilliseconds(30));
             } // Here is the test we dispose/stop the listner. We should not hang here forever.
             
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+            await cts.CancelAsync();
+#else
             cts.Cancel();
-#pragma warning restore VSTHRD103
+#endif
             foreach (var connectTask in connectTasks)
             {
                 await connectTask;

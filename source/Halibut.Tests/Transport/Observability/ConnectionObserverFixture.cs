@@ -97,10 +97,12 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-#pragma warning restore VSTHRD103
-
+#endif
+                
                 await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
@@ -132,10 +134,11 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-#pragma warning restore VSTHRD103
-
+#endif
                 await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);

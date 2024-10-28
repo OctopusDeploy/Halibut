@@ -110,10 +110,11 @@ namespace Halibut.Tests
                     Logger,
                     CancellationToken);
                 
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-#pragma warning restore VSTHRD103
-
+#endif
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
 
                 // don't assert things until we've seen the client actually connect
@@ -160,10 +161,12 @@ namespace Halibut.Tests
                 var incrementCount = Task.Run(async () => await clientCountingService.IncrementAsync(new HalibutProxyRequestOptions(cts.Token)), CancellationToken);
 
                 await Task.Delay(3000, CancellationToken);
-
-#pragma warning disable VSTHRD103
+                
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-#pragma warning restore VSTHRD103
+#endif
 
                 var exception = await AssertException.Throws<Exception>(incrementCount);
 
@@ -227,9 +230,11 @@ namespace Halibut.Tests
                     Logger,
                     CancellationToken);
                 
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-#pragma warning restore VSTHRD103
+#endif
                 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
                 
@@ -284,10 +289,11 @@ namespace Halibut.Tests
                     Logger,
                     CancellationToken);
                 
-
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-#pragma warning restore VSTHRD103
+#endif
 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
 

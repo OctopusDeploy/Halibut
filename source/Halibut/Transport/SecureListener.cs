@@ -299,6 +299,8 @@ namespace Halibut.Transport
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
 
 #pragma warning disable SYSLIB0039
+                    // See https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib0039
+                    // TLS 1.0 and 1.1 are obsolete from .NET 7
                     await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
 #pragma warning restore SYSLIB0039
 

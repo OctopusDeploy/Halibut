@@ -113,9 +113,11 @@ namespace Halibut.Tests
 
         public async ValueTask DisposeAsync()
         {
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+            await cancellationTokenSource.CancelAsync();
+#else
             cancellationTokenSource.Cancel();
-#pragma warning restore VSTHRD103
+#endif
 #pragma warning disable VSTHRD003
             await writeDataToDiskTask;
 #pragma warning restore VSTHRD003

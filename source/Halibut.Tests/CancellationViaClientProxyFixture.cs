@@ -90,9 +90,11 @@ namespace Halibut.Tests
                 }
                 
                 // The call is now in flight. Call cancel on the cancellation token for that in flight request.
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                await tokenSourceToCancel.CancelAsync();
+#else
                 tokenSourceToCancel.Cancel();
-#pragma warning restore VSTHRD103
+#endif
                 
                 // Give time for the cancellation to do something
                 await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);

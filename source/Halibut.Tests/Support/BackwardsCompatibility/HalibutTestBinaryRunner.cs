@@ -176,34 +176,43 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 
                 if (completedTask == runningTentacle)
                 {
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
-#pragma warning restore VSTHRD103
+#endif
                     // Will throw the startup exception.
                     await runningTentacle;
                 }
 
                 if (!hasTentacleStarted.IsSet)
                 {
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
-#pragma warning restore VSTHRD103
+#endif
                     throw new Exception("Halibut test binary did not appear to start correctly");
                 }
-
-#pragma warning disable VSTHRD103
+                
+#if NET8_0_OR_GREATER
+                await whenAnyCleanupCancellationTokenSource.CancelAsync();
+#else
                 whenAnyCleanupCancellationTokenSource.Cancel();
-#pragma warning restore VSTHRD103
-
+#endif
                 return (runningTentacle, serviceListenPort, runningTentacleCancellationTokenSource);
             }
             catch (Exception)
             {
-#pragma warning disable VSTHRD103
+#if NET8_0_OR_GREATER
+                await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                 runningTentacleCancellationTokenSource.Cancel();
-#pragma warning restore VSTHRD103
+#endif
                 runningTentacleCancellationTokenSource.Dispose();
                 throw;
             }
