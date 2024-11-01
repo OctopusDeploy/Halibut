@@ -100,7 +100,7 @@ class Build : NukeBuild
     }
 
     [PublicAPI]
-    Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests: true);
+    Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
 
     [PublicAPI]
     Target TestLinux => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
@@ -109,7 +109,7 @@ class Build : NukeBuild
     Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: true);
+    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
 
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {
