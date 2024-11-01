@@ -9,6 +9,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -194,7 +195,7 @@ namespace Halibut.Tests
             (await AssertException.Throws<ConnectingRequestCancelledException>(async () =>
             {
                 var task = client.SayHelloAsync("Hello", new(cancellationTokenSource.Token));
-                cancellationTokenSource.Cancel();
+                await cancellationTokenSource.CancelAsync();
                 await task;
             })).And.Message.Should().Contain($"An error occurred when sending a request to 'https://20.5.79.31:10933/', after the request began: The Request was cancelled while Connecting.");
         }
@@ -276,7 +277,7 @@ namespace Halibut.Tests
             var cancellationTask = Task.Run(async () =>
             {
                 await executingSemaphore.WaitAsync(CancellationToken);
-                cancellationTokenSource.Cancel();
+                await cancellationTokenSource.CancelAsync();
             });
 
             (await AssertException.Throws<TransferringRequestCancelledException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token))))

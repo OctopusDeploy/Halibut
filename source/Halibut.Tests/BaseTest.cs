@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Tests.Support;
+using Halibut.Tests.Util;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
 using ILogger = Serilog.ILogger;
@@ -38,7 +39,10 @@ namespace Halibut.Tests
             Logger.Information("Staring Test Tearing Down");
 
             Logger.Information("Cancelling CancellationTokenSource");
-            cancellationTokenSource?.Cancel();
+            if (cancellationTokenSource != null)
+            {
+                await cancellationTokenSource.CancelAsync();
+            }
             Logger.Information("Disposing CancellationTokenSource");
             cancellationTokenSource?.Dispose();
 

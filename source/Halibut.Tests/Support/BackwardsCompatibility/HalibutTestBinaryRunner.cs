@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CliWrap;
 using Halibut.Logging;
 using Halibut.Tests.Support.ExtensionMethods;
+using Halibut.Tests.Util;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using Serilog;
@@ -176,26 +177,26 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 
                 if (completedTask == runningTentacle)
                 {
-                    whenAnyCleanupCancellationTokenSource.Cancel();
-                    runningTentacleCancellationTokenSource.Cancel();
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
                     // Will throw the startup exception.
                     await runningTentacle;
                 }
 
                 if (!hasTentacleStarted.IsSet)
                 {
-                    whenAnyCleanupCancellationTokenSource.Cancel();
-                    runningTentacleCancellationTokenSource.Cancel();
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
                     throw new Exception("Halibut test binary did not appear to start correctly");
                 }
 
-                whenAnyCleanupCancellationTokenSource.Cancel();
+                await whenAnyCleanupCancellationTokenSource.CancelAsync();
 
                 return (runningTentacle, serviceListenPort, runningTentacleCancellationTokenSource);
             }
             catch (Exception)
             {
-                runningTentacleCancellationTokenSource.Cancel();
+                await runningTentacleCancellationTokenSource.CancelAsync();
                 runningTentacleCancellationTokenSource.Dispose();
                 throw;
             }

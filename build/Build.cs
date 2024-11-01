@@ -83,6 +83,8 @@ class Build : NukeBuild
 
     Target CompileNet60 => _ => CompileDefinition(_, "net6.0");
 
+    Target CompileNet80 => _ => CompileDefinition(_, "net8.0");
+
     ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
     {
         return targetDefinition
@@ -103,13 +105,19 @@ class Build : NukeBuild
     Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestLinux => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
+    Target TestLinux => _ => TestDefinition(_, Compile, "net6.0", runDotMemoryTests: false);
 
     [PublicAPI]
     Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
 
     [PublicAPI]
     Target TestWindowsNet60 => _ => TestDefinition(_, CompileNet60, "net6.0", runDotMemoryTests: true);
+
+    [PublicAPI]
+    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
+
+    [PublicAPI]
+    Target TestLinuxNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
 
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {
@@ -131,8 +139,8 @@ class Build : NukeBuild
                     .SetFilter(TestFilter)
                     .EnableNoBuild()
                     .EnableNoRestore()
-                    .EnableBlameCrash()
-                    .SetBlameCrashDumpType("full")
+                    // .EnableBlameCrash()
+                    // .SetBlameCrashDumpType("full")
                     .EnableBlameHang()
                     // This is set high since when a hang dump is collected it is saved into /tmp/
                     // On windows the dump collecting utility appears to be missing and so nothing is collected.

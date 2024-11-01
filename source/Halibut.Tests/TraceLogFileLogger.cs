@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Tests.Util;
 using Microsoft.VisualStudio.Threading;
 using IAsyncDisposable = System.IAsyncDisposable;
 
@@ -113,7 +114,7 @@ namespace Halibut.Tests
 
         public async ValueTask DisposeAsync()
         {
-            cancellationTokenSource.Cancel();
+            await cancellationTokenSource.CancelAsync();
 #pragma warning disable VSTHRD003
             await writeDataToDiskTask;
 #pragma warning restore VSTHRD003

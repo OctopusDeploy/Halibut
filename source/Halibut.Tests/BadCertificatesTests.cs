@@ -12,6 +12,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NUnit.Framework;
@@ -110,7 +111,7 @@ namespace Halibut.Tests
                     Logger,
                     CancellationToken);
                 
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
 
@@ -159,7 +160,7 @@ namespace Halibut.Tests
 
                 await Task.Delay(3000, CancellationToken);
 
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 var exception = await AssertException.Throws<Exception>(incrementCount);
 
@@ -223,7 +224,7 @@ namespace Halibut.Tests
                     Logger,
                     CancellationToken);
                 
-                cts.Cancel();
+                await cts.CancelAsync();
                 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
                 
@@ -279,7 +280,7 @@ namespace Halibut.Tests
                     CancellationToken);
                 
 
-                cts.Cancel();
+                await cts.CancelAsync();
 
                 await AssertException.Throws<OperationCanceledException>(incrementCount);
 
