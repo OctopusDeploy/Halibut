@@ -33,6 +33,7 @@ function ExecSafe([scriptblock] $cmd) {
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
 }
 
+# Octopus modification to ensure dotnet-install is always used in TeamCity builds
 # If dotnet CLI is installed globally and it matches requested version, use for execution
 if ($null -eq $env:TEAMCITY_VERSION -and $null -ne (Get-Command "dotnet" -ErrorAction SilentlyContinue) -and `
      $(dotnet --version) -and $LASTEXITCODE -eq 0) {
@@ -40,6 +41,7 @@ if ($null -eq $env:TEAMCITY_VERSION -and $null -ne (Get-Command "dotnet" -ErrorA
 }
 else {
     # Download install script
+    # Octopus modification to comment out the download of the install script
     #$DotNetInstallFile = "$TempDirectory\dotnet-install.ps1"
     #New-Item -ItemType Directory -Path $TempDirectory -Force | Out-Null
     #[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12

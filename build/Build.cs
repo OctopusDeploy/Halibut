@@ -5,6 +5,7 @@ using Nuke.Common;
 using Nuke.Common.CI;
 using Nuke.Common.IO;
 using Nuke.Common.ProjectModel;
+using Nuke.Common.Tools.DotMemoryUnit;
 using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities;
@@ -128,7 +129,7 @@ class Build : NukeBuild
                 {
                     var frameworkOption = framework != null ? $"--framework={framework}" : "";
 
-                    DotMemoryUnit($"{DotNetPath.DoubleQuoteIfNeeded()} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} {frameworkOption} --no-build");
+                    DotMemoryUnit($"{DotNetPath} --propagate-exit-code --instance-name={Guid.NewGuid()} -- test {Solution.Halibut_Tests_DotMemory.Path} --configuration={Configuration} {frameworkOption} --no-build");
                 }
 
                 DotNetTest(_ => _
