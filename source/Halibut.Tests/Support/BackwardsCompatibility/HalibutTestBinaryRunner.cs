@@ -88,7 +88,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "WithStandardServices", availableServices.HasStandardServices.ToString() },
                 { "WithCachingService", availableServices.HasCachingService.ToString() },
                 { "WithTentacleServices", availableServices.HasTentacleServices.ToString() },
-                { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty }
+                { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty },
+                // Changes to how .NET7+ allocates virtual memory means that the process can sometimes crash,
+                // and this env var is the workaround.
+                // See https://github.com/dotnet/runtime/issues/79612#issuecomment-1352378682 for more details
+                // on how I spent frustrating hours I'll never get back 🙃
+                { "DOTNET_GCHeapHardLimit", "1C0000000" }
             };
 
             if (proxyDetails is not null)
