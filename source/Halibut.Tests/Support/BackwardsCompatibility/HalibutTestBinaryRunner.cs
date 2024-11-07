@@ -89,12 +89,18 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "WithCachingService", availableServices.HasCachingService.ToString() },
                 { "WithTentacleServices", availableServices.HasTentacleServices.ToString() },
                 { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty },
+            };
+
+            // Propagate the DOTNET_GCHeapHardLimit environment variable to the test binary.
+            var dotnetGcHeapHardLimit = Environment.GetEnvironmentVariable("DOTNET_GCHeapHardLimit");
+            if (!string.IsNullOrWhiteSpace(dotnetGcHeapHardLimit))
+            {
                 // Changes to how .NET7+ allocates virtual memory means that the process can sometimes crash,
                 // and this env var is the workaround.
                 // See https://github.com/dotnet/runtime/issues/79612#issuecomment-1352378682 for more details
                 // on how I spent frustrating hours I'll never get back 🙃
-                { "DOTNET_GCHeapHardLimit", "1C0000000" }
-            };
+                settings.Add("DOTNET_GCHeapHardLimit", dotnetGcHeapHardLimit);
+            }
 
             if (proxyDetails is not null)
             {
