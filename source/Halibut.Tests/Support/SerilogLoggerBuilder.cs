@@ -65,16 +65,7 @@ namespace Halibut.Tests.Support
 
             if (traceFileLogger != null)
             {
-                var ignoreDuplicatedLoggers = Environment.GetEnvironmentVariable("IGNORE_DUPLICATED_LOGGERS") == "true";
-                TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) =>
-                    {
-                        if (ignoreDuplicatedLoggers)
-                        {
-                            return traceFileLogger;
-                        }
-                        throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run");
-                    }
-                );
+                TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
             }
 
             return logger;
