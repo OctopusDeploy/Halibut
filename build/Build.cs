@@ -130,19 +130,17 @@ class Build : NukeBuild
                     .SetFramework(framework)
                     .SetFilter(TestFilter)
                     .EnableNoBuild()
-                    .EnableNoRestore());
-
-                // Disabled temporarily while trying to diagnose .NET8 + Win2012 issues
-                // .EnableBlameCrash()
-                // .SetBlameCrashDumpType("full")
-                // .EnableBlameHang()
-                // // This is set high since when a hang dump is collected it is saved into /tmp/
-                // // On windows the dump collecting utility appears to be missing and so nothing is collected.
-                // // Setting high means we will have time to get in and collect a dump manually.
-                // // Note that the teamcity agent timeout still applies, and if set lower than this value will result
-                // // in the build being stopped.
-                // .SetBlameHangTimeout(TimeSpan.FromHours(3).TotalMilliseconds.ToString())
-                // .SetBlameHangDumpType("full"));
+                    .EnableNoRestore()
+                    .EnableBlameCrash()
+                    .SetBlameCrashDumpType("full")
+                    .EnableBlameHang()
+                    // This is set high since when a hang dump is collected it is saved into /tmp/
+                    // On windows the dump collecting utility appears to be missing and so nothing is collected.
+                    // Setting high means we will have time to get in and collect a dump manually.
+                    // Note that the teamcity agent timeout still applies, and if set lower than this value will result
+                    // in the build being stopped.
+                    .SetBlameHangTimeout(TimeSpan.FromHours(3).TotalMilliseconds.ToString())
+                    .SetBlameHangDumpType("full"));
 
             });
     }
