@@ -111,6 +111,11 @@ class Build : NukeBuild
     [PublicAPI]
     Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
 
+    // This temporary target is included to run the net8 tests on a pipeline configured for net6.0
+    // It can be removed once the build pipeline is updated to reference the new target.
+    [PublicAPI]
+    Target TestWindowsNet60 => t => t.DependsOn(TestWindowsNet80);
+
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {
         return targetDefinition
