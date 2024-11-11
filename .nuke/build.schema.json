@@ -96,6 +96,7 @@
               "TestLinux",
               "TestWindows",
               "TestWindowsNet48",
+              "TestWindowsNet60",
               "TestWindowsNet80"
             ]
           }
@@ -122,6 +123,7 @@
               "TestLinux",
               "TestWindows",
               "TestWindowsNet48",
+              "TestWindowsNet60",
               "TestWindowsNet80"
             ]
           }
