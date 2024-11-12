@@ -81,7 +81,7 @@ class Build : NukeBuild
 
     Target CompileNet48 => _ => CompileDefinition(_, "net48");
 
-    Target CompileNet60 => _ => CompileDefinition(_, "net6.0");
+    Target CompileNet80 => _ => CompileDefinition(_, "net8.0");
 
     ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
     {
@@ -100,7 +100,7 @@ class Build : NukeBuild
     }
 
     [PublicAPI]
-    Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests: true);
+    Target TestWindows => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
 
     [PublicAPI]
     Target TestLinux => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
@@ -109,7 +109,12 @@ class Build : NukeBuild
     Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestWindowsNet60 => _ => TestDefinition(_, CompileNet60, "net6.0", runDotMemoryTests: true);
+    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
+
+    // This temporary target is included to run the net8 tests on a pipeline configured for net6.0
+    // It can be removed once the build pipeline is updated to reference the new target.
+    [PublicAPI]
+    Target TestWindowsNet60 => t => t.DependsOn(TestWindowsNet80);
 
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {

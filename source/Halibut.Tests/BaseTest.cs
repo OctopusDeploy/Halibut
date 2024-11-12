@@ -38,7 +38,15 @@ namespace Halibut.Tests
             Logger.Information("Staring Test Tearing Down");
 
             Logger.Information("Cancelling CancellationTokenSource");
+            
+#if NET8_0_OR_GREATER
+            if (cancellationTokenSource != null)
+            {
+                await cancellationTokenSource.CancelAsync();    
+            }
+#else
             cancellationTokenSource?.Cancel();
+#endif
             Logger.Information("Disposing CancellationTokenSource");
             cancellationTokenSource?.Dispose();
 

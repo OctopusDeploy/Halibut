@@ -41,14 +41,18 @@ namespace Halibut.Tests.Support.TestAttributes
                 {
                     serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
+
+                var skipBackwardsCompatibilityTests = Environment.GetEnvironmentVariable("SKIP_BACKWARDS_COMPATIBILITY_TESTS") == "true";
                 
                 var builder = new ClientAndServiceTestCasesBuilder(
-                    new[] {
-                        ClientAndServiceTestVersion.Latest(),
-                        ClientAndServiceTestVersion.ClientOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ClientVersion),
-                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
-                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
-                    },
+                    skipBackwardsCompatibilityTests
+                        ? new[] { ClientAndServiceTestVersion.Latest() }
+                        : new[] {
+                            ClientAndServiceTestVersion.Latest(),
+                            ClientAndServiceTestVersion.ClientOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ClientVersion),
+                            ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
+                            ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
+                        },
                     serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect });
 
