@@ -88,7 +88,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "WithStandardServices", availableServices.HasStandardServices.ToString() },
                 { "WithCachingService", availableServices.HasCachingService.ToString() },
                 { "WithTentacleServices", availableServices.HasTentacleServices.ToString() },
-                { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty },
+                { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty }
             };
 
             // Propagate the DOTNET_GCHeapHardLimit environment variable to the test binary.
