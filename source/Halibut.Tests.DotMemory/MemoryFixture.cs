@@ -52,6 +52,11 @@ namespace Halibut.Tests.DotMemory
         [DotMemoryUnit(SavingStrategy = SavingStrategy.OnCheckFail, Directory = @"c:\temp\dotmemoryunit", WorkspaceNumberLimit = 5, DiskSpaceLimit = 104857600)]
         public void TcpClientsAreDisposedCorrectly()
         {
+            ServicePointManager.SecurityProtocol =
+                SecurityProtocolType.Tls
+                | SecurityProtocolType.Tls11
+                | SecurityProtocolType.Tls12;
+            
             if (!dotMemoryApi.IsEnabled)
                 Assert.Inconclusive("This test is meant to be run under dotMemory Unit. In your IDE, right click on the test icon and choose 'Run under dotMemory Unit'.");
 
