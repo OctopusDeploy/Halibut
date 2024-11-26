@@ -25,7 +25,7 @@ namespace Halibut.Transport.Streams
                 ClientCertificates = clientCertificates,
                 // Despite what you might think, this option allows the OS to decide the SSL version to use and is the recommended approach per the code comments on the version of SslProtocols we're using
                 // This is current at time of writing. MS docs recommend using SslProtocols.SystemDefault which does not exist on this particular enum, so that's fun. 
-                EnabledSslProtocols = SslProtocols.None,
+                EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck
             };
 

@@ -298,7 +298,13 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
 
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.None, false).ConfigureAwait(false);
+                    await ssl
+                        .AuthenticateAsServerAsync(
+                            serverCertificate,
+                            true,
+                            SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13,
+                            false)
+                        .ConfigureAwait(false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
