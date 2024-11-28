@@ -1,12 +1,17 @@
 using System;
+using System.Collections.Concurrent;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
+using Serilog;
+using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -21,6 +26,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         ProxyFactory? proxyFactory;
         Reference<HttpProxyService>? proxyServiceReference;
         LogLevel halibutLogLevel = LogLevel.Trace;
+        StringWriter? loggerStringWriter;
         readonly OldServiceAvailableServices availableServices = new(false, false);
         
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
@@ -59,6 +65,12 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             }
         }
 
+        public LatestClientAndPreviousServiceVersionBuilder RecordingLogs(out StringWriter stringWriter)
+        {
+            loggerStringWriter = stringWriter = new();
+            return this;
+        }
+        
         public LatestClientAndPreviousServiceVersionBuilder WithServiceVersion(Version? version)
         {
             this.version = version;
@@ -149,7 +161,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
-            var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndPreviousServiceVersionBuilder>();
+            var logger = loggerStringWriter == null
+                ? new SerilogLoggerBuilder()
+                    .Build().ForContext<LatestClientAndPreviousServiceVersionBuilder>()
+                : new LoggerConfiguration().WriteTo.TextWriter(loggerStringWriter).CreateLogger();
+            
             CancellationTokenSource cancellationTokenSource = new();
             if (version == null)
             {
