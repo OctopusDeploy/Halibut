@@ -90,7 +90,11 @@ namespace Halibut.Tests
                 }
                 
                 // The call is now in flight. Call cancel on the cancellation token for that in flight request.
+#if NET8_0_OR_GREATER
+                await tokenSourceToCancel.CancelAsync();
+#else
                 tokenSourceToCancel.Cancel();
+#endif
                 
                 // Give time for the cancellation to do something
                 await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);

@@ -194,7 +194,12 @@ namespace Halibut.Tests
             (await AssertException.Throws<ConnectingRequestCancelledException>(async () =>
             {
                 var task = client.SayHelloAsync("Hello", new(cancellationTokenSource.Token));
+                
+#if NET8_0_OR_GREATER
+                await cancellationTokenSource.CancelAsync();
+#else
                 cancellationTokenSource.Cancel();
+#endif
                 await task;
             })).And.Message.Should().Contain($"An error occurred when sending a request to 'https://20.5.79.31:10933/', after the request began: The Request was cancelled while Connecting.");
         }
@@ -276,7 +281,12 @@ namespace Halibut.Tests
             var cancellationTask = Task.Run(async () =>
             {
                 await executingSemaphore.WaitAsync(CancellationToken);
+                
+#if NET8_0_OR_GREATER
+                await cancellationTokenSource.CancelAsync();
+#else
                 cancellationTokenSource.Cancel();
+#endif
             });
 
             (await AssertException.Throws<TransferringRequestCancelledException>(async () => await doSomeActionClient.ActionAsync(new(cancellationTokenSource.Token))))

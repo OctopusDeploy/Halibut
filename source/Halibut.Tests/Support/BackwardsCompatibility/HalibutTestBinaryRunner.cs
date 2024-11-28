@@ -91,6 +91,17 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 { "TestTimeout", TestContext.CurrentContext.GetTestTimeout()?.ToString() ?? string.Empty }
             };
 
+            // Propagate the DOTNET_GCHeapHardLimit environment variable to the test binary.
+            var dotnetGcHeapHardLimit = Environment.GetEnvironmentVariable("DOTNET_GCHeapHardLimit");
+            if (!string.IsNullOrWhiteSpace(dotnetGcHeapHardLimit))
+            {
+                // Changes to how .NET7+ allocates virtual memory means that the process can sometimes crash,
+                // and this env var is the workaround.
+                // See https://github.com/dotnet/runtime/issues/79612#issuecomment-1352378682 for more details
+                // on how I spent frustrating hours I'll never get back 🙃
+                settings.Add("DOTNET_GCHeapHardLimit", dotnetGcHeapHardLimit);
+            }
+
             if (proxyDetails is not null)
             {
                 settings.Add("proxydetails_host", proxyDetails.Host);
@@ -176,26 +187,43 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 
                 if (completedTask == runningTentacle)
                 {
+#if NET8_0_OR_GREATER
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
+#endif
                     // Will throw the startup exception.
                     await runningTentacle;
                 }
 
                 if (!hasTentacleStarted.IsSet)
                 {
+#if NET8_0_OR_GREATER
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
+#endif
                     throw new Exception("Halibut test binary did not appear to start correctly");
                 }
-
+                
+#if NET8_0_OR_GREATER
+                await whenAnyCleanupCancellationTokenSource.CancelAsync();
+#else
                 whenAnyCleanupCancellationTokenSource.Cancel();
-
+#endif
                 return (runningTentacle, serviceListenPort, runningTentacleCancellationTokenSource);
             }
             catch (Exception)
             {
+#if NET8_0_OR_GREATER
+                await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                 runningTentacleCancellationTokenSource.Cancel();
+#endif
                 runningTentacleCancellationTokenSource.Dispose();
                 throw;
             }

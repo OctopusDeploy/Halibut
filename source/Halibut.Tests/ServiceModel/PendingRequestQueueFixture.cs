@@ -382,8 +382,12 @@ namespace Halibut.Tests.ServiceModel
 
             // Act
             var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationTokenSource.Token);
-
+            
+#if NET8_0_OR_GREATER
+            await cancellationTokenSource.CancelAsync();
+#else
             cancellationTokenSource.Cancel();
+#endif
 
             // Assert
             await AssertException.Throws<OperationCanceledException>(queueAndWaitTask);
@@ -413,7 +417,11 @@ namespace Halibut.Tests.ServiceModel
             var dequeued = await sut.DequeueAsync(CancellationToken);
 
             // Cancel, and give the queue time to start waiting for a response
+#if NET8_0_OR_GREATER
+            await cancellationTokenSource.CancelAsync();
+#else
             cancellationTokenSource.Cancel();
+#endif
             await Task.Delay(1000, CancellationToken);
             dequeued!.CancellationToken.IsCancellationRequested.Should().BeTrue("Should have cancelled the request");
             
@@ -554,8 +562,12 @@ namespace Halibut.Tests.ServiceModel
 
             var cancellationTokenSource = new CancellationTokenSource();
             var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, request, cancellationTokenSource.Token);
-
+            
+#if NET8_0_OR_GREATER
+            await cancellationTokenSource.CancelAsync();
+#else
             cancellationTokenSource.Cancel();
+#endif
 
             // Allow cancellation to occur before we dequeue.
             await Task.Delay(1000, CancellationToken);

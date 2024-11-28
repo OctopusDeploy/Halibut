@@ -97,8 +97,12 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-
+#endif
+                
                 await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
@@ -130,8 +134,11 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Task.Delay(3000, CancellationToken);
 
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
-
+#endif
                 await AssertException.Throws<Exception>(sayHelloTask);
 
                 connectionsObserver.ConnectionAcceptedCount.Should().BeGreaterOrEqualTo(1);
