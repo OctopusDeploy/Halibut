@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
@@ -60,6 +61,27 @@ namespace Halibut.Tests
                 connectionInitiatorLogs.Values
                     .SelectMany(log => log.GetLogs())
                     .Should().Contain(logEvent => logEvent.FormattedMessage.Contains($"using protocol {expectedSslProtocol}"));
+            }
+        }
+        
+        [Test]
+        // [PreviousClientAndLatestServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        public async Task PreviousClientXorServiceUsageMakeSslProtocolFallBackOnTls12(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await ((LatestClientAndPreviousServiceVersionBuilder)(clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithStandardServices()))
+                             .RecordingLogs(out var stringWriter)
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("World");
+                const SslProtocols expectedProtocol = SslProtocols.Tls12;
+                var expectedLogFragment = clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening
+                    ? $"client connected with {expectedProtocol}"
+                    : $"using protocol {expectedProtocol}";
+                var logs = stringWriter.ToString();
+                logs.Should().Contain(expectedLogFragment);
             }
         }
     }
