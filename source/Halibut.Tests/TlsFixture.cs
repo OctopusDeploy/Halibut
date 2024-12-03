@@ -13,19 +13,15 @@
 // limitations under the License.
 
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Exceptions;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -60,6 +56,29 @@ namespace Halibut.Tests
                 connectionInitiatorLogs.Values
                     .SelectMany(log => log.GetLogs())
                     .Should().Contain(logEvent => logEvent.FormattedMessage.Contains($"using protocol {expectedSslProtocol}"));
+            }
+        }
+
+        [Test]
+        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        public async Task LatestClientAndPreviousServiceFallBackOnTls12(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithStandardServices()
+                             .AsLatestClientAndPreviousServiceVersionBuilder()
+                             .RecordingClientLogs(out var clientLogs)
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("World");
+
+                var expectedLogMessage = clientAndServiceTestCase.ServiceConnectionType == ServiceConnectionType.Listening
+                    ? $"using protocol {SslProtocols.Tls12}"
+                    : $"client connected with {SslProtocols.Tls12}";
+
+                clientLogs.Values
+                    .SelectMany(log => log.GetLogs())
+                    .Should().Contain(logEvent => logEvent.FormattedMessage.Contains(expectedLogMessage));
             }
         }
     }

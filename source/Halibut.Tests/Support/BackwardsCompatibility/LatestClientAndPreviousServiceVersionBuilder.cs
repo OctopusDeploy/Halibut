@@ -1,12 +1,15 @@
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
+using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support.BackwardsCompatibility
 {
@@ -21,6 +24,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         ProxyFactory? proxyFactory;
         Reference<HttpProxyService>? proxyServiceReference;
         LogLevel halibutLogLevel = LogLevel.Trace;
+        ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         readonly OldServiceAvailableServices availableServices = new(false, false);
         
         LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
@@ -146,7 +150,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             return await Build(cancellationToken);
         }
-        
+
+        public LatestClientAndPreviousServiceVersionBuilder RecordingClientLogs(out ConcurrentDictionary<string, ILog> inMemoryLoggers)
+        {
+            inMemoryLoggers = new ConcurrentDictionary<string, ILog>();
+            this.clientInMemoryLoggers = inMemoryLoggers;
+            return this;
+        }
+
         public async Task<ClientAndService> Build(CancellationToken cancellationToken)
         {
             var logger = new SerilogLoggerBuilder().Build().ForContext<LatestClientAndPreviousServiceVersionBuilder>();
@@ -158,7 +169,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
-                .WithLogFactory(new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory())
+                .WithLogFactory(BuildClientLogger())
                 .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
 
             var client = clientBuilder.Build();
@@ -337,6 +348,25 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 Try.CatchingError(() => disposableCollection.Dispose(), LogError);
                 Try.CatchingError(() => cancellationTokenSource.Dispose(), LogError);
             }
+        }
+        
+        ILogFactory BuildClientLogger()
+        {
+            if (clientInMemoryLoggers == null)
+            {
+                return new TestContextLogCreator("Client", halibutLogLevel).ToCachingLogFactory();
+            }
+            
+            return new AggregateLogWriterLogCreator(
+                    new TestContextLogCreator("Client", halibutLogLevel),
+                    s =>
+                    {
+                        var logger = new InMemoryLogWriter();
+                        clientInMemoryLoggers[s] = logger;
+                        return new[] {logger};
+                    }
+                )
+                .ToCachingLogFactory();
         }
     }
 }
