@@ -1,17 +1,3 @@
-// Copyright 2012-2013 Octopus Deploy Pty. Ltd.
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-//   http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -47,6 +33,18 @@ namespace Halibut.Tests
                     ? clientLogs
                     : serviceLogs;
 
+                Logger.Information("Platform detection:");
+                Logger.Information("Environment.OSVersion.Platform: {EnvironmentOSVersionPlatform}", Environment.OSVersion.Platform);
+                Logger.Information("Environment.OSVersion.Version: {EnvironmentOSVersionVersion}", Environment.OSVersion.Version);
+                Logger.Information("Environment.OSVersion.VersionString: {EnvironmentOSVersionVersionString}", Environment.OSVersion.VersionString);
+                Logger.Information("Environment.OSVersion.ServicePack: {Environment.OSVersion.ServicePack}", Environment.OSVersion.ServicePack);
+                Logger.Information("RuntimeInformation.OSDescription: {RuntimeInformation.OSDescription}", RuntimeInformation.OSDescription);
+                Logger.Information("RuntimeInformation.RuntimeIdentifier: {RuntimeInformationRuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
+                Logger.Information("RuntimeInformation.FrameworkDescription: {RuntimeInformation.FrameworkDescription}", RuntimeInformation.FrameworkDescription);
+                Logger.Information("RuntimeInformation.ProcessArchitecture: {RuntimeInformation.ProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
+                Logger.Information("RuntimeInformation.OSArchitecture: {RuntimeInformation.OSArchitecture}", RuntimeInformation.OSArchitecture);
+                Logger.Information("RuntimeInformation.RuntimeIdentifier: {RuntimeInformationRuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
+                
                 // .NET does not support TLS 1.3 on Mac OS yet.
                 // https://github.com/dotnet/runtime/issues/1979
                 var expectedSslProtocol = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
