@@ -32,7 +32,6 @@ namespace Halibut.Tests
                 Logger.Information("Environment.OSVersion.VersionString: {EnvironmentOSVersionVersionString}", Environment.OSVersion.VersionString);
                 Logger.Information("Environment.OSVersion.ServicePack: {EnvironmentOSVersionServicePack}", Environment.OSVersion.ServicePack);
                 Logger.Information("RuntimeInformation.OSDescription: {RuntimeInformationOSDescription}", RuntimeInformation.OSDescription);
-                Logger.Information("RuntimeInformation.RuntimeIdentifier: {RuntimeInformationRuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
                 Logger.Information("RuntimeInformation.FrameworkDescription: {RuntimeInformationFrameworkDescription}", RuntimeInformation.FrameworkDescription);
                 Logger.Information("RuntimeInformation.ProcessArchitecture: {RuntimeInformationProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
                 Logger.Information("RuntimeInformation.OSArchitecture: {RuntimeInformationOSArchitecture}", RuntimeInformation.OSArchitecture);
