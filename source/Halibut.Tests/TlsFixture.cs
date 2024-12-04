@@ -26,6 +26,17 @@ namespace Halibut.Tests
                              .RecordingServiceLogs(out var serviceLogs)
                              .Build(CancellationToken))
             {
+                Logger.Information("Platform detection:");
+                Logger.Information("Environment.OSVersion.Platform: {EnvironmentOSVersionPlatform}", Environment.OSVersion.Platform);
+                Logger.Information("Environment.OSVersion.Version: {EnvironmentOSVersionVersion}", Environment.OSVersion.Version);
+                Logger.Information("Environment.OSVersion.VersionString: {EnvironmentOSVersionVersionString}", Environment.OSVersion.VersionString);
+                Logger.Information("Environment.OSVersion.ServicePack: {EnvironmentOSVersionServicePack}", Environment.OSVersion.ServicePack);
+                Logger.Information("RuntimeInformation.OSDescription: {RuntimeInformationOSDescription}", RuntimeInformation.OSDescription);
+                Logger.Information("RuntimeInformation.RuntimeIdentifier: {RuntimeInformationRuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
+                Logger.Information("RuntimeInformation.FrameworkDescription: {RuntimeInformationFrameworkDescription}", RuntimeInformation.FrameworkDescription);
+                Logger.Information("RuntimeInformation.ProcessArchitecture: {RuntimeInformationProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
+                Logger.Information("RuntimeInformation.OSArchitecture: {RuntimeInformationOSArchitecture}", RuntimeInformation.OSArchitecture);
+                
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 await echo.SayHelloAsync("World");
 
@@ -33,18 +44,6 @@ namespace Halibut.Tests
                     ? clientLogs
                     : serviceLogs;
 
-                Logger.Information("Platform detection:");
-                Logger.Information("Environment.OSVersion.Platform: {EnvironmentOSVersionPlatform}", Environment.OSVersion.Platform);
-                Logger.Information("Environment.OSVersion.Version: {EnvironmentOSVersionVersion}", Environment.OSVersion.Version);
-                Logger.Information("Environment.OSVersion.VersionString: {EnvironmentOSVersionVersionString}", Environment.OSVersion.VersionString);
-                Logger.Information("Environment.OSVersion.ServicePack: {Environment.OSVersion.ServicePack}", Environment.OSVersion.ServicePack);
-                Logger.Information("RuntimeInformation.OSDescription: {RuntimeInformation.OSDescription}", RuntimeInformation.OSDescription);
-                Logger.Information("RuntimeInformation.RuntimeIdentifier: {RuntimeInformationRuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
-                Logger.Information("RuntimeInformation.FrameworkDescription: {RuntimeInformation.FrameworkDescription}", RuntimeInformation.FrameworkDescription);
-                Logger.Information("RuntimeInformation.ProcessArchitecture: {RuntimeInformation.ProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
-                Logger.Information("RuntimeInformation.OSArchitecture: {RuntimeInformation.OSArchitecture}", RuntimeInformation.OSArchitecture);
-                Logger.Information("RuntimeInformation.RuntimeIdentifier: {RuntimeInformationRuntimeIdentifier}", RuntimeInformation.RuntimeIdentifier);
-                
                 // .NET does not support TLS 1.3 on Mac OS yet.
                 // https://github.com/dotnet/runtime/issues/1979
                 var expectedSslProtocol = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
