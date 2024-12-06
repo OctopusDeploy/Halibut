@@ -43,15 +43,18 @@ namespace Halibut.Tests
                     ? clientLogs
                     : serviceLogs;
 
-                // .NET does not support TLS 1.3 on Mac OS yet.
-                // https://github.com/dotnet/runtime/issues/1979
-                var expectedSslProtocol = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
-                    ? SslProtocols.Tls12
-                    : SslProtocols.Tls13;
-
+                var expectedSslProtocol = GetExpectedSslProtocolForTheCurrentPlatform();
+                var expectedLogFragment = $"using protocol {expectedSslProtocol}";
+                
                 connectionInitiatorLogs.Values
                     .SelectMany(log => log.GetLogs())
-                    .Should().Contain(logEvent => logEvent.FormattedMessage.Contains($"using protocol {expectedSslProtocol}"));
+                    .Should().Contain(
+                        logEvent => logEvent.FormattedMessage.Contains(expectedLogFragment),
+                        "The OS is \"{{OSDescription}}\", so we expect {{expectedSslProtocol}} to be used, and expect log output to contain \"{expectedLogFragment}\" for {tentacleType} tentacles.",
+                        RuntimeInformation.OSDescription,
+                        expectedSslProtocol,
+                        expectedLogFragment,
+                        clientAndServiceTestCase.ServiceConnectionType);
             }
         }
 
@@ -76,6 +79,35 @@ namespace Halibut.Tests
                     .SelectMany(log => log.GetLogs())
                     .Should().Contain(logEvent => logEvent.FormattedMessage.Contains(expectedLogMessage));
             }
+        }
+
+        SslProtocols GetExpectedSslProtocolForTheCurrentPlatform()
+        {
+            // All linux platforms we test against support TLS 1.3.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return SslProtocols.Tls13;
+            }
+            
+            // We test against old versions of Windows which do not support TLS 1.3.
+            // TLS 1.3 is supported since Windows Server 2022 which has build number 20348, and Windows 11 which has higher build numbers.
+            // TLS 1.3 is partially supported in Windows 10, which can have lower build numbers, but we don't test against that so it is ignored here.
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                const int WindowsServer2022OSBuild = 20348;
+                return Environment.OSVersion.Version.Build >= WindowsServer2022OSBuild
+                    ? SslProtocols.Tls13
+                    : SslProtocols.Tls12;
+            }
+
+            // .NET does not support TLS 1.3 on Mac OS yet.
+            // https://github.com/dotnet/runtime/issues/1979
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return SslProtocols.Tls12;
+            }
+            
+            throw new NotSupportedException($"Unsupported OS platform: {RuntimeInformation.OSDescription}");
         }
     }
 }
