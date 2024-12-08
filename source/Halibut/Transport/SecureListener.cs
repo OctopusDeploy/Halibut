@@ -298,11 +298,17 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
 
+                    await ssl
+                        .AuthenticateAsServerAsync(
+                            serverCertificate,
+                            true,
 #pragma warning disable SYSLIB0039
-                    // See https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib0039
-                    // TLS 1.0 and 1.1 are obsolete from .NET 7
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+                            // See https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib0039
+                            // TLS 1.0 and 1.1 are obsolete from .NET 7
+                            SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13,
 #pragma warning restore SYSLIB0039
+                            false)
+                        .ConfigureAwait(false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
