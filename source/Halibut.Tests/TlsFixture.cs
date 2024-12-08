@@ -16,7 +16,7 @@ namespace Halibut.Tests
     public class TlsFixture : BaseTest
     {
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testWebSocket: false, testNetworkConditions: false)]
         public async Task LatestClientAndServiceUseBestAvailableSslProtocol(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -59,7 +59,7 @@ namespace Halibut.Tests
         }
 
         [Test]
-        [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
+        [LatestClientAndPreviousServiceVersionsTestCases(testWebSocket: false, testNetworkConditions: false)]
         public async Task LatestClientAndPreviousServiceFallBackOnTls12(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
