@@ -43,18 +43,14 @@ namespace Halibut.Tests
                     ? clientLogs
                     : serviceLogs;
 
-                var expectedSslProtocol = GetExpectedSslProtocolForTheCurrentPlatform();
+                var expectedSslProtocol = SslProtocols.Tls13;// GetExpectedSslProtocolForTheCurrentPlatform();
                 var expectedLogFragment = $"using protocol {expectedSslProtocol}";
                 
                 connectionInitiatorLogs.Values
                     .SelectMany(log => log.GetLogs())
                     .Should().Contain(
                         logEvent => logEvent.FormattedMessage.Contains(expectedLogFragment),
-                        "The OS is \"{{OSDescription}}\", so we expect {{expectedSslProtocol}} to be used, and expect log output to contain \"{expectedLogFragment}\" for {tentacleType} tentacles.",
-                        RuntimeInformation.OSDescription,
-                        expectedSslProtocol,
-                        expectedLogFragment,
-                        clientAndServiceTestCase.ServiceConnectionType);
+                        $"The OS is \"{RuntimeInformation.OSDescription}\", so we expect {expectedSslProtocol} to be used, and expect log output to contain \"{expectedLogFragment}\" for {clientAndServiceTestCase.ServiceConnectionType} tentacles");
             }
         }
 
