@@ -77,6 +77,16 @@ namespace Halibut.Tests.Support
             }
         }
 
+        public LatestClientAndLatestServiceBuilder WithCertificates(
+            CertAndThumbprint clientCertAndThumbprint,
+            CertAndThumbprint serviceCertAndThumbprint)
+        {
+            clientBuilder.WithCertificate(clientCertAndThumbprint);
+            clientBuilder.WithTrustedThumbprint(serviceCertAndThumbprint.Thumbprint);
+            serviceBuilder.WithCertificate(serviceCertAndThumbprint);
+            serviceBuilder.WithTrustedThumbprint(clientCertAndThumbprint.Thumbprint);
+            return this;
+        }
 
         public LatestClientAndLatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
         {

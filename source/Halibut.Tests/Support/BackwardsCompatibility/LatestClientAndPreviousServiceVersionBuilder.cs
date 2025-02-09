@@ -16,8 +16,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     public class LatestClientAndPreviousServiceVersionBuilder : IClientAndServiceBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
-        readonly CertAndThumbprint serviceCertAndThumbprint;
-        readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
+        CertAndThumbprint serviceCertAndThumbprint;
+        CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
         Version? version;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
@@ -33,6 +33,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
         }
 
+        public LatestClientAndPreviousServiceVersionBuilder WithCertificates(
+            CertAndThumbprint serviceCertAndThumbprint,
+            CertAndThumbprint clientCertAndThumbprint)
+        {
+            this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+            this.clientCertAndThumbprint = clientCertAndThumbprint;
+            return this;
+        }
+        
         public static LatestClientAndPreviousServiceVersionBuilder WithPollingService()
         {
             return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
