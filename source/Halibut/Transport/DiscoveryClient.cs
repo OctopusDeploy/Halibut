@@ -45,7 +45,7 @@ namespace Halibut.Transport
                             await ssl.AuthenticateAsClientAsync(
                                 serviceEndpoint.BaseUri.Host,
                                 new X509Certificate2Collection(),
-                                SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13,
+                                SslConfiguration.SupportedProtocols,
                                 false);
 #else
                             await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(), cancellationToken);
