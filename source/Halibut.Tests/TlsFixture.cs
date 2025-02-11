@@ -20,9 +20,12 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testWebSocket: false, testNetworkConditions: false)]
         public async Task LatestClientAndServiceUseBestAvailableSslProtocol(ClientAndServiceTestCase clientAndServiceTestCase)
         {
+            // We need to avoid the use of cached SSL sessions to ensure that correct SSL protocol is chosen, so we use
+            // unique certificates for each test.
             using var tmpDirectory = new TmpDirectory();
             var clientCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
             var serviceCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .WithStandardServices()
                 .AsLatestClientAndLatestServiceBuilder()
@@ -30,15 +33,6 @@ namespace Halibut.Tests
                 .RecordingClientLogs(out var clientLogs)
                 .RecordingServiceLogs(out var serviceLogs)
                 .Build(CancellationToken);
-            Logger.Information("Platform detection:");
-            Logger.Information("Environment.OSVersion.Platform: {EnvironmentOSVersionPlatform}", Environment.OSVersion.Platform);
-            Logger.Information("Environment.OSVersion.Version: {EnvironmentOSVersionVersion}", Environment.OSVersion.Version);
-            Logger.Information("Environment.OSVersion.VersionString: {EnvironmentOSVersionVersionString}", Environment.OSVersion.VersionString);
-            Logger.Information("Environment.OSVersion.ServicePack: {EnvironmentOSVersionServicePack}", Environment.OSVersion.ServicePack);
-            Logger.Information("RuntimeInformation.OSDescription: {RuntimeInformationOSDescription}", RuntimeInformation.OSDescription);
-            Logger.Information("RuntimeInformation.FrameworkDescription: {RuntimeInformationFrameworkDescription}", RuntimeInformation.FrameworkDescription);
-            Logger.Information("RuntimeInformation.ProcessArchitecture: {RuntimeInformationProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
-            Logger.Information("RuntimeInformation.OSArchitecture: {RuntimeInformationOSArchitecture}", RuntimeInformation.OSArchitecture);
             
             var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
             await echo.SayHelloAsync("World");
@@ -61,6 +55,8 @@ namespace Halibut.Tests
         [LatestClientAndPreviousServiceVersionsTestCases(testWebSocket: false, testNetworkConditions: false)]
         public async Task LatestClientAndPreviousServiceFallBackOnTls12(ClientAndServiceTestCase clientAndServiceTestCase)
         {
+            // We need to avoid the use of cached SSL sessions to ensure that correct SSL protocol is chosen, so we use
+            // unique certificates for each test.
             using var tmpDirectory = new TmpDirectory();
             var clientCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
             var serviceCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
