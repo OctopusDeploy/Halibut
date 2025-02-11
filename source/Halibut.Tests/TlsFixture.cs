@@ -29,7 +29,7 @@ namespace Halibut.Tests
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .WithStandardServices()
                 .AsLatestClientAndLatestServiceBuilder()
-                .WithCertificates(clientCertAndThumbprint, serviceCertAndThumbprint)
+                .WithCertificates(/*clientCertAndThumbprint*/ null, serviceCertAndThumbprint)
                 .RecordingClientLogs(out var clientLogs)
                 .RecordingServiceLogs(out var serviceLogs)
                 .Build(CancellationToken);
@@ -64,7 +64,7 @@ namespace Halibut.Tests
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithStandardServices()
                              .AsLatestClientAndPreviousServiceVersionBuilder()
-                             .WithCertificates(serviceCertAndThumbprint, clientCertAndThumbprint)
+                             .WithCertificates(serviceCertAndThumbprint, null/*clientCertAndThumbprint*/)
                              .RecordingClientLogs(out var clientLogs)
                              .Build(CancellationToken);
 

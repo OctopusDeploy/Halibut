@@ -35,10 +35,14 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public LatestClientAndPreviousServiceVersionBuilder WithCertificates(
             CertAndThumbprint serviceCertAndThumbprint,
-            CertAndThumbprint clientCertAndThumbprint)
+            CertAndThumbprint? clientCertAndThumbprint)
         {
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
-            this.clientCertAndThumbprint = clientCertAndThumbprint;
+            if (clientCertAndThumbprint is not null)
+            {
+                this.clientCertAndThumbprint = clientCertAndThumbprint;
+            }
+            
             return this;
         }
         

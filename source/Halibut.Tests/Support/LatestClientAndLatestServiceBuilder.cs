@@ -78,13 +78,17 @@ namespace Halibut.Tests.Support
         }
 
         public LatestClientAndLatestServiceBuilder WithCertificates(
-            CertAndThumbprint clientCertAndThumbprint,
+            CertAndThumbprint? clientCertAndThumbprint,
             CertAndThumbprint serviceCertAndThumbprint)
         {
-            clientBuilder.WithCertificate(clientCertAndThumbprint);
-            clientBuilder.WithTrustedThumbprint(serviceCertAndThumbprint.Thumbprint);
+            if (clientCertAndThumbprint is not null)
+            {
+                clientBuilder.WithCertificate(clientCertAndThumbprint);
+                serviceBuilder.WithTrustedThumbprint(clientCertAndThumbprint.Thumbprint);
+            }
+            
             serviceBuilder.WithCertificate(serviceCertAndThumbprint);
-            serviceBuilder.WithTrustedThumbprint(clientCertAndThumbprint.Thumbprint);
+            clientBuilder.WithTrustedThumbprint(serviceCertAndThumbprint.Thumbprint);
             return this;
         }
 
