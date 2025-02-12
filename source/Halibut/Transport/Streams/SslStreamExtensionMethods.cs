@@ -23,11 +23,7 @@ namespace Halibut.Transport.Streams
             {
                 TargetHost = serviceEndpoint.BaseUri.Host,
                 ClientCertificates = clientCertificates,
-#pragma warning disable SYSLIB0039
-                // See https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib0039
-                // TLS 1.0 and 1.1 are obsolete from .NET 7
-                EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12,
-#pragma warning restore SYSLIB0039
+                EnabledSslProtocols = SslConfiguration.SupportedProtocols,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck
             };
 

@@ -24,8 +24,9 @@ namespace Halibut.Tests.Support
         public static Uri ListeningTentacleServiceUri(int port) => new($"https://localhost:{port}");
 
         readonly ServiceConnectionType serviceConnectionType;
-        readonly CertAndThumbprint serviceCertAndThumbprint;
         readonly ServiceFactoryBuilder serviceFactoryBuilder = new();
+
+        CertAndThumbprint serviceCertAndThumbprint;
 
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
@@ -82,6 +83,18 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public LatestServiceBuilder WithCertificate(CertAndThumbprint serviceCertAndThumbprint)
+        {
+            this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+            return this;
+        }
+
+        public LatestServiceBuilder WithTrustedThumbprint(string trustedThumbprint)
+        {
+            this.serviceTrustsThumbprint = trustedThumbprint;
+            return this;
+        }
+        
         public LatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
             this.serviceStreamFactory = streamFactory;

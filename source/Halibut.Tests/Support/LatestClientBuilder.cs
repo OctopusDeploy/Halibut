@@ -18,7 +18,7 @@ namespace Halibut.Tests.Support
     {
         readonly ServiceConnectionType serviceConnectionType;
 
-        readonly CertAndThumbprint clientCertAndThumbprint;
+        CertAndThumbprint clientCertAndThumbprint;
 
         string clientTrustsThumbprint; 
         IRpcObserver? clientRpcObserver;
@@ -61,6 +61,18 @@ namespace Halibut.Tests.Support
             }
         }
 
+        public LatestClientBuilder WithCertificate(CertAndThumbprint clientCertAndThumprint)
+        {
+            this.clientCertAndThumbprint = clientCertAndThumprint;
+            return this;
+        }
+        
+        public LatestClientBuilder WithTrustedThumbprint(string trustedThumbprint)
+        {
+            clientTrustsThumbprint = trustedThumbprint;
+            return this;
+        }
+        
         public LatestClientBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
             this.clientStreamFactory = streamFactory;
