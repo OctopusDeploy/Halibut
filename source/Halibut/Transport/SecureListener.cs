@@ -234,6 +234,9 @@ namespace Halibut.Transport
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
                     {
                     }
+                    catch (OperationCanceledException)
+                    {
+                    }
                     catch (ObjectDisposedException)
                     {
                         // Happens on shutdown
