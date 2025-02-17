@@ -59,11 +59,11 @@ else {
     if (!(Test-Path variable:DotNetVersion)) {
         # Octopus Modification to ensure TLS1.2 is enabled within the script
         # See https://github.com/dotnet/install-scripts/issues/362
-        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & ([scriptblock]::Create((Get-Content $DotNetInstallFile)))" -InstallDir $DotNetDirectory -Channel $DotNetChannel -NoPath }
+        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & $DotNetInstallFile -InstallDir $DotNetDirectory -Channel $DotNetChannel -NoPath" }
     } else {
         # Octopus Modification to ensure TLS1.2 is enabled within the script
         # See https://github.com/dotnet/install-scripts/issues/362
-        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & ([scriptblock]::Create((Get-Content $DotNetInstallFile)))" -InstallDir $DotNetDirectory -Version $DotNetVersion -NoPath }
+        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & $DotNetInstallFile -InstallDir $DotNetDirectory -Version $DotNetVersion -NoPath" }
     }
     $env:DOTNET_EXE = "$DotNetDirectory\dotnet.exe"
 }
