@@ -41,14 +41,10 @@ if ($null -eq $env:TEAMCITY_VERSION -and $null -ne (Get-Command "dotnet" -ErrorA
 }
 else {
     # Download install script
-    # Octopus modification to comment out the download of the install script
-    #$DotNetInstallFile = "$TempDirectory\dotnet-install.ps1"
-    #New-Item -ItemType Directory -Path $TempDirectory -Force | Out-Null
-    #[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    #(New-Object System.Net.WebClient).DownloadFile($DotNetInstallUrl, $DotNetInstallFile)
-
-    # Octopus modification to use version of the script configured to support TLS 1.2
-    $DotNetInstallFile = Join-Path $PSScriptRoot "dotnet-install.ps1"
+    $DotNetInstallFile = "$TempDirectory\dotnet-install.ps1"
+    New-Item -ItemType Directory -Path $TempDirectory -Force | Out-Null
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    (New-Object System.Net.WebClient).DownloadFile($DotNetInstallUrl, $DotNetInstallFile)
 
     # If global.json exists, load expected version
     if (Test-Path $DotNetGlobalFile) {
@@ -61,9 +57,13 @@ else {
     # Install by channel or version
     $DotNetDirectory = "$TempDirectory\dotnet-win"
     if (!(Test-Path variable:DotNetVersion)) {
-        ExecSafe { & powershell $DotNetInstallFile -InstallDir $DotNetDirectory -Channel $DotNetChannel -NoPath }
+        # Octopus Modification to ensure TLS1.2 is enabled within the script
+        # See https://github.com/dotnet/install-scripts/issues/362
+        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & $DotNetInstallFile -InstallDir $DotNetDirectory -Channel $DotNetChannel -NoPath" }
     } else {
-        ExecSafe { & powershell $DotNetInstallFile -InstallDir $DotNetDirectory -Version $DotNetVersion -NoPath }
+        # Octopus Modification to ensure TLS1.2 is enabled within the script
+        # See https://github.com/dotnet/install-scripts/issues/362
+        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & $DotNetInstallFile -InstallDir $DotNetDirectory -Version $DotNetVersion -NoPath" }
     }
     $env:DOTNET_EXE = "$DotNetDirectory\dotnet.exe"
 }
