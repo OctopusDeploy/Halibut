@@ -205,11 +205,11 @@ namespace Halibut.Transport
                 // This matches what we did before, in theory this will never happen.
             }
         }
+
         async Task AcceptAsync(CancellationToken cancellationToken)
         {
-
             const int errorThreshold = 3;
-            
+
             // Don't call listener.Stop until we sure we are not doing an Accept
             // See: https://github.com/OctopusDeploy/Issues/issues/6035
             // See: https://github.com/dotnet/corefx/issues/26034
@@ -222,16 +222,19 @@ namespace Halibut.Transport
                     try
                     {
 #if !NETFRAMEWORK
-            client = await listener.AcceptTcpClientAsync(this.cancellationToken);
+                        client = await listener.AcceptTcpClientAsync(this.cancellationToken);
 #else
-            // This only works because in the using we stop the listener which should work on windows
-            client = await listener.AcceptTcpClientAsync();
+                        // This only works because in the using we stop the listener which should work on windows
+                        client = await listener.AcceptTcpClientAsync();
 #endif
                         client.NoDelay = halibutTimeoutsAndLimits.TcpNoDelay;
                         var _ = Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
+                    {
+                    }
+                    catch (OperationCanceledException)
                     {
                     }
                     catch (ObjectDisposedException)
@@ -517,7 +520,7 @@ namespace Halibut.Transport
         {
             cts.Cancel();
             backgroundThread?.Join();
-            if (backgroundTask != null) await backgroundTask; 
+            if (backgroundTask != null) await backgroundTask;
             listener?.Stop();
             tcpClientManager.Dispose();
             cts.Dispose();
