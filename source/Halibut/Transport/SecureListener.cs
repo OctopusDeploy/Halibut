@@ -34,7 +34,11 @@ namespace Halibut.Transport
         static extern bool SetHandleInformation(IntPtr hObject, HANDLE_FLAGS dwMask, HANDLE_FLAGS dwFlags);
 
         readonly IPEndPoint endPoint;
+#if !NET5_0_OR_GREATER
         readonly X509Certificate2 serverCertificate;
+#else
+        readonly SslServerAuthenticationOptions authenticationOptions;
+#endif
         readonly ExchangeProtocolBuilder exchangeProtocolBuilder;
         readonly Predicate<string> verifyClientThumbprint;
         readonly Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect;
@@ -70,7 +74,20 @@ namespace Halibut.Transport
             IConnectionsObserver connectionsObserver)
         {
             this.endPoint = endPoint;
+
+#if !NET5_0_OR_GREATER
             this.serverCertificate = serverCertificate;
+#else
+            var certificateContext = SslStreamCertificateContext.Create(serverCertificate, null);
+            authenticationOptions = new SslServerAuthenticationOptions
+            {
+                ServerCertificateContext = certificateContext,
+                ClientCertificateRequired = true,
+                EnabledSslProtocols = SslConfiguration.SupportedProtocols,
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+            };
+#endif
+
             this.exchangeProtocolBuilder = exchangeProtocolBuilder;
             this.exchangeAction = exchangeAction;
             this.verifyClientThumbprint = verifyClientThumbprint;
@@ -299,11 +316,11 @@ namespace Halibut.Transport
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
 
                     await ssl
-                        .AuthenticateAsServerAsync(
-                            serverCertificate,
-                            true,
-                            SslConfiguration.SupportedProtocols,
-                            false)
+#if !NET5_0_OR_GREATER
+                        .AuthenticateAsServerAsync(serverCertificate, true, SslConfiguration.SupportedProtocols, false)
+#else
+                        .AuthenticateAsServerAsync(authenticationOptions, cancellationToken)
+#endif
                         .ConfigureAwait(false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
