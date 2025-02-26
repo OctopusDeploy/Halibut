@@ -52,6 +52,7 @@ namespace Halibut.Transport
         TcpListener listener;
         Thread? backgroundThread;
         Task? backgroundTask;
+        readonly SslStreamAuthenticationHelper streamAuthenticationHelper;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public SecureListener(
@@ -81,6 +82,13 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
+            
+            this.streamAuthenticationHelper = new SslStreamAuthenticationHelper(
+                serverCertificate, 
+                clientCertificateRequired: true,
+                SslConfiguration.SupportedProtocols,
+                checkCertificateRevocation: false);
+            
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
@@ -301,14 +309,8 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
 
-                    await ssl
-                        .AuthenticateAsServerAsync(
-                            serverCertificate,
-                            true,
-                            SslConfiguration.SupportedProtocols,
-                            false)
-                        .ConfigureAwait(false);
-
+                    await streamAuthenticationHelper.AuthenticateAsServerAsync(ssl, cancellationToken).ConfigureAwait(false);
+                    
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
                     var req = await ReadInitialRequest(ssl);
