@@ -1,7 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -10,6 +10,8 @@ using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Streams;
+
+using ClientAuthStreamKey = System.ValueTuple<string /*TargetHost*/, string /*ClientCertThumbrpint*/>;
 
 namespace Halibut.Transport
 {
@@ -21,13 +23,17 @@ namespace Halibut.Transport
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
 
+        // Note: We never clear this cache; If Octopus is connecting out to tentacles, will do so to the same tentacles repeatedly. 
+        // In the uncommon case that a tentacle is deleted or changes its certificate, we will "leak" a small amount of memory but this is acceptable.
+        readonly Dictionary<ClientAuthStreamKey, SslStreamClientAuthentication> authContextCache = new();
+
         public TcpConnectionFactory(X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory)
         {
             this.clientCertificate = clientCertificate;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
         }
-        
+
         public async Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
         {
             log.Write(EventType.OpeningNewConnection, $"Opening a new connection to {serviceEndpoint.BaseUri}");
@@ -35,26 +41,27 @@ namespace Halibut.Transport
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = await CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, streamFactory, log, cancellationToken);
             log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
-            
+
             var networkTimeoutStream = streamFactory.CreateStream(client);
 
             client.ConfigureTcpOptions(halibutTimeoutsAndLimits);
+
+            SslStreamClientAuthentication? streamClientAuthentication;
+            lock (authContextCache)
+            {
+                var key = new ClientAuthStreamKey(serviceEndpoint.BaseUri.Host, clientCertificate.Thumbprint);
+                if (!authContextCache.TryGetValue(key, out streamClientAuthentication))
+                {
+                    streamClientAuthentication = new SslStreamClientAuthentication(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslConfiguration.SupportedProtocols);
+                    authContextCache[key] = streamClientAuthentication;
+                }
+            }
 
             var ssl = new SslStream(networkTimeoutStream, false, certificateValidator.Validate, UserCertificateSelectionCallback);
 
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
 
-#if NETFRAMEWORK
-        // TODO: ASYNC ME UP!
-        // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
-        await ssl.AuthenticateAsClientAsync(
-            serviceEndpoint.BaseUri.Host,
-            new X509Certificate2Collection(clientCertificate),
-            SslConfiguration.SupportedProtocols,
-            false);
-#else
-            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), cancellationToken);
-#endif
+            await streamClientAuthentication.AuthenticateAsClientAsync(ssl, cancellationToken);
 
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
             await ssl.FlushAsync(cancellationToken);
@@ -63,7 +70,7 @@ namespace Halibut.Transport
 
             return new SecureConnection(client, ssl, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
         }
-        
+
         internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, ILog log, CancellationToken cancellationToken)
         {
             TcpClient client;
@@ -75,12 +82,13 @@ namespace Halibut.Transport
             else
             {
                 log.Write(EventType.Diagnostic, "Creating a proxy client");
-                
+
                 client = await new ProxyClientFactory(streamFactory)
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(() => CreateTcpClientAsync(halibutTimeoutsAndLimits))
                     .CreateConnectionAsync(endPoint.BaseUri.Host, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout, cancellationToken);
             }
+
             return client;
         }
 
@@ -92,7 +100,7 @@ namespace Halibut.Transport
 
             return CreateTcpClientAsync(addressFamily, halibutTimeoutsAndLimits);
         }
-        
+
         internal static TcpClient CreateTcpClientAsync(AddressFamily addressFamily, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             var client = new TcpClient(addressFamily)
@@ -105,6 +113,7 @@ namespace Halibut.Transport
             {
                 client.Client.DualMode = true;
             }
+
             return client;
         }
 

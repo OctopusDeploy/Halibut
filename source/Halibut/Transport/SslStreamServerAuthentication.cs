@@ -25,7 +25,7 @@ namespace Halibut.Transport
     // https://github.com/dotnet/runtime/issues/110803#issuecomment-2553658071
     // However these types don't exist in NetFramework. This facade
     // allows SecureListener to do the right thing for each platform without a bunch of #if's
-    readonly struct SslStreamAuthenticationHelper
+    class SslStreamServerAuthentication
     {
         readonly X509Certificate2 certificate;
         readonly bool clientCertificateRequired;
@@ -36,7 +36,7 @@ namespace Halibut.Transport
         readonly SslServerAuthenticationOptions serverAuthenticationOptions;
 #endif
 
-        public SslStreamAuthenticationHelper(X509Certificate2 certificate, bool clientCertificateRequired, SslProtocols enabledSslProtocols, bool checkCertificateRevocation)
+        public SslStreamServerAuthentication(X509Certificate2 certificate, bool clientCertificateRequired, SslProtocols enabledSslProtocols, bool checkCertificateRevocation)
         {
             this.certificate = certificate;
             this.clientCertificateRequired = clientCertificateRequired;
