@@ -27,6 +27,7 @@ namespace Halibut
         IRpcObserver? rpcObserver;
         IConnectionsObserver? connectionsObserver;
         IControlMessageObserver? controlMessageObserver;
+        IIdentityObserver? identityObserver;
 
         public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
@@ -125,6 +126,12 @@ namespace Halibut
             return this;
         }
 
+        public HalibutRuntimeBuilder WithIdentityObserver(IIdentityObserver identityObserver)
+        {
+            this.identityObserver = identityObserver;
+            return this;
+        }
+
         public HalibutRuntime Build()
         {
             var halibutTimeoutsAndLimits = this.halibutTimeoutsAndLimits;
@@ -157,6 +164,7 @@ namespace Halibut
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
             var controlMessageObserver = this.controlMessageObserver ?? new NoOpControlMessageObserver();
+            var identityObserver = this.identityObserver ?? NoIdentityObserver.Instance;
 
             var halibutRuntime = new HalibutRuntime(
                 serviceFactory,
@@ -171,7 +179,8 @@ namespace Halibut
                 streamFactory,
                 rpcObserver,
                 connectionsObserver,
-                controlMessageObserver);
+                controlMessageObserver,
+                identityObserver);
 
             if (onUnauthorizedClientConnect is not null)
             {

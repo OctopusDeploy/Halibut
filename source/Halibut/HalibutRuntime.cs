@@ -45,6 +45,7 @@ namespace Halibut
         readonly IConnectionsObserver connectionsObserver;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly IControlMessageObserver controlMessageObserver;
+        readonly IIdentityObserver identityObserver;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -59,7 +60,8 @@ namespace Halibut
             IStreamFactory streamFactory,
             IRpcObserver rpcObserver,
             IConnectionsObserver connectionsObserver, 
-            IControlMessageObserver controlMessageObserver)
+            IControlMessageObserver controlMessageObserver,
+            IIdentityObserver identityObserver)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -74,6 +76,7 @@ namespace Halibut
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.connectionsObserver = connectionsObserver;
             this.controlMessageObserver = controlMessageObserver;
+            this.identityObserver = identityObserver;
 
             connectionManager = new ConnectionManagerAsync();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
@@ -106,7 +109,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, identityObserver, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -122,7 +125,8 @@ namespace Halibut
                 HandleUnauthorizedClientConnect,
                 TimeoutsAndLimits,
                 streamFactory,
-                connectionsObserver);
+                connectionsObserver,
+                identityObserver);
 
             listeners.DoWithExclusiveAccess(l =>
             {
