@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
@@ -20,15 +21,21 @@ namespace Halibut.Transport.Protocol
         readonly IMessageExchangeStream stream;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
+        readonly IIdentityObserver identityObserver;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream,
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
+            IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter,
+            IIdentityObserver identityObserver,
+            ILog log)
         {
             this.stream = stream;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.activeTcpConnectionsLimiter = activeTcpConnectionsLimiter;
+            this.identityObserver = identityObserver;
             this.log = log;
         }
 
@@ -105,6 +112,7 @@ namespace Halibut.Transport.Protocol
         public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
+            identityObserver.IdentityEstablished(identity);
 
             //We might need to limit the connection, so by default, we create an unlimited connection lease
             var limitedConnectionLease = activeTcpConnectionsLimiter.CreateUnlimitedLease();
