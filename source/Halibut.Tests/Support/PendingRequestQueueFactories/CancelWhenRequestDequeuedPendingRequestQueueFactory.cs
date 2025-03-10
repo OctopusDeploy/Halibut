@@ -29,6 +29,11 @@ namespace Halibut.Tests.Support.PendingRequestQueueFactories
             return new Decorator(inner.CreateQueue(endpoint), cancellationTokenSource, shouldCancelOnDequeue, onResponseApplied);
         }
 
+        public Task<IPendingRequestQueue> CreateQueueAsync(Uri endpoint)
+        {
+            return Task.FromResult(CreateQueue(endpoint));
+        }
+
         class Decorator : IPendingRequestQueue
         {
             readonly CancellationTokenSource cancellationTokenSource;
