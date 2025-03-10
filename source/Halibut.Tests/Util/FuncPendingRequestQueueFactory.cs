@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Halibut.ServiceModel;
 
 namespace Halibut.Tests.Util
@@ -15,6 +16,11 @@ namespace Halibut.Tests.Util
         public IPendingRequestQueue CreateQueue(Uri endpoint)
         {
             return createQueue(endpoint);
+        }
+
+        public Task<IPendingRequestQueue> CreateQueueAsync(Uri endpoint)
+        {
+            return Task.FromResult(createQueue(endpoint));
         }
     }
 }

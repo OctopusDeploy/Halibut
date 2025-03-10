@@ -90,7 +90,7 @@ namespace Halibut
 
         IPendingRequestQueue GetQueue(Uri target)
         {
-            return queues.GetOrAdd(target, u => queueFactory.CreateQueue(target));
+            return queues.GetOrAdd(target, u => queueFactory.CreateQueueAsync(target).Result);
         }
 
         public int Listen()
