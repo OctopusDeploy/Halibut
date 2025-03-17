@@ -27,7 +27,7 @@ namespace Halibut
         IRpcObserver? rpcObserver;
         IConnectionsObserver? connectionsObserver;
         IControlMessageObserver? controlMessageObserver;
-        IIdentityObserver? identityObserver;
+        ISubscribersObserver? identityObserver;
 
         public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
@@ -126,9 +126,9 @@ namespace Halibut
             return this;
         }
 
-        public HalibutRuntimeBuilder WithIdentityObserver(IIdentityObserver identityObserver)
+        public HalibutRuntimeBuilder WithIdentityObserver(ISubscribersObserver subscribersObserver)
         {
-            this.identityObserver = identityObserver;
+            this.identityObserver = subscribersObserver;
             return this;
         }
 
@@ -164,7 +164,7 @@ namespace Halibut
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
             var controlMessageObserver = this.controlMessageObserver ?? new NoOpControlMessageObserver();
-            var identityObserver = this.identityObserver ?? NoIdentityObserver.Instance;
+            var identityObserver = this.identityObserver ?? NoSubscribersObserver.Instance;
 
             var halibutRuntime = new HalibutRuntime(
                 serviceFactory,

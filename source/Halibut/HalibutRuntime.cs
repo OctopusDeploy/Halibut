@@ -45,7 +45,7 @@ namespace Halibut
         readonly IConnectionsObserver connectionsObserver;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly IControlMessageObserver controlMessageObserver;
-        readonly IIdentityObserver identityObserver;
+        readonly ISubscribersObserver subscribersObserver;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -61,7 +61,7 @@ namespace Halibut
             IRpcObserver rpcObserver,
             IConnectionsObserver connectionsObserver, 
             IControlMessageObserver controlMessageObserver,
-            IIdentityObserver identityObserver)
+            ISubscribersObserver subscribersObserver)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -76,7 +76,7 @@ namespace Halibut
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.connectionsObserver = connectionsObserver;
             this.controlMessageObserver = controlMessageObserver;
-            this.identityObserver = identityObserver;
+            this.subscribersObserver = subscribersObserver;
 
             connectionManager = new ConnectionManagerAsync();
             this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
@@ -109,7 +109,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, identityObserver, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, subscribersObserver, log);
         }
 
         public int Listen(IPEndPoint endpoint)
@@ -126,7 +126,7 @@ namespace Halibut
                 TimeoutsAndLimits,
                 streamFactory,
                 connectionsObserver,
-                identityObserver);
+                subscribersObserver);
 
             listeners.DoWithExclusiveAccess(l =>
             {

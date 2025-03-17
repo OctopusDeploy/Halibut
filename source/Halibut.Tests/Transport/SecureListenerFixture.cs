@@ -74,7 +74,7 @@ namespace Halibut.Tests.Transport
                     timeoutsAndLimits,
                     new StreamFactory(),
                     NoOpConnectionsObserver.Instance,
-                    NoIdentityObserver.Instance
+                    NoSubscribersObserver.Instance
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)

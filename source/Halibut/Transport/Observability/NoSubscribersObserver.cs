@@ -17,12 +17,15 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport.Observability
 {
-    public class NoIdentityObserver : IIdentityObserver
+    public class NoSubscribersObserver : ISubscribersObserver
     {
-        static NoIdentityObserver? singleInstance;
-        public static NoIdentityObserver Instance => singleInstance ??= new NoIdentityObserver();
+        static NoSubscribersObserver? singleInstance;
+        public static NoSubscribersObserver Instance => singleInstance ??= new NoSubscribersObserver();
+        public void SubscriberJoined(Uri subscriptionId)
+        {
+        }
 
-        public void IdentityEstablished(RemoteIdentity identity)
+        public void SubscriberLeft(Uri subscriptionId)
         {
         }
     }

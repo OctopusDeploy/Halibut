@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.Transport.Observability
 {
-    public interface IIdentityObserver
+    public interface ISubscribersObserver
     {
-        void IdentityEstablished(RemoteIdentity identity);
+        void SubscriberJoined(Uri subscriptionId);
+        void SubscriberLeft(Uri subscriptionId);
     }
 }
