@@ -48,6 +48,7 @@ namespace Halibut.Transport
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly ISubscribersObserver subscribersObserver;
         ILog log;
         TcpListener listener;
         Thread? backgroundThread;
@@ -67,7 +68,8 @@ namespace Halibut.Transport
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
-            IConnectionsObserver connectionsObserver)
+            IConnectionsObserver connectionsObserver,
+            ISubscribersObserver subscribersObserver)
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -81,6 +83,7 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
+            this.subscribersObserver = subscribersObserver;
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
