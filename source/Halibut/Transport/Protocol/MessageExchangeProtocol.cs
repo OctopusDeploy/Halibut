@@ -21,7 +21,7 @@ namespace Halibut.Transport.Protocol
         readonly IMessageExchangeStream stream;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
-        readonly IIdentityObserver identityObserver;
+        readonly ISubscribersObserver subscribersObserver;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
@@ -29,13 +29,13 @@ namespace Halibut.Transport.Protocol
         public MessageExchangeProtocol(IMessageExchangeStream stream,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter,
-            IIdentityObserver identityObserver,
+            ISubscribersObserver subscribersObserver,
             ILog log)
         {
             this.stream = stream;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.activeTcpConnectionsLimiter = activeTcpConnectionsLimiter;
-            this.identityObserver = identityObserver;
+            this.subscribersObserver = subscribersObserver;
             this.log = log;
         }
 
@@ -112,7 +112,6 @@ namespace Halibut.Transport.Protocol
         public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
-            identityObserver.IdentityEstablished(identity);
 
             //We might need to limit the connection, so by default, we create an unlimited connection lease
             var limitedConnectionLease = activeTcpConnectionsLimiter.CreateUnlimitedLease();
@@ -133,9 +132,17 @@ namespace Halibut.Transport.Protocol
                         await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
                         break;
                     case RemoteIdentityType.Subscriber:
-                        var pendingRequestQueue = pendingRequests(identity);
-                        await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
-                        break;
+                        try
+                        {
+                            subscribersObserver.SubscriberJoined(identity.SubscriptionId);
+                            var pendingRequestQueue = pendingRequests(identity);
+                            await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
+                            break;
+                        }
+                        finally
+                        {
+                            subscribersObserver.SubscriberLeft(identity.SubscriptionId);
+                        }
                     default:
                         log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
                         throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
