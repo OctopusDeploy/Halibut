@@ -1,3 +1,5 @@
+# Derived from https://github.com/OctopusDeploy/OctopusDeploy/blob/main/.github/workflows/portal-update-pull-request-automation.yml
+
 name: 'Approve Renovate Pull Request'
 
 on:

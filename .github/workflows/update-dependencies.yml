@@ -1,3 +1,5 @@
+# Derived from https://github.com/OctopusDeploy/OctopusDeploy/blob/main/.github/workflows/update-dependencies.yml
+
 name: Renovate update dependencies
 on:
   schedule:
