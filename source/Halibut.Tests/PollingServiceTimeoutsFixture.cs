@@ -33,7 +33,7 @@ namespace Halibut.Tests
                 var stopwatch = Stopwatch.StartNew();
                 var exception = (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken)))).And;
 
-                exception.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out.");
+                exception.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out. Please check the tentacle logs to investigate this timeout.");
                 exception.ConnectionState.Should().Be(ConnectionState.Connecting);
 
                 stopwatch.Stop();
