@@ -35,7 +35,7 @@ namespace Halibut.Tests
             var client = clientOnly.CreateClientWithoutService<IEchoService, IAsyncClientEchoServiceWithOptions>();
 
             (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
-                .And.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out.");
+                .And.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time (00:00:05), so the request timed out. Please check the tentacle logs to investigate this timeout.");
         }
         
 
