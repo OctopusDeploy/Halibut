@@ -20,7 +20,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Halibut" Version="5.0.236" />
+      <PackageReference Include="Halibut" Version="8.1.1141" />
     </ItemGroup>
 
 </Project>

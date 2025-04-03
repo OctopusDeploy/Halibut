@@ -16,7 +16,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Halibut" Version="6.0.658" />
+        <PackageReference Include="Halibut" Version="8.1.1141" />
     </ItemGroup>
 
     <ItemGroup>
