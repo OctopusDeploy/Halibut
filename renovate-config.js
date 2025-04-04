@@ -1,8 +1,16 @@
+// Several parts of this config have been duplicated from the Octopus Server renovate.config
+
 const excludeList = [
     "dotnet-sdk", // The dotnet SDK update is a non-trivial piece of work
     "FluentAssertions", // FluentAssertions 8 and above introduced potential fees for developers
     "Halibut", // Various versions of Halibut are used for tests. We'll manually control this version
 ];
+
+const preCannedPrNotes = {
+    greenMeansGo: [
+        'Green means go. Any issues in this PR should be caught as part of our tests and/or builds.',
+    ],
+}
 
 module.exports = {
 
@@ -38,7 +46,33 @@ module.exports = {
     prConcurrentLimit: 2,
     prHourlyLimit: 1,
 
-    // If set to false, Renovate will upgrade dependencies to their latest release only. Renovate will not separate major or minor branches.
-    // https://docs.renovatebot.com/configuration-options/#separatemajorminor
-    separateMajorMinor: false,
-};
+  // If set to false, Renovate will upgrade dependencies to their latest release only. Renovate will not separate major or minor branches.
+  // https://docs.renovatebot.com/configuration-options/#separatemajorminor
+  separateMajorMinor: false,
+
+  packageRules: [
+    {
+      // These packages use a custom fork of NuGet which we still rely on.
+      groupName: 'NuGet Libraries',
+      matchPackageNames: [
+        'NuGet.Common',
+        'NuGet.Configuration',
+        'NuGet.Frameworks',
+        'NuGet.Packaging',
+        'NuGet.Packaging.Core',
+        'NuGet.Packaging.Core.Types',
+        'NuGet.Protocol.Core.Types',
+        'NuGet.Protocol.Core.v3',
+        'NuGet.Versioning',
+      ],
+      enabled: false,
+    },
+    {
+      matchPackageNames: ['Nsubstitute'],
+      prBodyNotes: [
+        ...preCannedPrNotes.greenMeansGo,
+        'Used extensively throughout tests. Any breaking changes are likely to be surfaced in the test suite.',
+      ],
+    },
+  ],
+}
