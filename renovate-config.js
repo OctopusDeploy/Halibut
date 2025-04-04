@@ -1,6 +1,7 @@
 const excludeList = [
-    "dotnet-sdk", // The dotnet SDK update is a non-trivial piece of work.
+    "dotnet-sdk", // The dotnet SDK update is a non-trivial piece of work
     "FluentAssertions", // FluentAssertions 8 and above introduced potential fees for developers
+    "Halibut", // Various versions of Halibut are used for tests. We'll manually control this version
 ];
 
 module.exports = {
