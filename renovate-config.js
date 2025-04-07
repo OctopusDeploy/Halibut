@@ -1,4 +1,5 @@
-// Several parts of this config have been duplicated from the Octopus Server renovate.config
+// Several parts of this config such as the excludeList, preCannedPrNotes and some packageRules have been duplicated from the Octopus Server renovate.config as they also apply to Tentacle
+// https://github.com/OctopusDeploy/OctopusDeploy/blob/main/renovate-config.js
 
 const excludeList = [
   'dotnet-sdk', // The dotnet SDK update is a non-trivial piece of work
@@ -50,6 +51,11 @@ module.exports = {
   separateMajorMinor: false,
 
   packageRules: [
+    // Keep the rest of the packages in alphabetical order (of package name). However, non-greenMeansGo packages should be placed before greenMeansGo packages
+    // Non-greenMeansGo packages
+    // <None at the moment. Replace this comment when some are introduced>
+
+    // greenMeansGo packages
     {
       matchPackageNames: ['Nsubstitute'],
       prBodyNotes: [
