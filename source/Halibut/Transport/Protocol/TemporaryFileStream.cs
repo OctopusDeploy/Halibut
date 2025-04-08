@@ -21,7 +21,7 @@ namespace Halibut.Transport.Protocol
         
         public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
         {
-            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again. Samdanae");
 
             await AttemptToDeleteAsync(filePath);
             using (FileStream sourceStream = File.Open(path, FileMode.Open))
