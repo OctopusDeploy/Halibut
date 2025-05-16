@@ -126,7 +126,7 @@ namespace Halibut
             return this;
         }
 
-        public HalibutRuntimeBuilder WithIdentityObserver(ISubscribersObserver subscribersObserver)
+        public HalibutRuntimeBuilder WithSubscribersObserver(ISubscribersObserver subscribersObserver)
         {
             this.identityObserver = subscribersObserver;
             return this;

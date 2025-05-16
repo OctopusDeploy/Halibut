@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 
@@ -20,7 +21,7 @@ namespace Halibut.ServiceModel
             return new PendingRequestQueueAsync(halibutTimeoutsAndLimits, logFactory.ForEndpoint(endpoint));
         }
 
-        public Task<IPendingRequestQueue> CreateQueueAsync(Uri endpoint)
+        public Task<IPendingRequestQueue> CreateQueueAsync(Uri endpoint, CancellationToken cancellationToken)
         {
             return Task.FromResult(CreateQueue(endpoint));
         }
