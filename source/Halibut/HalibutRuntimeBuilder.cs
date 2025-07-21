@@ -101,7 +101,7 @@ namespace Halibut
             return this;
         }
 
-        internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
+        public HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             return this;
