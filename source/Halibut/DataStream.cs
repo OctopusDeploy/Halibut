@@ -10,7 +10,7 @@ namespace Halibut
 {
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
-        readonly Func<Stream, CancellationToken, Task> writerAsync;
+        Func<Stream, CancellationToken, Task> writerAsync;
         IDataStreamReceiver? receiver;
 
         [JsonConstructor]
@@ -179,9 +179,23 @@ namespace Halibut
             await writerAsync(stream, cancellationToken);
         }
 
+        public async Task WriteData(Stream stream, CancellationToken cancellationToken)
+        {
+            await writerAsync(stream, cancellationToken);
+        }
+
         void IDataStreamInternal.Received(IDataStreamReceiver attachedReceiver)
         {
             receiver = attachedReceiver;
+        }
+
+        /// <summary>
+        /// Be carefull 
+        /// </summary>
+        /// <param name="writerAsync"></param>
+        public void SetWriterAsync(Func<Stream, CancellationToken, Task> writerAsync)
+        {
+            this.writerAsync = writerAsync;
         }
     }
 }
