@@ -1,4 +1,5 @@
 using System;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -15,6 +16,7 @@ using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NSubstitute;
 using NUnit.Framework;
+using DisposableCollection = Halibut.Util.DisposableCollection;
 
 namespace Halibut.Tests.Queue.Redis
 {
@@ -27,7 +29,7 @@ namespace Halibut.Tests.Queue.Redis
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
@@ -49,12 +51,52 @@ namespace Halibut.Tests.Queue.Redis
         }
         
         [Test]
+        public async Task When100kTentaclesAreSubscribed_TheQueueStillWorks()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var log = Substitute.For<ILog>();
+            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
+            
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
+
+            await using var disposableCollection = new DisposableCollection();
+            for (int i = 0; i < 100000; i++)
+            {
+                disposableCollection.Add(new RedisPendingRequestQueue(new Uri("poll://" + Guid.NewGuid()), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits));
+            }
+            
+            this.Logger.Fatal("Waiting");
+            await Task.Delay(30000);
+            this.Logger.Fatal("Done");
+            
+            var request = new RequestMessageBuilder(endpoint.ToString()).Build();
+            
+            await using var sut = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(new RedisFacade("localhost")), messageReaderWriter, halibutTimeoutsAndLimits);
+            
+            var task = sut.QueueAndWaitAsync(request, CancellationToken.None);
+
+            // Act
+            var result = await sut.DequeueAsync(CancellationToken);
+
+            // Assert
+            result.Should().NotBeNull();
+            result!.RequestMessage.Id.Should().Be(request.Id);
+            result.RequestMessage.MethodName.Should().Be(request.MethodName);
+            result.RequestMessage.ServiceName.Should().Be(request.ServiceName);
+        }
+        
+        [Test]
         public async Task FullSendAndReceiveShouldWork()
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
@@ -87,7 +129,7 @@ namespace Halibut.Tests.Queue.Redis
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
@@ -123,7 +165,7 @@ namespace Halibut.Tests.Queue.Redis
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

@@ -23,13 +23,13 @@ using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis
 {
-    public class HalibutHalibutRedisTransport
+    public class HalibutRedisTransport
     {
         const string Namespace = "octopus:server:halibut";
         
         readonly RedisFacade facade;
 
-        public HalibutHalibutRedisTransport(RedisFacade facade)
+        public HalibutRedisTransport(RedisFacade facade)
         {
             this.facade = facade;
         }
@@ -37,7 +37,7 @@ namespace Halibut.Queue.Redis
         // Request Pulse
         static string RequestMessagesPulseChannelName(Uri endpoint)
         {
-            return $"{Namespace}::requestpulsechannel::{endpoint}";
+            return $"{Namespace}::RequestMessagesPulseChannelName::{endpoint}";
         }
         
         public async Task<IAsyncDisposable> SubscribeToRequestMessagePulseChannel(Uri endpoint, Action<ChannelMessage> onRequestMessagePulse)
@@ -81,7 +81,7 @@ namespace Halibut.Queue.Redis
         
         static string RequestMessageKey(Uri endpoint, Guid requestId)
         {
-            return $"{Namespace}::requestpulsechannel::{endpoint}::{requestId}";
+            return $"{Namespace}::RequestMessageKey::{endpoint}::{requestId}";
         }
 
         static string RequestField = "RequestField";

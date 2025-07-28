@@ -25,9 +25,9 @@ namespace Halibut.Queue.Redis
     {
         readonly RequestMessage request;
         readonly ILog log;
-        readonly ManualResetEventSlim waiter;
+        readonly ManualResetEventSlim responseRecievedEvent;
         readonly object sync = new();
-        bool transferBegun;
+        bool requestCollected;
         bool completed;
 
         readonly TimeSpan pollingRequestMaximumMessageProcessingTimeout;
@@ -37,15 +37,16 @@ namespace Halibut.Queue.Redis
             this.request = request;
             this.log = log;
             this.pollingRequestMaximumMessageProcessingTimeout = pollingRequestMaximumMessageProcessingTimeout;
-            waiter = new ManualResetEventSlim(false);
+            responseRecievedEvent = new ManualResetEventSlim(false);
         }
 
+        // Waits for the request to be collected and response to come back
         public async Task WaitUntilComplete(CancellationToken cancellationToken, Func<Task> pollingRequestQueueTimeElapsed)
         {
             await Task.CompletedTask;
             log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-            var success = waiter.Wait(request.Destination.PollingRequestQueueTimeout, cancellationToken);
+            var success = responseRecievedEvent.Wait(request.Destination.PollingRequestQueueTimeout, cancellationToken);
             if (success)
             {
                 log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
@@ -59,12 +60,11 @@ namespace Halibut.Queue.Redis
             }
             catch
             {
-                
             }
             var waitForTransferToComplete = false;
             lock (sync)
             {
-                if (transferBegun)
+                if (requestCollected)
                     waitForTransferToComplete = true;
                 else
                     completed = true;
@@ -72,7 +72,7 @@ namespace Halibut.Queue.Redis
 
             if (waitForTransferToComplete)
             {
-                success = waiter.Wait(pollingRequestMaximumMessageProcessingTimeout);
+                success = responseRecievedEvent.Wait(pollingRequestMaximumMessageProcessingTimeout);
                 if (success)
                     log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
                 else
@@ -85,14 +85,14 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        public bool BeginTransfer()
+        public bool FYITheRequestHasBeenCollected()
         {
             lock (sync)
             {
                 if (completed)
                     return false;
 
-                transferBegun = true;
+                requestCollected = true;
                 return true;
             }
         }
@@ -106,7 +106,7 @@ namespace Halibut.Queue.Redis
                 if (Response == null)
                 {
                     Response = response;
-                    waiter.Set();
+                    responseRecievedEvent.Set();
                 }
             }
         }

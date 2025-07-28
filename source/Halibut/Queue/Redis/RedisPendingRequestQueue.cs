@@ -26,7 +26,7 @@ namespace Halibut.Queue.Redis
     {
         readonly Uri endpoint;
         readonly ILog log;
-        readonly HalibutHalibutRedisTransport halibutRedisTransport;
+        readonly HalibutRedisTransport halibutRedisTransport;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly MessageReaderWriter messageReaderWriter;
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
@@ -36,7 +36,7 @@ namespace Halibut.Queue.Redis
         public RedisPendingRequestQueue(
             Uri endpoint, 
             ILog log, 
-            HalibutHalibutRedisTransport halibutRedisTransport, 
+            HalibutRedisTransport halibutRedisTransport, 
             MessageReaderWriter messageReaderWriter, 
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
@@ -67,17 +67,27 @@ namespace Halibut.Queue.Redis
             // TODO: Respect cancellation token
             var pending = new RedisPendingRequest(request, log, halibutTimeoutsAndLimits.PollingRequestQueueTimeout);
             
+            // TODO: What if this payload was gigantic
+            // TODO: Do we need to encrypt this?
             var payload = await messageReaderWriter.PrepareRequest(request, cancellationToken);
             
             // Start listening for a response to the request, we don't want to miss the response.
             await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, cancellationToken);
 
-            // Make the request available before tell people it is available.
+            // Make the request available before we tell people it is available.
             await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
+            // ---
             await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
             await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
             
-            await pending.WaitUntilComplete(cancellationToken, async () =>
+            await pending.WaitUntilComplete(cancellationToken, ClearRequestFromQueueWhenPickupTimeoutExpired(request, cancellationToken, pending));
+            
+            return pending.Response!;
+        }
+
+        Func<Task> ClearRequestFromQueueWhenPickupTimeoutExpired(RequestMessage request, CancellationToken cancellationToken, RedisPendingRequest pending)
+        {
+            return async () =>
             {
                 // The time the message is allowed to sit on the queue for has elapsed.
                 // Let's try to pop if from the queue, either:
@@ -86,11 +96,9 @@ namespace Halibut.Queue.Redis
                 var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cancellationToken);
                 if (requestJson != null)
                 {
-                    pending.BeginTransfer();
+                    pending.FYITheRequestHasBeenCollected();
                 }
-            });
-            
-            return pending.Response!;
+            };
         }
 
         async Task<IAsyncDisposable> SubscribeToResponse(Guid activityId,
@@ -138,7 +146,9 @@ namespace Halibut.Queue.Redis
                 var first = await TryRemoveNextItemFromQueue(cancellationToken);
                 if (first != null) return first;
 
-                await Task.WhenAny(hasItemsForEndpoint.WaitAsync(cancellationTokenSource.Token), Task.Delay(new HalibutTimeoutsAndLimits().PollingQueueWaitTimeout, cancellationTokenSource.Token));
+                await Task.WhenAny(
+                    hasItemsForEndpoint.WaitAsync(cancellationTokenSource.Token), 
+                    Task.Delay(new HalibutTimeoutsAndLimits().PollingQueueWaitTimeout, cancellationTokenSource.Token));
 
                 if (!hasItemsForEndpoint.IsSet)
                 {

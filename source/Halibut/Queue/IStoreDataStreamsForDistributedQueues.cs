@@ -33,6 +33,7 @@ namespace Halibut.Queue
         public async Task StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
+            
             foreach (var dataStream in dataStreams)
             {
                 using var memoryStream = new MemoryStream();

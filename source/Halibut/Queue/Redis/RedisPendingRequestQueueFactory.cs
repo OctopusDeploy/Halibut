@@ -22,14 +22,14 @@ namespace Halibut.Queue.Redis
     {
         readonly QueueMessageSerializer queueMessageSerializer;
         readonly IStoreDataStreamsForDistributedQueues dataStreamStorage;
-        readonly HalibutHalibutRedisTransport halibutRedisTransport;
+        readonly HalibutRedisTransport halibutRedisTransport;
         readonly ILogFactory logFactory;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
 
         public RedisPendingRequestQueueFactory(
             QueueMessageSerializer queueMessageSerializer,
             IStoreDataStreamsForDistributedQueues dataStreamStorage,
-            HalibutHalibutRedisTransport halibutRedisTransport,
+            HalibutRedisTransport halibutRedisTransport,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, 
             ILogFactory logFactory)
         {
