@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using NSubstitute;
 using NUnit.Framework;
+using Serilog;
 using DisposableCollection = Halibut.Util.DisposableCollection;
 
 namespace Halibut.Tests.Queue.Redis
@@ -68,26 +70,36 @@ namespace Halibut.Tests.Queue.Redis
             for (int i = 0; i < 100000; i++)
             {
                 disposableCollection.Add(new RedisPendingRequestQueue(new Uri("poll://" + Guid.NewGuid()), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits));
+                if(i % 10000 == 0)
+                {
+                    Logger.Information("Up to: {i}", i);
+                }
             }
             
             this.Logger.Fatal("Waiting");
             await Task.Delay(30000);
             this.Logger.Fatal("Done");
-            
-            var request = new RequestMessageBuilder(endpoint.ToString()).Build();
-            
-            await using var sut = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(new RedisFacade("localhost")), messageReaderWriter, halibutTimeoutsAndLimits);
-            
-            var task = sut.QueueAndWaitAsync(request, CancellationToken.None);
 
-            // Act
-            var result = await sut.DequeueAsync(CancellationToken);
+            while (true)
+            {
+                var sw = Stopwatch.StartNew();
+                var request = new RequestMessageBuilder(endpoint.ToString()).Build();
+            
+                await using var sut = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(new RedisFacade("localhost")), messageReaderWriter, halibutTimeoutsAndLimits);
+            
+                var task = sut.QueueAndWaitAsync(request, CancellationToken.None);
 
-            // Assert
-            result.Should().NotBeNull();
-            result!.RequestMessage.Id.Should().Be(request.Id);
-            result.RequestMessage.MethodName.Should().Be(request.MethodName);
-            result.RequestMessage.ServiceName.Should().Be(request.ServiceName);
+                // Act
+                var result = await sut.DequeueAsync(CancellationToken);
+
+                // Assert
+                result.Should().NotBeNull();
+                result!.RequestMessage.Id.Should().Be(request.Id);
+                result.RequestMessage.MethodName.Should().Be(request.MethodName);
+                result.RequestMessage.ServiceName.Should().Be(request.ServiceName);
+                Logger.Information("It took {}", sw.Elapsed.TotalSeconds.ToString("0.00"));
+            }
+            
         }
         
         [Test]
