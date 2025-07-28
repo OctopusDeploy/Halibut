@@ -1,0 +1,170 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Halibut.Diagnostics;
+using Halibut.Queue;
+using Halibut.Queue.Redis;
+using Halibut.Tests.Builders;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestServices.Async;
+using Halibut.Tests.Util;
+using Halibut.TestUtils.Contracts;
+using Halibut.Transport.Protocol;
+using NSubstitute;
+using NUnit.Framework;
+
+namespace Halibut.Tests.Queue.Redis
+{
+    public class RedisPendingRequestQueueFixture : BaseTest
+    {
+
+        [Test]
+        public async Task DequeueAsync_ShouldReturnRequestFromRedis()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var log = Substitute.For<ILog>();
+            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var sut = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            
+            var task = sut.QueueAndWaitAsync(request, CancellationToken.None);
+
+            // Act
+            var result = await sut.DequeueAsync(CancellationToken);
+
+            // Assert
+            result.Should().NotBeNull();
+            result!.RequestMessage.Id.Should().Be(request.Id);
+            result.RequestMessage.MethodName.Should().Be(request.MethodName);
+            result.RequestMessage.ServiceName.Should().Be(request.ServiceName);
+        }
+        
+        [Test]
+        public async Task FullSendAndReceiveShouldWork()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = Substitute.For<ILog>();
+            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var node1Sender = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            var node2Reciever = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            
+            var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+            
+            var requestMessageWithCancellationToken = await node2Reciever.DequeueAsync(CancellationToken);
+            
+            requestMessageWithCancellationToken.Should().NotBeNull();
+            requestMessageWithCancellationToken!.RequestMessage.Id.Should().Be(request.Id);
+            requestMessageWithCancellationToken.RequestMessage.MethodName.Should().Be(request.MethodName);
+            requestMessageWithCancellationToken.RequestMessage.ServiceName.Should().Be(request.ServiceName);
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken.RequestMessage, "Yay");
+            await node2Reciever.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+
+            responseMessage.Result.Should().Be("Yay");
+        }
+        
+        [Test]
+        public async Task FullSendAndReceiveWithDataStreamShouldWork()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = Substitute.For<ILog>();
+            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            request.Params = new[] { new ComplexObjectMultipleDataStreams(DataStream.FromString("hello"), DataStream.FromString("world")) };
+            
+
+            var node1Sender = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            var node2Reciever = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            
+            var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+            
+            var requestMessageWithCancellationToken = await node2Reciever.DequeueAsync(CancellationToken);
+            
+            var objWithDataStreams = (ComplexObjectMultipleDataStreams) requestMessageWithCancellationToken!.RequestMessage.Params[0];
+            (await objWithDataStreams.Payload1!.ReadAsString(CancellationToken)).Should().Be("hello");
+            (await objWithDataStreams.Payload2!.ReadAsString(CancellationToken)).Should().Be("world");
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken.RequestMessage, 
+                new ComplexObjectMultipleDataStreams(DataStream.FromString("good"), DataStream.FromString("bye")));
+            
+            await node2Reciever.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+
+            var returnObject = (ComplexObjectMultipleDataStreams) responseMessage.Result!;
+            (await returnObject.Payload1!.ReadAsString(CancellationToken)).Should().Be("good");
+            (await returnObject.Payload2!.ReadAsString(CancellationToken)).Should().Be("bye");
+        }
+        
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var redisTransport = new HalibutHalibutRedisTransport(new RedisFacade("localhost"));
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithStandardServices()
+                             .AsLatestClientAndLatestServiceBuilder()
+                             .WithPendingRequestQueueFactory((queueMessageSerializer, logFactory) => 
+                                 new RedisPendingRequestQueueFactory(
+                                     queueMessageSerializer, 
+                                     dataStreamStore,
+                                     redisTransport,
+                                     new HalibutTimeoutsAndLimits(),
+                                     logFactory))
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+                (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
+
+                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
+                {
+                    (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+                }
+            }
+        }
+        
+        public class QueueMessageSerializerBuilder
+        {
+            public QueueMessageSerializer Build()
+            {
+                var typeRegistry = new TypeRegistry();
+                typeRegistry.Register(typeof(IComplexObjectService));
+
+                StreamCapturingJsonSerializer StreamCapturingSerializer()
+                {
+                    var settings = MessageSerializerBuilder.CreateSerializer();
+                    var binder = new RegisteredSerializationBinder(typeRegistry);
+                    settings.SerializationBinder = binder;
+                    return new StreamCapturingJsonSerializer(settings);
+                }
+
+                return new QueueMessageSerializer(StreamCapturingSerializer);
+            }
+        }
+    }
+} 

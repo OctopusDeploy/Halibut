@@ -33,7 +33,7 @@ namespace Halibut.Tests.ServiceModel
             await Task.Delay(1000, CancellationToken);
             queueAndWaitTask.IsCompleted.Should().BeFalse();
 
-            await sut.ApplyResponse(expectedResponse, request.Destination);
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
 
             // Assert
             var response = await queueAndWaitTask;
@@ -60,13 +60,13 @@ namespace Halibut.Tests.ServiceModel
             queueAndWaitTask.IsCompleted.Should().BeFalse();
 
             // Apply unrelated responses
-            await sut.ApplyResponse(null!, request.Destination);
-            await sut.ApplyResponse(unexpectedResponse, request.Destination);
+            await sut.ApplyResponse(null!, request.ActivityId);
+            await sut.ApplyResponse(unexpectedResponse, request.ActivityId);
 
             await Task.Delay(1000, CancellationToken);
             queueAndWaitTask.IsCompleted.Should().BeFalse();
 
-            await sut.ApplyResponse(expectedResponse, request.Destination);
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
 
 
             // Assert
@@ -153,7 +153,7 @@ namespace Halibut.Tests.ServiceModel
 
             finishedTask.Should().Be(delayTask);
             
-            await sut.ApplyResponse(expectedResponse, request.Destination);
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
 
             var response = await queueAndWaitTask;
 
@@ -188,7 +188,7 @@ namespace Halibut.Tests.ServiceModel
             await Task.Delay(2000, CancellationToken);
             dequeued.CancellationToken.IsCancellationRequested.Should().BeFalse("Should not have cancelled the request after PollingRequestQueueTimeout is reached");
 
-            await sut.ApplyResponse(expectedResponse, request.Destination);
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
 
             var response = await queueAndWaitTask;
 
@@ -472,7 +472,7 @@ namespace Halibut.Tests.ServiceModel
 
             var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, previousRequest, CancellationToken);
             await sut.DequeueAsync(CancellationToken);
-            await sut.ApplyResponse(expectedPreviousResponse, previousRequest.Destination);
+            await sut.ApplyResponse(expectedPreviousResponse, previousRequest.ActivityId);
             await queueAndWaitTask;
 
             // Act
@@ -512,7 +512,7 @@ namespace Halibut.Tests.ServiceModel
             dequeuedRequest!.RequestMessage.Should().Be(request);
 
             // Apply a response so we can prove this counts as taking a message.
-            await sut.ApplyResponse(expectedResponse, request.Destination);
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
             var response = await queueAndWaitTask;
             response.Should().Be(expectedResponse);
         }
@@ -539,7 +539,7 @@ namespace Halibut.Tests.ServiceModel
             // Assert
             await Task.WhenAll(dequeueTasks);
 
-            await sut.ApplyResponse(expectedResponse, request.Destination);
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
             await queueAndWaitTask;
 
             var singleDequeuedRequest = await dequeueTasks.Should().ContainSingle(t => t.Result != null).Subject;
@@ -577,7 +577,7 @@ namespace Halibut.Tests.ServiceModel
 
 
             // Act
-            await sut.ApplyResponse(expectedResponse, request.Destination);
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
 
 
             // Assert
@@ -656,7 +656,7 @@ namespace Halibut.Tests.ServiceModel
 
             //Concurrently apply responses to prove this does not cause issues.
             var applyResponseTasks = requestsInOrder
-                .Select((r,i) => Task.Run(async () => await sut.ApplyResponse(expectedResponsesInOrder[i], r.Destination)))
+                .Select((r,i) => Task.Run(async () => await sut.ApplyResponse(expectedResponsesInOrder[i], r.ActivityId)))
                 .ToList();
 
             await Task.WhenAll(applyResponseTasks);

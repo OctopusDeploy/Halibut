@@ -9,7 +9,7 @@ namespace Halibut.ServiceModel
     {
         bool IsEmpty { get; }
         int Count { get; }
-        Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination);
+        Task ApplyResponse(ResponseMessage response, Guid requestActivityId);
         Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken);
         Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken);
     }

@@ -14,7 +14,7 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
-        readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
+        internal readonly Func<StreamCapturingJsonSerializer> CreateStreamCapturingSerializer;
         readonly IMessageSerializerObserver observer;
         readonly long readIntoMemoryLimitBytes;
         readonly long writeIntoMemoryLimitBytes;
@@ -28,7 +28,7 @@ namespace Halibut.Transport.Protocol
             long writeIntoMemoryLimitBytes,
             ILogFactory logFactory)
         {
-            this.createStreamCapturingSerializer = createStreamCapturingSerializer;
+            this.CreateStreamCapturingSerializer = createStreamCapturingSerializer;
             this.observer = observer;
             this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
@@ -51,7 +51,7 @@ namespace Halibut.Transport.Protocol
                 // for the moment this MUST be object so that the $type property is included
                 // If it is not, then an old receiver (eg, old tentacle) will not be able to understand messages from a new sender (server)
                 // Once ALL sources and targets are deserializing to MessageEnvelope<T>, (ReadBsonMessage) then this can be changed to T
-                var streamCapturingSerializer = createStreamCapturingSerializer();
+                var streamCapturingSerializer = CreateStreamCapturingSerializer();
                 streamCapturingSerializer.Serializer.Serialize(bson, new MessageEnvelope<object> { Message = message! });
 
                 serializedStreams = streamCapturingSerializer.DataStreams;
@@ -152,7 +152,7 @@ namespace Halibut.Transport.Protocol
 
         (MessageEnvelope<T> MessageEnvelope, IReadOnlyList<DataStream> DataStreams) DeserializeMessageAndDataStreams<T>(JsonReader reader)
         {
-            var streamCapturingSerializer = createStreamCapturingSerializer();
+            var streamCapturingSerializer = CreateStreamCapturingSerializer();
             var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
             
             if (result == null)

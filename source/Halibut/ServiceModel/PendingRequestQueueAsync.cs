@@ -161,7 +161,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination)
+        public async Task ApplyResponse(ResponseMessage response, Guid requestActivityId)
         {
             if (response == null)
             {

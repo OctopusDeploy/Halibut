@@ -22,6 +22,7 @@ using Newtonsoft.Json;
 
 namespace Halibut.Queue
 {
+    // TODO make an  interface
     public class QueueMessageSerializer
     {
         readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
@@ -33,7 +34,7 @@ namespace Halibut.Queue
 
         public (string, IReadOnlyList<DataStream>) WriteMessage<T>(T message)
         {
-            IReadOnlyList<DataStream> datatStreams;
+            IReadOnlyList<DataStream> dataStreams;
             
             var sb = new StringBuilder();
             using var sw = new StringWriter(sb, CultureInfo.InvariantCulture);
@@ -41,10 +42,10 @@ namespace Halibut.Queue
             {
                 var streamCapturingSerializer = createStreamCapturingSerializer();
                 streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<object> { Message = message! });
-                datatStreams = streamCapturingSerializer.DataStreams;
+                dataStreams = streamCapturingSerializer.DataStreams;
             }
 
-            return (sb.ToString(), datatStreams);
+            return (sb.ToString(), dataStreams);
         }
 
         public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(string json)
