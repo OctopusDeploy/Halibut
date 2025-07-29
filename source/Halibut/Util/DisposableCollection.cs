@@ -27,6 +27,16 @@ namespace Halibut.Util
         readonly ConcurrentStack<IAsyncDisposable> disposables = new();
         bool isDisposed;
 
+        public DisposableCollection()
+        {
+            
+        }
+
+        public DisposableCollection(params IAsyncDisposable[] disposables)
+        {
+            this.disposables.PushRange(disposables);
+        }
+
         public T Add<T>(T disposable) where T : IDisposable
         {
             if (isDisposed) throw new ObjectDisposedException("Cannot add item for disposal. This collection has already been disposed.");

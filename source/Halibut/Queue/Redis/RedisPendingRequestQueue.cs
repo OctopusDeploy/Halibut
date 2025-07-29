@@ -13,11 +13,13 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using Nito.AsyncEx;
 
 namespace Halibut.Queue.Redis
@@ -60,46 +62,51 @@ namespace Halibut.Queue.Redis
             await PulseChannelSubDisposer.DisposeAsync();
         }
 
-        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
+        public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
         {
             // TODO: redis goes down
             // TODO: Other node goes down.
             // TODO: Respect cancellation token
-            var pending = new RedisPendingRequest(request, log, halibutTimeoutsAndLimits.PollingRequestQueueTimeout);
+            using var pending = new PendingRequest(request, log);
             
             // TODO: What if this payload was gigantic
             // TODO: Do we need to encrypt this?
-            var payload = await messageReaderWriter.PrepareRequest(request, cancellationToken);
+            var payload = await messageReaderWriter.PrepareRequest(request, requestCancellationToken);
             
             // Start listening for a response to the request, we don't want to miss the response.
-            await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, cancellationToken);
+            await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, requestCancellationToken);
+
+            await using var tryClearRequestFromQueueWhenRequestIsCancelled 
+                = pending.PendingRequestCancellationToken.Register(async () => await TryClearRequestFromQueue(request, pending));
+            await using var trySendCancelWhenRequestIsCancelled
+                = pending.PendingRequestCancellationToken.Register(async () => await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request));
 
             // Make the request available before we tell people it is available.
-            await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
-            // ---
-            await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
-            await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
+            await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, requestCancellationToken);
+            await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, requestCancellationToken);
+            await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, requestCancellationToken);
             
-            await pending.WaitUntilComplete(cancellationToken, ClearRequestFromQueueWhenPickupTimeoutExpired(request, cancellationToken, pending));
+            await pending.WaitUntilComplete(() => TryClearRequestFromQueue(request, pending), requestCancellationToken);
             
             return pending.Response!;
         }
 
-        Func<Task> ClearRequestFromQueueWhenPickupTimeoutExpired(RequestMessage request, CancellationToken cancellationToken, RedisPendingRequest pending)
+        async Task TryClearRequestFromQueue(RequestMessage request, PendingRequest pending)
         {
-            return async () =>
+            // The time the message is allowed to sit on the queue for has elapsed.
+            // Let's try to pop if from the queue, either:
+            // - We pop it, which means it was never collected so let pending deal with the timeout.
+            // - We could not pop it, which means it was collected.
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
+            var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
+            if (requestJson != null)
             {
-                // The time the message is allowed to sit on the queue for has elapsed.
-                // Let's try to pop if from the queue, either:
-                // - We pop it, which means it was never collected so let pending deal with the timeout.
-                // - We could not pop it, which means it was collected.
-                var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cancellationToken);
-                if (requestJson != null)
-                {
-                    pending.FYITheRequestHasBeenCollected();
-                }
-            };
+                await pending.RequestHasBeenCollectedAndWillBeTransfered();
+            }
         }
+
+        
 
         async Task<IAsyncDisposable> SubscribeToResponse(Guid activityId,
             Action<ResponseMessage> onResponse,
@@ -115,12 +122,21 @@ namespace Halibut.Queue.Redis
         public bool IsEmpty => throw new NotImplementedException();
         public int Count => throw new NotImplementedException();
 
+        ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
+        
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
         {
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
-            return new RequestMessageWithCancellationToken(pending, CancellationToken.None);
+
+            var watchForRequestCancellation = new WatchForRequestCancellation(endpoint, pending.ActivityId, halibutRedisTransport);
+            disposablesForInFlightRequests[pending.ActivityId] = new DisposableCollection(watchForRequestCancellation);
+            
+            
+            return new RequestMessageWithCancellationToken(pending, watchForRequestCancellation.RequestCancelledCancellationToken);
         }
+
+        
         
         public async Task ApplyResponse(ResponseMessage response, Guid requestActivityId)
         {

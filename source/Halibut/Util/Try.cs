@@ -34,6 +34,30 @@ namespace Halibut.Util
         {
             return new SilentStreamDisposer(streamToDispose, onFailure);
         }
+        
+        public static void IgnoringError(Action tryThisAction)
+        {
+            try
+            {
+                tryThisAction();
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+        
+        public static async Task IgnoringError(Func<Task> tryThisAction)
+        {
+            try
+            {
+                await tryThisAction();
+            }
+            catch
+            {
+                // ignored
+            }
+        }
     }
     
 }

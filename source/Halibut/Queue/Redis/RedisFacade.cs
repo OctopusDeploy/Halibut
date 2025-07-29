@@ -110,6 +110,20 @@ namespace Halibut.Queue.Redis
 
             return value;
         }
+
+        public async Task SetString(string key, string value)
+        {
+            key = "string:" + key;
+            var database = Connection.GetDatabase();
+            await database.StringSetAsync(key, value);
+        }
+        
+        public async Task<string?> GetString(string key)
+        {
+            key = "string:" + key;
+            var database = Connection.GetDatabase();
+            return await database.StringGetAsync(key);
+        }
     }
 
 }
