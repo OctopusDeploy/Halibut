@@ -14,6 +14,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.QueuedDataStreams;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.Queue.Redis

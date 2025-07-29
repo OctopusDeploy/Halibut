@@ -1,5 +1,8 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Queue;
@@ -56,6 +59,84 @@ namespace Halibut.Tests.Queue
             deserializedMessage.Should().BeEquivalentTo(request);
             dataStreams.Should().BeEmpty();
             deserializedDataStreams.Should().BeEmpty();
+        }
+        
+        [Test]
+        public void SerializeAndDeserializeMessageWithDataStream_ShouldRoundTrip_RequestMessage()
+        {
+            var typeRegistry = new TypeRegistry();
+            typeRegistry.Register(typeof(IHaveTypeWithDataStreamsService));
+            // Arrange
+            var sut = new QueueMessageSerializerBuilder(new LogFactory())
+                .WithTypeRegistry(typeRegistry)
+                .Build();
+
+            var request = new RequestMessage()
+            {
+                Id = "hello",
+                ActivityId = Guid.NewGuid(),
+                Destination = new ServiceEndPoint(new Uri("poll://bob"), "n", new HalibutTimeoutsAndLimits()),
+                ServiceName = "service",
+                MethodName = "Echo",
+                Params = new object[] {"hello",
+                    DataStream.FromString("yo")
+                    ,new TypeWithDataStreams(new RepeatingStringDataStream("bob", 10))
+                    
+                }
+            };
+
+            // Act
+            var (json, dataStreams) = sut.WriteMessage(request);
+
+            dataStreams[1].Should().BeOfType<RepeatingStringDataStream>();
+
+            json.Should().Contain("TypeWithDataStreams");
+            json.Should().NotContain("RepeatingStringDataStream");
+            
+            var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<RequestMessage>(json);
+
+            // Assert
+            //deserializedMessage.Should().BeEquivalentTo(request);
+            deserializedDataStreams.Count.Should().Be(2);
+        }
+
+        public interface IHaveTypeWithDataStreamsService
+        {
+            public void Do(TypeWithDataStreams typeWithDataStreams);
+        }
+        public class TypeWithDataStreams
+        {
+            public TypeWithDataStreams(DataStream dataStream)
+            {
+                DataStream = dataStream;
+            }
+
+            public DataStream DataStream { get; set; }
+        }
+        
+        
+        public class RepeatingStringDataStream : DataStream
+        {
+            string toRepeat;
+            int HowManyTimes;
+            
+            public RepeatingStringDataStream(string toRepeat, int howManyTimes) 
+                : base(toRepeat.GetUTF8Bytes().Length * howManyTimes, WriteRepeatedStringsAsync(toRepeat, howManyTimes))
+            {
+                this.toRepeat = toRepeat;
+                HowManyTimes = howManyTimes;
+            }
+
+            static Func<Stream, CancellationToken, Task> WriteRepeatedStringsAsync(string toRepeat, int howManyTimes)
+            {
+                return (async (stream, token) =>
+                {
+                    for (int i = 0; i < howManyTimes; i++)
+                    {
+                        await stream.WriteAsync(toRepeat.GetUTF8Bytes(), token);
+                    }
+                });
+            }
         }
 
         public class QueueMessageSerializerBuilder

@@ -10,7 +10,7 @@ namespace Halibut
 {
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
-        Func<Stream, CancellationToken, Task> writerAsync;
+        protected Func<Stream, CancellationToken, Task> writerAsync;
         IDataStreamReceiver? receiver;
 
         [JsonConstructor]

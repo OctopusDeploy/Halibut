@@ -14,6 +14,7 @@
 
 using System;
 using Halibut.Diagnostics;
+using Halibut.Queue.QueuedDataStreams;
 using Halibut.ServiceModel;
 
 namespace Halibut.Queue.Redis

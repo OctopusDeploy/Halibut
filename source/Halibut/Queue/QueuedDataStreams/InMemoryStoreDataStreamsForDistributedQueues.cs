@@ -18,15 +18,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Halibut.Queue
+namespace Halibut.Queue.QueuedDataStreams
 {
-    public interface IStoreDataStreamsForDistributedQueues
-    {
-        public Task StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
-        
-        public Task ReHydrateDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
-    }
-
     public class InMemoryStoreDataStreamsForDistributedQueues : IStoreDataStreamsForDistributedQueues
     {
         public IDictionary<Guid, byte[]> dataStreamsStored = new Dictionary<Guid, byte[]>();
