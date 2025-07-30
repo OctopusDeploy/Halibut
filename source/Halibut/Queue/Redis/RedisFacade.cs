@@ -27,10 +27,14 @@ namespace Halibut.Queue.Redis
         readonly Lazy<ConnectionMultiplexer> connection;
 
         ConnectionMultiplexer Connection => connection.Value;
+        
+        string keyPrefix;
 
-        public RedisFacade(string redisHost)
+        public RedisFacade(string redisHost, string? keyPrefix)
         {
 
+            this.keyPrefix = keyPrefix ?? "halibut";
+            
             connection = new Lazy<ConnectionMultiplexer>(() =>
             {
                     return ConnectionMultiplexer.Connect(redisHost);
@@ -47,7 +51,7 @@ namespace Halibut.Queue.Redis
 
         public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage)
         {
-            channelName = "channel:" + channelName;
+            channelName = "channel:" + keyPrefix + ":" + channelName;
             // TODO ever call needs to respect the cancellation token
             var channel = await Connection.GetSubscriber()
                 .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
@@ -59,14 +63,14 @@ namespace Halibut.Queue.Redis
         
         public async Task PublishToChannel(string channelName, string payload)
         {
-            channelName = "channel:" + channelName;
+            channelName = "channel:" + keyPrefix + ":" + channelName;
             var subscriber = Connection.GetSubscriber();
             await subscriber.PublishAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal), payload);
         }
         
         public async Task SetInHash(string key, string field, string payload)
         {
-            key = "hash:" + key;
+            key = "hash:" + keyPrefix + ":" + key;
             // TODO: TTL
             // TODO ever call needs to respect the cancellation token
             var ttl = new TimeSpan(9, 9, 9);
@@ -78,7 +82,7 @@ namespace Halibut.Queue.Redis
         public async Task<string?> TryGetAndDeleteFromHash(string key, string field)
         {
             // TODO ever call needs to respect the cancellation token
-            key = "hash:" + key;
+            key = "hash:" + keyPrefix + ":" + key;
             var database = Connection.GetDatabase();
             var value = await database.HashGetAsync(key, new RedisValue(field));
             var res = await database.KeyDeleteAsync(key);
@@ -92,7 +96,7 @@ namespace Halibut.Queue.Redis
 
         public async Task ListRightPushAsync(string key, string payload)
         {
-            key = "list:" + key;
+            key = "list:" + keyPrefix + ":" + key;
             var database = Connection.GetDatabase();
             // TODO can we set TTL on this?
             await database.ListRightPushAsync(key, payload);
@@ -100,7 +104,7 @@ namespace Halibut.Queue.Redis
 
         public async Task<string?> ListLeftPopAsync(string key)
         {
-            key = "list:" + key;
+            key = "list:" + keyPrefix + ":" + key;
             var database = Connection.GetDatabase();
             var value = await database.ListLeftPopAsync(key);
             if (value.IsNull)
@@ -113,14 +117,14 @@ namespace Halibut.Queue.Redis
 
         public async Task SetString(string key, string value)
         {
-            key = "string:" + key;
+            key = "string:" + keyPrefix + ":" + key;
             var database = Connection.GetDatabase();
             await database.StringSetAsync(key, value);
         }
         
         public async Task<string?> GetString(string key)
         {
-            key = "string:" + key;
+            key = "string:" + keyPrefix + ":" + key;
             var database = Connection.GetDatabase();
             return await database.StringGetAsync(key);
         }

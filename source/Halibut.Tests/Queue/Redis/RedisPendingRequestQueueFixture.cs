@@ -31,13 +31,17 @@ namespace Halibut.Tests.Queue.Redis
 {
     public class RedisPendingRequestQueueFixture : BaseTest
     {
+        private static RedisFacade CreateRedisFacade()
+        {
+            return new RedisFacade("localhost", Guid.NewGuid().ToString());
+        }
         [Test]
         public async Task DequeueAsync_ShouldReturnRequestFromRedis()
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
@@ -57,6 +61,33 @@ namespace Halibut.Tests.Queue.Redis
             result.RequestMessage.MethodName.Should().Be(request.MethodName);
             result.RequestMessage.ServiceName.Should().Be(request.ServiceName);
         }
+        
+        [Test]
+        public async Task WhenThePickupTimeoutExpires_AnErrorsReturned_AndTheRequestCanNotBeCollected()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var log = Substitute.For<ILog>();
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint")
+                .WithServiceEndpoint(b => b.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(100)))
+                .Build();
+
+            var sut = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+
+            var response = await sut.QueueAndWaitAsync(request, CancellationToken.None);
+
+            response.Error!.Message.Should().Contain("A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time");
+
+            // Act
+            var result = await sut.DequeueAsync(CancellationToken);
+
+            result.Should().BeNull();
+        }
 
         //[Test]
         public async Task When100kTentaclesAreSubscribed_TheQueueStillWorks()
@@ -64,7 +95,7 @@ namespace Halibut.Tests.Queue.Redis
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -90,7 +121,7 @@ namespace Halibut.Tests.Queue.Redis
             {
                 var request = new RequestMessageBuilder(endpoint.ToString()).Build();
 
-                await using var sut = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(new RedisFacade("localhost")), messageReaderWriter, halibutTimeoutsAndLimits);
+                await using var sut = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(CreateRedisFacade()), messageReaderWriter, halibutTimeoutsAndLimits);
 
                 var resultTask = sut.DequeueAsync(CancellationToken);
 
@@ -118,7 +149,7 @@ namespace Halibut.Tests.Queue.Redis
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
@@ -151,7 +182,7 @@ namespace Halibut.Tests.Queue.Redis
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
@@ -186,7 +217,7 @@ namespace Halibut.Tests.Queue.Redis
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
-            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
 
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -218,7 +249,7 @@ namespace Halibut.Tests.Queue.Redis
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
             var log = Substitute.For<ILog>();
-            var redisTransport = new HalibutRedisTransport(new RedisFacade("localhost"));
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
