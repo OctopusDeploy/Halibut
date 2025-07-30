@@ -16,49 +16,178 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Util;
+using Halibut.Diagnostics; // Add logging support
 using Newtonsoft.Json;
+using Nito.AsyncEx;
 using StackExchange.Redis;
 using StackExchange.Redis.KeyspaceIsolation;
 
 namespace Halibut.Queue.Redis
 {
-    public class RedisFacade : IDisposable
+    /// <summary>
+    /// Facade for Redis operations with built-in connection monitoring and disconnect detection.
+    /// 
+    /// Usage example for connection monitoring:
+    /// <code>
+    /// var facade = new RedisFacade("localhost:6379", "myapp", logger);
+    /// 
+    /// // Monitor overall connection events
+    /// facade.ConnectionFailed += message => Console.WriteLine($"Connection failed: {message}");
+    /// facade.ConnectionRestored += message => Console.WriteLine($"Connection restored: {message}");
+    /// facade.ErrorOccurred += message => Console.WriteLine($"Redis error: {message}");
+    /// 
+    /// // Subscribe with per-subscription monitoring
+    /// var subscription = await facade.SubscribeToChannel("my-channel", async message => {
+    ///     Console.WriteLine($"Received: {message}");
+    /// });
+    /// 
+    /// // Monitor individual subscription disconnects
+    /// if (subscription is RedisSubscriptionWrapper wrapper)
+    /// {
+    ///     wrapper.SubscriptionDisconnected += message => Console.WriteLine($"Subscription lost: {message}");
+    ///     wrapper.SubscriptionReconnected += message => Console.WriteLine($"Subscription restored: {message}");
+    /// }
+    /// 
+    /// // Check connection status
+    /// if (!facade.IsConnected)
+    /// {
+    ///     Console.WriteLine("Redis is not connected!");
+    /// }
+    /// </code>
+    /// </summary>
+    public class RedisFacade : IAsyncDisposable
     {
         readonly Lazy<ConnectionMultiplexer> connection;
+        readonly ILog log;
 
         ConnectionMultiplexer Connection => connection.Value;
         
         string keyPrefix;
 
-        public RedisFacade(string redisHost, string? keyPrefix)
-        {
 
+        CancellationTokenSource cts;
+        CancellationToken facadeCancellationToken;
+
+        public RedisFacade(string configuration, string? keyPrefix, ILog log) : this(ConfigurationOptions.Parse(configuration), keyPrefix, log)
+        {
+            
+        }
+        public RedisFacade(ConfigurationOptions redisOptions, string? keyPrefix, ILog log)
+        {
             this.keyPrefix = keyPrefix ?? "halibut";
+            this.log = log;
+            this.cts = new CancellationTokenSource();
+            this.facadeCancellationToken = cts.Token;
             
             connection = new Lazy<ConnectionMultiplexer>(() =>
             {
-                    return ConnectionMultiplexer.Connect(redisHost);
+                var multiplexer = ConnectionMultiplexer.Connect(redisOptions);
+                
+                //redisOptions.ReconnectRetryPolicy = new LinearRetry()
+                
+                // Subscribe to connection events
+                multiplexer.ConnectionFailed += OnConnectionFailed;
+                multiplexer.ConnectionRestored += OnConnectionRestored;
+                multiplexer.ErrorMessage += OnErrorMessage;
+                
+                return multiplexer;
             });
         }
 
-        public void Dispose()
+
+        public class ConnectionInErrorHelper
         {
+            readonly TaskCompletionSource connectionInError = new TaskCompletionSource();
+            
+            public bool IsConnectionInError => connectionInError.Task.IsCompleted;
+            
+            public void SetIsInError() => connectionInError.SetResult();
+            
+            public Task CompletesWhenAConnectionErrorOccurs => connectionInError.Task;
+        }
+        
+        private ConnectionInErrorHelper AConnectionHasErroredOutSinceYouGotThis = new ConnectionInErrorHelper();
+        private readonly object errorOccuredLock = new object();
+        
+        private ConnectionInErrorHelper ConnectionInErrorHelperProvider() => AConnectionHasErroredOutSinceYouGotThis;
+        
+
+        private void RecordConnectionErrorHasOccured()
+        {
+            lock (errorOccuredLock)
+            {
+                var inErrorConnectionInError = this.AConnectionHasErroredOutSinceYouGotThis;
+                this.AConnectionHasErroredOutSinceYouGotThis = new ();
+                inErrorConnectionInError.SetIsInError();
+            }
+        } 
+        private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
+        {
+            RecordConnectionErrorHasOccured();
+            
+            var message = $"Redis connection failed - EndPoint: {e.EndPoint}, Failure: {e.FailureType}, Exception: {e.Exception?.Message}";
+            
+            log?.Write(EventType.Error, message);
+        }
+
+        private void OnErrorMessage(object? sender, RedisErrorEventArgs e)
+        {
+            var message = $"Redis error - EndPoint: {e.EndPoint}, Message: {e.Message}";
+            log?.Write(EventType.Error, message);
+        }
+        
+        private void OnConnectionRestored(object? sender, ConnectionFailedEventArgs e)
+        {
+            var message = $"Redis connection restored - EndPoint: {e.EndPoint}";
+            log?.Write(EventType.Diagnostic, message);
+        }
+
+        public bool IsConnected => connection.IsValueCreated && Connection.IsConnected;
+
+        public async ValueTask DisposeAsync()
+        {
+            await Try.IgnoringError(async () => await cts.CancelAsync());
+            Try.IgnoringError(() => cts.Dispose());
+            
             if (connection.IsValueCreated)
             {
-                connection.Value.Dispose();
+                var conn = connection.Value;
+                
+                Try.IgnoringError(() =>
+                {
+                    // Unsubscribe from events before disposing
+                    conn.ConnectionFailed -= OnConnectionFailed;
+                    conn.ConnectionRestored -= OnConnectionRestored;
+                    conn.ErrorMessage -= OnErrorMessage;
+                });
+                
+                await Try.IgnoringError(async () => await conn.DisposeAsync());
             }
         }
+        
+        
 
         public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage)
         {
+            
             channelName = "channel:" + keyPrefix + ":" + channelName;
             // TODO ever call needs to respect the cancellation token
-            var channel = await Connection.GetSubscriber()
-                .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
+            // var channel = await Connection.GetSubscriber()
+            //     .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
+            //
+            // channel.OnMessage(onMessage);
+
+            var resilientSubscriber = new ResilientSubscriber(this.Connection,
+                channelName,
+                onMessage,
+                facadeCancellationToken,
+                () => ConnectionInErrorHelperProvider(),
+                log
+            );
+
+            await resilientSubscriber.StartSubscribe();
             
-            channel.OnMessage(onMessage);
-            
-            return new FuncAsyncDisposable(() => channel.UnsubscribeAsync());
+            return resilientSubscriber;
         }
         
         public async Task PublishToChannel(string channelName, string payload)

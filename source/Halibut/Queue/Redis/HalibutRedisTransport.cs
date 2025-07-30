@@ -160,6 +160,8 @@ namespace Halibut.Queue.Redis
         }
 
         // Cancellation Notification
+        // TODO: I think this wants to become some sort of: is the sender still interested in the results
+        // e.g. if the sender of the request is gone we should treat that as a cancellation.
 
         public string RequestCancelledMarkerKey(Uri endpoint, Guid requestId)
         {

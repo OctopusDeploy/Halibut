@@ -67,6 +67,7 @@ namespace Halibut.Queue.Redis
             // TODO: redis goes down
             // TODO: Other node goes down.
             // TODO: Respect cancellation token
+            // TODO RedisConnectionException can be raised out of here, what should the queue do?
             using var pending = new PendingRequest(request, log);
             
             // TODO: What if this payload was gigantic

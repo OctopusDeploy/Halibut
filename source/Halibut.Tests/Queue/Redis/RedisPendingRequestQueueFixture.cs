@@ -9,12 +9,14 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
+using Halibut.Logging;
 using Halibut.Queue;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.Logging;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
@@ -26,15 +28,14 @@ using NSubstitute;
 using NUnit.Framework;
 using Serilog;
 using DisposableCollection = Halibut.Util.DisposableCollection;
+using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Queue.Redis
 {
     public class RedisPendingRequestQueueFixture : BaseTest
     {
-        private static RedisFacade CreateRedisFacade()
-        {
-            return new RedisFacade("localhost", Guid.NewGuid().ToString());
-        }
+        private static RedisFacade CreateRedisFacade() => new("localhost", Guid.NewGuid().ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+
         [Test]
         public async Task DequeueAsync_ShouldReturnRequestFromRedis()
         {
