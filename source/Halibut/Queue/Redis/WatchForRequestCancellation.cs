@@ -38,12 +38,10 @@ namespace Halibut.Queue.Redis
 
         readonly CancellationTokenSource watchForCancellationTokenSource = new();
 
-        Task watchTask;
-
         public WatchForRequestCancellation(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport)
         {
             var token = watchForCancellationTokenSource.Token;
-            watchTask = Task.Run(async () => await WatchForExceptions(endpoint, requestActivityId, halibutRedisTransport, token));
+            var _ = Task.Run(async () => await WatchForExceptions(endpoint, requestActivityId, halibutRedisTransport, token));
         }
 
         async Task WatchForExceptions(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, CancellationToken token)
@@ -51,23 +49,31 @@ namespace Halibut.Queue.Redis
             try
             {
                 await using var _ = await halibutRedisTransport.SubscribeToRequestCancellation(endpoint, requestActivityId,
-                    async _ =>
+                    async () =>
                     {
-                        await requestCancelledCts.CancelAsync();
-                        await watchForCancellationTokenSource.CancelAsync();
+                        await Task.CompletedTask;
+                        //await requestCancelledCts.CancelAsync();
+                        //await watchForCancellationTokenSource.CancelAsync();
                     },
                     token);
+                
                 // Also poll to see if the request is cancelled since we can miss
                 // the publication.
                 while (!token.IsCancellationRequested)
                 {
-                    // TODO: What happens if this throws?
-                    if (await halibutRedisTransport.IsRequestMarkedAsCancelled(endpoint, requestActivityId, token))
+                    try
                     {
-                        await requestCancelledCts.CancelAsync();
-                        await watchForCancellationTokenSource.CancelAsync();
+                        if (await halibutRedisTransport.IsRequestMarkedAsCancelled(endpoint, requestActivityId, token))
+                        {
+                            await requestCancelledCts.CancelAsync();
+                            await watchForCancellationTokenSource.CancelAsync();
+                        }
                     }
-                    await Task.Delay(TimeSpan.FromMinutes(1), token);
+                    catch
+                    {
+                        // TODO: Ask the ai to log.
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(60), token);
                 }
             }
             catch

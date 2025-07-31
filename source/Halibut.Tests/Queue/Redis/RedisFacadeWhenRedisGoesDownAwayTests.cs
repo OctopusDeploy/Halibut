@@ -13,7 +13,9 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -21,12 +23,14 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
 using Halibut.Tests.Support.Logging;
+using Halibut.Util;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
 using StackExchange.Redis;
 
 namespace Halibut.Tests.Queue.Redis
 {
+    [SuppressMessage("Usage", "VSTHRD003:Avoid awaiting foreign Tasks")]
     public class RedisFacadeWhenRedisGoesDownAwayTests : BaseTest
     {
         private static RedisFacade CreateRedisFacade(int port) => new("localhost:" + port, Guid.NewGuid().ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
@@ -35,13 +39,10 @@ namespace Halibut.Tests.Queue.Redis
         int redisPort = 6379;
         
         [Test]
-        public async Task WhenTheConnectionToRedisBrieflyGoesDown_FutureRequestsAShortTimeLaterCanBeExecuted()
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_SometimeLaterOnWeCanDoBasicCalls()
         {
             
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
-            
-            var configurationOptions = new ConfigurationOptions();
-            configurationOptions.EndPoints.Add("localhost:" + redisPort);
             
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -53,40 +54,117 @@ namespace Halibut.Tests.Queue.Redis
             portForwarder.ReturnToNormalMode();
 
             // After a short delay it does seem to work again.
-            await Task.Delay(100);
+            await Task.Delay(1000);
             
             await redisFacade.GetString("foo");
-            
-
-            await Task.CompletedTask;
-        }
-
-        [Test]
-        public async Task WhenSubWhenRedisCanNotBeReached()
-        {
-
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
-
-            var configurationOptions = new ConfigurationOptions();
-            configurationOptions.EndPoints.Add("localhost:" + portForwarder.ListeningPort);
-            configurationOptions.AbortOnConnectFail = false;
-
-            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("Unstable");
-            log.Write(EventType.Diagnostic, "Hello from log");
-            
-            await using var redisViaPortForwarder = new RedisFacade(configurationOptions, Guid.NewGuid().ToString(), log);
-            
-            portForwarder.EnterKillNewAndExistingConnectionsMode();
-
-
-            await using var channel = await redisViaPortForwarder.SubscribeToChannel("bob", async message =>
-            {
-                await Task.CompletedTask;
-            });
         }
         
         [Test]
-        public async Task WhenSubScribedToAChannelAndRedisConnectGoesAwayWhatHappens()
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyDoBasicCalls()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            await redisFacade.SetString("foo", "bar");
+
+            (await redisFacade.GetString("foo")).Should().Be("bar");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here
+            
+            await redisFacade.GetString("foo");
+        }
+
+        [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndWeTryToSubscribe_WhenTheConnectionIsRestored_WeCanReceiveMessages()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            var redisLogCreator = new TestContextLogCreator("Redis", LogLevel.Trace);
+            var guid = Guid.NewGuid().ToString();
+            await using var redisViaPortForwarder = new RedisFacade("localhost:" + portForwarder.ListeningPort, guid, redisLogCreator.CreateNewForPrefix("Unstable"));
+            await using var redisStableConnection = new RedisFacade("localhost:" + redisPort, guid, redisLogCreator.CreateNewForPrefix("Stable"));
+
+            await redisViaPortForwarder.SetString("Establish connection", "before we subscribe");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            
+            var msgs = new ConcurrentBag<string>();
+            var subscribeToChannelTask = redisViaPortForwarder.SubscribeToChannel("bob", async message =>
+            {
+                await Task.CompletedTask;
+                msgs.Add(message.Message!);
+            }, CancellationToken);
+            
+
+            // Give everything enough time to have a crack at trying to subscribe to messages.
+            await Task.Delay(2000);
+            await redisStableConnection.PublishToChannel("bob", "MISSED");
+            
+            // Just in case the subscriber reconnects faster than the publish call. 
+            await Task.Delay(2000);
+            
+            portForwarder.ReturnToNormalMode();
+
+            // Keep going around the loop until we recieve something
+            while (msgs.Count == 0)
+            {
+                Logger.Information("Trying again");
+                await redisStableConnection.PublishToChannel("bob", "RECONNECT");
+                await Task.Delay(1000);
+            }
+
+            msgs.Should().Contain("RECONNECT", "Since the subscriber should eventually connect up");
+            msgs.Should().NotContain("MISSED", "Since this was sent when the subscriber could not have been connected. " +
+                                               "If this is seen maybe the test itself has a bug.");
+        }
+        
+        [Test]
+        public async Task WhenTheConnectionIsNeverEstablished_AndWeTryToSubscribe_WhenTheConnectionIsRestored_WeCanReceiveMessages()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            var redisLogCreator = new TestContextLogCreator("Redis", LogLevel.Trace);
+            var guid = Guid.NewGuid().ToString();
+            await using var redisViaPortForwarder = new RedisFacade("localhost:" + portForwarder.ListeningPort, guid, redisLogCreator.CreateNewForPrefix("Unstable"));
+            await using var redisStableConnection = new RedisFacade("localhost:" + redisPort, guid, redisLogCreator.CreateNewForPrefix("Stable"));
+
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            
+            var msgs = new ConcurrentBag<string>();
+            var subscribeToChannelTask = redisViaPortForwarder.SubscribeToChannel("bob", async message =>
+            {
+                await Task.CompletedTask;
+                msgs.Add(message.Message!);
+            }, CancellationToken);
+            
+            await using var _ = new FuncAsyncDisposable(() => Try.IgnoringError(async () => await (await subscribeToChannelTask).DisposeAsync()));
+
+            // Give everything enough time to have a crack at trying to subscribe to messages.
+            await Task.Delay(2000);
+            await redisStableConnection.PublishToChannel("bob", "MISSED");
+            
+            // Just in case the subscriber reconnects faster than the publish call. 
+            await Task.Delay(2000);
+            
+            portForwarder.ReturnToNormalMode();
+
+            // Keep going around the loop until we recieve something
+            while (msgs.Count == 0)
+            {
+                Logger.Information("Trying again");
+                await redisStableConnection.PublishToChannel("bob", "RECONNECT");
+                await Task.Delay(1000);
+            }
+
+            msgs.Should().Contain("RECONNECT", "Since the subscriber should eventually connect up");
+            msgs.Should().NotContain("MISSED", "Since this was sent when the subscriber could not have been connected. " +
+                                               "If this is seen maybe the test itself has a bug.");
+        }
+        
+        [Test]
+        public async Task WhenSubscribedAndTheConnectionGoesDown_WhenTheConnectionIsRestored_MessagesCanEventuallyBeSentToTheSubscriberAgain()
         {
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
 
@@ -97,36 +175,36 @@ namespace Halibut.Tests.Queue.Redis
             
             await using var redisStableConnection = new RedisFacade("localhost:" + redisPort, guid, redisLogCreator.CreateNewForPrefix("Stable"));
 
-            var msgs = new List<string>();
-
+            var msgs = new ConcurrentBag<string>();
             await using var channel = await redisViaPortForwarder.SubscribeToChannel("bob", async message =>
             {
                 await Task.CompletedTask;
                 msgs.Add(message.Message!);
-            });
-
-            await Task.Delay(1000);
-            await redisViaPortForwarder.PublishToChannel("bob", "hello");
+            }, CancellationToken); 
+            
+            // Check both sides can publish.
+            await redisViaPortForwarder.PublishToChannel("bob", "hello unstable");
             await redisStableConnection.PublishToChannel("bob", "hello stable");
-            msgs.Should().BeEquivalentTo("hello", "hello stable");
+            await Task.Delay(1000); // TODO better
+            msgs.Should().BeEquivalentTo("hello unstable", "hello stable");
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
-            await Task.Delay(5000);
+            // The stable connection should still be able to publish to redis.
+            // But the subscriber on the unstable connection will not got the message.
+            await redisStableConnection.PublishToChannel("bob", "MISSED");
+            await Task.Delay(1111);
             portForwarder.ReturnToNormalMode();
 
-            
             while (msgs.Count <= 2)
             {
                 Logger.Information("Trying again");
-                await redisStableConnection.PublishToChannel("bob", "hello");
-                await Task.Delay(5000);
+                await redisStableConnection.PublishToChannel("bob", "RECONNECT");
+                await Task.Delay(1000);
             }
-            
-            
 
-            
-            
-            await Task.CompletedTask;
+            msgs.Should().Contain("RECONNECT", "Since the subscriber should eventually be re-connected");
+            msgs.Should().NotContain("MISSED", "Since this was sent when the subscriber could not have been connected. " +
+                                               "If this is seen maybe the test itself has a bug.");
         }
 
 

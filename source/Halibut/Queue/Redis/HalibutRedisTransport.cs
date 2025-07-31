@@ -40,14 +40,15 @@ namespace Halibut.Queue.Redis
             return $"{Namespace}::RequestMessagesPulseChannelName::{endpoint}";
         }
 
-        public async Task<IAsyncDisposable> SubscribeToRequestMessagePulseChannel(Uri endpoint, Action<ChannelMessage> onRequestMessagePulse)
+        public async Task<IAsyncDisposable> SubscribeToRequestMessagePulseChannel(Uri endpoint, Action<ChannelMessage> onRequestMessagePulse, CancellationToken cancellationToken)
         {
             var channelName = RequestMessagesPulseChannelName(endpoint);
             return await facade.SubscribeToChannel(channelName, async message =>
             {
                 await Task.CompletedTask;
                 onRequestMessagePulse(message);
-            });
+            },
+                cancellationToken);
         }
 
         public async Task PulseRequestPushedToEndpoint(Uri endpoint, CancellationToken cancellationToken)
@@ -117,15 +118,16 @@ namespace Halibut.Queue.Redis
         }
 
         public async Task<IAsyncDisposable> SubScribeToResponses(Uri endpoint, Guid requestOfResponseToWaitFor,
-            Func<string, CancellationToken, Task> onResponse,
+            Func<string, Task> onResponse,
             CancellationToken cancellationToken)
         {
             var channelName = ResponseMessagesChannelName(endpoint, requestOfResponseToWaitFor);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? response = foo.Message;
-                if (response is not null) await onResponse(response, cancellationToken);
-            });
+                if (response is not null) await onResponse(response);
+            },
+            cancellationToken);
         }
 
         public async Task PublishResponse(Uri endpoint, Guid requestId, string payload, CancellationToken cancellationToken)
@@ -142,15 +144,15 @@ namespace Halibut.Queue.Redis
         }
 
         public async Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request,
-            Func<CancellationToken, Task> onCancellationReceived,
+            Func<Task> onCancellationReceived,
             CancellationToken cancellationToken)
         {
             var channelName = RequestCancelledChannel(endpoint, request);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? response = foo.Message;
-                if (response is not null) await onCancellationReceived(cancellationToken);
-            });
+                if (response is not null) await onCancellationReceived();
+            }, cancellationToken);
         }
 
         public async Task PublishCancellation(Uri endpoint, Guid requestId, CancellationToken cancellationToken)

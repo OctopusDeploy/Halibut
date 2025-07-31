@@ -78,6 +78,9 @@ namespace Halibut.Queue.Redis
             this.log = log;
             this.cts = new CancellationTokenSource();
             this.facadeCancellationToken = cts.Token;
+
+            // aka have more goes at connecting.
+            redisOptions.AbortOnConnectFail = false;
             
             connection = new Lazy<ConnectionMultiplexer>(() =>
             {
@@ -93,40 +96,38 @@ namespace Halibut.Queue.Redis
                 return multiplexer;
             });
         }
-
-
-        public class ConnectionInErrorHelper
+        
+        public class ShouldAbandonAndReconnectHelper
         {
             readonly TaskCompletionSource connectionInError = new TaskCompletionSource();
             
             public bool IsConnectionInError => connectionInError.Task.IsCompleted;
             
-            public void SetIsInError() => connectionInError.SetResult();
+            public void SetReconnectionIsAdvised() => connectionInError.SetResult();
             
-            public Task CompletesWhenAConnectionErrorOccurs => connectionInError.Task;
+            public Task WaitUntilShouldReSubscribeTask => connectionInError.Task;
         }
         
-        private ConnectionInErrorHelper AConnectionHasErroredOutSinceYouGotThis = new ConnectionInErrorHelper();
+        private ShouldAbandonAndReconnectHelper ShouldAbandonAndReconnect = new ShouldAbandonAndReconnectHelper();
         private readonly object errorOccuredLock = new object();
         
-        private ConnectionInErrorHelper ConnectionInErrorHelperProvider() => AConnectionHasErroredOutSinceYouGotThis;
+        private ShouldAbandonAndReconnectHelper ConnectionInErrorHelperProvider() => ShouldAbandonAndReconnect;
         
 
-        private void RecordConnectionErrorHasOccured()
+        private void AdviseThatClientsShouldStartReconnecting()
         {
             lock (errorOccuredLock)
             {
-                var inErrorConnectionInError = this.AConnectionHasErroredOutSinceYouGotThis;
-                this.AConnectionHasErroredOutSinceYouGotThis = new ();
-                inErrorConnectionInError.SetIsInError();
+                var shouldAbandonAndReconnect = this.ShouldAbandonAndReconnect;
+                this.ShouldAbandonAndReconnect = new ();
+                shouldAbandonAndReconnect.SetReconnectionIsAdvised();
             }
         } 
         private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
         {
-            RecordConnectionErrorHasOccured();
-            
+            AdviseThatClientsShouldStartReconnecting();
+
             var message = $"Redis connection failed - EndPoint: {e.EndPoint}, Failure: {e.FailureType}, Exception: {e.Exception?.Message}";
-            
             log?.Write(EventType.Error, message);
         }
 
@@ -167,27 +168,31 @@ namespace Halibut.Queue.Redis
         
         
 
-        public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage)
+        public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage, CancellationToken cancellationToken)
         {
             
             channelName = "channel:" + keyPrefix + ":" + channelName;
-            // TODO ever call needs to respect the cancellation token
-            // var channel = await Connection.GetSubscriber()
-            //     .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
-            //
-            // channel.OnMessage(onMessage);
-
-            var resilientSubscriber = new ResilientSubscriber(this.Connection,
-                channelName,
-                onMessage,
-                facadeCancellationToken,
-                () => ConnectionInErrorHelperProvider(),
-                log
-            );
-
-            await resilientSubscriber.StartSubscribe();
-            
-            return resilientSubscriber;
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    // This can throw if we are unable to connect to redis.
+                    var channel = await Connection.GetSubscriber()
+                        .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
+                
+                    // Once we are connected to redis, it seems even if the connection to redis dies.
+                    // The client will take care of re-connecting to redis.
+                    channel.OnMessage(onMessage);
+                
+                    return new FuncAsyncDisposable(async () => await channel.UnsubscribeAsync());
+                }
+                catch
+                {
+                    // TODO: Get AI to log.
+                    await Try.IgnoringError(async () => await Task.Delay(2000, cancellationToken));
+                }
+            }
         }
         
         public async Task PublishToChannel(string channelName, string payload)
@@ -214,6 +219,7 @@ namespace Halibut.Queue.Redis
             key = "hash:" + keyPrefix + ":" + key;
             var database = Connection.GetDatabase();
             var value = await database.HashGetAsync(key, new RedisValue(field));
+            // TODO: If we retry this is not idempotent.
             var res = await database.KeyDeleteAsync(key);
             if (!res)
             {

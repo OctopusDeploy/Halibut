@@ -32,8 +32,12 @@ namespace Halibut.Queue.Redis
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly MessageReaderWriter messageReaderWriter;
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
+
+        readonly CancellationTokenSource queueCts = new ();
+        ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
+        readonly CancellationToken queueToken;
         
-        IAsyncDisposable PulseChannelSubDisposer { get; }
+        Task<IAsyncDisposable> PulseChannelSubDisposer { get; }
         
         public RedisPendingRequestQueue(
             Uri endpoint, 
@@ -47,19 +51,21 @@ namespace Halibut.Queue.Redis
             this.messageReaderWriter = messageReaderWriter;
             this.halibutRedisTransport = halibutRedisTransport;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.queueToken = queueCts.Token;
             
             // TODO: can we unsub if no tentacle is asking for a work for an extended period of time?
             // and also NOT sub if the queue is being created to send work. 
             // The advice is many channels with few subscribers is better than a single channel with many subscribers.
             // If we end up with too many channels, we could shared the channels based on modulo of the hash of the endpoint,
             // which means we might have only 1000 channels and num_tentacles/1000 subscribers to each channel. For 300K tentacles.
-            PulseChannelSubDisposer = this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set())
-                .GetAwaiter().GetResult();
+            PulseChannelSubDisposer = Task.Run(() => this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set(), queueToken));
         }
         
         public async ValueTask DisposeAsync()
         {
-            await PulseChannelSubDisposer.DisposeAsync();
+            await Try.IgnoringError(async () => await queueCts.CancelAsync());
+            Try.IgnoringError(() => queueCts.Dispose());
+            await Try.IgnoringError(async () => await (await PulseChannelSubDisposer).DisposeAsync());
         }
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
@@ -113,9 +119,9 @@ namespace Halibut.Queue.Redis
             Action<ResponseMessage> onResponse,
             CancellationToken cancellationToken)
         {
-            return await halibutRedisTransport.SubScribeToResponses(endpoint, activityId, async (responseJson, ct) =>
+            return await halibutRedisTransport.SubScribeToResponses(endpoint, activityId, async (responseJson) =>
             {
-                var response = await messageReaderWriter.ReadResponse(responseJson, ct);
+                var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
                 onResponse(response);
             }, cancellationToken);
         }
@@ -123,8 +129,8 @@ namespace Halibut.Queue.Redis
         public bool IsEmpty => throw new NotImplementedException();
         public int Count => throw new NotImplementedException();
 
-        ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
         
+
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
         {
             var pending = await DequeueNextAsync();
