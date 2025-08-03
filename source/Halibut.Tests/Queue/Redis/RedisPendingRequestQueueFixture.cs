@@ -26,6 +26,7 @@ using Halibut.Transport.Protocol;
 using Nito.AsyncEx;
 using NSubstitute;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 using Serilog;
 using DisposableCollection = Halibut.Util.DisposableCollection;
 using ILog = Halibut.Diagnostics.ILog;
@@ -34,7 +35,8 @@ namespace Halibut.Tests.Queue.Redis
 {
     public class RedisPendingRequestQueueFixture : BaseTest
     {
-        private static RedisFacade CreateRedisFacade() => new("localhost", Guid.NewGuid().ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+        const int redisPort = 6379;
+        private static RedisFacade CreateRedisFacade(int? port = redisPort, Guid? guid = null) => new("localhost:" + port, (guid ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
 
         [Test]
         public async Task DequeueAsync_ShouldReturnRequestFromRedis()
@@ -213,10 +215,65 @@ namespace Halibut.Tests.Queue.Redis
             (await returnObject.Payload1!.ReadAsString(CancellationToken)).Should().Be("good");
             (await returnObject.Payload2!.ReadAsString(CancellationToken)).Should().Be("bye");
         }
+        
+        // TODO when receiver (dequeue) can not connect to redis it should not throw an exception.
+        // Or should it to try to encourage a new TCP connection which could go to a different node.
+        
+        [Test]
+        public async Task WhenTheReceiverConnectionToRedisIsInterruptedAndRestoredBeforeWorkIsPublished_TheRecieverShouldBeAbleToCollectThatWorkQuickly()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = Substitute.For<ILog>();
+            var guid = Guid.NewGuid();
+            await using var redisFacadeSender = CreateRedisFacade(guid: guid);
 
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            await using var redisFacadeReceiver = CreateRedisFacade(portForwarder.ListeningPort, guid: guid);
+            
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
+            halibutTimeoutAndLimits.PollingQueueWaitTimeout = TimeSpan.FromDays(1); // We should not need to rely on the timeout working for very short disconnects.
+
+            
+            var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeReceiver), messageReaderWriter, halibutTimeoutAndLimits);
+            var dequeueTask = node2Receiver.DequeueAsync(CancellationToken);
+            
+            await Task.Delay(5000, CancellationToken); // Allow some time for the receiver to subscribe to work.
+            dequeueTask.IsCompleted.Should().BeFalse("Dequeue should not have ");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            await Task.Delay(1000, CancellationToken); // The network outage continues!
+            
+            portForwarder.ReturnToNormalMode(); // The network outage gets all fixed up :D
+            Logger.Information("Network restored!");
+            
+            // The receiver should be able to get itself back into a state where it can collect messages quickly, within this time.
+            await Task.Delay(TimeSpan.FromSeconds(30), CancellationToken);
+            
+            var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+
+            // Surely it will be done in 25s, it should take less than 1s.
+            await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(20), CancellationToken), dequeueTask);
+
+            dequeueTask.IsCompleted.Should().BeTrue("The queue did not app");
+
+            var requestReceived = await dequeueTask;
+            requestReceived.Should().NotBeNull();
+            requestReceived!.RequestMessage.ActivityId.Should().Be(request.ActivityId);
+        }
+
+
+        
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
-        public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenUsingTheRedisQueue_ASimpleEchoServiceCanBeCalled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
@@ -245,7 +302,7 @@ namespace Halibut.Tests.Queue.Redis
 
         
         [Test]
-        public async Task CancellingARequestShouldResultInTheDequeuedResponseTokenBeingCanelled()
+        public async Task CancellingARequestShouldResultInTheDequeuedResponseTokenBeingCancelled()
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());

@@ -171,7 +171,7 @@ namespace Halibut.Queue.Redis
 
                 await Task.WhenAny(
                     hasItemsForEndpoint.WaitAsync(cancellationTokenSource.Token), 
-                    Task.Delay(new HalibutTimeoutsAndLimits().PollingQueueWaitTimeout, cancellationTokenSource.Token));
+                    Task.Delay(halibutTimeoutsAndLimits.PollingQueueWaitTimeout, cancellationTokenSource.Token));
 
                 if (!hasItemsForEndpoint.IsSet)
                 {
