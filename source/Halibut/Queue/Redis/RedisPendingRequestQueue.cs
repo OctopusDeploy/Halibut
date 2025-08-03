@@ -86,7 +86,8 @@ namespace Halibut.Queue.Redis
             await using var tryClearRequestFromQueueWhenRequestIsCancelled 
                 = pending.PendingRequestCancellationToken.Register(async () => await TryClearRequestFromQueue(request, pending));
             await using var trySendCancelWhenRequestIsCancelled
-                = pending.PendingRequestCancellationToken.Register(async () => await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request));
+                = pending.PendingRequestCancellationToken.Register(async () => 
+                    await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request, log));
 
             // Make the request available before we tell people it is available.
             await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, requestCancellationToken);
@@ -136,7 +137,7 @@ namespace Halibut.Queue.Redis
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
 
-            var watchForRequestCancellation = new WatchForRequestCancellation(endpoint, pending.ActivityId, halibutRedisTransport);
+            var watchForRequestCancellation = new WatchForRequestCancellation(endpoint, pending.ActivityId, halibutRedisTransport, log);
             disposablesForInFlightRequests[pending.ActivityId] = new DisposableCollection(watchForRequestCancellation);
             
             

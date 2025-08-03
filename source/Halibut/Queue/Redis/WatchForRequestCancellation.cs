@@ -15,6 +15,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 
@@ -26,20 +27,47 @@ namespace Halibut.Queue.Redis
         public static async Task TrySendCancellation(
             HalibutRedisTransport halibutRedisTransport, 
             Uri endpoint, 
-            RequestMessage request)
+            RequestMessage request,
+            ILog log)
         {
+            log.Write(EventType.Diagnostic, $"Attempting to send cancellation for request - Endpoint: {endpoint}, ActivityId: {request.ActivityId}");
+            
             using var cts = new CancellationTokenSource();
             cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
-            await halibutRedisTransport.PublishCancellation(endpoint, request.ActivityId, cts.Token);
-            await halibutRedisTransport.MarkRequestAsCancelled(endpoint, request.ActivityId, cts.Token);
+            
+            try
+            {
+                log.Write(EventType.Diagnostic, $"Publishing cancellation notification - Endpoint: {endpoint}, ActivityId: {request.ActivityId}");
+                await halibutRedisTransport.PublishCancellation(endpoint, request.ActivityId, cts.Token);
+                
+                log.Write(EventType.Diagnostic, $"Marking request as cancelled - Endpoint: {endpoint}, ActivityId: {request.ActivityId}");
+                await halibutRedisTransport.MarkRequestAsCancelled(endpoint, request.ActivityId, cts.Token);
+                
+                log.Write(EventType.Diagnostic, $"Successfully sent cancellation for request - Endpoint: {endpoint}, ActivityId: {request.ActivityId}");
+            }
+            catch (OperationCanceledException ex)
+            {
+                log.Write(EventType.Error, $"Cancellation send operation timed out after 2 minutes - Endpoint: {endpoint}, ActivityId: {request.ActivityId}, Error: {ex.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, $"Failed to send cancellation for request - Endpoint: {endpoint}, ActivityId: {request.ActivityId}, Error: {ex.Message}");
+                throw;
+            }
         }
         readonly CancellationTokenSource requestCancelledCts = new();
         public CancellationToken RequestCancelledCancellationToken => requestCancelledCts.Token;
 
         readonly CancellationTokenSource watchForCancellationTokenSource = new();
 
-        public WatchForRequestCancellation(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport)
+        readonly ILog log;
+
+        public WatchForRequestCancellation(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, ILog log)
         {
+            this.log = log;
+            log.Write(EventType.Diagnostic, $"Starting to watch for request cancellation - Endpoint: {endpoint}, ActivityId: {requestActivityId}");
+            
             var token = watchForCancellationTokenSource.Token;
             var _ = Task.Run(async () => await WatchForExceptions(endpoint, requestActivityId, halibutRedisTransport, token));
         }
@@ -48,14 +76,19 @@ namespace Halibut.Queue.Redis
         {
             try
             {
+                log.Write(EventType.Diagnostic, $"Subscribing to request cancellation notifications - Endpoint: {endpoint}, ActivityId: {requestActivityId}");
+                
                 await using var _ = await halibutRedisTransport.SubscribeToRequestCancellation(endpoint, requestActivityId,
                     async () =>
                     {
                         await Task.CompletedTask;
-                        //await requestCancelledCts.CancelAsync();
-                        //await watchForCancellationTokenSource.CancelAsync();
+                        log.Write(EventType.Diagnostic, $"Received cancellation notification via subscription - Endpoint: {endpoint}, ActivityId: {requestActivityId}");
+                        await requestCancelledCts.CancelAsync();
+                        await watchForCancellationTokenSource.CancelAsync();
                     },
                     token);
+                
+                log.Write(EventType.Diagnostic, $"Starting polling loop for request cancellation - Endpoint: {endpoint}, ActivityId: {requestActivityId}");
                 
                 // Also poll to see if the request is cancelled since we can miss
                 // the publication.
@@ -65,29 +98,37 @@ namespace Halibut.Queue.Redis
                     {
                         if (await halibutRedisTransport.IsRequestMarkedAsCancelled(endpoint, requestActivityId, token))
                         {
+                            log.Write(EventType.Diagnostic, $"Request cancellation detected via polling - Endpoint: {endpoint}, ActivityId: {requestActivityId}");
                             await requestCancelledCts.CancelAsync();
                             await watchForCancellationTokenSource.CancelAsync();
+                            break;
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // TODO: Ask the ai to log.
+                        log.Write(EventType.Diagnostic, $"Error while polling for request cancellation - Endpoint: {endpoint}, ActivityId: {requestActivityId}, Error: {ex.Message}");
                     }
                     await Task.Delay(TimeSpan.FromSeconds(60), token);
                 }
+                
+                log.Write(EventType.Diagnostic, $"Exiting watch loop for request cancellation - Endpoint: {endpoint}, ActivityId: {requestActivityId}");
             }
-            catch
+            catch (Exception ex)
             {
-                // TODO log when we get an exception we don't expect.
+                log.Write(EventType.Error, $"Unexpected error in request cancellation watcher - Endpoint: {endpoint}, ActivityId: {requestActivityId}, Error: {ex.Message}");
             }
         }
 
         public async ValueTask DisposeAsync()
         {
+            log.Write(EventType.Diagnostic, "Disposing WatchForRequestCancellation");
+            
             await Try.IgnoringError(async () => await watchForCancellationTokenSource.CancelAsync());
             Try.IgnoringError(() => watchForCancellationTokenSource.Dispose());
             await Try.IgnoringError(async () => await requestCancelledCts.CancelAsync());
             Try.IgnoringError(() => requestCancelledCts.Dispose());
+            
+            log.Write(EventType.Diagnostic, "WatchForRequestCancellation disposed");
         }
     }
 }
