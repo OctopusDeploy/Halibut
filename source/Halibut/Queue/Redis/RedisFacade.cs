@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Util;
@@ -143,6 +144,63 @@ namespace Halibut.Queue.Redis
             log?.Write(EventType.Diagnostic, message);
         }
 
+        /// <summary>
+        /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.
+        /// </summary>
+        private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+        {
+            using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
+            var combinedToken = linkedTokenSource.Token;
+            
+            var totalDuration = TimeSpan.FromSeconds(12);
+            var retryDelay = TimeSpan.FromSeconds(1);
+            var stopwatch = Stopwatch.StartNew();
+            
+            while (true)
+            {
+                combinedToken.ThrowIfCancellationRequested();
+                
+                try
+                {
+                    return await operation();
+                }
+                catch (Exception ex) when (stopwatch.Elapsed < totalDuration && !combinedToken.IsCancellationRequested)
+                {
+                    log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
+                    await Task.Delay(retryDelay, combinedToken);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.
+        /// </summary>
+        private async Task ExecuteWithRetry(Func<Task> operation, CancellationToken cancellationToken)
+        {
+            using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
+            var combinedToken = linkedTokenSource.Token;
+            
+            var totalDuration = TimeSpan.FromSeconds(12);
+            var retryDelay = TimeSpan.FromSeconds(1);
+            var stopwatch = Stopwatch.StartNew();
+            
+            while (true)
+            {
+                combinedToken.ThrowIfCancellationRequested();
+                
+                try
+                {
+                    await operation();
+                    return;
+                }
+                catch (Exception ex) when (stopwatch.Elapsed < totalDuration && !combinedToken.IsCancellationRequested)
+                {
+                    log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
+                    await Task.Delay(retryDelay, combinedToken);
+                }
+            }
+        }
+
         public bool IsConnected => connection.IsValueCreated && Connection.IsConnected;
 
         public async ValueTask DisposeAsync()
@@ -198,70 +256,106 @@ namespace Halibut.Queue.Redis
         public async Task PublishToChannel(string channelName, string payload)
         {
             channelName = "channel:" + keyPrefix + ":" + channelName;
-            var subscriber = Connection.GetSubscriber();
-            await subscriber.PublishAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal), payload);
+            await ExecuteWithRetry(async () =>
+            {
+                var subscriber = Connection.GetSubscriber();
+                await subscriber.PublishAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal), payload);
+            }, CancellationToken.None);
         }
         
         public async Task SetInHash(string key, string field, string payload)
         {
             key = "hash:" + keyPrefix + ":" + key;
+            
             // TODO: TTL
             // TODO ever call needs to respect the cancellation token
             var ttl = new TimeSpan(9, 9, 9);
-            var database = Connection.GetDatabase();
-            await database.HashSetAsync(key, new RedisValue(field), new RedisValue(payload));
-            await database.KeyExpireAsync(key, ttl);
+            
+            // Retry each operation independently
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.HashSetAsync(key, new RedisValue(field), new RedisValue(payload));
+            }, CancellationToken.None);
+            
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.KeyExpireAsync(key, ttl);
+            }, CancellationToken.None);
         }
 
         public async Task<string?> TryGetAndDeleteFromHash(string key, string field)
         {
-            // TODO ever call needs to respect the cancellation token
             key = "hash:" + keyPrefix + ":" + key;
-            var database = Connection.GetDatabase();
-            var value = await database.HashGetAsync(key, new RedisValue(field));
+            
+            // Retry each operation independently
+            var value = await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.HashGetAsync(key, new RedisValue(field));
+            }, CancellationToken.None);
+            
             // TODO: If we retry this is not idempotent.
-            var res = await database.KeyDeleteAsync(key);
+            var res = await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.KeyDeleteAsync(key);
+            }, CancellationToken.None);
+            
             if (!res)
             {
                 // Someone else deleted this, so return nothing to make the get and delete appear to be atomic. 
                 return null;
             } 
-            return value;
+            return (string?)value;
         }
 
         public async Task ListRightPushAsync(string key, string payload)
         {
             key = "list:" + keyPrefix + ":" + key;
-            var database = Connection.GetDatabase();
-            // TODO can we set TTL on this?
-            await database.ListRightPushAsync(key, payload);
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                // TODO can we set TTL on this?
+                await database.ListRightPushAsync(key, payload);
+            }, CancellationToken.None);
         }
 
         public async Task<string?> ListLeftPopAsync(string key)
         {
             key = "list:" + keyPrefix + ":" + key;
-            var database = Connection.GetDatabase();
-            var value = await database.ListLeftPopAsync(key);
-            if (value.IsNull)
+            return await ExecuteWithRetry<string?>(async () =>
             {
-                return null;
-            }
+                var database = Connection.GetDatabase();
+                var value = await database.ListLeftPopAsync(key);
+                if (value.IsNull)
+                {
+                    return null;
+                }
 
-            return value;
+                return (string?)value;
+            }, CancellationToken.None);
         }
 
         public async Task SetString(string key, string value)
         {
             key = "string:" + keyPrefix + ":" + key;
-            var database = Connection.GetDatabase();
-            await database.StringSetAsync(key, value);
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.StringSetAsync(key, value);
+            }, CancellationToken.None);
         }
         
         public async Task<string?> GetString(string key)
         {
             key = "string:" + keyPrefix + ":" + key;
-            var database = Connection.GetDatabase();
-            return await database.StringGetAsync(key);
+            return await ExecuteWithRetry<string?>(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.StringGetAsync(key);
+            }, CancellationToken.None);
         }
     }
 

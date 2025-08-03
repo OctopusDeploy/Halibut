@@ -180,6 +180,8 @@ namespace Halibut.Queue.Redis
                     return null;
                 }
 
+                // TODO: Does this work well for multiple clients? We might go round before we collect work.
+                // TODO: test this.
                 hasItemsForEndpoint.Reset();
                 return await TryRemoveNextItemFromQueue(cancellationToken);
             }

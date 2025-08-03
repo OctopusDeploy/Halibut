@@ -79,6 +79,128 @@ namespace Halibut.Tests.Queue.Redis
         }
 
         [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyPublishToChannel()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection first
+            await redisFacade.SetString("connection", "established");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            await redisFacade.PublishToChannel("test-channel", "test-message");
+        }
+
+        [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelySetInHash()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection first
+            await redisFacade.SetString("connection", "established");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            await redisFacade.SetInHash("test-hash", "test-field", "test-value");
+        }
+
+        [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyTryGetAndDeleteFromHash()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection and set up test data
+            await redisFacade.SetInHash("test-hash", "test-field", "test-value");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            var result = await redisFacade.TryGetAndDeleteFromHash("test-hash", "test-field");
+            result.Should().Be("test-value");
+        }
+
+        [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyListRightPush()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection first
+            await redisFacade.SetString("connection", "established");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            await redisFacade.ListRightPushAsync("test-list", "test-item");
+        }
+
+        [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyListLeftPop()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection and set up test data
+            await redisFacade.ListRightPushAsync("test-list", "test-item");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            var result = await redisFacade.ListLeftPopAsync("test-list");
+            result.Should().Be("test-item");
+        }
+
+        [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelySetString()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection first
+            await redisFacade.SetString("connection", "established");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            await redisFacade.SetString("test-key", "test-value");
+        }
+
+        [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyGetString()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection and set up test data
+            await redisFacade.SetString("test-key", "test-value");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            var result = await redisFacade.GetString("test-key");
+            result.Should().Be("test-value");
+        }
+
+        [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndWeTryToSubscribe_WhenTheConnectionIsRestored_WeCanReceiveMessages()
         {
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
