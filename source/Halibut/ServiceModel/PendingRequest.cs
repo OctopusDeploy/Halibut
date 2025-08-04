@@ -23,14 +23,14 @@ using Nito.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
-    
-    class PendingRequest : IDisposable
+    public class PendingRequest : IDisposable
     {
         readonly RequestMessage request;
         readonly ILog log;
         readonly AsyncManualResetEvent responseWaiter = new(false);
         readonly SemaphoreSlim transferLock = new(1, 1);
-        bool transferBegun;
+        //bool transferBegun;
+        AsyncManualResetEvent requestCollected = new(false);
         bool completed;
         readonly CancellationTokenSource pendingRequestCancellationTokenSource;
         ResponseMessage? response;
@@ -44,6 +44,10 @@ namespace Halibut.ServiceModel
             PendingRequestCancellationToken = pendingRequestCancellationTokenSource.Token;
         }
 
+        public Task WaitForRequestToBeMarkedAsCollected(CancellationToken cancellationToken) => requestCollected.WaitAsync(cancellationToken);
+        
+        public bool HasRequestBeenMarkedAsCollected => requestCollected.IsSet;
+        
         public RequestMessage Request => request;
 
         /// <summary>
@@ -79,10 +83,10 @@ namespace Halibut.ServiceModel
             catch (RequestCancelledException)
             {
                 cancelled = true;
-                if(!transferBegun) await timePendingRequestCanBeOnTheQueueHasElapsed();
+                if(!requestCollected.IsSet) await timePendingRequestCanBeOnTheQueueHasElapsed();
                 using (await transferLock.LockAsync(CancellationToken.None))
                 {
-                    if (!transferBegun)
+                    if (!requestCollected.IsSet)
                     {
                         completed = true;
                         log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint", request);
@@ -91,11 +95,11 @@ namespace Halibut.ServiceModel
                 }
             }
 
-            if(!transferBegun) await timePendingRequestCanBeOnTheQueueHasElapsed();
+            if(!requestCollected.IsSet) await timePendingRequestCanBeOnTheQueueHasElapsed();
             var waitForTransferToComplete = false;
             using (await transferLock.LockAsync(CancellationToken.None))
             {
-                if (transferBegun)
+                if (requestCollected.IsSet)
                 {
                     waitForTransferToComplete = true;
                 }
@@ -171,12 +175,12 @@ namespace Halibut.ServiceModel
             {
                 using (await transferLock.LockAsync(CancellationToken.None))
                 {
-                    if (transferBegun && cancelTheRequestWhenTransferHasBegun)
+                    if (requestCollected.IsSet && cancelTheRequestWhenTransferHasBegun)
                     {
                         // Cancel the dequeued request. This will cause co-operative cancellation on the thread dequeuing the request
                         pendingRequestCancellationTokenSource.Cancel();
                     }
-                    else if (!transferBegun)
+                    else if (!requestCollected.IsSet)
                     {
                         // Cancel the queued request. This will flag the request as cancelled to stop it being dequeued
                         pendingRequestCancellationTokenSource.Cancel();
@@ -187,14 +191,14 @@ namespace Halibut.ServiceModel
                         return false;
                     }
                 
-                    throw transferBegun ? new TransferringRequestCancelledException(ex) : new ConnectingRequestCancelledException(ex);
+                    throw requestCollected.IsSet ? new TransferringRequestCancelledException(ex) : new ConnectingRequestCancelledException(ex);
                 }
             }
 
             return true;
         }
         
-        public async Task<bool> RequestHasBeenCollectedAndWillBeTransfered()
+        public async Task<bool> RequestHasBeenCollectedAndWillBeTransferred()
         {
             // The PendingRequest is Disposed at the end of QueueAndWaitAsync but a race condition 
             // exists in the current approach that means DequeueAsync could pick this request up after
@@ -212,7 +216,7 @@ namespace Halibut.ServiceModel
                         return false;
                     }
 
-                    transferBegun = true;
+                    requestCollected.Set();
                     return true;
                 }
             }
@@ -227,8 +231,12 @@ namespace Halibut.ServiceModel
 
         public void SetResponse(ResponseMessage response)
         {
-            this.response = response;
-            responseWaiter.Set();
+            lock (responseWaiter)
+            {
+                if(this.response != null) return;
+                this.response = response;
+                responseWaiter.Set();
+            }
         }
 
         public void Dispose()

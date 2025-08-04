@@ -25,7 +25,8 @@ namespace Halibut.Tests.Builders
             var request = new RequestMessage
             {
                 Id = Guid.NewGuid().ToString(),
-                Destination = serviceEndPoint
+                Destination = serviceEndPoint,
+                ActivityId = Guid.NewGuid(),
             };
 
             

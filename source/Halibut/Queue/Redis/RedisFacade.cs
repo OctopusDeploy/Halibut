@@ -285,6 +285,16 @@ namespace Halibut.Queue.Redis
             }, CancellationToken.None);
         }
 
+        public async Task<bool> HashContainsKey(string key, string field)
+        {
+            key = "hash:" + keyPrefix + ":" + key;
+            return await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.HashExistsAsync(key, new RedisValue(field));
+            }, CancellationToken.None);
+        }
+
         public async Task<string?> TryGetAndDeleteFromHash(string key, string field)
         {
             key = "hash:" + keyPrefix + ":" + key;

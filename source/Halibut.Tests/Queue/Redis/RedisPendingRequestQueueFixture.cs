@@ -43,7 +43,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -70,7 +70,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -97,7 +97,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
@@ -151,7 +151,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -184,7 +184,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -224,7 +224,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             await using var redisFacadeSender = CreateRedisFacade(guid: guid);
 
@@ -274,7 +274,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             await using var redisFacadeReceiver = CreateRedisFacade(guid: guid);
 
@@ -316,7 +316,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             await using var redisFacadeSender = CreateRedisFacade(guid: guid);
 
@@ -328,13 +328,16 @@ namespace Halibut.Tests.Queue.Redis
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            
+            request.Destination.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
 
             var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
+            halibutTimeoutAndLimits.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
             halibutTimeoutAndLimits.PollingQueueWaitTimeout = TimeSpan.FromDays(1); // We should not need to rely on the timeout working for very short disconnects.
 
             
             var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
-            var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeReceiver), messageReaderWriter, halibutTimeoutAndLimits);
             
             
             var queueAndWaitTask = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
@@ -344,13 +347,13 @@ namespace Halibut.Tests.Queue.Redis
             // Now disconnect the receiver from redis.
             portForwarder.EnterKillNewAndExistingConnectionsMode();
 
-            await Task.WhenAny(Task.Delay(TimeSpan.FromMinutes(1), CancellationToken), queueAndWaitTask);
+            await Task.WhenAny(Task.Delay(TimeSpan.FromMinutes(2), CancellationToken), queueAndWaitTask);
 
             queueAndWaitTask.IsCompleted.Should().BeTrue();
 
             var response = await queueAndWaitTask;
             response.Error.Should().NotBeNull();
-            response.Error!.Message.Should().Contain("Timed out waiting for the collectors heart beat");
+            response.Error!.Message.Should().Contain("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.");
         }
 
         
@@ -389,7 +392,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
-            var log = Substitute.For<ILog>();
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();

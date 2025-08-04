@@ -108,7 +108,7 @@ namespace Halibut.ServiceModel
                     return null;
                 }
 
-                var result = await pending.RequestHasBeenCollectedAndWillBeTransfered();
+                var result = await pending.RequestHasBeenCollectedAndWillBeTransferred();
                 if (result)
                 {
                     return new (pending.Request, pending.PendingRequestCancellationToken);

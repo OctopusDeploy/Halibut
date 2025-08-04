@@ -201,6 +201,24 @@ namespace Halibut.Tests.Queue.Redis
         }
 
         [Test]
+        public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyHashContainsKey()
+        {
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+
+            // Establish connection and set up test data
+            await redisFacade.SetInHash("test-hash", "test-field", "test-value");
+            
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            portForwarder.ReturnToNormalMode();
+            
+            // No delay here - should retry and succeed
+            var exists = await redisFacade.HashContainsKey("test-hash", "test-field");
+            exists.Should().BeTrue();
+        }
+
+        [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndWeTryToSubscribe_WhenTheConnectionIsRestored_WeCanReceiveMessages()
         {
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();

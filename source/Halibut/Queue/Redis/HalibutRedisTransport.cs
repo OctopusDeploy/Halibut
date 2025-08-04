@@ -110,6 +110,11 @@ namespace Halibut.Queue.Redis
             return redisQueueItem.PayloadJson;
         }
 
+        public async Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
+        {
+            var requestKey = RequestMessageKey(endpoint, requestId);
+            return await facade.HashContainsKey(requestKey, RequestField);
+        }
 
         // Response channel
         static string ResponseMessagesChannelName(Uri endpoint, Guid requestId)
@@ -181,7 +186,34 @@ namespace Halibut.Queue.Redis
             var key = RequestCancelledMarkerKey(endpoint, requestId);
             return (await facade.GetString(key)) != null;
         }
-}
+        
+        
+        // Node Processing the request heart beat channel
+        static string NodeProcessingTheRequestHeartBeatChannel(Uri endpoint, Guid requestId)
+        {
+            return $"{Namespace}::NodeProcessingTheRequestHeartBeatChannel::{endpoint}::{requestId}";
+        }
+
+        public async Task<IAsyncDisposable> SubscribeToNodeProcessingTheRequestHeartBeatChannel(
+            Uri endpoint, 
+            Guid request,
+            Func<Task> onHeartBeat,
+            CancellationToken cancellationToken)
+        {
+            var channelName = NodeProcessingTheRequestHeartBeatChannel(endpoint, request);
+            return await facade.SubscribeToChannel(channelName, async foo =>
+            {
+                string? response = foo.Message;
+                if (response is not null) await onHeartBeat();
+            }, cancellationToken);
+        }
+
+        public async Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
+        {
+            var channelName = NodeProcessingTheRequestHeartBeatChannel(endpoint, requestId);
+            await facade.PublishToChannel(channelName, "{}");
+        }
+    }
 
 
     public class RedisHalibutQueueItem2

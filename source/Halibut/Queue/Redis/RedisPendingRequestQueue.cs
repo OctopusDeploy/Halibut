@@ -70,6 +70,8 @@ namespace Halibut.Queue.Redis
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
         {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, requestCancellationToken);
+            var cancellationToken = cts.Token;
             // TODO: redis goes down
             // TODO: Other node goes down.
             // TODO: Respect cancellation token
@@ -78,10 +80,11 @@ namespace Halibut.Queue.Redis
             
             // TODO: What if this payload was gigantic
             // TODO: Do we need to encrypt this?
-            var payload = await messageReaderWriter.PrepareRequest(request, requestCancellationToken);
+            var payload = await messageReaderWriter.PrepareRequest(request, cancellationToken);
             
             // Start listening for a response to the request, we don't want to miss the response.
-            await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, requestCancellationToken);
+            // TODO: subscribing to the response is not reliable, we also need to account for missed publications.
+            await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, cancellationToken);
 
             await using var tryClearRequestFromQueueWhenRequestIsCancelled 
                 = pending.PendingRequestCancellationToken.Register(async () => await TryClearRequestFromQueue(request, pending));
@@ -90,11 +93,24 @@ namespace Halibut.Queue.Redis
                     await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request, log));
 
             // Make the request available before we tell people it is available.
-            await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, requestCancellationToken);
-            await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, requestCancellationToken);
-            await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, requestCancellationToken);
+            await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
+            await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
+            await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
             
-            await pending.WaitUntilComplete(() => TryClearRequestFromQueue(request, pending), requestCancellationToken);
+            await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
+
+            var watchProcessingNodeTask = Task.Run(async () =>
+            {
+                var disconnected = await ProcessingNodeHeartBeatSender.WaitUntilNodeProcessingRequestFlatLines(endpoint, request, pending, halibutRedisTransport, log, watcherCts.CancellationToken);
+                if (!watcherCts.CancellationToken.IsCancellationRequested && disconnected == ProcessingNodeHeartBeatSender.NodeProcessingRequestWatcherResult.ProcessingNodeIsLikelyDisconnected)
+                {
+                    // TODO: if(responseWatcher.CheckForResponseNow() == ResponseNotFound) {
+                        pending.SetResponse(ResponseMessage.FromError(request, "The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline."));
+                    //}
+            }
+            });
+            
+            await pending.WaitUntilComplete(() => TryClearRequestFromQueue(request, pending), cancellationToken);
             
             return pending.Response!;
         }
@@ -105,12 +121,19 @@ namespace Halibut.Queue.Redis
             // Let's try to pop if from the queue, either:
             // - We pop it, which means it was never collected so let pending deal with the timeout.
             // - We could not pop it, which means it was collected.
-            using var cts = new CancellationTokenSource();
-            cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
-            var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
-            if (requestJson != null)
+            try
             {
-                await pending.RequestHasBeenCollectedAndWillBeTransfered();
+                using var cts = new CancellationTokenSource();
+                cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
+                var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
+                if (requestJson != null)
+                {
+                    await pending.RequestHasBeenCollectedAndWillBeTransferred();
+                }
+            }
+            catch (Exception)
+            {
+                // TODO log the exception here.
             }
         }
 
@@ -137,11 +160,22 @@ namespace Halibut.Queue.Redis
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
 
-            var watchForRequestCancellation = new WatchForRequestCancellation(endpoint, pending.ActivityId, halibutRedisTransport, log);
-            disposablesForInFlightRequests[pending.ActivityId] = new DisposableCollection(watchForRequestCancellation);
             
-            
-            return new RequestMessageWithCancellationToken(pending, watchForRequestCancellation.RequestCancelledCancellationToken);
+            var disposables = new DisposableCollection();
+            try
+            {
+                var watchForRequestCancellation = new WatchForRequestCancellation(endpoint, pending.ActivityId, halibutRedisTransport, log);
+                disposables.AddAsyncDisposable(watchForRequestCancellation);
+                disposables.AddAsyncDisposable(new ProcessingNodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log));      
+                var response = new RequestMessageWithCancellationToken(pending, watchForRequestCancellation.RequestCancelledCancellationToken);
+                disposablesForInFlightRequests[pending.ActivityId] = disposables;
+                return response;
+            }
+            catch (Exception)
+            {
+                await Try.IgnoringError(async () => await disposables.DisposeAsync());
+                throw;
+            }
         }
 
         
