@@ -85,8 +85,6 @@ namespace Halibut.Queue.Redis
             // Start listening for a response to the request, we don't want to miss the response.
             await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, cancellationToken);
 
-            // These are not guaranteed to execute, we should ensure they are executed in a finally block.
-
             var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(request, pending));
             try
             {
@@ -96,7 +94,7 @@ namespace Halibut.Queue.Redis
                 await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
 
                 await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
-                var watchProcessingNodeTask = WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
+                WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
 
                 await pending.WaitUntilComplete(async () => await tryClearRequestFromQueueAtMostOnce.Task, cancellationToken);
             }
@@ -123,9 +121,9 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        Task WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancellationTokenSourceAsyncDisposable watcherCts)
+        void WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancellationTokenSourceAsyncDisposable watcherCts)
         {
-            return Task.Run(async () =>
+            Task.Run(async () =>
             {
                 var disconnected = await ProcessingNodeHeartBeatSender.WaitUntilNodeProcessingRequestFlatLines(endpoint, request, pending, halibutRedisTransport, log, MaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, watcherCts.CancellationToken);
                 if (!watcherCts.CancellationToken.IsCancellationRequested && disconnected == ProcessingNodeHeartBeatSender.NodeProcessingRequestWatcherResult.ProcessingNodeIsLikelyDisconnected)
