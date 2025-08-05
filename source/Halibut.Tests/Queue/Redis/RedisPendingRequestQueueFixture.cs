@@ -329,6 +329,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
+            // TODO: This only needs to be set because we do not detect the work was collected as soon as it has been collected.
             request.Destination.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
 
             var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
@@ -354,6 +355,49 @@ namespace Halibut.Tests.Queue.Redis
             var response = await queueAndWaitTask;
             response.Error.Should().NotBeNull();
             response.Error!.Message.Should().Contain("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.");
+        }
+        
+        [Test]
+        public async Task WhenTheSenderDisconnectsFromRedisRightWhenTheReceiverSendsTheResponseBack_TheSenderStillGetsTheResponse()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var guid = Guid.NewGuid();
+            
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            await using var stableConnection = CreateRedisFacade(guid: guid);
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            await using var unreliableConnection = CreateRedisFacade(portForwarder.ListeningPort, guid: guid);
+            
+            var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(unreliableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(stableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());
+            
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            // TODO: This only needs to be set because we do not detect the work was collected as soon as it has been collected.
+            request.Destination.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
+            var queueAndWaitTask = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+            
+            var dequeuedRequest = await node2Receiver.DequeueAsync(CancellationToken);
+            
+            // Just before we send the response, disconnect the sender. 
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            await node2Receiver.ApplyResponse(ResponseMessage.FromResult(dequeuedRequest!.RequestMessage, "Yay"), dequeuedRequest!.RequestMessage.ActivityId);
+            
+            await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);
+            portForwarder.ReturnToNormalMode();
+
+            await Task.WhenAny(Task.Delay(TimeSpan.FromMinutes(2), CancellationToken), queueAndWaitTask);
+
+            queueAndWaitTask.IsCompleted.Should().BeTrue();
+
+            var response = await queueAndWaitTask;
+            response.Error.Should().BeNull();
+            response.Result.Should().Be("Yay");
+            
         }
 
         

@@ -14,6 +14,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
@@ -146,15 +147,37 @@ namespace Halibut.Queue.Redis
 
         
 
+        const string ResponseMessageSubscriptionName = "ResponseMessage";
+        
         async Task<IAsyncDisposable> SubscribeToResponse(Guid activityId,
             Action<ResponseMessage> onResponse,
             CancellationToken cancellationToken)
         {
-            return await halibutRedisTransport.SubScribeToResponses(endpoint, activityId, async (responseJson) =>
+            await Task.CompletedTask;
+            var sub = new PollAndSubscribeForSingleMessage(ResponseMessageSubscriptionName, endpoint, activityId, halibutRedisTransport, log);
+            var _ = Task.Run(async () =>
             {
-                var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
-                onResponse(response);
-            }, cancellationToken);
+                try
+                {
+                    var responseJson = await sub.ResultTask;
+                    var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
+                    onResponse(response);
+                }
+                catch (OperationCanceledException)
+                {
+                    // TODO ignore
+                }
+                catch (Exception)
+                {
+                    // TODO log
+                }
+            });
+            return sub;
+            // return await halibutRedisTransport.SubScribeToResponses(endpoint, activityId, async (responseJson) =>
+            // {
+            //     var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
+            //     onResponse(response);
+            // }, cancellationToken);
         }
 
         public bool IsEmpty => throw new NotImplementedException();
@@ -197,7 +220,7 @@ namespace Halibut.Queue.Redis
             // back to the node which sent the response
             
             var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
-            await halibutRedisTransport.PublishResponse(endpoint, requestActivityId, payload, cancellationToken);
+            await PollAndSubscribeForSingleMessage.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, log);
         }
 
         async Task<RequestMessage?> DequeueNextAsync()

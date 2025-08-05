@@ -116,32 +116,6 @@ namespace Halibut.Queue.Redis
             return await facade.HashContainsKey(requestKey, RequestField);
         }
 
-        // Response channel
-        static string ResponseMessagesChannelName(Uri endpoint, Guid requestId)
-        {
-            return $"{Namespace}::ResponseMessagesChannelName::{endpoint}::{requestId}";
-        }
-
-        public async Task<IAsyncDisposable> SubScribeToResponses(Uri endpoint, Guid requestOfResponseToWaitFor,
-            Func<string, Task> onResponse,
-            CancellationToken cancellationToken)
-        {
-            var channelName = ResponseMessagesChannelName(endpoint, requestOfResponseToWaitFor);
-            return await facade.SubscribeToChannel(channelName, async foo =>
-            {
-                string? response = foo.Message;
-                if (response is not null) await onResponse(response);
-            },
-            cancellationToken);
-        }
-
-        public async Task PublishResponse(Uri endpoint, Guid requestId, string payload, CancellationToken cancellationToken)
-        {
-            var channelName = ResponseMessagesChannelName(endpoint, requestId);
-            await facade.PublishToChannel(channelName, payload);
-        }
-
-
         // Cancellation channel
         static string RequestCancelledChannel(Uri endpoint, Guid requestId)
         {
@@ -212,6 +186,55 @@ namespace Halibut.Queue.Redis
         {
             var channelName = NodeProcessingTheRequestHeartBeatChannel(endpoint, requestId);
             await facade.PublishToChannel(channelName, "{}");
+        }
+        
+        // Generic methods for watching for any string value being set
+        
+        string GenericChannelName(string thingToWatchFor, Uri endpoint, Guid identifier)
+        {
+            return $"{Namespace}::GenericChannel::{thingToWatchFor}::{endpoint}::{identifier}";
+        }
+        
+        public async Task<IAsyncDisposable> SubscribeToGenericNotification(string thingToWatchFor, Uri endpoint, Guid identifier,
+            Func<string, Task> onValueReceived,
+            CancellationToken cancellationToken)
+        {
+            var channelName = GenericChannelName(thingToWatchFor, endpoint, identifier);
+            return await facade.SubscribeToChannel(channelName, async foo =>
+            {
+                string? value = foo.Message;
+                if (value is not null) await onValueReceived(value);
+            }, cancellationToken);
+        }
+        
+        public async Task PublishThatValueIsAvailable(string thingToWatchFor, Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
+        {
+            var channelName = GenericChannelName(thingToWatchFor, endpoint, identifier);
+            await facade.PublishToChannel(channelName, value);
+        }
+        
+        string GenericMarkerKey(string thingToWatchFor, Uri endpoint, Guid identifier)
+        {
+            return $"{Namespace}::GenericMarker::{thingToWatchFor}::{endpoint}::{identifier}";
+        }
+        
+        public async Task SendValue(string thingToWatchFor, Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
+        {
+            // TODO: really must have a TTL
+            var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
+            await facade.SetString(key, value);
+        }
+        
+        public async Task<string?> GetGenericMarker(string thingToWatchFor, Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        {
+            var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
+            return await facade.GetString(key);
+        }
+        
+        public async Task<bool> DeleteGenericMarker(string thingToWatchFor, Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        {
+            var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
+            return await facade.DeleteString(key);
         }
     }
 

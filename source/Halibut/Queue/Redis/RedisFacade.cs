@@ -350,6 +350,7 @@ namespace Halibut.Queue.Redis
 
         public async Task SetString(string key, string value)
         {
+            // TODO TTL
             key = "string:" + keyPrefix + ":" + key;
             await ExecuteWithRetry(async () =>
             {
@@ -365,6 +366,16 @@ namespace Halibut.Queue.Redis
             {
                 var database = Connection.GetDatabase();
                 return await database.StringGetAsync(key);
+            }, CancellationToken.None);
+        }
+        
+        public async Task<bool> DeleteString(string key)
+        {
+            key = "string:" + keyPrefix + ":" + key;
+            return await ExecuteWithRetry<bool>(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.KeyDeleteAsync(key);
             }, CancellationToken.None);
         }
     }
