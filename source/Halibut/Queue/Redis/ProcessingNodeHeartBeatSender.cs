@@ -149,18 +149,21 @@ namespace Halibut.Queue.Redis
             {
                 try
                 {
-                    // This might only be set when the queue timeout is reached.
+                    // Has something else determined the request was collected?
+                    // TODO should we bail out of here if the PendingRequest is complete? 
                     if(pending.HasRequestBeenMarkedAsCollected) 
                     {
                         log.Write(EventType.Diagnostic, "Request {0} has been marked as collected", request.ActivityId);
                         return;
                     }
+                    
 
                     // So check ourselves if the request has been collected.
                     var requestIsStillOnQueue = await halibutRedisTransport.IsRequestStillOnQueue(endpoint, request.ActivityId, cancellationToken);
                     if(!requestIsStillOnQueue) 
                     {
                         log.Write(EventType.Diagnostic, "Request {0} is no longer on queue", request.ActivityId);
+                        await pending.RequestHasBeenCollectedAndWillBeTransferred();
                         return;
                     }
                 }

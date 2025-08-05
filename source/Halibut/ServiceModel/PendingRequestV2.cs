@@ -103,7 +103,8 @@ namespace Halibut.ServiceModel
                     SetResponseNoLock(ResponseMessage.FromException(
                         request, 
                         new TimeoutException($"A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({request.Destination.PollingRequestQueueTimeout}), so the request timed out."),
-                        ConnectionState.Connecting));
+                        ConnectionState.Connecting),
+                        false);
                     return;
                 }
             }
@@ -125,7 +126,8 @@ namespace Halibut.ServiceModel
                         SetResponseNoLock(ResponseMessage.FromException(
                             request,
                             new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded."),
-                            ConnectionState.Connecting));
+                            ConnectionState.Connecting),
+                            false);
                         await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
                         cancellationToken.ThrowIfCancellationRequested();
                     }
@@ -137,7 +139,8 @@ namespace Halibut.ServiceModel
                 log.Write(EventType.MessageExchange, "Request {0} had an internal error, unexpectedly stopped waiting for the response.", request);
                 await SetResponseAsync(ResponseMessage.FromException(
                     request, 
-                    new PendingRequestQueueInternalException($"Request {request.Id} had an internal error, unexpectedly stopped waiting for the response.")));
+                    new PendingRequestQueueInternalException($"Request {request.Id} had an internal error, unexpectedly stopped waiting for the response.")),
+                    false);
             }
         }
         
@@ -155,7 +158,10 @@ namespace Halibut.ServiceModel
                 {
                     // Check if the request has already been completed or if the request has been cancelled 
                     // to ensure we don't dequeue an already completed or already cancelled request
-                    if (requestCollected.IsSet || pendingRequestCancellationTokenSource.IsCancellationRequested)
+                    if (requestCollected.IsSet 
+                        || pendingRequestCancellationTokenSource.IsCancellationRequested
+                        || responseWaiter.IsSet)
+                        
                     {
                         return false;
                     }
@@ -175,23 +181,24 @@ namespace Halibut.ServiceModel
 
         public void SetResponse(ResponseMessage response)
         {
-            this.SetResponseAsync(response).GetAwaiter().GetResult();
+            // If someone is calling this then we know for sure they collected the request
+            this.SetResponseAsync(response, true).GetAwaiter().GetResult();
         }
         
-        public async Task SetResponseAsync(ResponseMessage response)
+        async Task SetResponseAsync(ResponseMessage response, bool requestWasCollected)
         {
             using (await transferLock.LockAsync(CancellationToken.None))
             {
-                SetResponseNoLock(response);
+                SetResponseNoLock(response, requestWasCollected);
             }
         }
 
-        void SetResponseNoLock(ResponseMessage response)
+        void SetResponseNoLock(ResponseMessage response, bool requestWasCollected)
         {
             if(this.response != null) return;
             this.response = response;
             responseWaiter.Set();
-            requestCollected.Set(); // Also the request has been collected, if we have a response.
+            if(requestWasCollected) requestCollected.Set(); // Also the request has been collected, if we have a response.
         }
 
         public void Dispose()
