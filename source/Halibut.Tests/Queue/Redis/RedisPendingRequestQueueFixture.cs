@@ -335,10 +335,14 @@ namespace Halibut.Tests.Queue.Redis
             var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             
+            // Lower this to complete the test sooner.
+            node1Sender.MaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline = TimeSpan.FromSeconds(30);
+            node2Receiver.MaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline = TimeSpan.FromSeconds(30);
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
             // TODO: Setting this low shows we don't timeout because the request was not picked up in time.
+            // Could be its own test.
             request.Destination.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
             var queueAndWaitTask = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
             

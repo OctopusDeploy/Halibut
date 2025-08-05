@@ -75,7 +75,6 @@ namespace Halibut.Queue.Redis
             var cancellationToken = cts.Token;
             // TODO: redis goes down
             // TODO: Other node goes down.
-            // TODO: Respect cancellation token
             // TODO RedisConnectionException can be raised out of here, what should the queue do?
             using var pending = new PendingRequest(request, log);
             
@@ -84,39 +83,61 @@ namespace Halibut.Queue.Redis
             var payload = await messageReaderWriter.PrepareRequest(request, cancellationToken);
             
             // Start listening for a response to the request, we don't want to miss the response.
-            // TODO: subscribing to the response is not reliable, we also need to account for missed publications.
             await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, cancellationToken);
 
-            await using var tryClearRequestFromQueueWhenRequestIsCancelled 
-                = pending.PendingRequestCancellationToken.Register(async () => await TryClearRequestFromQueue(request, pending));
-            await using var trySendCancelWhenRequestIsCancelled
-                = pending.PendingRequestCancellationToken.Register(async () => 
-                    await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request, log));
+            // These are not guaranteed to execute, we should ensure they are executed in a finally block.
 
-            // Make the request available before we tell people it is available.
-            await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
-            await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
-            await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
-            
-            await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
-
-            var watchProcessingNodeTask = Task.Run(async () =>
+            var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(request, pending));
+            try
             {
-                var disconnected = await ProcessingNodeHeartBeatSender.WaitUntilNodeProcessingRequestFlatLines(endpoint, request, pending, halibutRedisTransport, log, watcherCts.CancellationToken);
-                if (!watcherCts.CancellationToken.IsCancellationRequested && disconnected == ProcessingNodeHeartBeatSender.NodeProcessingRequestWatcherResult.ProcessingNodeIsLikelyDisconnected)
-                {
-                    // TODO: if(responseWatcher.CheckForResponseNow() == ResponseNotFound) {
-                        pending.SetResponse(ResponseMessage.FromError(request, "The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline."));
-                    //}
+                // Make the request available before we tell people it is available.
+                await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
+                await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
+                await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
+
+                await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
+                var watchProcessingNodeTask = WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
+
+                await pending.WaitUntilComplete(async () => await tryClearRequestFromQueueAtMostOnce.Task, cancellationToken);
             }
-            });
-            
-            await pending.WaitUntilComplete(() => TryClearRequestFromQueue(request, pending), cancellationToken);
-            
+            finally
+            {
+                // Make an attempt to ensure the request is removed from redis.
+                var background = Task.Run(async () => await Try.IgnoringError(async () => await tryClearRequestFromQueueAtMostOnce.Task));
+                var backgroundCancellation = Task.Run(async () => await SendCancellationIfRequestWasCancelled(request, pending));
+            }
+
             return pending.Response!;
         }
 
-        async Task TryClearRequestFromQueue(RequestMessage request, PendingRequest pending)
+        async Task SendCancellationIfRequestWasCancelled(RequestMessage request, PendingRequest pending)
+        {
+            if (pending.PendingRequestCancellationToken.IsCancellationRequested)
+            {
+                // TODO log
+                await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request, log);
+            }
+            else
+            {
+                // TODO log
+            }
+        }
+
+        Task WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancellationTokenSourceAsyncDisposable watcherCts)
+        {
+            return Task.Run(async () =>
+            {
+                var disconnected = await ProcessingNodeHeartBeatSender.WaitUntilNodeProcessingRequestFlatLines(endpoint, request, pending, halibutRedisTransport, log, MaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, watcherCts.CancellationToken);
+                if (!watcherCts.CancellationToken.IsCancellationRequested && disconnected == ProcessingNodeHeartBeatSender.NodeProcessingRequestWatcherResult.ProcessingNodeIsLikelyDisconnected)
+                {
+                    // TODO: if(responseWatcher.CheckForResponseNow() == ResponseNotFound) {
+                    pending.SetResponse(ResponseMessage.FromError(request, "The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline."));
+                    //}
+                }
+            });
+        }
+
+        async Task<bool> TryClearRequestFromQueue(RequestMessage request, PendingRequest pending)
         { 
             log.Write(EventType.Diagnostic, "Attempting to clear request {0} from queue for endpoint {1}", request.ActivityId, endpoint);
             
@@ -126,12 +147,18 @@ namespace Halibut.Queue.Redis
             // - We could not pop it, which means it was collected.
             try
             {
+                if (pending.HasRequestBeenMarkedAsCollected)
+                {
+                    // TODO: log
+                    return false;
+                }
                 using var cts = new CancellationTokenSource();
                 cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
                 var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
                 if (requestJson != null)
                 {
                     log.Write(EventType.Diagnostic, "Successfully removed request {0} from queue - request was never collected by a processing node", request.ActivityId);
+                    return true;
                 }
                 else
                 {
@@ -143,6 +170,7 @@ namespace Halibut.Queue.Redis
             {
                 log.WriteException(EventType.Error, "Failed to clear request {0} from queue for endpoint {1}", ex, request.ActivityId, endpoint);
             }
+            return false;
         }
 
         
@@ -183,10 +211,14 @@ namespace Halibut.Queue.Redis
         public bool IsEmpty => throw new NotImplementedException();
         public int Count => throw new NotImplementedException();
 
-        
+        public TimeSpan MaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline { get; set; } = ProcessingNodeHeartBeatSender.DefaultMaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline;
 
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
         {
+            // TODO: is it god or bad that redis exceptions will bubble out of here.
+            // I think it will kill the TCP connection, which will force re-connect (in perhaps a backoff function)
+            // This could result in connecting to a node that is actually connected to redis. It could also
+            // cause a cascade of failure from high load.
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
 

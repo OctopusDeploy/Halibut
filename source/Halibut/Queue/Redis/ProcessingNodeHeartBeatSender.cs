@@ -35,6 +35,9 @@ namespace Halibut.Queue.Redis
         private readonly HalibutRedisTransport halibutRedisTransport;
         private readonly CancellationTokenSource cancellationTokenSource;
         private readonly ILog log;
+        
+        public static readonly TimeSpan DefaultMaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline = TimeSpan.FromSeconds(60);
+        
 
         public ProcessingNodeHeartBeatSender(Uri endpoint,
             Guid requestActivityId,
@@ -46,7 +49,6 @@ namespace Halibut.Queue.Redis
             this.halibutRedisTransport = halibutRedisTransport;
             this.cancellationTokenSource = new CancellationTokenSource();
             this.log = log;
-
             log.Write(EventType.Diagnostic, "Starting ProcessingNodeHeartBeatSender for request {0} to endpoint {1}", requestActivityId, endpoint);
             Task.Run(() => SendPulsesWhileProcessingRequest(cancellationTokenSource.Token));
         }
@@ -88,6 +90,7 @@ namespace Halibut.Queue.Redis
             PendingRequest pending,
             HalibutRedisTransport halibutRedisTransport,
             ILog log,
+            TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
             log.Write(EventType.Diagnostic, "Starting to watch for processing node flatline for request {0} to endpoint {1}", request.ActivityId, endpoint);
@@ -122,8 +125,6 @@ namespace Halibut.Queue.Redis
                     // TODO: I am sure a fancy pants delay could be done here calculated from the now and last heart beat etc.
                     await Try.IgnoringError(async () => await Task.Delay(TimeSpan.FromSeconds(10), cts.Token));
                     var timeSinceLastHeartBeat = DateTimeOffset.Now - lastHeartBeat.Value;
-                    // TODO 60?
-                    var maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline = TimeSpan.FromSeconds(30);
                     if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline)
                     {
                         log.Write(EventType.Diagnostic, "Processing node appears disconnected for request {0}, last heartbeat was {1} seconds ago", request.ActivityId, timeSinceLastHeartBeat.TotalSeconds);

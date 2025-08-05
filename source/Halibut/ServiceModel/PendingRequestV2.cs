@@ -158,16 +158,12 @@ namespace Halibut.ServiceModel
                 {
                     // Check if the request has already been completed or if the request has been cancelled 
                     // to ensure we don't dequeue an already completed or already cancelled request
-                    if (requestCollected.IsSet 
-                        || pendingRequestCancellationTokenSource.IsCancellationRequested
-                        || responseWaiter.IsSet)
-                        
-                    {
-                        return false;
-                    }
 
+                    var requestHasBeenCollected = this.requestCollected.IsSet;
                     requestCollected.Set();
-                    return true;
+                    return !requestHasBeenCollected
+                           && !responseWaiter.IsSet
+                           && !pendingRequestCancellationTokenSource.IsCancellationRequested;
                 }
             }
             catch (ObjectDisposedException)
