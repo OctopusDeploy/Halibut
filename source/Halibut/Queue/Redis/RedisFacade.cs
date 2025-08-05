@@ -143,6 +143,9 @@ namespace Halibut.Queue.Redis
             var message = $"Redis connection restored - EndPoint: {e.EndPoint}";
             log?.Write(EventType.Diagnostic, message);
         }
+        
+        // We can survive redis being unavailable for this amount of time.
+        static readonly TimeSpan MaxDurationToRetryFor = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.
@@ -152,7 +155,6 @@ namespace Halibut.Queue.Redis
             using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
             
-            var totalDuration = TimeSpan.FromSeconds(12);
             var retryDelay = TimeSpan.FromSeconds(1);
             var stopwatch = Stopwatch.StartNew();
             
@@ -164,7 +166,7 @@ namespace Halibut.Queue.Redis
                 {
                     return await operation();
                 }
-                catch (Exception ex) when (stopwatch.Elapsed < totalDuration && !combinedToken.IsCancellationRequested)
+                catch (Exception ex) when (stopwatch.Elapsed < MaxDurationToRetryFor && !combinedToken.IsCancellationRequested)
                 {
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
                     await Task.Delay(retryDelay, combinedToken);
@@ -180,7 +182,6 @@ namespace Halibut.Queue.Redis
             using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
             
-            var totalDuration = TimeSpan.FromSeconds(12);
             var retryDelay = TimeSpan.FromSeconds(1);
             var stopwatch = Stopwatch.StartNew();
             
@@ -193,7 +194,7 @@ namespace Halibut.Queue.Redis
                     await operation();
                     return;
                 }
-                catch (Exception ex) when (stopwatch.Elapsed < totalDuration && !combinedToken.IsCancellationRequested)
+                catch (Exception ex) when (stopwatch.Elapsed < MaxDurationToRetryFor && !combinedToken.IsCancellationRequested)
                 {
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
                     await Task.Delay(retryDelay, combinedToken);

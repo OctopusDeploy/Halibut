@@ -23,7 +23,7 @@ using Nito.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
-    public class PendingRequest : IDisposable
+    public class PendingRequestOld : IDisposable
     {
         readonly RequestMessage request;
         readonly ILog log;
@@ -35,7 +35,7 @@ namespace Halibut.ServiceModel
         readonly CancellationTokenSource pendingRequestCancellationTokenSource;
         ResponseMessage? response;
 
-        public PendingRequest(RequestMessage request, ILog log)
+        public PendingRequestOld(RequestMessage request, ILog log)
         {
             this.request = request;
             this.log = log;
@@ -183,7 +183,7 @@ namespace Halibut.ServiceModel
                     else if (!requestCollected.IsSet)
                     {
                         // Cancel the queued request. This will flag the request as cancelled to stop it being dequeued
-                        pendingRequestCancellationTokenSource.Cancel();
+                        //pendingRequestCancellationTokenSource.Cancel();
                     }
 
                     if (timeoutCancellationTokenSource.IsCancellationRequested)

@@ -418,11 +418,13 @@ namespace Halibut.Tests.ServiceModel
 
             // Cancel, and give the queue time to start waiting for a response
 #if NET8_0_OR_GREATER
+            await Task.Delay(1000);
             await cancellationTokenSource.CancelAsync();
 #else
             cancellationTokenSource.Cancel();
 #endif
             await Task.Delay(1000, CancellationToken);
+            
             dequeued!.CancellationToken.IsCancellationRequested.Should().BeTrue("Should have cancelled the request");
             
             await AssertException.Throws<OperationCanceledException>(queueAndWaitTask);

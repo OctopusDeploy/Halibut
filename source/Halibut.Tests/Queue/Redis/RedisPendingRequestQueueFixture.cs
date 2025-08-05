@@ -310,7 +310,7 @@ namespace Halibut.Tests.Queue.Redis
             dequeuedRequest.Should().NotBeNull();
             dequeuedRequest!.RequestMessage.ActivityId.Should().Be(request.ActivityId);
         }
-        
+
         [Test]
         public async Task WhenTheReceiverDequeuesWorkAndThenDisconnectsFromRedisForEver_TheSenderEventuallyTimesOut()
         {
@@ -318,29 +318,28 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
             var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
-            await using var redisFacadeSender = CreateRedisFacade(guid: guid);
-
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
-            await using var redisFacadeReceiver = CreateRedisFacade(portForwarder.ListeningPort, guid: guid);
             
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
 
-            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
-            
-            // TODO: This only needs to be set because we do not detect the work was collected as soon as it has been collected.
-            request.Destination.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
-
             var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutAndLimits.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
             halibutTimeoutAndLimits.PollingQueueWaitTimeout = TimeSpan.FromDays(1); // We should not need to rely on the timeout working for very short disconnects.
 
+            await using var stableRedisConnection = CreateRedisFacade(guid: guid);
+
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            await using var unstableRedisConnection = CreateRedisFacade(portForwarder.ListeningPort, guid: guid);
             
-            var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
-            var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeReceiver), messageReaderWriter, halibutTimeoutAndLimits);
+            var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             
             
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            
+            // TODO: Setting this low shows we don't timeout because the request was not picked up in time.
+            request.Destination.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
             var queueAndWaitTask = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
             
             var dequeuedRequest = await node2Receiver.DequeueAsync(CancellationToken);

@@ -122,7 +122,9 @@ namespace Halibut.Queue.Redis
                     // TODO: I am sure a fancy pants delay could be done here calculated from the now and last heart beat etc.
                     await Try.IgnoringError(async () => await Task.Delay(TimeSpan.FromSeconds(10), cts.Token));
                     var timeSinceLastHeartBeat = DateTimeOffset.Now - lastHeartBeat.Value;
-                    if (timeSinceLastHeartBeat > TimeSpan.FromSeconds(60))
+                    // TODO 60?
+                    var maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline = TimeSpan.FromSeconds(30);
+                    if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline)
                     {
                         log.Write(EventType.Diagnostic, "Processing node appears disconnected for request {0}, last heartbeat was {1} seconds ago", request.ActivityId, timeSinceLastHeartBeat.TotalSeconds);
                         return NodeProcessingRequestWatcherResult.ProcessingNodeIsLikelyDisconnected;

@@ -117,7 +117,7 @@ namespace Halibut.Queue.Redis
         }
 
         async Task TryClearRequestFromQueue(RequestMessage request, PendingRequest pending)
-        {
+        { 
             log.Write(EventType.Diagnostic, "Attempting to clear request {0} from queue for endpoint {1}", request.ActivityId, endpoint);
             
             // The time the message is allowed to sit on the queue for has elapsed.
@@ -132,10 +132,10 @@ namespace Halibut.Queue.Redis
                 if (requestJson != null)
                 {
                     log.Write(EventType.Diagnostic, "Successfully removed request {0} from queue - request was never collected by a processing node", request.ActivityId);
-                    await pending.RequestHasBeenCollectedAndWillBeTransferred();
                 }
                 else
                 {
+                    await pending.RequestHasBeenCollectedAndWillBeTransferred();
                     log.Write(EventType.Diagnostic, "Request {0} was not found in queue - it was already collected by a processing node", request.ActivityId);
                 }
             }
