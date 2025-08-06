@@ -14,7 +14,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
@@ -87,7 +86,7 @@ namespace Halibut.Queue.Redis
             var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(request, pending));
             try
             {
-                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Sender, DelayBetweenHeartBeatsForSender);
+                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Sender, DelayBetweenHeartBeatsForRequestSender);
                 // Make the request available before we tell people it is available.
                 await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
                 await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
@@ -121,14 +120,14 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        void WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancellationTokenSourceAsyncDisposable watcherCts)
+        void WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancelOnDisposeCancellationTokenSource watcherCts)
         {
             Task.Run(async () =>
             {
                 var watcherCtsCancellationToken = watcherCts.CancellationToken;
                 try
                 {
-                    var disconnected = await NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(endpoint, request, pending, halibutRedisTransport, log, NodeOfflineTimeoutBetweenHeartBeatsFromReceiver, watcherCtsCancellationToken);
+                    var disconnected = await NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(endpoint, request, pending, halibutRedisTransport, log, NodeIsOfflineHeartBeatTimeoutForRequestProcessor, watcherCtsCancellationToken);
                     if (!watcherCtsCancellationToken.IsCancellationRequested && disconnected == NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected)
                     {
                         // TODO: if(responseWatcher.CheckForResponseNow() == ResponseNotFound) {
@@ -218,18 +217,21 @@ namespace Halibut.Queue.Redis
 
         public bool IsEmpty => Count == 0;
         public int Count => throw new NotImplementedException();
-
-        // Setting this too high means things above the RPC might not have time to retry.
-        public TimeSpan NodeOfflineTimeoutBetweenHeartBeatsFromReceiver { get; set; } = TimeSpan.FromSeconds(60);
+        
 
         // The timespan is more generous for the sender going offline, since if it does go offline,
         // since under some cases the request completing is advantageous. That node needs to
         // re-do the entire RPC for idempotent RPCs this might mean that the task required is already done.
-        internal TimeSpan NodeOfflineTimeoutBetweenHeartBeatsFromSender { get; set; }  = TimeSpan.FromSeconds(90);
+        internal TimeSpan NodeIsOfflineHeartBeatTimeoutForRequestSender { get; set; }  = TimeSpan.FromSeconds(90);
         
-        internal TimeSpan DelayBetweenHeartBeatsForSender { get; set; }  = TimeSpan.FromSeconds(15);
+        internal TimeSpan DelayBetweenHeartBeatsForRequestSender { get; set; }  = TimeSpan.FromSeconds(15);
         
-        internal TimeSpan DelayBetweenHeartBeatsForReceiver { get; set; }  = TimeSpan.FromSeconds(15);
+        // Setting this too high means things above the RPC might not have time to retry.
+        public TimeSpan NodeIsOfflineHeartBeatTimeoutForRequestProcessor { get; set; } = TimeSpan.FromSeconds(60);
+        
+        internal TimeSpan DelayBetweenHeartBeatsForRequestProcessor { get; set; }  = TimeSpan.FromSeconds(15);
+        
+        internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(5);
         
         
         
@@ -246,9 +248,9 @@ namespace Halibut.Queue.Redis
             var disposables = new DisposableCollection();
             try
             {
-                disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, DelayBetweenHeartBeatsForReceiver));
+                disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, DelayBetweenHeartBeatsForRequestProcessor));
 
-                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeOfflineTimeoutBetweenHeartBeatsFromSender, log);
+                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
                 var response = new RequestMessageWithCancellationToken(pending, watcher.RequestProcessingCancellationToken);
                 disposablesForInFlightRequests[pending.ActivityId] = disposables;
                 return response;
@@ -280,7 +282,7 @@ namespace Halibut.Queue.Redis
 
                 var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
-                await PollAndSubscribeForSingleMessage.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, log);
+                await PollAndSubscribeForSingleMessage.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
             }
             catch (Exception ex)

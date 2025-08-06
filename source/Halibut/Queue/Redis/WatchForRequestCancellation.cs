@@ -23,7 +23,6 @@ namespace Halibut.Queue.Redis
 {
     public class WatchForRequestCancellation : IAsyncDisposable
     {
-        
         public static async Task TrySendCancellation(
             HalibutRedisTransport halibutRedisTransport, 
             Uri endpoint, 
@@ -41,7 +40,7 @@ namespace Halibut.Queue.Redis
                 await halibutRedisTransport.PublishCancellation(endpoint, request.ActivityId, cts.Token);
                 
                 log.Write(EventType.Diagnostic, "Marking request as cancelled - Endpoint: {0}, ActivityId: {1}", endpoint, request.ActivityId);
-                await halibutRedisTransport.MarkRequestAsCancelled(endpoint, request.ActivityId, cts.Token);
+                await halibutRedisTransport.MarkRequestAsCancelled(endpoint, request.ActivityId, CancelRequestMarkerTTL, cts.Token);
                 
                 log.Write(EventType.Diagnostic, "Successfully sent cancellation for request - Endpoint: {0}, ActivityId: {1}", endpoint, request.ActivityId);
             }
@@ -54,6 +53,12 @@ namespace Halibut.Queue.Redis
                 log.Write(EventType.Error, "Failed to send cancellation for request - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, request.ActivityId, ex.Message);
             }
         }
+
+        // How long the CancelRequestMarker will sit in redis before it times out.
+        // If it does timeout it won't matter since the request-sender will stop sending heart beats
+        // causing the request-processor to cancel the request anyway. 
+        static TimeSpan CancelRequestMarkerTTL = TimeSpan.FromMinutes(5);
+
         readonly CancellationTokenSource requestCancelledCts = new();
         public CancellationToken RequestCancelledCancellationToken => requestCancelledCts.Token;
 
@@ -90,6 +95,7 @@ namespace Halibut.Queue.Redis
                 
                 // Also poll to see if the request is cancelled since we can miss
                 // the publication.
+                // TODO: reconsider if we need this since the heart beats should take care of this.
                 while (!token.IsCancellationRequested)
                 {
                     try

@@ -46,9 +46,9 @@ namespace Halibut.Tests.Queue.Redis
             
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
-            await redisFacade.SetString("foo", "bar");
+            await redisFacade.SetString("foo", "bar", TimeSpan.FromMinutes(1), CancellationToken);
 
-            (await redisFacade.GetString("foo")).Should().Be("bar");
+            (await redisFacade.GetString("foo", CancellationToken)).Should().Be("bar");
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
@@ -56,7 +56,7 @@ namespace Halibut.Tests.Queue.Redis
             // After a short delay it does seem to work again.
             await Task.Delay(1000);
             
-            await redisFacade.GetString("foo");
+            await redisFacade.GetString("foo", CancellationToken);
         }
         
         [Test]
@@ -66,16 +66,16 @@ namespace Halibut.Tests.Queue.Redis
             
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
-            await redisFacade.SetString("foo", "bar");
+            await redisFacade.SetString("foo", "bar", TimeSpan.FromMinutes(1), CancellationToken);
 
-            (await redisFacade.GetString("foo")).Should().Be("bar");
+            (await redisFacade.GetString("foo", CancellationToken)).Should().Be("bar");
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
             // No delay here
             
-            await redisFacade.GetString("foo");
+            await redisFacade.GetString("foo", CancellationToken);
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection first
-            await redisFacade.SetString("connection", "established");
+            await redisFacade.SetString("connection", "established", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
@@ -103,7 +103,7 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection first
-            await redisFacade.SetString("connection", "established");
+            await redisFacade.SetString("connection", "established", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
@@ -138,7 +138,7 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection first
-            await redisFacade.SetString("connection", "established");
+            await redisFacade.SetString("connection", "established", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
@@ -173,13 +173,13 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection first
-            await redisFacade.SetString("connection", "established");
+            await redisFacade.SetString("connection", "established", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            await redisFacade.SetString("test-key", "test-value");
+            await redisFacade.SetString("test-key", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
         }
 
         [Test]
@@ -190,13 +190,13 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection and set up test data
-            await redisFacade.SetString("test-key", "test-value");
+            await redisFacade.SetString("test-key", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            var result = await redisFacade.GetString("test-key");
+            var result = await redisFacade.GetString("test-key", CancellationToken);
             result.Should().Be("test-value");
         }
 
@@ -227,7 +227,7 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisViaPortForwarder = new RedisFacade("localhost:" + portForwarder.ListeningPort, guid, redisLogCreator.CreateNewForPrefix("Unstable"));
             await using var redisStableConnection = new RedisFacade("localhost:" + redisPort, guid, redisLogCreator.CreateNewForPrefix("Stable"));
 
-            await redisViaPortForwarder.SetString("Establish connection", "before we subscribe");
+            await redisViaPortForwarder.SetString("Establish connection", "before we subscribe", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             

@@ -149,16 +149,16 @@ namespace Halibut.Queue.Redis
             return $"{Namespace}::RequestCancelledMarkerKey::{endpoint}::{requestId}";
         }
 
-        public async Task MarkRequestAsCancelled(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
+        public async Task MarkRequestAsCancelled(Uri endpoint, Guid requestId, TimeSpan ttl, CancellationToken cancellationToken)
         {
             var key = RequestCancelledMarkerKey(endpoint, requestId);
-            await facade.SetString(key, "{}");
+            await facade.SetString(key, "{}", ttl, cancellationToken);
         }
         
         public async Task<bool> IsRequestMarkedAsCancelled(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var key = RequestCancelledMarkerKey(endpoint, requestId);
-            return (await facade.GetString(key)) != null;
+            return (await facade.GetString(key, cancellationToken)) != null;
         }
         
         
@@ -234,17 +234,16 @@ namespace Halibut.Queue.Redis
             return $"{Namespace}::GenericMarker::{thingToWatchFor}::{endpoint}::{identifier}";
         }
         
-        public async Task SendValue(string thingToWatchFor, Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
+        public async Task SendValue(string thingToWatchFor, Uri endpoint, Guid identifier, string value, TimeSpan ttl, CancellationToken cancellationToken)
         {
-            // TODO: really must have a TTL
             var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
-            await facade.SetString(key, value);
+            await facade.SetString(key, value, ttl, cancellationToken);
         }
         
         public async Task<string?> GetGenericMarker(string thingToWatchFor, Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
             var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
-            return await facade.GetString(key);
+            return await facade.GetString(key, cancellationToken);
         }
         
         public async Task<bool> DeleteGenericMarker(string thingToWatchFor, Uri endpoint, Guid identifier, CancellationToken cancellationToken)

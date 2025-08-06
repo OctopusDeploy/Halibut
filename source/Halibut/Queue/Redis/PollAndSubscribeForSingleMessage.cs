@@ -29,6 +29,7 @@ namespace Halibut.Queue.Redis
             Uri endpoint, 
             Guid activityId,
             string value,
+            TimeSpan ttl,
             ILog log)
         {
             log.Write(EventType.Diagnostic, "Attempting to set {0} for - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
@@ -39,7 +40,7 @@ namespace Halibut.Queue.Redis
             try
             {
                 log.Write(EventType.Diagnostic, "Marking {0} as set - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
-                await halibutRedisTransport.SendValue(messageTypeName, endpoint, activityId, value, cts.Token);
+                await halibutRedisTransport.SendValue(messageTypeName, endpoint, activityId, value, ttl, cts.Token);
                 
                 log.Write(EventType.Diagnostic, "Publishing {0} notification - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
                 await halibutRedisTransport.PublishThatValueIsAvailable(messageTypeName, endpoint, activityId, value, cts.Token);

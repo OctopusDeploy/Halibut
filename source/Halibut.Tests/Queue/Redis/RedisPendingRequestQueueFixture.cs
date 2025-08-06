@@ -225,7 +225,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
             var queue = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
-            queue.DelayBetweenHeartBeatsForSender = TimeSpan.FromSeconds(1);
+            queue.DelayBetweenHeartBeatsForRequestSender = TimeSpan.FromSeconds(1);
             
             // Act
             var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
@@ -268,7 +268,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
             var queue = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
-            queue.DelayBetweenHeartBeatsForReceiver = TimeSpan.FromSeconds(1);
+            queue.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
 
             // Act
             var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
@@ -453,10 +453,10 @@ namespace Halibut.Tests.Queue.Redis
             var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             
             // Lower this to complete the test sooner.
-            node1Sender.DelayBetweenHeartBeatsForReceiver = TimeSpan.FromSeconds(1);
-            node2Receiver.DelayBetweenHeartBeatsForReceiver = TimeSpan.FromSeconds(1);
-            node1Sender.NodeOfflineTimeoutBetweenHeartBeatsFromReceiver = TimeSpan.FromSeconds(10);
-            node2Receiver.NodeOfflineTimeoutBetweenHeartBeatsFromReceiver = TimeSpan.FromSeconds(10);
+            node1Sender.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
+            node2Receiver.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
+            node1Sender.NodeIsOfflineHeartBeatTimeoutForRequestProcessor = TimeSpan.FromSeconds(10);
+            node2Receiver.NodeIsOfflineHeartBeatTimeoutForRequestProcessor = TimeSpan.FromSeconds(10);
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
@@ -503,10 +503,10 @@ namespace Halibut.Tests.Queue.Redis
             var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             
-            node1Sender.DelayBetweenHeartBeatsForSender= TimeSpan.FromSeconds(1);
-            node2Receiver.DelayBetweenHeartBeatsForSender= TimeSpan.FromSeconds(1);
-            node1Sender.NodeOfflineTimeoutBetweenHeartBeatsFromSender = TimeSpan.FromSeconds(15);
-            node2Receiver.NodeOfflineTimeoutBetweenHeartBeatsFromSender = TimeSpan.FromSeconds(15);
+            node1Sender.DelayBetweenHeartBeatsForRequestSender= TimeSpan.FromSeconds(1);
+            node2Receiver.DelayBetweenHeartBeatsForRequestSender= TimeSpan.FromSeconds(1);
+            node1Sender.NodeIsOfflineHeartBeatTimeoutForRequestSender = TimeSpan.FromSeconds(15);
+            node2Receiver.NodeIsOfflineHeartBeatTimeoutForRequestSender = TimeSpan.FromSeconds(15);
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
