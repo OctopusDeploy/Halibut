@@ -126,7 +126,7 @@ namespace Halibut.Queue.Redis
             Guid requestActivityId, 
             HalibutRedisTransport halibutRedisTransport,
             ILog log,
-            TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
+            TimeSpan maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline,
             HalibutQueueNodeSendingPulses watchingForPulsesFrom,
             CancellationToken watchCancellationToken)
         {
@@ -151,7 +151,7 @@ namespace Halibut.Queue.Redis
                     // TODO: I am sure a fancy pants delay could be done here calculated from the now and last heart beat etc.
                     await Try.IgnoringError(async () => await Task.Delay(TimeSpan.FromSeconds(10), watchCancellationToken));
                     var timeSinceLastHeartBeat = DateTimeOffset.Now - lastHeartBeat.Value;
-                    if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline)
+                    if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline)
                     {
                         log.Write(EventType.Diagnostic, "{0} node appears disconnected, request {1}, last heartbeat was {2} seconds ago", watchingForPulsesFrom, requestActivityId, timeSinceLastHeartBeat.TotalSeconds);
                         return NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected;

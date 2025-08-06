@@ -23,6 +23,7 @@ using Halibut.Tests.TestServices.Async;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using Nito.AsyncEx;
 using NSubstitute;
 using NUnit.Framework;
@@ -178,6 +179,122 @@ namespace Halibut.Tests.Queue.Redis
 
             responseMessage.Result.Should().Be("Yay");
         }
+        
+        [Test]
+        public async Task OnceARequestIsComplete_NoInflightDisposableShouldExist()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var queue = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+
+            // Act
+            var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
+
+            var requestMessageWithCancellationToken = await queue.DequeueAsync(CancellationToken);
+            requestMessageWithCancellationToken.Should().NotBeNull();
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken!.RequestMessage, "Yay");
+            await queue.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+            responseMessage.Result.Should().Be("Yay");
+            
+            // Assert
+            queue.disposablesForInFlightRequests.Should().BeEmpty();
+        }
+        
+        [Test]
+        public async Task OnceARequestIsComplete_NoSenderHeartBeatsShouldBeSent()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var queue = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            queue.DelayBetweenHeartBeatsForSender = TimeSpan.FromSeconds(1);
+            
+            // Act
+            var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
+
+            var requestMessageWithCancellationToken = await queue.DequeueAsync(CancellationToken);
+            requestMessageWithCancellationToken.Should().NotBeNull();
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken!.RequestMessage, "Yay");
+            await queue.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+            
+
+            var responseMessage = await queueAndWaitAsync;
+            responseMessage.Result.Should().Be("Yay");
+            
+            // Assert
+            bool heartBeatSent = false;
+            var cts = new CancellationTokenSource().CancelOnDispose();
+            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.Sender, async () =>
+            {
+                await Task.CompletedTask;
+                heartBeatSent = true;
+            }, 
+                cts.CancellationToken);
+            
+            await Task.Delay(5000);
+            heartBeatSent.Should().BeFalse();
+        }
+        
+        [Test]
+        public async Task OnceARequestIsComplete_NoReceiverHeartBeatsShouldBeSent()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var queue = new RedisPendingRequestQueue(endpoint, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            queue.DelayBetweenHeartBeatsForReceiver = TimeSpan.FromSeconds(1);
+
+            // Act
+            var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
+
+            var requestMessageWithCancellationToken = await queue.DequeueAsync(CancellationToken);
+            requestMessageWithCancellationToken.Should().NotBeNull();
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken!.RequestMessage, "Yay");
+            await queue.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+            responseMessage.Result.Should().Be("Yay");
+            
+            // Assert
+            bool heartBeatSent = false;
+            var cts = new CancellationTokenSource().CancelOnDispose();
+            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+            {
+                await Task.CompletedTask;
+                heartBeatSent = true;
+            }, 
+                cts.CancellationToken);
+            
+            await Task.Delay(5000);
+            heartBeatSent.Should().BeFalse();
+        }
 
         [Test]
         public async Task FullSendAndReceiveWithDataStreamShouldWork()
@@ -220,7 +337,7 @@ namespace Halibut.Tests.Queue.Redis
         // Or should it to try to encourage a new TCP connection which could go to a different node.
         
         [Test]
-        public async Task WhenTheReceiverConnectionToRedisIsInterruptedAndRestoredBeforeWorkIsPublished_TheRecieverShouldBeAbleToCollectThatWorkQuickly()
+        public async Task WhenTheReceiversConnectionToRedisIsInterruptedAndRestoredBeforeWorkIsPublished_TheRecieverShouldBeAbleToCollectThatWorkQuickly()
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
@@ -408,7 +525,7 @@ namespace Halibut.Tests.Queue.Redis
         }
         
         [Test]
-        public async Task WhenTheSenderDisconnectsFromRedisRightWhenTheReceiverSendsTheResponseBack_TheSenderStillGetsTheResponse()
+        public async Task WhenTheSenderBrieflyDisconnectsFromRedisRightWhenTheReceiverSendsTheResponseBack_TheSenderStillGetsTheResponse()
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());

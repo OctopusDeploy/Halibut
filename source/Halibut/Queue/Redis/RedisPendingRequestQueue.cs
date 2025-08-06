@@ -35,7 +35,7 @@ namespace Halibut.Queue.Redis
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
 
         readonly CancellationTokenSource queueCts = new ();
-        ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
+        internal ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
         readonly CancellationToken queueToken;
         
         Task<IAsyncDisposable> PulseChannelSubDisposer { get; }
@@ -74,7 +74,6 @@ namespace Halibut.Queue.Redis
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, requestCancellationToken);
             var cancellationToken = cts.Token;
             // TODO: redis goes down
-            // TODO: Other node goes down.
             // TODO RedisConnectionException can be raised out of here, what should the queue do?
             using var pending = new PendingRequest(request, log);
             
@@ -198,28 +197,26 @@ namespace Halibut.Queue.Redis
             {
                 try
                 {
+                    log.Write(EventType.Diagnostic, "Waiting for response for request {0}", activityId);
                     var responseJson = await sub.ResultTask;
+                    log.Write(EventType.Diagnostic, "Received response JSON for request {0}, deserializing", activityId);
                     var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
+                    log.Write(EventType.Diagnostic, "Successfully deserialized response for request {0}, invoking callback", activityId);
                     onResponse(response);
                 }
                 catch (OperationCanceledException)
                 {
-                    // TODO ignore
+                    log.Write(EventType.Diagnostic, "Response subscription cancelled for request {0}", activityId);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    // TODO log
+                    log.WriteException(EventType.Error, "Error while processing response for request {0}", ex, activityId);
                 }
             });
             return sub;
-            // return await halibutRedisTransport.SubScribeToResponses(endpoint, activityId, async (responseJson) =>
-            // {
-            //     var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
-            //     onResponse(response);
-            // }, cancellationToken);
         }
 
-        public bool IsEmpty => throw new NotImplementedException();
+        public bool IsEmpty => Count == 0;
         public int Count => throw new NotImplementedException();
 
         // Setting this too high means things above the RPC might not have time to retry.
@@ -265,15 +262,52 @@ namespace Halibut.Queue.Redis
 
         public async Task ApplyResponse(ResponseMessage response, Guid requestActivityId)
         {
-            if (response == null) return;
+            log.Write(EventType.MessageExchange, "Applying response for request {0}", requestActivityId);
+            
+            try
+            {
+                if (response == null) 
+                {
+                    log.Write(EventType.Diagnostic, "Response is null for request {0}, skipping apply", requestActivityId);
+                    return;
+                }
 
-            var cancellationToken = CancellationToken.None;
-            
-            // This node has now completed the RPC, and so the response must be sent
-            // back to the node which sent the response
-            
-            var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
-            await PollAndSubscribeForSingleMessage.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, log);
+                log.Write(EventType.MessageExchange, "Preparing response payload for request {0}", requestActivityId);
+                var cancellationToken = CancellationToken.None;
+
+                // This node has now completed the RPC, and so the response must be sent
+                // back to the node which sent the response
+
+                var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
+                log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
+                await PollAndSubscribeForSingleMessage.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, log);
+                log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
+            }
+            catch (Exception ex)
+            {
+                log.WriteException(EventType.Error, "Error applying response for request {0}", ex, requestActivityId);
+                throw;
+            }
+            finally
+            {
+                if (disposablesForInFlightRequests.TryRemove(requestActivityId, out var disposables))
+                {
+                    log.Write(EventType.Diagnostic, "Disposing in-flight request resources for request {0}", requestActivityId);
+                    try
+                    {
+                        await disposables.DisposeAsync();
+                        log.Write(EventType.Diagnostic, "Successfully disposed in-flight request resources for request {0}", requestActivityId);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.WriteException(EventType.Diagnostic, "Error disposing in-flight request resources for request {0}", ex, requestActivityId);
+                    }
+                }
+                else
+                {
+                    log.Write(EventType.Diagnostic, "No in-flight request resources found to dispose for request {0}", requestActivityId);
+                }
+            }
         }
 
         async Task<RequestMessage?> DequeueNextAsync()
