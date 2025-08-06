@@ -239,7 +239,6 @@ namespace Halibut.Tests.Queue.Redis
 
             var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutAndLimits.PollingQueueWaitTimeout = TimeSpan.FromDays(1); // We should not need to rely on the timeout working for very short disconnects.
-
             
             var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(redisFacadeReceiver), messageReaderWriter, halibutTimeoutAndLimits);
@@ -310,6 +309,7 @@ namespace Halibut.Tests.Queue.Redis
             dequeuedRequest.Should().NotBeNull();
             dequeuedRequest!.RequestMessage.ActivityId.Should().Be(request.ActivityId);
         }
+         
 
         [Test]
         public async Task WhenTheReceiverDequeuesWorkAndThenDisconnectsFromRedisForEver_TheSenderEventuallyTimesOut()
@@ -336,8 +336,10 @@ namespace Halibut.Tests.Queue.Redis
             var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             
             // Lower this to complete the test sooner.
-            node1Sender.MaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline = TimeSpan.FromSeconds(30);
-            node2Receiver.MaxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline = TimeSpan.FromSeconds(30);
+            node1Sender.DelayBetweenHeartBeatsForReceiver = TimeSpan.FromSeconds(1);
+            node2Receiver.DelayBetweenHeartBeatsForReceiver = TimeSpan.FromSeconds(1);
+            node1Sender.NodeOfflineTimeoutBetweenHeartBeatsFromReceiver = TimeSpan.FromSeconds(10);
+            node2Receiver.NodeOfflineTimeoutBetweenHeartBeatsFromReceiver = TimeSpan.FromSeconds(10);
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
@@ -351,13 +353,58 @@ namespace Halibut.Tests.Queue.Redis
             // Now disconnect the receiver from redis.
             portForwarder.EnterKillNewAndExistingConnectionsMode();
 
-            await Task.WhenAny(Task.Delay(TimeSpan.FromMinutes(2), CancellationToken), queueAndWaitTask);
+            await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(20), CancellationToken), queueAndWaitTask);
 
             queueAndWaitTask.IsCompleted.Should().BeTrue();
 
             var response = await queueAndWaitTask;
             response.Error.Should().NotBeNull();
             response.Error!.Message.Should().Contain("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.");
+        }
+        
+        [Test]
+        public async Task WhenTheReceiverDequeuesWork_AndTheSenderDisconnects_AndNeverReconnects_TheDequeuedWorkIsEventuallyCancelled()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var guid = Guid.NewGuid();
+            
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
+            halibutTimeoutAndLimits.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
+            halibutTimeoutAndLimits.PollingQueueWaitTimeout = TimeSpan.FromDays(1); // We should not need to rely on the timeout working for very short disconnects.
+
+            await using var stableRedisConnection = CreateRedisFacade(guid: guid);
+
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            await using var unstableRedisConnection = CreateRedisFacade(portForwarder.ListeningPort, guid: guid);
+            
+            var node1Sender = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
+            
+            node1Sender.DelayBetweenHeartBeatsForSender= TimeSpan.FromSeconds(1);
+            node2Receiver.DelayBetweenHeartBeatsForSender= TimeSpan.FromSeconds(1);
+            node1Sender.NodeOfflineTimeoutBetweenHeartBeatsFromSender = TimeSpan.FromSeconds(15);
+            node2Receiver.NodeOfflineTimeoutBetweenHeartBeatsFromSender = TimeSpan.FromSeconds(15);
+            
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            
+            var queueAndWaitTask = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+            
+            var dequeuedRequest = await node2Receiver.DequeueAsync(CancellationToken);
+            dequeuedRequest!.CancellationToken.IsCancellationRequested.Should().BeFalse();
+            
+            // Now disconnect the sender from redis.
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+
+            await Task.WhenAny(Task.Delay(TimeSpan.FromMinutes(2), dequeuedRequest.CancellationToken));
+
+
+            dequeuedRequest.CancellationToken.IsCancellationRequested.Should().BeTrue();
         }
         
         [Test]
@@ -462,10 +509,8 @@ namespace Halibut.Tests.Queue.Redis
 
             try
             {
-                await Task.Delay(TimeSpan.FromMinutes(1), requestMessageWithCancellationToken.CancellationToken);
+                await Task.Delay(TimeSpan.FromSeconds(10), requestMessageWithCancellationToken.CancellationToken);
             } catch (TaskCanceledException){}
-            
-            
             
             requestMessageWithCancellationToken!.CancellationToken.IsCancellationRequested.Should().BeTrue();
         }

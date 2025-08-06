@@ -53,13 +53,13 @@ namespace Halibut.ServiceModel
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="timePendingRequestCanBeOnTheQueueHasElapsed">
+        /// <param name="checkIfPendingRequestWasCollectedOrRemoveIt">
         /// This will be called either when the pick-up timeout has elapsed OR if the Cancellation Token has been triggered.
         /// This gives the user an opportunity to remove the pending request from shared places and optionally
         /// call BeginTransfer
         /// </param>
         /// <param name="cancellationToken"></param>
-        public async Task WaitUntilComplete(Func<Task> timePendingRequestCanBeOnTheQueueHasElapsed, CancellationToken cancellationToken)
+        public async Task WaitUntilComplete(Func<Task> checkIfPendingRequestWasCollectedOrRemoveIt, CancellationToken cancellationToken)
         {
             log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
@@ -78,8 +78,12 @@ namespace Halibut.ServiceModel
                     log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
                     return;
                 }
+            }
 
-
+            if (!requestCollected.IsSet) await checkIfPendingRequestWasCollectedOrRemoveIt();
+            
+            using (await transferLock.LockAsync(CancellationToken.None)) {
+                
                 if (cancellationToken.IsCancellationRequested)
                 {
                     if (!requestCollected.IsSet) log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint", request);
@@ -88,11 +92,7 @@ namespace Halibut.ServiceModel
                     await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
                     cancellationToken.ThrowIfCancellationRequested();
                 }
-            }
-
-            if (!requestCollected.IsSet) await timePendingRequestCanBeOnTheQueueHasElapsed();
-            
-            using (await transferLock.LockAsync(CancellationToken.None)) {
+                
                 if (!requestCollected.IsSet)
                 {
                     // Request was not collected within the pickup time.

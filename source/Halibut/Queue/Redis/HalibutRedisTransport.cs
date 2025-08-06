@@ -163,18 +163,19 @@ namespace Halibut.Queue.Redis
         
         
         // Node Processing the request heart beat channel
-        static string NodeProcessingTheRequestHeartBeatChannel(Uri endpoint, Guid requestId)
+        static string NodeProcessingTheRequestHeartBeatChannel(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType)
         {
-            return $"{Namespace}::NodeProcessingTheRequestHeartBeatChannel::{endpoint}::{requestId}";
+            return $"{Namespace}::NodeProcessingTheRequestHeartBeatChannel::{endpoint}::{requestId}::{nodeSendingPulsesType}";
         }
 
-        public async Task<IAsyncDisposable> SubscribeToNodeProcessingTheRequestHeartBeatChannel(
+        public async Task<IAsyncDisposable> SubscribeToNodeHeartBeatChannel(
             Uri endpoint, 
             Guid request,
+            HalibutQueueNodeSendingPulses nodeSendingPulsesType,
             Func<Task> onHeartBeat,
             CancellationToken cancellationToken)
         {
-            var channelName = NodeProcessingTheRequestHeartBeatChannel(endpoint, request);
+            var channelName = NodeProcessingTheRequestHeartBeatChannel(endpoint, request, nodeSendingPulsesType);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? response = foo.Message;
@@ -182,10 +183,25 @@ namespace Halibut.Queue.Redis
             }, cancellationToken);
         }
 
+        public async Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
+        {
+            var channelName = NodeProcessingTheRequestHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType);
+            await facade.PublishToChannel(channelName, "{}");
+        }
+
+        // Backward compatibility methods (defaulting to Receiver for existing code)
+        public async Task<IAsyncDisposable> SubscribeToNodeProcessingTheRequestHeartBeatChannel(
+            Uri endpoint, 
+            Guid request,
+            Func<Task> onHeartBeat,
+            CancellationToken cancellationToken)
+        {
+            return await SubscribeToNodeHeartBeatChannel(endpoint, request, HalibutQueueNodeSendingPulses.Receiver, onHeartBeat, cancellationToken);
+        }
+
         public async Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
-            var channelName = NodeProcessingTheRequestHeartBeatChannel(endpoint, requestId);
-            await facade.PublishToChannel(channelName, "{}");
+            await SendHeartBeatFromNodeProcessingTheRequest(endpoint, requestId, HalibutQueueNodeSendingPulses.Receiver, cancellationToken);
         }
         
         // Generic methods for watching for any string value being set
