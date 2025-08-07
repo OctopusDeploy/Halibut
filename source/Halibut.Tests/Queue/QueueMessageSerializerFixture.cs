@@ -5,10 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
-using Halibut.Queue;
 using Halibut.Tests.Support;
 using Halibut.Transport.Protocol;
-using Newtonsoft.Json;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Queue
@@ -19,7 +17,7 @@ namespace Halibut.Tests.Queue
         public void SerializeAndDeserializeMessage_ShouldRoundTrip()
         {
             // Arrange
-            var sut = new QueueMessageSerializerBuilder(new LogFactory())
+            var sut = new QueueMessageSerializerBuilder()
                 .Build();
 
             const string testMessage = "Hello, Queue!";
@@ -38,7 +36,7 @@ namespace Halibut.Tests.Queue
         public void SerializeAndDeserializeMessage_ShouldRoundTrip_RequestMessage()
         {
             // Arrange
-            var sut = new QueueMessageSerializerBuilder(new LogFactory())
+            var sut = new QueueMessageSerializerBuilder()
                 .Build();
 
             var request = new RequestMessage()
@@ -67,7 +65,7 @@ namespace Halibut.Tests.Queue
             var typeRegistry = new TypeRegistry();
             typeRegistry.Register(typeof(IHaveTypeWithDataStreamsService));
             // Arrange
-            var sut = new QueueMessageSerializerBuilder(new LogFactory())
+            var sut = new QueueMessageSerializerBuilder()
                 .WithTypeRegistry(typeRegistry)
                 .Build();
 
@@ -136,46 +134,6 @@ namespace Halibut.Tests.Queue
                         await stream.WriteAsync(toRepeat.GetUTF8Bytes(), token);
                     }
                 });
-            }
-        }
-
-        public class QueueMessageSerializerBuilder
-        {
-            readonly ILogFactory logFactory;
-            ITypeRegistry? typeRegistry;
-            Action<JsonSerializerSettings>? configureSerializer;
-
-            public QueueMessageSerializerBuilder(ILogFactory logFactory)
-            {
-                this.logFactory = logFactory;
-            }
-
-            public QueueMessageSerializerBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
-            {
-                this.typeRegistry = typeRegistry;
-                return this;
-            }
-
-            public QueueMessageSerializerBuilder WithSerializerSettings(Action<JsonSerializerSettings> configure)
-            {
-                configureSerializer = configure;
-                return this;
-            }
-
-            public QueueMessageSerializer Build()
-            {
-                var typeRegistry = this.typeRegistry ?? new TypeRegistry();
-
-                StreamCapturingJsonSerializer StreamCapturingSerializer()
-                {
-                    var settings = MessageSerializerBuilder.CreateSerializer();
-                    var binder = new RegisteredSerializationBinder(typeRegistry);
-                    settings.SerializationBinder = binder;
-                    configureSerializer?.Invoke(settings);
-                    return new StreamCapturingJsonSerializer(settings);
-                }
-
-                return new QueueMessageSerializer(StreamCapturingSerializer);
             }
         }
     }
