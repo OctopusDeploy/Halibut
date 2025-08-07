@@ -5,6 +5,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Halibut.Tests.Support;
 using NUnit.Framework;
+using Try = Halibut.Util.Try;
 
 namespace Halibut.Tests.Queue.Redis.Utils
 {
@@ -98,7 +99,15 @@ namespace Halibut.Tests.Queue.Redis.Utils
         /// <summary>
         /// Starts the Redis container
         /// </summary>
-        public Task StartAsync() => _container.StartAsync();
+        public async Task StartAsync()
+        {
+            // Since I have seen errors here.
+            for (int i = 0; i < 5; i++)
+            {
+                await Try.IgnoringError(async () => await _container.StartAsync());
+            }
+            await _container.StartAsync();
+        }
 
         /// <summary>
         /// Stops the Redis container
