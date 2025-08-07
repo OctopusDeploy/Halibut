@@ -41,7 +41,7 @@ namespace Halibut.Tests.Support.PendingRequestQueueFactories
 
             public bool IsEmpty => inner.IsEmpty;
             public int Count => inner.Count;
-            public async Task ApplyResponse(ResponseMessage response, ServiceEndPoint destination) => await inner.ApplyResponse(response, destination);
+            public async Task ApplyResponse(ResponseMessage response, Guid requestActivityId) => await inner.ApplyResponse(response, requestActivityId);
             public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken) => await inner.DequeueAsync(cancellationToken);
 
             public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationTokens)

@@ -56,7 +56,7 @@ namespace Halibut.Tests.Timeouts
                        .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
                            .WithLog(logFactory.ForEndpoint(uri))
                            .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                           .Build()))
+                           .Build().PendingRequestQueue))
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero,  TimeSpan.Zero))
                        .WithEchoService()
                        .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)

@@ -6,6 +6,7 @@ namespace Halibut.Tests.Builders
     public class RequestMessageBuilder
     {
         readonly ServiceEndPointBuilder serviceEndPointBuilder = new();
+        private Guid? activityId;
 
         public RequestMessageBuilder(string endpoint)
         {
@@ -18,6 +19,12 @@ namespace Halibut.Tests.Builders
             return this;
         }
         
+        public RequestMessageBuilder WithActivityId(Guid activityId)
+        {
+            this.activityId = activityId;
+            return this;
+        }
+        
         public RequestMessage Build()
         {
             var serviceEndPoint = serviceEndPointBuilder.Build();
@@ -25,10 +32,9 @@ namespace Halibut.Tests.Builders
             var request = new RequestMessage
             {
                 Id = Guid.NewGuid().ToString(),
-                Destination = serviceEndPoint
+                Destination = serviceEndPoint,
+                ActivityId = activityId ?? Guid.NewGuid(),
             };
-
-            
 
             return request;
         }

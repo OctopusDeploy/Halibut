@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Logging;
+using Halibut.Queue;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.TestServices;
@@ -221,6 +222,11 @@ namespace Halibut.Tests.Support
         }
 
         public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
+        {
+            return WithPendingRequestQueueFactory((_, logFactory) => pendingRequestQueueFactory(logFactory));
+        }
+
+        public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<QueueMessageSerializer, ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
             clientBuilder.WithPendingRequestQueueFactory(pendingRequestQueueFactory);
             return this;

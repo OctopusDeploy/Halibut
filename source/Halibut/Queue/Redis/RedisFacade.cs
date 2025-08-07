@@ -1,0 +1,395 @@
+// Copyright 2012-2013 Octopus Deploy Pty. Ltd.
+// 
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// 
+//   http://www.apache.org/licenses/LICENSE-2.0
+// 
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
+using Halibut.Util;
+using Halibut.Diagnostics; // Add logging support
+using Newtonsoft.Json;
+using Nito.AsyncEx;
+using StackExchange.Redis;
+using StackExchange.Redis.KeyspaceIsolation;
+
+namespace Halibut.Queue.Redis
+{
+    /// <summary>
+    /// Facade for Redis operations with built-in connection monitoring and disconnect detection.
+    /// 
+    /// Usage example for connection monitoring:
+    /// <code>
+    /// var facade = new RedisFacade("localhost:6379", "myapp", logger);
+    /// 
+    /// // Monitor overall connection events
+    /// facade.ConnectionFailed += message => Console.WriteLine($"Connection failed: {message}");
+    /// facade.ConnectionRestored += message => Console.WriteLine($"Connection restored: {message}");
+    /// facade.ErrorOccurred += message => Console.WriteLine($"Redis error: {message}");
+    /// 
+    /// // Subscribe with per-subscription monitoring
+    /// var subscription = await facade.SubscribeToChannel("my-channel", async message => {
+    ///     Console.WriteLine($"Received: {message}");
+    /// });
+    /// 
+    /// // Monitor individual subscription disconnects
+    /// if (subscription is RedisSubscriptionWrapper wrapper)
+    /// {
+    ///     wrapper.SubscriptionDisconnected += message => Console.WriteLine($"Subscription lost: {message}");
+    ///     wrapper.SubscriptionReconnected += message => Console.WriteLine($"Subscription restored: {message}");
+    /// }
+    /// 
+    /// // Check connection status
+    /// if (!facade.IsConnected)
+    /// {
+    ///     Console.WriteLine("Redis is not connected!");
+    /// }
+    /// </code>
+    /// </summary>
+    public class RedisFacade : IAsyncDisposable
+    {
+        readonly Lazy<ConnectionMultiplexer> connection;
+        readonly ILog log;
+
+        ConnectionMultiplexer Connection => connection.Value;
+        
+        string keyPrefix;
+
+
+        CancellationTokenSource cts;
+        CancellationToken facadeCancellationToken;
+
+        public RedisFacade(string configuration, string? keyPrefix, ILog log) : this(ConfigurationOptions.Parse(configuration), keyPrefix, log)
+        {
+            
+        }
+        public RedisFacade(ConfigurationOptions redisOptions, string? keyPrefix, ILog log)
+        {
+            this.keyPrefix = keyPrefix ?? "halibut";
+            this.log = log;
+            this.cts = new CancellationTokenSource();
+            this.facadeCancellationToken = cts.Token;
+
+            // aka have more goes at connecting.
+            redisOptions.AbortOnConnectFail = false;
+            
+            connection = new Lazy<ConnectionMultiplexer>(() =>
+            {
+                var multiplexer = ConnectionMultiplexer.Connect(redisOptions);
+                
+                //redisOptions.ReconnectRetryPolicy = new LinearRetry()
+                
+                // Subscribe to connection events
+                multiplexer.ConnectionFailed += OnConnectionFailed;
+                multiplexer.ConnectionRestored += OnConnectionRestored;
+                multiplexer.ErrorMessage += OnErrorMessage;
+                
+                return multiplexer;
+            });
+        }
+        
+        public class ShouldAbandonAndReconnectHelper
+        {
+            readonly TaskCompletionSource connectionInError = new TaskCompletionSource();
+            
+            public bool IsConnectionInError => connectionInError.Task.IsCompleted;
+            
+            public void SetReconnectionIsAdvised() => connectionInError.SetResult();
+            
+            public Task WaitUntilShouldReSubscribeTask => connectionInError.Task;
+        }
+        
+        private ShouldAbandonAndReconnectHelper ShouldAbandonAndReconnect = new ShouldAbandonAndReconnectHelper();
+        private readonly object errorOccuredLock = new object();
+        
+        private ShouldAbandonAndReconnectHelper ConnectionInErrorHelperProvider() => ShouldAbandonAndReconnect;
+        
+
+        private void AdviseThatClientsShouldStartReconnecting()
+        {
+            lock (errorOccuredLock)
+            {
+                var shouldAbandonAndReconnect = this.ShouldAbandonAndReconnect;
+                this.ShouldAbandonAndReconnect = new ();
+                shouldAbandonAndReconnect.SetReconnectionIsAdvised();
+            }
+        } 
+        private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
+        {
+            AdviseThatClientsShouldStartReconnecting();
+
+            var message = $"Redis connection failed - EndPoint: {e.EndPoint}, Failure: {e.FailureType}, Exception: {e.Exception?.Message}";
+            log?.Write(EventType.Error, message);
+        }
+
+        private void OnErrorMessage(object? sender, RedisErrorEventArgs e)
+        {
+            var message = $"Redis error - EndPoint: {e.EndPoint}, Message: {e.Message}";
+            log?.Write(EventType.Error, message);
+        }
+        
+        private void OnConnectionRestored(object? sender, ConnectionFailedEventArgs e)
+        {
+            var message = $"Redis connection restored - EndPoint: {e.EndPoint}";
+            log?.Write(EventType.Diagnostic, message);
+        }
+        
+        // We can survive redis being unavailable for this amount of time.
+        static readonly TimeSpan MaxDurationToRetryFor = TimeSpan.FromSeconds(30);
+
+        /// <summary>
+        /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.
+        /// </summary>
+        private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+        {
+            using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
+            var combinedToken = linkedTokenSource.Token;
+            
+            var retryDelay = TimeSpan.FromSeconds(1);
+            var stopwatch = Stopwatch.StartNew();
+            
+            while (true)
+            {
+                combinedToken.ThrowIfCancellationRequested();
+                
+                try
+                {
+                    return await operation();
+                }
+                catch (Exception ex) when (stopwatch.Elapsed < MaxDurationToRetryFor && !combinedToken.IsCancellationRequested)
+                {
+                    log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
+                    await Task.Delay(retryDelay, combinedToken);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.
+        /// </summary>
+        private async Task ExecuteWithRetry(Func<Task> operation, CancellationToken cancellationToken)
+        {
+            using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
+            var combinedToken = linkedTokenSource.Token;
+            
+            var retryDelay = TimeSpan.FromSeconds(1);
+            var stopwatch = Stopwatch.StartNew();
+            
+            while (true)
+            {
+                combinedToken.ThrowIfCancellationRequested();
+                
+                try
+                {
+                    await operation();
+                    return;
+                }
+                catch (Exception ex) when (stopwatch.Elapsed < MaxDurationToRetryFor && !combinedToken.IsCancellationRequested)
+                {
+                    log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
+                    await Task.Delay(retryDelay, combinedToken);
+                }
+            }
+        }
+
+        public bool IsConnected => connection.IsValueCreated && Connection.IsConnected;
+
+        public async ValueTask DisposeAsync()
+        {
+            await Try.IgnoringError(async () => await cts.CancelAsync());
+            Try.IgnoringError(() => cts.Dispose());
+            
+            if (connection.IsValueCreated)
+            {
+                var conn = connection.Value;
+                
+                Try.IgnoringError(() =>
+                {
+                    // Unsubscribe from events before disposing
+                    conn.ConnectionFailed -= OnConnectionFailed;
+                    conn.ConnectionRestored -= OnConnectionRestored;
+                    conn.ErrorMessage -= OnErrorMessage;
+                });
+                
+                await Try.IgnoringError(async () => await conn.DisposeAsync());
+            }
+        }
+        
+        
+
+        public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage, CancellationToken cancellationToken)
+        {
+            
+            channelName = "channel:" + keyPrefix + ":" + channelName;
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    // This can throw if we are unable to connect to redis.
+                    var channel = await Connection.GetSubscriber()
+                        .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
+                
+                    // Once we are connected to redis, it seems even if the connection to redis dies.
+                    // The client will take care of re-connecting to redis.
+                    channel.OnMessage(onMessage);
+                
+                    return new FuncAsyncDisposable(async () => await channel.UnsubscribeAsync());
+                }
+                catch
+                {
+                    // TODO: Get AI to log.
+                    await Try.IgnoringError(async () => await Task.Delay(2000, cancellationToken));
+                }
+            }
+        }
+        
+        public async Task PublishToChannel(string channelName, string payload)
+        {
+            channelName = "channel:" + keyPrefix + ":" + channelName;
+            await ExecuteWithRetry(async () =>
+            {
+                var subscriber = Connection.GetSubscriber();
+                await subscriber.PublishAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal), payload);
+            }, CancellationToken.None);
+        }
+        
+        public async Task SetInHash(string key, string field, string payload)
+        {
+            key = "hash:" + keyPrefix + ":" + key;
+            
+            // TODO: TTL
+            // TODO ever call needs to respect the cancellation token
+            var ttl = new TimeSpan(9, 9, 9);
+            
+            // Retry each operation independently
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.HashSetAsync(key, new RedisValue(field), new RedisValue(payload));
+            }, CancellationToken.None);
+            
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.KeyExpireAsync(key, ttl);
+            }, CancellationToken.None);
+        }
+
+        public async Task<bool> HashContainsKey(string key, string field)
+        {
+            key = "hash:" + keyPrefix + ":" + key;
+            return await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.HashExistsAsync(key, new RedisValue(field));
+            }, CancellationToken.None);
+        }
+
+        public async Task<string?> TryGetAndDeleteFromHash(string key, string field)
+        {
+            key = "hash:" + keyPrefix + ":" + key;
+            
+            // Retry each operation independently
+            var value = await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.HashGetAsync(key, new RedisValue(field));
+            }, CancellationToken.None);
+            
+            // TODO: If we retry this is not idempotent.
+            var res = await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.KeyDeleteAsync(key);
+            }, CancellationToken.None);
+            
+            if (!res)
+            {
+                // Someone else deleted this, so return nothing to make the get and delete appear to be atomic. 
+                return null;
+            } 
+            return (string?)value;
+        }
+
+        public async Task ListRightPushAsync(string key, string payload)
+        {
+            key = "list:" + keyPrefix + ":" + key;
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                // TODO can we set TTL on this?
+                await database.ListRightPushAsync(key, payload);
+            }, CancellationToken.None);
+        }
+
+        public async Task<string?> ListLeftPopAsync(string key)
+        {
+            key = "list:" + keyPrefix + ":" + key;
+            return await ExecuteWithRetry<string?>(async () =>
+            {
+                var database = Connection.GetDatabase();
+                var value = await database.ListLeftPopAsync(key);
+                if (value.IsNull)
+                {
+                    return null;
+                }
+
+                return (string?)value;
+            }, CancellationToken.None);
+        }
+
+        public async Task SetString(string key, string value, TimeSpan ttl, CancellationToken cancellationToken)
+        {
+            // TODO TTL
+            key = "string:" + keyPrefix + ":" + key;
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.StringSetAsync(key, value);
+            }, cancellationToken);
+
+            await SetTtlForKey(key, ttl, cancellationToken);
+        }
+
+        public async Task SetTtlForKey(string key, TimeSpan ttl, CancellationToken cancellationToken)
+        {
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.KeyExpireAsync(key, ttl);
+            }, cancellationToken);
+        }
+
+        public async Task<string?> GetString(string key, CancellationToken cancellationToken)
+        {
+            key = "string:" + keyPrefix + ":" + key;
+            return await ExecuteWithRetry<string?>(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.StringGetAsync(key);
+            }, cancellationToken);
+        }
+        
+        public async Task<bool> DeleteString(string key)
+        {
+            key = "string:" + keyPrefix + ":" + key;
+            return await ExecuteWithRetry<bool>(async () =>
+            {
+                var database = Connection.GetDatabase();
+                return await database.KeyDeleteAsync(key);
+            }, CancellationToken.None);
+        }
+    }
+
+}
