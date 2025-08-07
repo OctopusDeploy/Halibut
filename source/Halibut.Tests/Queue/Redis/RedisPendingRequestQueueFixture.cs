@@ -83,6 +83,7 @@ namespace Halibut.Tests.Queue.Redis
                 .Build();
 
             var sut = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await sut.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             var response = await sut.QueueAndWaitAsync(request, CancellationToken.None);
 
@@ -163,6 +164,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
 
@@ -198,6 +200,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, dataLossWatcher, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
             var node2Receiver = new RedisPendingRequestQueue(endpoint, dataLossWatcher, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
 
@@ -351,7 +354,8 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
-            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var senderLog = new TestContextLogCreator("QueueSender", LogLevel.Trace).CreateNewForPrefix("");
+            var receiverLog = new TestContextLogCreator("ReceiverLog", LogLevel.Trace).CreateNewForPrefix("");
             var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -360,8 +364,9 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             request.Params = new[] { new ComplexObjectMultipleDataStreams(DataStream.FromString("hello"), DataStream.FromString("world")) };
 
-            var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
-            var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), senderLog, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), receiverLog, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
 
@@ -409,6 +414,7 @@ namespace Halibut.Tests.Queue.Redis
             
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(redisFacadeReceiver), messageReaderWriter, halibutTimeoutAndLimits);
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
             var dequeueTask = node2Receiver.DequeueAsync(CancellationToken);
             
             await Task.Delay(5000, CancellationToken); // Allow some time for the receiver to subscribe to work.
@@ -459,6 +465,7 @@ namespace Halibut.Tests.Queue.Redis
             
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(redisFacadeSender), messageReaderWriter, halibutTimeoutAndLimits);
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
 
@@ -501,6 +508,7 @@ namespace Halibut.Tests.Queue.Redis
             
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
             
             // Lower this to complete the test sooner.
             node1Sender.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
@@ -552,6 +560,7 @@ namespace Halibut.Tests.Queue.Redis
             
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
             
             node1Sender.DelayBetweenHeartBeatsForRequestSender= TimeSpan.FromSeconds(1);
             node2Receiver.DelayBetweenHeartBeatsForRequestSender= TimeSpan.FromSeconds(1);
@@ -592,6 +601,7 @@ namespace Halibut.Tests.Queue.Redis
             
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(unreliableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(stableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             // TODO: This only needs to be set because we do not detect the work was collected as soon as it has been collected.
@@ -635,7 +645,8 @@ namespace Halibut.Tests.Queue.Redis
                                      new NeverLosingDataWatchForRedisLosingAllItsData(),
                                      redisTransport,
                                      new HalibutTimeoutsAndLimits(),
-                                     logFactory))
+                                     logFactory)
+                                     .WithWaitForReceiverToBeReady())
                              .Build(CancellationToken))
             {
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();

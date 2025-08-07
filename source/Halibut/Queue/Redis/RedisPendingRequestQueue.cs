@@ -63,8 +63,10 @@ namespace Halibut.Queue.Redis
             // The advice is many channels with few subscribers is better than a single channel with many subscribers.
             // If we end up with too many channels, we could shared the channels based on modulo of the hash of the endpoint,
             // which means we might have only 1000 channels and num_tentacles/1000 subscribers to each channel. For 300K tentacles.
-            PulseChannelSubDisposer = Task.Run(() => this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set(), queueToken));
+            PulseChannelSubDisposer = Task.Run(async () => await this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set(), queueToken));
         }
+
+        internal async Task WaitUntilQueueIsSubscribedToReceiveMessages() => await PulseChannelSubDisposer;
         
         public async ValueTask DisposeAsync()
         {
