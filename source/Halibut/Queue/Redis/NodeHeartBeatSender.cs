@@ -173,6 +173,7 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Waiting for request {0} to be collected from queue", request.ActivityId);
             
+            // TODO: um like listen to the heart beat here, because heart beat == collected (maybe)
             while (!cancellationToken.IsCancellationRequested)
             {
                 try

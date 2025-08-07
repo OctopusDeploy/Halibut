@@ -112,8 +112,8 @@ namespace Halibut.Queue.Redis
 
                 await pending.WaitUntilComplete(
             async () => await tryClearRequestFromQueueAtMostOnce.Task,
-                                                () => dataLoseCt.IsCancellationRequested ? " Cancelled because data loss on redis was detected." : "",                  
-                                                cancellationToken);
+                                () => dataLoseCt.IsCancellationRequested ? " Cancelled because data loss on redis was detected." : "",                  
+                                                        cancellationToken);
             }
             finally
             {
@@ -339,6 +339,7 @@ namespace Halibut.Queue.Redis
 
         async Task<RequestMessage?> DequeueNextAsync()
         {
+            // TODO use queue token.
             var cancellationToken = CancellationToken.None;
             
             using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
