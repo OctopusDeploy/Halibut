@@ -20,6 +20,7 @@ using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
+using Nito.AsyncEx;
 
 namespace Halibut.Queue.Redis
 {
@@ -98,16 +99,29 @@ namespace Halibut.Queue.Redis
             RequestMessage request, 
             PendingRequest pending,
             HalibutRedisTransport halibutRedisTransport,
+            TimeSpan timeBetweenCheckingIfRequestWasCollected,
             ILog log,
             TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
             // Once the pending's CT has been cancelled we no longer care to keep observing
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(watchCancellationToken, pending.PendingRequestCancellationToken);
+            var cancellationToken = cts.Token;
             // TODO: test this is indeed called first.
-            await WaitForRequestToBeCollected(endpoint, request, pending, halibutRedisTransport, log, cts.Token);
-            
-            return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.Receiver, cts.Token);
+            try
+            {
+                await WaitForRequestToBeCollected(endpoint, request, pending, halibutRedisTransport, timeBetweenCheckingIfRequestWasCollected, log, cts.Token);
+
+                return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.Receiver, cts.Token);
+            }
+            catch (Exception) when (!cts.Token.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception)
+            {
+                return NodeProcessingRequestWatcherResult.NoDisconnectSeen;
+            }
         }
 
         public static async Task<NodeProcessingRequestWatcherResult> WatchThatNodeWhichSentTheRequestIsStillAlive(
@@ -130,7 +144,7 @@ namespace Halibut.Queue.Redis
             HalibutQueueNodeSendingPulses watchingForPulsesFrom,
             CancellationToken watchCancellationToken)
         {
-            log.Write(EventType.Diagnostic, "Starting to watch for {0} node flatline, request {1}, endpoint {2}", watchingForPulsesFrom, requestActivityId, endpoint);
+            log.Write(EventType.Diagnostic, "Starting to watch for pulses from {0} node, request {1}, endpoint {2}", watchingForPulsesFrom, requestActivityId, endpoint);
 
             DateTimeOffset? lastHeartBeat = DateTimeOffset.Now;
             
@@ -168,16 +182,29 @@ namespace Halibut.Queue.Redis
             }
         }
         
-
-        static async Task WaitForRequestToBeCollected(Uri endpoint, RequestMessage request, PendingRequest pending, HalibutRedisTransport halibutRedisTransport, ILog log, CancellationToken cancellationToken)
+        static async Task WaitForRequestToBeCollected(Uri endpoint, RequestMessage request, PendingRequest pending, HalibutRedisTransport halibutRedisTransport,
+            TimeSpan timeBetweenCheckingIfRequestWasCollected,
+            ILog log, CancellationToken cancellationToken)
         {
             log.Write(EventType.Diagnostic, "Waiting for request {0} to be collected from queue", request.ActivityId);
+
+            // Is this worthwhile?
+            var asyncManualResetEvent = new AsyncManualResetEvent(false);
+            // await using var subscription = await halibutRedisTransport.SubscribeToNodeHeartBeatChannel(
+            //     endpoint,
+            //     request.ActivityId,
+            //     HalibutQueueNodeSendingPulses.Receiver, async () =>
+            //     {
+            //         await Task.CompletedTask;
+            //         asyncManualResetEvent.Set();
+            //         log.Write(EventType.Diagnostic, "While waiting for request to be collected received heartbeat from {0} node, request {1}", HalibutQueueNodeSendingPulses.Receiver, request.ActivityId);
+            //     }, cancellationToken);
             
-            // TODO: um like listen to the heart beat here, because heart beat == collected (maybe)
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
+                    asyncManualResetEvent.Reset();
                     // Has something else determined the request was collected?
                     // TODO should we bail out of here if the PendingRequest is complete? 
                     if(pending.HasRequestBeenMarkedAsCollected) 
@@ -201,7 +228,13 @@ namespace Halibut.Queue.Redis
                     log.WriteException(EventType.Diagnostic, "Error checking if request {0} is still on queue", ex, request.ActivityId);
                 }
                 
-                await Try.IgnoringError(async () => await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(30), cancellationToken), pending.WaitForRequestToBeMarkedAsCollected(cancellationToken)));
+                await Try.IgnoringError(async () =>
+                {
+                    await Task.WhenAny(
+                        Task.Delay(timeBetweenCheckingIfRequestWasCollected, cancellationToken),
+                        asyncManualResetEvent.WaitAsync(cancellationToken),
+                        pending.WaitForRequestToBeMarkedAsCollected(cancellationToken));
+                });
             }
             
             log.Write(EventType.Diagnostic, "Stopped waiting for request {0} to be collected (cancelled)", request.ActivityId);

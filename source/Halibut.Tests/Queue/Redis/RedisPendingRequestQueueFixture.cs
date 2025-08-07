@@ -54,6 +54,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
             var sut = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await sut.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             var task = sut.QueueAndWaitAsync(request, CancellationToken.None);
 
@@ -247,6 +248,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
             var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             // Act
             var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
@@ -278,6 +280,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
             var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
             queue.DelayBetweenHeartBeatsForRequestSender = TimeSpan.FromSeconds(1);
             
             // Act
@@ -321,6 +324,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
             var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
             queue.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
 
             // Act
@@ -566,6 +570,8 @@ namespace Halibut.Tests.Queue.Redis
             node2Receiver.DelayBetweenHeartBeatsForRequestSender= TimeSpan.FromSeconds(1);
             node1Sender.NodeIsOfflineHeartBeatTimeoutForRequestSender = TimeSpan.FromSeconds(15);
             node2Receiver.NodeIsOfflineHeartBeatTimeoutForRequestSender = TimeSpan.FromSeconds(15);
+            node1Sender.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromSeconds(1);
+            node2Receiver.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromSeconds(1);
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
@@ -675,6 +681,7 @@ namespace Halibut.Tests.Queue.Redis
             request.Params = new[] { new ComplexObjectMultipleDataStreams(DataStream.FromString("hello"), DataStream.FromString("world")) };
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await node1Sender.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             using var cts = new CancellationTokenSource();
             

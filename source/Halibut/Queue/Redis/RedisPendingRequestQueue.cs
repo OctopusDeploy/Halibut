@@ -147,7 +147,15 @@ namespace Halibut.Queue.Redis
                 var watcherCtsCancellationToken = watcherCts.CancellationToken;
                 try
                 {
-                    var disconnected = await NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(endpoint, request, pending, halibutRedisTransport, log, NodeIsOfflineHeartBeatTimeoutForRequestProcessor, watcherCtsCancellationToken);
+                    var disconnected = await NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(
+                        endpoint,
+                        request,
+                        pending,
+                        halibutRedisTransport,
+                        TimeBetweenCheckingIfRequestWasCollected,
+                        log,
+                        NodeIsOfflineHeartBeatTimeoutForRequestProcessor,
+                        watcherCtsCancellationToken);
                     if (!watcherCtsCancellationToken.IsCancellationRequested && disconnected == NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected)
                     {
                         // TODO: if(responseWatcher.CheckForResponseNow() == ResponseNotFound) {
@@ -252,6 +260,8 @@ namespace Halibut.Queue.Redis
         internal TimeSpan DelayBetweenHeartBeatsForRequestProcessor { get; set; }  = TimeSpan.FromSeconds(15);
         
         internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(5);
+        
+        internal TimeSpan TimeBetweenCheckingIfRequestWasCollected { get; set; } = TimeSpan.FromSeconds(30);
         
         
         
