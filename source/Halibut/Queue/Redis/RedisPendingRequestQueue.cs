@@ -27,6 +27,7 @@ namespace Halibut.Queue.Redis
     class RedisPendingRequestQueue : IPendingRequestQueue, IDisposable
     {
         readonly Uri endpoint;
+        readonly IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData;
         readonly ILog log;
         readonly HalibutRedisTransport halibutRedisTransport;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
@@ -35,18 +36,22 @@ namespace Halibut.Queue.Redis
 
         readonly CancellationTokenSource queueCts = new ();
         internal ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
+        
+        // TODO: this needs to be used in all public methods.
         readonly CancellationToken queueToken;
         
         Task<IAsyncDisposable> PulseChannelSubDisposer { get; }
         
         public RedisPendingRequestQueue(
             Uri endpoint, 
+            IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData,
             ILog log, 
             HalibutRedisTransport halibutRedisTransport, 
             MessageReaderWriter messageReaderWriter, 
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.endpoint = endpoint;
+            this.watchForRedisLosingAllItsData = watchForRedisLosingAllItsData;
             this.log = log;
             this.messageReaderWriter = messageReaderWriter;
             this.halibutRedisTransport = halibutRedisTransport;
@@ -68,9 +73,19 @@ namespace Halibut.Queue.Redis
             await Try.IgnoringError(async () => await (await PulseChannelSubDisposer).DisposeAsync());
         }
 
+        private async Task<CancellationToken> DataLossCancellationToken(CancellationToken? cancellationToken)
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, cancellationToken ?? CancellationToken.None);
+            return await watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), cts.Token);
+        }
+
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
         {
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, requestCancellationToken);
+            
+            var dataLoseCt = await DataLossCancellationToken(requestCancellationToken);
+            
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, requestCancellationToken, dataLoseCt);
+            
             var cancellationToken = cts.Token;
             // TODO: redis goes down
             // TODO RedisConnectionException can be raised out of here, what should the queue do?
@@ -95,7 +110,10 @@ namespace Halibut.Queue.Redis
                 await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
                 WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
 
-                await pending.WaitUntilComplete(async () => await tryClearRequestFromQueueAtMostOnce.Task, cancellationToken);
+                await pending.WaitUntilComplete(
+            async () => await tryClearRequestFromQueueAtMostOnce.Task,
+                                                () => dataLoseCt.IsCancellationRequested ? " Cancelled because data loss on redis was detected." : "",                  
+                                                cancellationToken);
             }
             finally
             {
@@ -248,10 +266,17 @@ namespace Halibut.Queue.Redis
             var disposables = new DisposableCollection();
             try
             {
+                // There is a chance the data loss occured after we got the data but before here.
+                // In that case we will just time out because of the lack of heart beats.
+                var dataLossCT = await this.watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), queueToken);
+                
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, DelayBetweenHeartBeatsForRequestProcessor));
-
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
-                var response = new RequestMessageWithCancellationToken(pending, watcher.RequestProcessingCancellationToken);
+                
+                var cts = CancellationTokenSource.CreateLinkedTokenSource(watcher.RequestProcessingCancellationToken, dataLossCT);
+                disposables.Add(cts);
+                
+                var response = new RequestMessageWithCancellationToken(pending, cts.Token);
                 disposablesForInFlightRequests[pending.ActivityId] = disposables;
                 return response;
             }

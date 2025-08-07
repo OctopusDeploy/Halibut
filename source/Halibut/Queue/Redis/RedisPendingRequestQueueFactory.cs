@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.ServiceModel;
@@ -26,10 +27,12 @@ namespace Halibut.Queue.Redis
         readonly HalibutRedisTransport halibutRedisTransport;
         readonly ILogFactory logFactory;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
+        readonly IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData;
 
         public RedisPendingRequestQueueFactory(
             QueueMessageSerializer queueMessageSerializer,
             IStoreDataStreamsForDistributedQueues dataStreamStorage,
+            IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData,
             HalibutRedisTransport halibutRedisTransport,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, 
             ILogFactory logFactory)
@@ -39,15 +42,20 @@ namespace Halibut.Queue.Redis
             this.halibutRedisTransport = halibutRedisTransport;
             this.logFactory = logFactory;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
+            this.watchForRedisLosingAllItsData = watchForRedisLosingAllItsData;
         }
+
+        
 
         public IPendingRequestQueue CreateQueue(Uri endpoint)
         {
             return new RedisPendingRequestQueue(endpoint,
+                watchForRedisLosingAllItsData,
                 logFactory.ForEndpoint(endpoint),
                 halibutRedisTransport,
                 new MessageReaderWriter(queueMessageSerializer, dataStreamStorage),
                 halibutTimeoutsAndLimits);
         }
+
     }
 }

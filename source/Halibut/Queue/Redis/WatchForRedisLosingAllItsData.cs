@@ -20,7 +20,18 @@ using Halibut.Util;
 
 namespace Halibut.Queue.Redis
 {
-    public class WatchForRedisLosingAllItsData : IAsyncDisposable
+    public interface IWatchForRedisLosingAllItsData : IAsyncDisposable
+    {
+        /// <summary>
+        /// Will cause the caller to wait until we are connected to redis and so can detect datalose.
+        /// </summary>
+        /// <param name="timeToWait">Time to wait for this to reach a state where it can detect datalose</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>A cancellation token which is triggered when data lose occurs.</returns>
+        Task<CancellationToken> GetTokenForDataLoseDetection(TimeSpan timeToWait, CancellationToken cancellationToken);
+    }
+
+    public class WatchForRedisLosingAllItsData : IWatchForRedisLosingAllItsData
     {
         RedisFacade redisFacade;
         readonly ILog log;
@@ -55,6 +66,7 @@ namespace Halibut.Queue.Redis
                 return await taskCompletionSource.Task;
             }
             
+            // TODO: Check if tentacle needs this to be classified as exception that can be retried.
             await using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken).CancelOnDispose();
             cts.CancellationTokenSource.CancelAfter(timeToWait);
             return await taskCompletionSource.Task.WaitAsync(cts.CancellationToken);

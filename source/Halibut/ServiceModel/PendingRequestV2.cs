@@ -58,39 +58,55 @@ namespace Halibut.ServiceModel
         /// This gives the user an opportunity to remove the pending request from shared places and optionally
         /// call BeginTransfer
         /// </param>
+        /// <param name="cancellationReason"></param>
         /// <param name="cancellationToken"></param>
-        public async Task WaitUntilComplete(Func<Task> checkIfPendingRequestWasCollectedOrRemoveIt, CancellationToken cancellationToken)
+        public async Task WaitUntilComplete(Func<Task> checkIfPendingRequestWasCollectedOrRemoveIt,
+            Func<string?> cancellationReason,
+            CancellationToken cancellationToken)
         {
             log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-            await using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken).CancelOnDispose();
             
-            var pendingRequestPickupTimeout = Try.IgnoringError(async () => await Task.Delay(request.Destination.PollingRequestQueueTimeout, cts.CancellationToken));
-            var responseWaiterTask = responseWaiter.WaitAsync(cts.CancellationToken);
+            var pendingRequestPickupTimeout = Try.IgnoringError(async () => await Task.Delay(request.Destination.PollingRequestQueueTimeout, cancellationToken));
+            var responseWaiterTask = responseWaiter.WaitAsync(cancellationToken);
             
             await Task.WhenAny(pendingRequestPickupTimeout, responseWaiterTask);
 
-            using (await transferLock.LockAsync(CancellationToken.None))
+            
+            // Response has been returned so just say we are done.
+            if (responseWaiter.IsSet)
             {
-                // Response has been returned so just say we are done.
-                if (responseWaiter.IsSet)
-                {
-                    log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
-                    return;
-                }
+                log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
+                return;
             }
 
             if (!requestCollected.IsSet) await checkIfPendingRequestWasCollectedOrRemoveIt();
             
             using (await transferLock.LockAsync(CancellationToken.None)) {
                 
+                if (responseWaiter.IsSet)
+                {
+                    log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
+                    return;
+                }
+                
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    if (!requestCollected.IsSet) log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint", request);
-                    else log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint, will try to cancel the request", request);
+                    // TODO: This seems sus, we throw here but we don't throw below. This should be straightened out.
+                    OperationCanceledException operationCanceledException;
+                    if (!requestCollected.IsSet)
+                    {
+                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint" + cancellationReason()??"", request);
+                        operationCanceledException = new OperationCanceledException($"Request {request} was cancelled before it could be collected by the polling endpoint" + cancellationReason()??"");
+                    }
+                    else
+                    {
+                        log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint, will try to cancel the request" + cancellationReason()??"", request);
+                        operationCanceledException = new OperationCanceledException($"Request {request} was collected by the polling endpoint, will try to cancel the request" + cancellationReason() ?? "");
+                    }
 
                     await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
-                    cancellationToken.ThrowIfCancellationRequested();
+                    throw requestCollected.IsSet ? new TransferringRequestCancelledException(operationCanceledException) : new ConnectingRequestCancelledException(operationCanceledException);
                 }
                 
                 if (!requestCollected.IsSet)
@@ -116,20 +132,19 @@ namespace Halibut.ServiceModel
             {
                 await responseWaiterTask;
             }
-            catch (Exception) when (!cts.CancellationToken.IsCancellationRequested)
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
             {
                 using (await transferLock.LockAsync(CancellationToken.None))
                 {
                     if (!responseWaiter.IsSet)
                     {
-                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received", request);
+                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received" + cancellationReason()??"", request);
                         SetResponseNoLock(ResponseMessage.FromException(
                             request,
-                            new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded."),
+                            new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded." + cancellationReason()??""),
                             ConnectionState.Connecting),
                             false);
                         await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
-                        cancellationToken.ThrowIfCancellationRequested();
                     }
                 }
             }

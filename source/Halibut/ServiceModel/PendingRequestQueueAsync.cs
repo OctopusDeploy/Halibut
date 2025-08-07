@@ -58,7 +58,7 @@ namespace Halibut.ServiceModel
 
             try
             {
-                await pending.WaitUntilComplete(() => Task.CompletedTask, cancellationToken);
+                await pending.WaitUntilComplete(() => Task.CompletedTask, () => null, cancellationToken);
             }
             finally
             {
