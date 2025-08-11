@@ -40,6 +40,8 @@ namespace Halibut.Queue.Redis
         // TODO: this needs to be used in all public methods.
         readonly CancellationToken queueToken;
         
+        int numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection = 0;
+
         Task<IAsyncDisposable> PulseChannelSubDisposer { get; }
         
         public RedisPendingRequestQueue(
@@ -108,14 +110,22 @@ namespace Halibut.Queue.Redis
                 await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
                 await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
                 await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
+                Interlocked.Increment(ref numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection);
+                try
+                {
 
-                await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
-                WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
+                    await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
+                    WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
 
-                await pending.WaitUntilComplete(
-            async () => await tryClearRequestFromQueueAtMostOnce.Task,
-                                () => dataLoseCt.IsCancellationRequested ? " Cancelled because data loss on redis was detected." : "",                  
-                                                        cancellationToken);
+                    await pending.WaitUntilComplete(
+                        async () => await tryClearRequestFromQueueAtMostOnce.Task,
+                        () => dataLoseCt.IsCancellationRequested ? " Cancelled because data loss on redis was detected." : "",
+                        cancellationToken);
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection);
+                }
             }
             finally
             {
@@ -244,8 +254,7 @@ namespace Halibut.Queue.Redis
         }
 
         public bool IsEmpty => Count == 0;
-        public int Count => throw new NotImplementedException();
-        
+        public int Count => numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection;
 
         // The timespan is more generous for the sender going offline, since if it does go offline,
         // since under some cases the request completing is advantageous. That node needs to
@@ -358,8 +367,13 @@ namespace Halibut.Queue.Redis
             try
             {
                 // TODO can we avoid going to redis here?
+                // TODO: Does this work well for multiple clients? We might go round before we collect work.
+                // TODO: test this.
+                hasItemsForEndpoint.Reset();
+                
                 var first = await TryRemoveNextItemFromQueue(cancellationToken);
                 if (first != null) return first;
+                
 
                 await Task.WhenAny(
                     hasItemsForEndpoint.WaitAsync(cancellationTokenSource.Token), 
@@ -371,10 +385,7 @@ namespace Halibut.Queue.Redis
                     // to keep the connection healthy.
                     return null;
                 }
-
-                // TODO: Does this work well for multiple clients? We might go round before we collect work.
-                // TODO: test this.
-                hasItemsForEndpoint.Reset();
+                
                 return await TryRemoveNextItemFromQueue(cancellationToken);
             }
             finally

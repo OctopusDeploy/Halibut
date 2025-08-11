@@ -110,7 +110,8 @@ namespace Halibut.Tests.ServiceModel
 
         [Test]
         [AllQueuesTestCases]
-        public async Task QueueAndWait_WhenRequestIsDequeued_WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_WillWaitForeverUntilResponseIsSet(PendingRequestQueueTestCase queueTestCase)
+        public async Task QueueAndWait_WhenRequestIsDequeued_WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout_WillWaitForeverUntilResponseIsSet(
+            PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
@@ -148,49 +149,53 @@ namespace Halibut.Tests.ServiceModel
             next.Should().BeNull();
         }
 
-        // [Test]
-        // public async Task QueueAndWait_WhenRequestIsDequeued_ButPollingRequestQueueTimeoutIsReached_ShouldWaitTillRequestRespondsAndClearRequest()
-        // {
-        //     // Arrange
-        //     const string endpoint = "poll://endpoint001";
-        //
-        //     await using var queueHolder = new PendingRequestQueueBuilder()
-        //         .WithEndpoint(endpoint)
-        //         .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
-        //         .Build();
-        //     var sut = queueHolder.PendingRequestQueue;
-        //
-        //     var request = new RequestMessageBuilder(endpoint)
-        //         .WithServiceEndpoint(seb => seb.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(1000)))
-        //         .Build();
-        //
-        //     var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
-        //
-        //     // Act
-        //     var (queueAndWaitTask, dequeued) = await QueueAndDequeueRequest_ForTimeoutTestingOnly_ToCopeWithRaceCondition(sut, request, CancellationToken);
-        //
-        //     await Task.Delay(2000, CancellationToken);
-        //     dequeued.CancellationToken.IsCancellationRequested.Should().BeFalse("Should not have cancelled the request after PollingRequestQueueTimeout is reached");
-        //
-        //     await sut.ApplyResponse(expectedResponse, request.ActivityId);
-        //
-        //     var response = await queueAndWaitTask;
-        //
-        //     // Assert
-        //     dequeued.RequestMessage.Should().NotBeNull("We should have removed the item from the queue before it timed out.").And.Be(request);
-        //     response.Should().Be(expectedResponse);
-        //
-        //     var next = await sut.DequeueAsync(CancellationToken);
-        //     next.Should().BeNull();
-        // }
+        [Test]
+        [AllQueuesTestCases]
+        public async Task QueueAndWait_WhenRequestIsDequeued_ButPollingRequestQueueTimeoutIsReached_ShouldWaitTillRequestRespondsAndClearRequest(
+            PendingRequestQueueTestCase queueTestCase)
+        {
+            // Arrange
+            const string endpoint = "poll://endpoint001";
+        
+            await using var queueHolder = queueTestCase.Builder
+                .WithEndpoint(endpoint)
+                .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
+                .Build();
+            var sut = queueHolder.PendingRequestQueue;
+        
+            // Act
+            var lowTimeoutToShowWeAreWaitingForTheResponseToComeBack = TimeSpan.FromMilliseconds(1000);
+            var (request, queueAndWaitTask, dequeued) = await QueueAndDequeueRequest_ForVeryLowPickupTimeouts(
+                sut,
+                endpoint,
+                builder => builder.WithServiceEndpoint(seb => seb.WithPollingRequestQueueTimeout(lowTimeoutToShowWeAreWaitingForTheResponseToComeBack)),
+                CancellationToken);
+            var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
+        
+            await Task.Delay(2000, CancellationToken);
+            dequeued.CancellationToken.IsCancellationRequested.Should().BeFalse("Should not have cancelled the request after PollingRequestQueueTimeout is reached");
+        
+            await sut.ApplyResponse(expectedResponse, request.ActivityId);
+        
+            var response = await queueAndWaitTask;
+        
+            // Assert
+            dequeued.RequestMessage.Should().NotBeNull("We should have removed the item from the queue before it timed out.")
+                .And.BeEquivalentTo(request);
+            response.Should().BeEquivalentTo(expectedResponse);
+        
+            var next = await sut.DequeueAsync(CancellationToken);
+            next.Should().BeNull();
+        }
 
         [Test]
-        public async Task QueueAndWait_AddingMultipleItemsToQueueInOrder_ShouldDequeueInOrder()
+        [AllQueuesTestCases]
+        public async Task QueueAndWait_AddingMultipleItemsToQueueInOrder_ShouldDequeueInOrder(PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var queueHolder = queueTestCase.Builder.WithEndpoint(endpoint).Build();
             var sut = queueHolder.PendingRequestQueue;
 
             var requestsInOrder = Enumerable.Range(0, 3)
@@ -209,19 +214,20 @@ namespace Halibut.Tests.ServiceModel
             foreach (var expectedRequest in requestsInOrder)
             {
                 var request = await sut.DequeueAsync(CancellationToken);
-                request!.RequestMessage.Should().Be(expectedRequest);
+                request!.RequestMessage.Should().BeEquivalentTo(expectedRequest);
             }
 
             await ApplyResponsesConcurrentlyAndEnsureAllQueueResponsesMatch(sut, requestsInOrder, queueAndWaitTasksInOrder);
         }
 
         [Test]
-        public async Task QueueAndWait_AddingMultipleItemsToQueueConcurrently_AllRequestsShouldBeSuccessfullyQueued()
+        [AllQueuesTestCases]
+        public async Task QueueAndWait_AddingMultipleItemsToQueueConcurrently_AllRequestsShouldBeSuccessfullyQueued(PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var queueHolder = queueTestCase.Builder.WithEndpoint(endpoint).Build();
             var sut = queueHolder.PendingRequestQueue;
 
             var requestsInOrder = Enumerable.Range(0, 30)
@@ -249,12 +255,13 @@ namespace Halibut.Tests.ServiceModel
 
         [Test]
         [NonParallelizable]
-        public async Task QueueAndWait_Can_Queue_Dequeue_Apply_VeryLargeNumberOfRequests()
+        [AllQueuesTestCases]
+        public async Task QueueAndWait_Can_Queue_Dequeue_Apply_VeryLargeNumberOfRequests(PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var queueHolder = queueTestCase.Builder.WithEndpoint(endpoint).Build();
             var sut = queueHolder.PendingRequestQueue;
 
             // Choose a number large enough that it will fail when doing the 'synchronous' version.
@@ -281,14 +288,15 @@ namespace Halibut.Tests.ServiceModel
 
         [Test]
         [NonParallelizable]
-        public async Task QueueAndWait_Can_Queue_Dequeue_WhenRequestsAreBeingCancelled()
+        [AllQueuesTestCases]
+        public async Task QueueAndWait_Can_Queue_Dequeue_WhenRequestsAreBeingCancelled(PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
             const int totalRequest = 500;
             const int minimumCancelledRequest = 100;
 
-            await using var queueHolder = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var queueHolder = queueTestCase.Builder.WithEndpoint(endpoint).Build();
             var sut = queueHolder.PendingRequestQueue;
 
             var requestsInOrder = Enumerable.Range(0, totalRequest)
@@ -358,12 +366,14 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
-        public async Task QueueAndWait_CancellingAPendingRequestBeforeItIsDequeued_ShouldThrowExceptionAndClearRequest()
+        [AllQueuesTestCases]
+        public async Task QueueAndWait_CancellingAPendingRequestBeforeItIsDequeued_ShouldThrowExceptionAndClearRequest(
+            PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var queueHolder = queueTestCase.Builder.WithEndpoint(endpoint).Build();
             var sut = queueHolder.PendingRequestQueue;
             var request = new RequestMessageBuilder(endpoint).Build();
 
@@ -386,12 +396,14 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
-        public async Task QueueAndWait_CancellingAPendingRequestAfterItIsDequeued_ShouldThrowExceptionAndClearRequest()
+        [AllQueuesTestCases]
+        public async Task QueueAndWait_CancellingAPendingRequestAfterItIsDequeued_ShouldThrowExceptionAndClearRequest(
+            PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder()
+            await using var queueHolder = queueTestCase.Builder
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -420,19 +432,22 @@ namespace Halibut.Tests.ServiceModel
             await AssertException.Throws<OperationCanceledException>(queueAndWaitTask);
             
             // Assert
-            dequeued?.RequestMessage.Should().NotBeNull().And.Be(request);
+            dequeued?.RequestMessage.Should().NotBeNull()
+                .And.BeEquivalentTo(request);
             
             var next = await sut.DequeueAsync(CancellationToken);
             next.Should().BeNull();
         }
 
         [Test]
-        public async Task DequeueAsync_WithNothingQueued_WillWaitPollingQueueWaitTimeout_ShouldReturnNull()
+        [AllQueuesTestCases]
+        public async Task DequeueAsync_WithNothingQueued_WillWaitPollingQueueWaitTimeout_ShouldReturnNull(
+            PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder()
+            await using var queueHolder = queueTestCase.Builder
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
                 .Build();
@@ -449,12 +464,14 @@ namespace Halibut.Tests.ServiceModel
         }
 
         [Test]
-        public async Task DequeueAsync_WithNothingQueued_WillWaitPollingQueueWaitTimeout_AfterPreviousRequestWasQueuedAndDequeued()
+        [AllQueuesTestCases]
+        public async Task DequeueAsync_WithNothingQueued_WillWaitPollingQueueWaitTimeout_AfterPreviousRequestWasQueuedAndDequeued(
+            PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder()
+            await using var queueHolder = queueTestCase.Builder
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
                 .Build();
@@ -465,7 +482,8 @@ namespace Halibut.Tests.ServiceModel
             var expectedPreviousResponse = ResponseMessageBuilder.FromRequest(previousRequest).Build();
 
             var queueAndWaitTask = await StartQueueAndWaitAndWaitForRequestToBeQueued(sut, previousRequest, CancellationToken);
-            await sut.DequeueAsync(CancellationToken);
+            var dequeued = await sut.DequeueAsync(CancellationToken);
+            dequeued.Should().NotBeNull();
             await sut.ApplyResponse(expectedPreviousResponse, previousRequest.ActivityId);
             await queueAndWaitTask;
 
@@ -475,17 +493,19 @@ namespace Halibut.Tests.ServiceModel
 
             // Assert
             // Although we sleep for 1 second, sometimes it can be just under. So be generous with the buffer.
-            stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
             dequeuedRequest.Should().BeNull();
+            stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
+            
         }
 
         [Test]
-        public async Task DequeueAsync_WillContinueWaitingUntilItemIsQueued()
+        [AllQueuesTestCases]
+        public async Task DequeueAsync_WillContinueWaitingUntilItemIsQueued(PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var queueHolder = queueTestCase.Builder.WithEndpoint(endpoint).Build();
             var sut = queueHolder.PendingRequestQueue;
             var request = new RequestMessageBuilder(endpoint).Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
@@ -504,21 +524,23 @@ namespace Halibut.Tests.ServiceModel
             // Although we sleep for 1 second, sometimes it can be just under. So be generous with the buffer.
             stopwatch.Elapsed.Should().BeGreaterThan(TimeSpan.FromMilliseconds(800));
 
-            dequeuedRequest!.RequestMessage.Should().Be(request);
+            dequeuedRequest!.RequestMessage.Should().BeEquivalentTo(request);
 
             // Apply a response so we can prove this counts as taking a message.
             await sut.ApplyResponse(expectedResponse, request.ActivityId);
             var response = await queueAndWaitTask;
-            response.Should().Be(expectedResponse);
+            response.Should().BeEquivalentTo(expectedResponse);
         }
 
         [Test]
-        public async Task DequeueAsync_WithMultipleDequeueCallsWaiting_WhenSingleRequestIsQueued_ThenOnlyOneCallersReceivesRequest()
+        [AllQueuesTestCases]
+        public async Task DequeueAsync_WithMultipleDequeueCallsWaiting_WhenSingleRequestIsQueued_ThenOnlyOneCallersReceivesRequest(
+            PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder().WithEndpoint(endpoint).Build();
+            await using var queueHolder = queueTestCase.Builder.WithEndpoint(endpoint).Build();
             var sut = queueHolder.PendingRequestQueue;
             var request = new RequestMessageBuilder(endpoint).Build();
             var expectedResponse = ResponseMessageBuilder.FromRequest(request).Build();
@@ -539,16 +561,18 @@ namespace Halibut.Tests.ServiceModel
             await queueAndWaitTask;
 
             var singleDequeuedRequest = await dequeueTasks.Should().ContainSingle(t => t.Result != null).Subject;
-            singleDequeuedRequest!.RequestMessage.Should().Be(request);
+            singleDequeuedRequest!.RequestMessage.Should().BeEquivalentTo(request);
         }
 
         [Test]
-        public async Task ApplyResponse_AfterRequestHasBeenCollected_AndWaitingHasBeenCancelled_ResponseIsIgnored()
+        [AllQueuesTestCases]
+        public async Task ApplyResponse_AfterRequestHasBeenCollected_AndWaitingHasBeenCancelled_ResponseIsIgnored(
+            PendingRequestQueueTestCase queueTestCase)
         {
             // Arrange
             const string endpoint = "poll://endpoint001";
 
-            await using var queueHolder = new PendingRequestQueueBuilder()
+            await using var queueHolder = queueTestCase.Builder
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
                 .Build();
@@ -665,7 +689,7 @@ namespace Halibut.Tests.ServiceModel
                 var response = await queueAndWaitTask;
 
                 var expectedResponse = expectedResponsesInOrder[index++];
-                response.Should().Be(expectedResponse);
+                response.Should().BeEquivalentTo(expectedResponse);
             }
         }
     }
