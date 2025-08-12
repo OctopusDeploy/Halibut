@@ -59,7 +59,18 @@ namespace Halibut.Tests.Queue.Redis
         }
 
         [Test]
-        public async Task WatchForARealRedisLosingAllOfItsData_E2E_Test()
+        public async Task WhenRedisRunsForLongerThanTheKeyTTL_NoDataLoseShouldBeDetected()
+        {
+            await using var redisFacade = CreateRedisFacade();
+            await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromMilliseconds(100), keyTTL: TimeSpan.FromSeconds(2));
+            var watcherCt = await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
+
+            await Task.Delay(TimeSpan.FromSeconds(4));
+            watcherCt.IsCancellationRequested.Should().BeFalse();
+        }
+
+        [Test]
+        public async Task WhenRedisLosesAllOfIts_TheWatcherShouldDetectTheDataLose()
         {
             Logger.Information("Starting WatchForARealRedisLosingAllOfItsData_E2E_Test");
             

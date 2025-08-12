@@ -96,7 +96,7 @@ namespace Halibut.Queue.Redis
                     if (!hasSetKey)
                     {
                         log.Write(EventType.Diagnostic, "Setting initial data loss monitoring key {0} with TTL {1} minutes", key, KeyTTL.TotalMinutes);
-                        await redisFacade.SetString(key, guid.ToString(), KeyTTL, cancellationToken);
+                        await redisFacade.SetString(key, guid, KeyTTL, cancellationToken);
                         taskCompletionSource.TrySetResult(cts.CancellationToken);
                         hasSetKey = true;
                         log.Write(EventType.Diagnostic, "Successfully set initial data loss monitoring key {0}, monitoring is now active", key);
@@ -104,14 +104,16 @@ namespace Halibut.Queue.Redis
                     else
                     {
                         var data = await redisFacade.GetString(key, cancellationToken);
-                        if (data != guid.ToString())
+                        if (data != guid)
                         {
-                            log.Write(EventType.Error, "Redis data loss detected! Expected value {0} for key {1}, but got {2}. This indicates Redis has lost data.", guid.ToString(), key, data ?? "null");
+                            log.Write(EventType.Error, "Redis data loss detected! Expected value {0} for key {1}, but got {2}. This indicates Redis has lost data.", guid, key, data ?? "null");
                             // Anyone new will be given a new thing to wait on.
                             taskCompletionSource = new TaskCompletionSource<CancellationToken>();
                             await Try.IgnoringError(async () => await cts.CancellationTokenSource.CancelAsync());
                             return;
                         }
+
+                        await redisFacade.SetTtlForString(key, KeyTTL, cancellationToken);
                     }
                 }
                 catch (Exception ex)

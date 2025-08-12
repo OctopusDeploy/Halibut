@@ -366,17 +366,29 @@ namespace Halibut.Queue.Redis
         public async Task SetString(string key, string value, TimeSpan ttl, CancellationToken cancellationToken)
         {
             // TODO TTL
-            key = "string:" + keyPrefix + ":" + key;
+            key = ToStringKey(key);
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
                 await database.StringSetAsync(key, value);
             }, cancellationToken);
 
-            await SetTtlForKey(key, ttl, cancellationToken);
+            // TODO unit test.
+            await SetTtlForKeyRaw(key, ttl, cancellationToken);
         }
 
-        public async Task SetTtlForKey(string key, TimeSpan ttl, CancellationToken cancellationToken)
+        string ToStringKey(string key)
+        {
+            return "string:" + keyPrefix + ":" + key;
+        }
+
+        public async Task SetTtlForString(string key, TimeSpan ttl, CancellationToken cancellationToken)
+        {
+            await SetTtlForKeyRaw(ToStringKey(key), ttl, cancellationToken);
+
+        }
+
+        async Task SetTtlForKeyRaw(string key, TimeSpan ttl, CancellationToken cancellationToken)
         {
             await ExecuteWithRetry(async () =>
             {
@@ -387,7 +399,7 @@ namespace Halibut.Queue.Redis
 
         public async Task<string?> GetString(string key, CancellationToken cancellationToken)
         {
-            key = "string:" + keyPrefix + ":" + key;
+            key = ToStringKey(key);
             return await ExecuteWithRetry<string?>(async () =>
             {
                 var database = Connection.GetDatabase();

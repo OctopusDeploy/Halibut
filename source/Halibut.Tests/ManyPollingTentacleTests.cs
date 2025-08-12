@@ -18,6 +18,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Docker.DotNet.Models;
+using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.Queue.QueuedDataStreams;
@@ -34,12 +36,13 @@ using DisposableCollection = Halibut.Util.DisposableCollection;
 
 namespace Halibut.Tests
 {
+    [NonParallelizable]
     public class ManyPollingTentacleTests : BaseTest
     {
         [Test]
         [AllQueuesTestCases]
         [NonParallelizable]
-        public async Task ManyPollingTentacles(PendingRequestQueueTestCase queueTestCase)
+        public async Task ManyRequestToPollingTentacles_Works_AndDoesNotUseTooManyResources(PendingRequestQueueTestCase queueTestCase)
         {
             var services = GetDelegateServiceFactory();
             await using var disposables = new DisposableCollection();
@@ -83,7 +86,8 @@ namespace Halibut.Tests
 
                 var serviceEndpoint = new ServiceEndPoint(new Uri("https://localhost:" + listenPort), Certificates.Octopus.Thumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
                 
-                var pollEndpoints = Enumerable.Range(0, 10000).Select(i => new Uri("poll://" + i + "Bob")).ToArray();
+                
+                var pollEndpoints = Enumerable.Range(0, 100).Select(i => new Uri("poll://" + i + "Bob")).ToArray();
                 
                 foreach (var pollEndpoint in pollEndpoints)
                 {
@@ -101,8 +105,8 @@ namespace Halibut.Tests
 
                 var tasks = new List<Task>();
 
-                int concurrency = 0;
-                int limit = 50;
+                int concurrency = 20;
+                int limit = 20;
                 int total = concurrency * Math.Min(clients.Count, limit);
                 int callsMade = 0;
 
@@ -128,15 +132,27 @@ namespace Halibut.Tests
                     }));
                 }
 
-                
-
                 await Task.WhenAll(tasks);
                 
                 totalSw.Stop();
                 
                 Logger.Information("Time was {T}", totalSw.ElapsedMilliseconds);
+                
+                callsMade.Should().Be(total);
 
-                await Task.Delay(10000000);
+                
+                for (int i = 0; i < 200; i++)
+                {
+                    if (redisFacade.TotalSubscribers == pollEndpoints.Length) break;
+                    await Task.Delay(100);
+                }
+                
+                redisFacade.TotalSubscribers.Should().Be(pollEndpoints.Length);
+                
+                foreach (var task in tasks)
+                {
+                    await task;
+                }
             }
         }
         
