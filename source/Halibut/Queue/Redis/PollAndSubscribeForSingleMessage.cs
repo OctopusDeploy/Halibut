@@ -160,14 +160,17 @@ namespace Halibut.Queue.Redis
                     pollBackoffStrategy.Try();
                     var delay = pollBackoffStrategy.GetSleepPeriod();
                     log.Write(EventType.Diagnostic, "Waiting {0} seconds before next poll for {1} - Endpoint: {2}, ActivityId: {3}", delay.TotalSeconds, messageTypeName, endpoint, activityId);
-                    await Task.Delay(delay, token);
+                    await Try.IgnoringError(async () => await Task.Delay(delay, token));
                 }
                 
                 log.Write(EventType.Diagnostic, "Exiting watch loop for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
             }
             catch (Exception ex)
             {
-                log.Write(EventType.Error, "Unexpected error in {0} watcher - Endpoint: {1}, ActivityId: {2}, Error: {3}", messageTypeName, endpoint, activityId, ex.Message);
+                if (!token.IsCancellationRequested)
+                {
+                    log.Write(EventType.Error, "Unexpected error in {0} watcher - Endpoint: {1}, ActivityId: {2}, Error: {3}", messageTypeName, endpoint, activityId, ex.Message);
+                }
             }
         }
 

@@ -117,6 +117,9 @@ namespace Halibut.Queue.Redis
                     await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
                     WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
 
+                    // TODO: We need to ensure that no matter what exceptions are thrown we eventually exit.
+                    // For example can the subscription to the response, fail and never come back?
+                    // Can the WatchProcessProcessingNodeIsStillConnected fail and never come back?
                     await pending.WaitUntilComplete(
                         async () => await tryClearRequestFromQueueAtMostOnce.Task,
                         () => dataLoseCt.IsCancellationRequested ? " Cancelled because data loss on redis was detected." : "",

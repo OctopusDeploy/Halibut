@@ -112,14 +112,17 @@ namespace Halibut.Queue.Redis
                     {
                         log.Write(EventType.Diagnostic, "Error while polling for request cancellation - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, requestActivityId, ex.Message);
                     }
-                    await Task.Delay(TimeSpan.FromSeconds(60), token);
+                    await Try.IgnoringError(async () => await Task.Delay(TimeSpan.FromSeconds(60), token));
                 }
                 
                 log.Write(EventType.Diagnostic, "Exiting watch loop for request cancellation - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
             }
             catch (Exception ex)
             {
-                log.Write(EventType.Error, "Unexpected error in request cancellation watcher - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, requestActivityId, ex.Message);
+                if (!token.IsCancellationRequested)
+                {
+                    log.Write(EventType.Error, "Unexpected error in request cancellation watcher - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, requestActivityId, ex.Message);
+                }
             }
         }
 
