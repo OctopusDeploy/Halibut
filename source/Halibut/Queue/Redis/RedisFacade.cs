@@ -18,10 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Util;
 using Halibut.Diagnostics; // Add logging support
-using Newtonsoft.Json;
-using Nito.AsyncEx;
 using StackExchange.Redis;
-using StackExchange.Redis.KeyspaceIsolation;
 
 namespace Halibut.Queue.Redis
 {
@@ -224,8 +221,9 @@ namespace Halibut.Queue.Redis
                 await Try.IgnoringError(async () => await conn.DisposeAsync());
             }
         }
-        
-        
+
+
+        internal int TotalSubscribers = 0;
 
         public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage, CancellationToken cancellationToken)
         {
@@ -239,12 +237,28 @@ namespace Halibut.Queue.Redis
                     // This can throw if we are unable to connect to redis.
                     var channel = await Connection.GetSubscriber()
                         .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
-                
-                    // Once we are connected to redis, it seems even if the connection to redis dies.
-                    // The client will take care of re-connecting to redis.
-                    channel.OnMessage(onMessage);
-                
-                    return new FuncAsyncDisposable(async () => await channel.UnsubscribeAsync());
+
+                    var disposable = new FuncAsyncDisposable(async () =>
+                    {
+                        Interlocked.Decrement(ref TotalSubscribers);
+                        await channel.UnsubscribeAsync();
+                    });
+                    
+                    Interlocked.Increment(ref TotalSubscribers);
+                    try
+                    {
+                        // Once we are connected to redis, it seems even if the connection to redis dies.
+                        // The client will take care of re-connecting to redis.
+                        channel.OnMessage(onMessage);
+                    }
+                    catch (Exception)
+                    {
+                        await disposable.DisposeAsync();
+                        throw;
+                    }
+
+                    return disposable;
+
                 }
                 catch
                 {

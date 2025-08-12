@@ -72,10 +72,10 @@ namespace Halibut.Queue.Redis
             log.Write(EventType.Diagnostic, "Starting to watch for request cancellation - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
             
             var token = watchForCancellationTokenSource.Token;
-            var _ = Task.Run(async () => await WatchForExceptions(endpoint, requestActivityId, halibutRedisTransport, token));
+            var _ = Task.Run(async () => await WatchForCancellation(endpoint, requestActivityId, halibutRedisTransport, token));
         }
 
-        async Task WatchForExceptions(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, CancellationToken token)
+        async Task WatchForCancellation(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, CancellationToken token)
         {
             try
             {

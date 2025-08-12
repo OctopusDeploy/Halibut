@@ -293,6 +293,7 @@ namespace Halibut.Queue.Redis
                 
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, DelayBetweenHeartBeatsForRequestProcessor));
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
+                disposables.AddAsyncDisposable(watcher);
                 
                 var cts = CancellationTokenSource.CreateLinkedTokenSource(watcher.RequestProcessingCancellationToken, dataLossCT);
                 disposables.Add(cts);

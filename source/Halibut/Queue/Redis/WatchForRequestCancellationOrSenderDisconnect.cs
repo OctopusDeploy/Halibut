@@ -28,7 +28,7 @@ namespace Halibut.Queue.Redis
         public CancellationToken RequestProcessingCancellationToken { get; }
         readonly WatchForRequestCancellation watchForRequestCancellation;
 
-        readonly CancellationTokenSource KeepWatchingCancellationTokenSource;
+        readonly CancelOnDisposeCancellationTokenSource KeepWatchingCancellationTokenSource;
         
         DisposableCollection disposableCollection = new DisposableCollection();
 
@@ -48,8 +48,8 @@ namespace Halibut.Queue.Redis
                 disposableCollection.Add(RequestCancellationTokenSource);
                 RequestProcessingCancellationToken = RequestCancellationTokenSource.Token;
 
-                KeepWatchingCancellationTokenSource = new CancellationTokenSource();
-                disposableCollection.Add(KeepWatchingCancellationTokenSource);
+                KeepWatchingCancellationTokenSource = new CancellationTokenSource().CancelOnDispose();
+                disposableCollection.AddAsyncDisposable(KeepWatchingCancellationTokenSource);
 
                 Task.Run(() => WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, nodeOfflineTimeoutBetweenHeartBeatsFromSender, log));
             }
@@ -63,7 +63,7 @@ namespace Halibut.Queue.Redis
 
         async Task WatchThatNodeWhichSentTheRequestIsStillAlive(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, TimeSpan nodeOfflineTimeoutBetweenHeartBeatsFromSender, ILog log)
         {
-            var watchCancellationToken = KeepWatchingCancellationTokenSource.Token;
+            var watchCancellationToken = KeepWatchingCancellationTokenSource.CancellationToken;
             try
             {
                 var res = await NodeHeartBeatSender
