@@ -21,10 +21,10 @@ using Nito.AsyncEx;
 
 namespace Halibut.Queue.Redis
 {
-    public class PollAndSubscribeForSingleMessage : IAsyncDisposable
+    public class PollAndSubscribeToResponse : IAsyncDisposable
     {
         public static async Task TrySendMessage(
-            string messageTypeName,
+            string messageTypeName, // TODO drop this, it is always response.
             HalibutRedisTransport halibutRedisTransport, 
             Uri endpoint, 
             Guid activityId,
@@ -70,9 +70,9 @@ namespace Halibut.Queue.Redis
         
         public Task<string> ResultTask => message.Task;
 
-        public PollAndSubscribeForSingleMessage(string messageTypeName, Uri endpoint, Guid activityId, HalibutRedisTransport halibutRedisTransport, ILog log)
+        public PollAndSubscribeToResponse(string messageTypeName, Uri endpoint, Guid activityId, HalibutRedisTransport halibutRedisTransport, ILog log)
         {
-            this.log = log;
+            this.log = log.ForContext<PollAndSubscribeToResponse>();
             this.messageTypeName = messageTypeName;
             this.endpoint = endpoint;
             this.activityId = activityId;
@@ -82,7 +82,7 @@ namespace Halibut.Queue.Redis
                 TimeSpan.FromSeconds(15),   // Increment: 15s
                 TimeSpan.FromMinutes(2)     // Maximum delay: 2 minutes
             );
-            log.Write(EventType.Diagnostic, "Starting to watch for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
+            this.log.Write(EventType.Diagnostic, "Starting to watch for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
             
             var token = watcherTokenSource.Token;
             var _ = Task.Run(async () => await WatchAndWaitForMessage(token));
@@ -130,7 +130,12 @@ namespace Halibut.Queue.Redis
                             await TrySetResultAndRemoveValueFromRedis(value, token);
                         }
                         
-                        await watcherTokenSource.CancelAsync();
+                        log.Write(EventType.Diagnostic, "Cancelling  polling loop for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
+                        
+                        await Try.IgnoringError(async () => await watcherTokenSource.CancelAsync());
+                        
+                        log.Write(EventType.Diagnostic, "Is token cancelled: {0} - Endpoint: {1}, ActivityId: {2} {3}", messageTypeName, endpoint, activityId, token.IsCancellationRequested);
+                        
                     },
                     token);
                 
@@ -161,6 +166,7 @@ namespace Halibut.Queue.Redis
                     var delay = pollBackoffStrategy.GetSleepPeriod();
                     log.Write(EventType.Diagnostic, "Waiting {0} seconds before next poll for {1} - Endpoint: {2}, ActivityId: {3}", delay.TotalSeconds, messageTypeName, endpoint, activityId);
                     await Try.IgnoringError(async () => await Task.Delay(delay, token));
+                    log.Write(EventType.Diagnostic, "Done waiting going around the loop {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
                 }
                 
                 log.Write(EventType.Diagnostic, "Exiting watch loop for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
@@ -176,7 +182,7 @@ namespace Halibut.Queue.Redis
 
         public async ValueTask DisposeAsync()
         {
-            log.Write(EventType.Diagnostic, "Disposing GenericWatcher for {0}", messageTypeName);
+            log.Write(EventType.Diagnostic, "Disposing GenericWatcher for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
             
             await Try.IgnoringError(async () => await watcherTokenSource.CancelAsync());
             Try.IgnoringError(() => watcherTokenSource.Dispose());
@@ -184,7 +190,7 @@ namespace Halibut.Queue.Redis
             // If the message task is not yet complete, then complete if now with null since we have nothing for it.
             Try.IgnoringError(() => message.TrySetCanceled());
             
-            log.Write(EventType.Diagnostic, "GenericWatcher for {0} disposed", messageTypeName);
+            log.Write(EventType.Diagnostic, "Disposed GenericWatcher for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
         }
     }
 } 

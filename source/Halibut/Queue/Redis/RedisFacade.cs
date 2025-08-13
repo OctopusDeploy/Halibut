@@ -13,6 +13,7 @@
 // limitations under the License.
 
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -225,6 +226,8 @@ namespace Halibut.Queue.Redis
 
         internal int TotalSubscribers = 0;
 
+        internal ConcurrentDictionary<string, bool> subs = new ConcurrentDictionary<string, bool>();
+
         public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage, CancellationToken cancellationToken)
         {
             
@@ -238,9 +241,13 @@ namespace Halibut.Queue.Redis
                     var channel = await Connection.GetSubscriber()
                         .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
 
+                    var someGuid = channelName + "__" + Guid.NewGuid().ToString();
+                    subs.TryAdd(someGuid, false);
+
                     var disposable = new FuncAsyncDisposable(async () =>
                     {
                         Interlocked.Decrement(ref TotalSubscribers);
+                        subs.TryRemove(someGuid, out var _);
                         await channel.UnsubscribeAsync();
                     });
                     

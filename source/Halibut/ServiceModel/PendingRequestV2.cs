@@ -38,7 +38,7 @@ namespace Halibut.ServiceModel
         public PendingRequest(RequestMessage request, ILog log)
         {
             this.request = request;
-            this.log = log;
+            this.log = log.ForContext<PendingRequest>();
 
             pendingRequestCancellationTokenSource = new CancellationTokenSource();
             PendingRequestCancellationToken = pendingRequestCancellationTokenSource.Token;

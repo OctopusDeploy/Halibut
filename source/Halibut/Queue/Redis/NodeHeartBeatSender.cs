@@ -58,8 +58,8 @@ namespace Halibut.Queue.Redis
             this.halibutRedisTransport = halibutRedisTransport;
             this.nodeSendingPulsesType = nodeSendingPulsesType;
             cancellationTokenSource = new CancellationTokenSource().CancelOnDispose();
-            this.log = log;
-            log.Write(EventType.Diagnostic, "Starting NodeHeartBeatSender for {0} node, request {1}, endpoint {2}", nodeSendingPulsesType, requestActivityId, endpoint);
+            this.log = log.ForContext<NodeHeartBeatSender>();
+            this.log.Write(EventType.Diagnostic, "Starting NodeHeartBeatSender for {0} node, request {1}, endpoint {2}", nodeSendingPulsesType, requestActivityId, endpoint);
             TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(defaultDelayBetweenPulses, cancellationTokenSource.CancellationToken));
         }
 
@@ -104,6 +104,7 @@ namespace Halibut.Queue.Redis
             TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
+            log = log.ForContext<NodeHeartBeatSender>();
             // Once the pending's CT has been cancelled we no longer care to keep observing
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(watchCancellationToken, pending.PendingRequestCancellationToken);
             // TODO: test this is indeed called first.
@@ -143,6 +144,7 @@ namespace Halibut.Queue.Redis
             HalibutQueueNodeSendingPulses watchingForPulsesFrom,
             CancellationToken watchCancellationToken)
         {
+            log.ForContext<NodeHeartBeatSender>();
             log.Write(EventType.Diagnostic, "Starting to watch for pulses from {0} node, request {1}, endpoint {2}", watchingForPulsesFrom, requestActivityId, endpoint);
 
             DateTimeOffset? lastHeartBeat = DateTimeOffset.Now;
@@ -192,6 +194,7 @@ namespace Halibut.Queue.Redis
             TimeSpan timeBetweenCheckingIfRequestWasCollected,
             ILog log, CancellationToken cancellationToken)
         {
+            log = log.ForContext<NodeHeartBeatSender>();
             log.Write(EventType.Diagnostic, "Waiting for request {0} to be collected from queue", request.ActivityId);
 
             // Is this worthwhile?

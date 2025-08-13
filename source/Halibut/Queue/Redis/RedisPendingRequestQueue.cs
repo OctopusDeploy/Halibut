@@ -54,7 +54,7 @@ namespace Halibut.Queue.Redis
         {
             this.endpoint = endpoint;
             this.watchForRedisLosingAllItsData = watchForRedisLosingAllItsData;
-            this.log = log;
+            this.log = log.ForContext<RedisPendingRequestQueue>();
             this.messageReaderWriter = messageReaderWriter;
             this.halibutRedisTransport = halibutRedisTransport;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
@@ -79,6 +79,7 @@ namespace Halibut.Queue.Redis
 
         private async Task<CancellationToken> DataLossCancellationToken(CancellationToken? cancellationToken)
         {
+            // TODO must throw something that can be retried.
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, cancellationToken ?? CancellationToken.None);
             return await watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), cts.Token);
         }
@@ -91,8 +92,8 @@ namespace Halibut.Queue.Redis
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, requestCancellationToken, dataLoseCt);
             
             var cancellationToken = cts.Token;
-            // TODO: redis goes down
             // TODO RedisConnectionException can be raised out of here, what should the queue do?
+            // TODO it must raise an exception that supports being retried.
             using var pending = new PendingRequest(request, log);
             
             // TODO: What if this payload was gigantic
@@ -232,7 +233,7 @@ namespace Halibut.Queue.Redis
             CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
-            var sub = new PollAndSubscribeForSingleMessage(ResponseMessageSubscriptionName, endpoint, activityId, halibutRedisTransport, log);
+            var sub = new PollAndSubscribeToResponse(ResponseMessageSubscriptionName, endpoint, activityId, halibutRedisTransport, log);
             var _ = Task.Run(async () =>
             {
                 try
@@ -332,7 +333,7 @@ namespace Halibut.Queue.Redis
 
                 var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
-                await PollAndSubscribeForSingleMessage.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, TTLOfResponseMessage, log);
+                await PollAndSubscribeToResponse.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
             }
             catch (Exception ex)

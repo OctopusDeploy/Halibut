@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Halibut.Diagnostics.LogWriters
 {
@@ -9,9 +10,9 @@ namespace Halibut.Diagnostics.LogWriters
     public class AggregateLogWriter : ILog
     {
         readonly ILog log;
-        readonly ILogWriter[] logWriter;
+        readonly ILog[] logWriter;
 
-        public AggregateLogWriter(ILog log, ILogWriter[] logWriter)
+        public AggregateLogWriter(ILog log, ILog[] logWriter)
         {
             this.log = log;
             this.logWriter = logWriter;
@@ -38,6 +39,11 @@ namespace Halibut.Diagnostics.LogWriters
         public IList<LogEvent> GetLogs()
         {
             return log.GetLogs();
+        }
+
+        public ILog ForContext<T>()
+        {
+            return new AggregateLogWriter(log.ForContext<T>(), logWriter.Select(lw => lw.ForContext<T>()).ToArray());
         }
     }
 }

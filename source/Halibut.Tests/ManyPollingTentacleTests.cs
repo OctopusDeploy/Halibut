@@ -44,6 +44,7 @@ namespace Halibut.Tests
         [NonParallelizable]
         public async Task ManyRequestToPollingTentacles_Works_AndDoesNotUseTooManyResources(PendingRequestQueueTestCase queueTestCase)
         {
+            var logFactory = new CachingLogFactory(new TestContextLogCreator("", LogLevel.Trace));
             var services = GetDelegateServiceFactory();
             await using var disposables = new DisposableCollection();
             var log = new TestContextLogCreator("Redis", LogLevel.Fatal);
@@ -62,11 +63,11 @@ namespace Halibut.Tests
                                          watchForRedisLosingAllItsData,
                                          new HalibutRedisTransport(redisFacade),
                                          new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
-                                         new LogFactory());
+                                         logFactory);
                                  }
 
                                  return new PendingRequestQueueFactoryAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
-                                     new LogFactory());
+                                     logFactory);
                              })
                              .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
                              .Build())
@@ -141,11 +142,22 @@ namespace Halibut.Tests
                 callsMade.Should().Be(total);
 
                 
-                for (int i = 0; i < 200; i++)
+                for (int i = 0; i < 20; i++)
                 {
                     if (redisFacade.TotalSubscribers == pollEndpoints.Length) break;
                     await Task.Delay(100);
                 }
+
+                var s = "";
+                foreach (var subsKey in redisFacade.subs.Keys)
+                {
+                    if(subsKey.Contains("RequestMessagesPulseChannelName")) continue;
+                    s += "\n" + subsKey;
+                }
+                
+                Logger.Information("F {F}", s);
+                
+                Logger.Information("Created queues: {Count}", RedisPendingRequestQueue.CountCreated);
                 
                 redisFacade.TotalSubscribers.Should().Be(pollEndpoints.Length);
                 

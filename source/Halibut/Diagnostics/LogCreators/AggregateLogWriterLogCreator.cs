@@ -6,9 +6,9 @@ namespace Halibut.Diagnostics.LogCreators
     public class AggregateLogWriterLogCreator : ICreateNewILog
     {
         readonly ICreateNewILog logCreator;
-        readonly Func<string, ILogWriter[]> logWriterFactoryForPrefix;
+        readonly Func<string, ILog[]> logWriterFactoryForPrefix;
 
-        public AggregateLogWriterLogCreator(ICreateNewILog logCreator, Func<string, ILogWriter[]> logWriterFactoryForPrefix)
+        public AggregateLogWriterLogCreator(ICreateNewILog logCreator, Func<string, ILog[]> logWriterFactoryForPrefix)
         {
             this.logCreator = logCreator;
             this.logWriterFactoryForPrefix = logWriterFactoryForPrefix;
