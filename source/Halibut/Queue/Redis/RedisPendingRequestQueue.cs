@@ -122,7 +122,9 @@ namespace Halibut.Queue.Redis
                     // Can the WatchProcessProcessingNodeIsStillConnected fail and never come back?
                     await pending.WaitUntilComplete(
                         async () => await tryClearRequestFromQueueAtMostOnce.Task,
-                        () => dataLoseCt.IsCancellationRequested ? " Cancelled because data loss on redis was detected." : "",
+                        () => dataLoseCt.IsCancellationRequested ? 
+                            new RedisDataLoseHalibutClientException($"Request {request.ActivityId} was cancelled because we detected that redis lost all of its data.") 
+                            : null,
                         cancellationToken);
                 }
                 finally

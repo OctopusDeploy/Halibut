@@ -32,6 +32,7 @@ using Octopus.TestPortForwarder;
 using Serilog;
 using DisposableCollection = Halibut.Util.DisposableCollection;
 using ILog = Halibut.Diagnostics.ILog;
+using Try = Halibut.Tests.Support.Try;
 
 namespace Halibut.Tests.Queue.Redis
 {
@@ -222,16 +223,10 @@ namespace Halibut.Tests.Queue.Redis
             queueAndWaitAsync.IsCompleted.Should().BeTrue("As soon as data loss is detected the queueAndWait should return.");
 
             // Sigh it can go down either of these paths!
-            if (queueAndWaitAsync.IsCompletedSuccessfully)
-            {
-                var responseMessage = await queueAndWaitAsync;
-                responseMessage!.Error!.Message.Should().Contain("Cancelled because data loss on redis was detected.");
-            }
-            else
-            {
-                var e = await AssertException.Throws<Exception>(queueAndWaitAsync);
-                e.And.InnerException!.Message.Should().Contain("Cancelled because data loss on redis was detected.");
-            }
+            var e = await AssertException.Throws<Exception>(queueAndWaitAsync);
+            e.And.IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
+            e.And.Should().BeOfType<RedisDataLoseHalibutClientException>();
+            
         }
         
         [Test]

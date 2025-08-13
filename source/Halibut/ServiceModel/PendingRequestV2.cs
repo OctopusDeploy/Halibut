@@ -58,10 +58,10 @@ namespace Halibut.ServiceModel
         /// This gives the user an opportunity to remove the pending request from shared places and optionally
         /// call BeginTransfer
         /// </param>
-        /// <param name="cancellationReason"></param>
+        /// <param name="overrideCancellationReason"></param>
         /// <param name="cancellationToken"></param>
         public async Task WaitUntilComplete(Func<Task> checkIfPendingRequestWasCollectedOrRemoveIt,
-            Func<string?> cancellationReason,
+            Func<Exception?> overrideCancellationReason,
             CancellationToken cancellationToken)
         {
             log.Write(EventType.MessageExchange, "Request {0} was queued", request);
@@ -93,20 +93,29 @@ namespace Halibut.ServiceModel
                 if (cancellationToken.IsCancellationRequested)
                 {
                     // TODO: This seems sus, we throw here but we don't throw below. This should be straightened out.
+                    await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
+                    
+                    var cancellationException = overrideCancellationReason();
+                    if (cancellationException != null)
+                    {
+                        log.Write(EventType.MessageExchange, "Request {0} did not complete because: " + cancellationException.Message, request);
+                        throw cancellationException;
+                    }
+
                     OperationCanceledException operationCanceledException;
                     if (!requestCollected.IsSet)
                     {
-                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint" + cancellationReason()??"", request);
-                        operationCanceledException = new OperationCanceledException($"Request {request} was cancelled before it could be collected by the polling endpoint" + cancellationReason()??"");
+                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint", request);
+                        operationCanceledException = new OperationCanceledException($"Request {request} was cancelled before it could be collected by the polling endpoint");
                     }
                     else
                     {
-                        log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint, will try to cancel the request" + cancellationReason()??"", request);
-                        operationCanceledException = new OperationCanceledException($"Request {request} was collected by the polling endpoint, will try to cancel the request" + cancellationReason() ?? "");
+                        log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint, will try to cancel the request", request);
+                        operationCanceledException = new OperationCanceledException($"Request {request} was collected by the polling endpoint, will try to cancel the request");
                     }
-
-                    await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
+                        
                     throw requestCollected.IsSet ? new TransferringRequestCancelledException(operationCanceledException) : new ConnectingRequestCancelledException(operationCanceledException);
+
                 }
                 
                 if (!requestCollected.IsSet)
@@ -138,10 +147,18 @@ namespace Halibut.ServiceModel
                 {
                     if (!responseWaiter.IsSet)
                     {
-                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received" + cancellationReason()??"", request);
+                        var cancellationException = overrideCancellationReason();
+                        if (cancellationException != null)
+                        {
+                            await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
+                            log.Write(EventType.MessageExchange, "Request {0} did not complete because: " + cancellationException.Message, request);
+                            throw cancellationException;
+                        }
+                        
+                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received" + overrideCancellationReason()??"", request);
                         SetResponseNoLock(ResponseMessage.FromException(
                             request,
-                            new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded." + cancellationReason()??""),
+                            new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded." + overrideCancellationReason()??""),
                             ConnectionState.Connecting),
                             false);
                         await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
