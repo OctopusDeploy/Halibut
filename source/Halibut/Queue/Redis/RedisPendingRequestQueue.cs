@@ -93,7 +93,7 @@ namespace Halibut.Queue.Redis
             var cancellationToken = cts.Token;
             // TODO RedisConnectionException can be raised out of here, what should the queue do?
             // TODO it must raise an exception that supports being retried.
-            using var pending = new PendingRequest(request, log);
+            using var pending = new RedisPendingRequest(request, log);
             
             // TODO: What if this payload was gigantic
             // TODO: Do we need to encrypt this?
@@ -107,7 +107,7 @@ namespace Halibut.Queue.Redis
             {
                 await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Sender, DelayBetweenHeartBeatsForRequestSender);
                 // Make the request available before we tell people it is available.
-                await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, cancellationToken);
+                await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, request.Destination.PollingRequestQueueTimeout, cancellationToken);
                 await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
                 await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
                 Interlocked.Increment(ref numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection);
@@ -136,26 +136,29 @@ namespace Halibut.Queue.Redis
             {
                 // Make an attempt to ensure the request is removed from redis.
                 var background = Task.Run(async () => await Try.IgnoringError(async () => await tryClearRequestFromQueueAtMostOnce.Task));
-                var backgroundCancellation = Task.Run(async () => await SendCancellationIfRequestWasCancelled(request, pending));
+                var backgroundCancellation = Task.Run(async () =>
+                {
+                    if(requestCancellationToken.IsCancellationRequested) await SendCancellationIfRequestWasCancelled(request, pending);
+                });
             }
 
             return pending.Response!;
         }
 
-        async Task SendCancellationIfRequestWasCancelled(RequestMessage request, PendingRequest pending)
+        async Task SendCancellationIfRequestWasCancelled(RequestMessage request, RedisPendingRequest redisPending)
         {
-            if (pending.PendingRequestCancellationToken.IsCancellationRequested)
+            if (redisPending.PendingRequestCancellationToken.IsCancellationRequested)
             {
-                // TODO log
+                log.Write(EventType.Diagnostic, "Request {0} was cancelled, sending cancellation to endpoint {1}", request.ActivityId, endpoint);
                 await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request, log);
             }
             else
             {
-                // TODO log
+                log.Write(EventType.Diagnostic, "Request {0} was not cancelled, no cancellation needed for endpoint {1}", request.ActivityId, endpoint);
             }
         }
 
-        void WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancelOnDisposeCancellationToken watcherCts)
+        void WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, RedisPendingRequest redisPending, CancelOnDisposeCancellationToken watcherCts)
         {
             Task.Run(async () =>
             {
@@ -165,7 +168,7 @@ namespace Halibut.Queue.Redis
                     var disconnected = await NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(
                         endpoint,
                         request,
-                        pending,
+                        redisPending,
                         halibutRedisTransport,
                         TimeBetweenCheckingIfRequestWasCollected,
                         log,
@@ -174,7 +177,7 @@ namespace Halibut.Queue.Redis
                     if (!watcherCtsCancellationToken.IsCancellationRequested && disconnected == NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected)
                     {
                         // TODO: if(responseWatcher.CheckForResponseNow() == ResponseNotFound) {
-                        pending.SetResponse(ResponseMessage.FromError(request, "The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline."));
+                        redisPending.SetResponse(ResponseMessage.FromError(request, "The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline."));
                         //}
                     }
                 }
@@ -189,7 +192,7 @@ namespace Halibut.Queue.Redis
             });
         }
 
-        async Task<bool> TryClearRequestFromQueue(RequestMessage request, PendingRequest pending)
+        async Task<bool> TryClearRequestFromQueue(RequestMessage request, RedisPendingRequest redisPending)
         { 
             log.Write(EventType.Diagnostic, "Attempting to clear request {0} from queue for endpoint {1}", request.ActivityId, endpoint);
             
@@ -199,9 +202,9 @@ namespace Halibut.Queue.Redis
             // - We could not pop it, which means it was collected.
             try
             {
-                if (pending.HasRequestBeenMarkedAsCollected)
+                if (redisPending.HasRequestBeenMarkedAsCollected)
                 {
-                    // TODO: log
+                    log.Write(EventType.Diagnostic, "Request {0} has already been marked as collected, skipping queue removal for endpoint {1}", request.ActivityId, endpoint);
                     return false;
                 }
                 await using var cts = new CancelOnDisposeCancellationToken();
@@ -214,7 +217,7 @@ namespace Halibut.Queue.Redis
                 }
                 else
                 {
-                    await pending.RequestHasBeenCollectedAndWillBeTransferred();
+                    await redisPending.RequestHasBeenCollectedAndWillBeTransferred();
                     log.Write(EventType.Diagnostic, "Request {0} was not found in queue - it was already collected by a processing node", request.ActivityId);
                 }
             }
@@ -234,7 +237,7 @@ namespace Halibut.Queue.Redis
             CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
-            var sub = new PollAndSubscribeToResponse(ResponseMessageSubscriptionName, endpoint, activityId, halibutRedisTransport, log);
+            var sub = new PollAndSubscribeToResponse(endpoint, activityId, halibutRedisTransport, log);
             var _ = Task.Run(async () =>
             {
                 try
@@ -273,7 +276,7 @@ namespace Halibut.Queue.Redis
         
         internal TimeSpan DelayBetweenHeartBeatsForRequestProcessor { get; set; }  = TimeSpan.FromSeconds(15);
         
-        internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(5);
+        internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(20);
         
         internal TimeSpan TimeBetweenCheckingIfRequestWasCollected { get; set; } = TimeSpan.FromSeconds(30);
         
@@ -368,7 +371,7 @@ namespace Halibut.Queue.Redis
                 }
                 var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
-                await PollAndSubscribeToResponse.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, TTLOfResponseMessage, log);
+                await PollAndSubscribeToResponse.TrySendMessage(halibutRedisTransport, endpoint, requestActivityId, payload, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
             }
             catch (Exception ex)

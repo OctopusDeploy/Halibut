@@ -130,7 +130,7 @@ namespace Halibut.Queue.Redis
             }
 
             log.Write(EventType.Diagnostic, "Redis data loss monitoring stopped for key {0}, cleaning up", key);
-            await Try.IgnoringError(async () => await redisFacade.DeleteString(key));
+            await Try.IgnoringError(async () => await redisFacade.DeleteString(key, cancellationToken));
         }
 
         public async ValueTask DisposeAsync()

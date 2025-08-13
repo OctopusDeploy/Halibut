@@ -97,7 +97,7 @@ namespace Halibut.Queue.Redis
         public static async Task<NodeProcessingRequestWatcherResult> WatchThatNodeProcessingTheRequestIsStillAlive(
             Uri endpoint,
             RequestMessage request, 
-            PendingRequest pending,
+            RedisPendingRequest redisPending,
             HalibutRedisTransport halibutRedisTransport,
             TimeSpan timeBetweenCheckingIfRequestWasCollected,
             ILog log,
@@ -106,11 +106,11 @@ namespace Halibut.Queue.Redis
         {
             log = log.ForContext<NodeHeartBeatSender>();
             // Once the pending's CT has been cancelled we no longer care to keep observing
-            await using var cts = new CancelOnDisposeCancellationToken(watchCancellationToken, pending.PendingRequestCancellationToken);
+            await using var cts = new CancelOnDisposeCancellationToken(watchCancellationToken, redisPending.PendingRequestCancellationToken);
             try
             {
                 // TODO: test this is indeed called first.
-                await WaitForRequestToBeCollected(endpoint, request, pending, halibutRedisTransport, timeBetweenCheckingIfRequestWasCollected, log, cts.Token);
+                await WaitForRequestToBeCollected(endpoint, request, redisPending, halibutRedisTransport, timeBetweenCheckingIfRequestWasCollected, log, cts.Token);
 
                 return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.Receiver, cts.Token);
             }
@@ -189,7 +189,7 @@ namespace Halibut.Queue.Redis
             }
         }
         
-        static async Task WaitForRequestToBeCollected(Uri endpoint, RequestMessage request, PendingRequest pending, HalibutRedisTransport halibutRedisTransport,
+        static async Task WaitForRequestToBeCollected(Uri endpoint, RequestMessage request, RedisPendingRequest redisPending, HalibutRedisTransport halibutRedisTransport,
             TimeSpan timeBetweenCheckingIfRequestWasCollected,
             ILog log, CancellationToken cancellationToken)
         {
@@ -214,7 +214,7 @@ namespace Halibut.Queue.Redis
                 {
                     asyncManualResetEvent.Reset();
                     // Has something else determined the request was collected?
-                    if(pending.HasRequestBeenMarkedAsCollected) 
+                    if(redisPending.HasRequestBeenMarkedAsCollected) 
                     {
                         log.Write(EventType.Diagnostic, "Request {0} has been marked as collected", request.ActivityId);
                         return;
@@ -226,7 +226,7 @@ namespace Halibut.Queue.Redis
                     if(!requestIsStillOnQueue) 
                     {
                         log.Write(EventType.Diagnostic, "Request {0} is no longer on queue", request.ActivityId);
-                        await pending.RequestHasBeenCollectedAndWillBeTransferred();
+                        await redisPending.RequestHasBeenCollectedAndWillBeTransferred();
                         return;
                     }
                 }
@@ -240,7 +240,7 @@ namespace Halibut.Queue.Redis
                     await Task.WhenAny(
                         Task.Delay(timeBetweenCheckingIfRequestWasCollected, cancellationToken),
                         asyncManualResetEvent.WaitAsync(cancellationToken),
-                        pending.WaitForRequestToBeMarkedAsCollected(cancellationToken));
+                        redisPending.WaitForRequestToBeMarkedAsCollected(cancellationToken));
                 });
             }
             

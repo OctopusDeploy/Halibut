@@ -75,10 +75,10 @@ namespace Halibut.Tests.Queue.Redis
             var payload = "test-payload";
 
             // Act
-            await redisFacade.SetInHash(key, field, payload);
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Assert - We'll verify by trying to get and delete it
-            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field);
+            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
             retrievedValue.Should().Be(payload);
         }
 
@@ -91,10 +91,10 @@ namespace Halibut.Tests.Queue.Redis
             var field = "test-field";
             var payload = "test-payload";
 
-            await redisFacade.SetInHash(key, field, payload);
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Act
-            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field);
+            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
 
             // Assert
             retrievedValue.Should().Be(payload);
@@ -109,10 +109,10 @@ namespace Halibut.Tests.Queue.Redis
             var field = "test-field";
             var payload = "test-payload";
 
-            await redisFacade.SetInHash(key, field, payload);
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Act
-            var exists = await redisFacade.HashContainsKey(key, field);
+            var exists = await redisFacade.HashContainsKey(key, field, CancellationToken);
 
             // Assert
             exists.Should().BeTrue();
@@ -127,7 +127,7 @@ namespace Halibut.Tests.Queue.Redis
             var nonExistentField = "non-existent-field";
 
             // Act
-            var exists = await redisFacade.HashContainsKey(key, nonExistentField);
+            var exists = await redisFacade.HashContainsKey(key, nonExistentField, CancellationToken);
 
             // Assert
             exists.Should().BeFalse();
@@ -142,7 +142,7 @@ namespace Halibut.Tests.Queue.Redis
             var field = "test-field";
 
             // Act
-            var exists = await redisFacade.HashContainsKey(nonExistentKey, field);
+            var exists = await redisFacade.HashContainsKey(nonExistentKey, field, CancellationToken);
 
             // Assert
             exists.Should().BeFalse();
@@ -157,24 +157,24 @@ namespace Halibut.Tests.Queue.Redis
             var field = "test-field";
             var payload = "test-payload";
 
-            await redisFacade.SetInHash(key, field, payload);
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Verify the hash field exists
-            var existsBefore = await redisFacade.HashContainsKey(key, field);
+            var existsBefore = await redisFacade.HashContainsKey(key, field, CancellationToken);
             existsBefore.Should().BeTrue();
 
             // Act
-            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field);
+            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
 
             // Assert
             retrievedValue.Should().Be(payload);
             
             // Verify the entire key was deleted (not just the field)
-            var existsAfter = await redisFacade.HashContainsKey(key, field);
+            var existsAfter = await redisFacade.HashContainsKey(key, field, CancellationToken);
             existsAfter.Should().BeFalse();
 
             // Verify trying to get it again returns null
-            var secondRetrieval = await redisFacade.TryGetAndDeleteFromHash(key, field);
+            var secondRetrieval = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
             secondRetrieval.Should().BeNull();
         }
 
@@ -188,12 +188,12 @@ namespace Halibut.Tests.Queue.Redis
             var payload2 = "second-item";
 
             // Act - Push items to the right
-            await redisFacade.ListRightPushAsync(key, payload1);
-            await redisFacade.ListRightPushAsync(key, payload2);
+            await redisFacade.ListRightPushAsync(key, payload1, TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.ListRightPushAsync(key, payload2, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Pop items from the left (FIFO)
-            var firstItem = await redisFacade.ListLeftPopAsync(key);
-            var secondItem = await redisFacade.ListLeftPopAsync(key);
+            var firstItem = await redisFacade.ListLeftPopAsync(key, CancellationToken);
+            var secondItem = await redisFacade.ListLeftPopAsync(key, CancellationToken);
 
             // Assert
             firstItem.Should().Be(payload1);
@@ -208,7 +208,7 @@ namespace Halibut.Tests.Queue.Redis
             var emptyListKey = Guid.NewGuid().ToString();
 
             // Act
-            var result = await redisFacade.ListLeftPopAsync(emptyListKey);
+            var result = await redisFacade.ListLeftPopAsync(emptyListKey, CancellationToken);
 
             // Assert
             result.Should().BeNull();
@@ -236,7 +236,7 @@ namespace Halibut.Tests.Queue.Redis
             }, CancellationToken);
 
             // Act - Publish a message
-            await redisFacade.PublishToChannel(channelName, testMessage);
+            await redisFacade.PublishToChannel(channelName, testMessage, CancellationToken);
 
             // Wait for the message to be received
             await messageReceived.Task.TimeoutAfter(TimeSpan.FromSeconds(5), CancellationToken);
@@ -273,7 +273,7 @@ namespace Halibut.Tests.Queue.Redis
             // Act - Publish multiple messages
             foreach (var msg in messages)
             {
-                await redisFacade.PublishToChannel(channelName, msg);
+                await redisFacade.PublishToChannel(channelName, msg, CancellationToken);
             }
 
             // Wait for all messages to be received
@@ -305,7 +305,7 @@ namespace Halibut.Tests.Queue.Redis
             await subscription.DisposeAsync();
 
             // Publish a message after unsubscribing
-            await redisFacade.PublishToChannel(channelName, "should-not-receive");
+            await redisFacade.PublishToChannel(channelName, "should-not-receive", CancellationToken);
 
             // Wait a bit to ensure no message is received
             await Task.Delay(100);
@@ -377,10 +377,10 @@ namespace Halibut.Tests.Queue.Redis
             var payload = "test-payload";
 
             // Act - Set a value in hash (it has a TTL of 9:9:9 according to the implementation)
-            await redisFacade.SetInHash(key, field, payload);
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Immediately try to get the value - should exist
-            var immediateValue = await redisFacade.TryGetAndDeleteFromHash(key, field);
+            var immediateValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
 
             // Assert
             immediateValue.Should().Be(payload);

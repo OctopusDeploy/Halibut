@@ -170,7 +170,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder(endpoint.ToString())
                 .WithActivityId(requestActivityId)
                 .Build();
-            var pendingRequest = new PendingRequest(request, log);
+            var pendingRequest = new RedisPendingRequest(request, log);
             
             // Start heartbeat sender
             await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
@@ -212,7 +212,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder(endpoint.ToString())
                 .WithActivityId(requestActivityId)
                 .Build();
-            var pendingRequest = new PendingRequest(request, log);
+            var pendingRequest = new RedisPendingRequest(request, log);
             await pendingRequest.RequestHasBeenCollectedAndWillBeTransferred();
             
             // Start heartbeat sender
@@ -256,7 +256,7 @@ namespace Halibut.Tests.Queue.Redis
             var request = new RequestMessageBuilder(endpoint.ToString())
                 .WithActivityId(requestActivityId)
                 .Build();
-            var pendingRequest = new PendingRequest(request, log);
+            var pendingRequest = new RedisPendingRequest(request, log);
             
             // Start heartbeat sender with unstable connection
             await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));

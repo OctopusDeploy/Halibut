@@ -55,7 +55,7 @@ namespace Halibut.Queue.Redis
         {
             var channelName = RequestMessagesPulseChannelName(endpoint);
             string emptyJson = "{}"; // Maybe we will actually want to share data in the future, empty json means we can add stuff later.
-            await facade.PublishToChannel(channelName, emptyJson);
+            await facade.PublishToChannel(channelName, emptyJson, cancellationToken);
         }
 
         // Request IDs list
@@ -67,14 +67,14 @@ namespace Halibut.Queue.Redis
 
         public async Task PushRequestGuidOnToQueue(Uri endpoint, Guid guid, CancellationToken cancellationToken)
         {
-            // TODO should we overcomplicate this with json?
-            // TODO TTL
-            await facade.ListRightPushAsync(KeyForNextRequestGuidInListForEndpoint(endpoint), guid.ToString());
+            // TTL is high since it applies to all GUIDs in the queue.
+            var ttlForAllRequestsGuidsInList = TimeSpan.FromDays(1);
+            await facade.ListRightPushAsync(KeyForNextRequestGuidInListForEndpoint(endpoint), guid.ToString(), ttlForAllRequestsGuidsInList, cancellationToken);
         }
 
         public async Task<Guid?> TryPopNextRequestGuid(Uri endpoint, CancellationToken cancellationToken)
         {
-            var result = await facade.ListLeftPopAsync(KeyForNextRequestGuidInListForEndpoint(endpoint));
+            var result = await facade.ListLeftPopAsync(KeyForNextRequestGuidInListForEndpoint(endpoint), cancellationToken);
             return result.ToGuid();
         }
 
@@ -87,21 +87,23 @@ namespace Halibut.Queue.Redis
 
         static string RequestField = "RequestField";
 
-        public async Task PutRequest(Uri endpoint, Guid requestId, string payload, CancellationToken cancellationToken)
+        public async Task PutRequest(Uri endpoint, Guid requestId, string payload, TimeSpan requestPickupTimeout, CancellationToken cancellationToken)
         {
             var redisQueueItem = new RedisHalibutQueueItem2(requestId, payload);
 
             var serialisedQueueItem = JsonConvert.SerializeObject(redisQueueItem);
 
             var requestKey = RequestMessageKey(endpoint, requestId);
+            
+            var ttl = requestPickupTimeout + TimeSpan.FromMinutes(2);
 
-            await facade.SetInHash(requestKey, RequestField, serialisedQueueItem);
+            await facade.SetInHash(requestKey, RequestField, serialisedQueueItem, ttl, cancellationToken);
         }
 
         public async Task<string?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var requestKey = RequestMessageKey(endpoint, requestId);
-            var requestMessage = await facade.TryGetAndDeleteFromHash(requestKey, RequestField);
+            var requestMessage = await facade.TryGetAndDeleteFromHash(requestKey, RequestField, cancellationToken);
             if (requestMessage == null) return null;
 
             var redisQueueItem = JsonConvert.DeserializeObject<RedisHalibutQueueItem2>(requestMessage);
@@ -113,7 +115,7 @@ namespace Halibut.Queue.Redis
         public async Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var requestKey = RequestMessageKey(endpoint, requestId);
-            return await facade.HashContainsKey(requestKey, RequestField);
+            return await facade.HashContainsKey(requestKey, RequestField, cancellationToken);
         }
 
         // Cancellation channel
@@ -137,7 +139,7 @@ namespace Halibut.Queue.Redis
         public async Task PublishCancellation(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var channelName = RequestCancelledChannel(endpoint, requestId);
-            await facade.PublishToChannel(channelName, "{}");
+            await facade.PublishToChannel(channelName, "{}", cancellationToken);
         }
         
         public string RequestCancelledMarkerKey(Uri endpoint, Guid requestId)
@@ -182,7 +184,7 @@ namespace Halibut.Queue.Redis
         public async Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
         {
             var channelName = NodeHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType);
-            await facade.PublishToChannel(channelName, "{}");
+            await facade.PublishToChannel(channelName, "{}", cancellationToken);
         }
 
         // Backward compatibility methods (defaulting to Receiver for existing code)
@@ -202,16 +204,16 @@ namespace Halibut.Queue.Redis
         
         // Generic methods for watching for any string value being set
         
-        string GenericChannelName(string thingToWatchFor, Uri endpoint, Guid identifier)
+        string ResponseAvailableChannel(Uri endpoint, Guid identifier)
         {
-            return $"{Namespace}::GenericChannel::{thingToWatchFor}::{endpoint}::{identifier}";
+            return $"{Namespace}::ResponseAvailableChannel::{endpoint}::{identifier}";
         }
         
-        public async Task<IAsyncDisposable> SubscribeToGenericNotification(string thingToWatchFor, Uri endpoint, Guid identifier,
+        public async Task<IAsyncDisposable> SubscribeToResponseChannel(Uri endpoint, Guid identifier,
             Func<string, Task> onValueReceived,
             CancellationToken cancellationToken)
         {
-            var channelName = GenericChannelName(thingToWatchFor, endpoint, identifier);
+            var channelName = ResponseAvailableChannel(endpoint, identifier);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? value = foo.Message;
@@ -219,33 +221,33 @@ namespace Halibut.Queue.Redis
             }, cancellationToken);
         }
         
-        public async Task PublishThatValueIsAvailable(string thingToWatchFor, Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
+        public async Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
         {
-            var channelName = GenericChannelName(thingToWatchFor, endpoint, identifier);
-            await facade.PublishToChannel(channelName, value);
+            var channelName = ResponseAvailableChannel(endpoint, identifier);
+            await facade.PublishToChannel(channelName, value, cancellationToken);
         }
         
-        string GenericMarkerKey(string thingToWatchFor, Uri endpoint, Guid identifier)
+        string ResponseMarkerKey(Uri endpoint, Guid identifier)
         {
-            return $"{Namespace}::GenericMarker::{thingToWatchFor}::{endpoint}::{identifier}";
+            return $"{Namespace}::ResponseMarkerKey::{endpoint}::{identifier}";
         }
         
-        public async Task SendValue(string thingToWatchFor, Uri endpoint, Guid identifier, string value, TimeSpan ttl, CancellationToken cancellationToken)
+        public async Task MarkThatResponseIsSet(Uri endpoint, Guid identifier, string value, TimeSpan ttl, CancellationToken cancellationToken)
         {
-            var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
+            var key = ResponseMarkerKey(endpoint, identifier);
             await facade.SetString(key, value, ttl, cancellationToken);
         }
         
-        public async Task<string?> GetGenericMarker(string thingToWatchFor, Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public async Task<string?> GetGenericMarker(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
-            var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
+            var key = ResponseMarkerKey(endpoint, identifier);
             return await facade.GetString(key, cancellationToken);
         }
         
-        public async Task<bool> DeleteGenericMarker(string thingToWatchFor, Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public async Task<bool> DeleteResponseMarker(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
-            var key = GenericMarkerKey(thingToWatchFor, endpoint, identifier);
-            return await facade.DeleteString(key);
+            var key = ResponseMarkerKey(endpoint, identifier);
+            return await facade.DeleteString(key, cancellationToken);
         }
     }
 

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 using System;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -106,26 +105,8 @@ namespace Halibut.Queue.Redis
             
             public Task WaitUntilShouldReSubscribeTask => connectionInError.Task;
         }
-        
-        private ShouldAbandonAndReconnectHelper ShouldAbandonAndReconnect = new ShouldAbandonAndReconnectHelper();
-        private readonly object errorOccuredLock = new object();
-        
-        private ShouldAbandonAndReconnectHelper ConnectionInErrorHelperProvider() => ShouldAbandonAndReconnect;
-        
-
-        private void AdviseThatClientsShouldStartReconnecting()
-        {
-            lock (errorOccuredLock)
-            {
-                var shouldAbandonAndReconnect = this.ShouldAbandonAndReconnect;
-                this.ShouldAbandonAndReconnect = new ();
-                shouldAbandonAndReconnect.SetReconnectionIsAdvised();
-            }
-        } 
         private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
         {
-            AdviseThatClientsShouldStartReconnecting();
-
             var message = $"Redis connection failed - EndPoint: {e.EndPoint}, Failure: {e.FailureType}, Exception: {e.Exception?.Message}";
             log?.Write(EventType.Error, message);
         }
@@ -224,12 +205,9 @@ namespace Halibut.Queue.Redis
 
 
         internal int TotalSubscribers = 0;
-
-        internal ConcurrentDictionary<string, bool> subs = new ConcurrentDictionary<string, bool>();
-
+        
         public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage, CancellationToken cancellationToken)
         {
-            
             channelName = "channel:" + keyPrefix + ":" + channelName;
             while (true)
             {
@@ -240,13 +218,9 @@ namespace Halibut.Queue.Redis
                     var channel = await Connection.GetSubscriber()
                         .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
 
-                    var someGuid = channelName + "__" + Guid.NewGuid().ToString();
-                    subs.TryAdd(someGuid, false);
-
                     var disposable = new FuncAsyncDisposable(async () =>
                     {
                         Interlocked.Decrement(ref TotalSubscribers);
-                        subs.TryRemove(someGuid, out var _);
                         await channel.UnsubscribeAsync();
                     });
                     
@@ -264,59 +238,50 @@ namespace Halibut.Queue.Redis
                     }
 
                     return disposable;
-
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // TODO: Get AI to log.
+                    log?.WriteException(EventType.Diagnostic, "Failed to subscribe to Redis channel {0}, retrying in 2 seconds", ex, channelName);
                     await Try.IgnoringError(async () => await Task.Delay(2000, cancellationToken));
                 }
             }
         }
         
-        public async Task PublishToChannel(string channelName, string payload)
+        public async Task PublishToChannel(string channelName, string payload, CancellationToken cancellationToken)
         {
             channelName = "channel:" + keyPrefix + ":" + channelName;
             await ExecuteWithRetry(async () =>
             {
                 var subscriber = Connection.GetSubscriber();
                 await subscriber.PublishAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal), payload);
-            }, CancellationToken.None);
+            }, cancellationToken);
         }
         
-        public async Task SetInHash(string key, string field, string payload)
+        public async Task SetInHash(string key, string field, string payload, TimeSpan ttl, CancellationToken cancellationToken)
         {
             key = "hash:" + keyPrefix + ":" + key;
-            
-            // TODO: TTL
-            // TODO ever call needs to respect the cancellation token
-            var ttl = new TimeSpan(9, 9, 9);
             
             // Retry each operation independently
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
                 await database.HashSetAsync(key, new RedisValue(field), new RedisValue(payload));
-            }, CancellationToken.None);
-            
-            await ExecuteWithRetry(async () =>
-            {
-                var database = Connection.GetDatabase();
-                await database.KeyExpireAsync(key, ttl);
-            }, CancellationToken.None);
+            }, cancellationToken);
+
+            await SetTtlForKeyRaw(key, ttl, cancellationToken);
         }
 
-        public async Task<bool> HashContainsKey(string key, string field)
+        public async Task<bool> HashContainsKey(string key, string field, CancellationToken cancellationToken)
         {
             key = "hash:" + keyPrefix + ":" + key;
             return await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
                 return await database.HashExistsAsync(key, new RedisValue(field));
-            }, CancellationToken.None);
+            }, cancellationToken);
         }
 
-        public async Task<string?> TryGetAndDeleteFromHash(string key, string field)
+        public async Task<string?> TryGetAndDeleteFromHash(string key, string field, CancellationToken cancellationToken)
         {
             key = "hash:" + keyPrefix + ":" + key;
             
@@ -325,15 +290,15 @@ namespace Halibut.Queue.Redis
             {
                 var database = Connection.GetDatabase();
                 return await database.HashGetAsync(key, new RedisValue(field));
-            }, CancellationToken.None);
+            }, cancellationToken);
             
             // TODO: If we retry this is not idempotent.
-            // TODO: Test
+            // TODO: This needs to be tested in RedisPendingRequestsQueueFixture
             var res = await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
                 return await database.KeyDeleteAsync(key);
-            }, CancellationToken.None);
+            }, cancellationToken);
             
             if (!res)
             {
@@ -343,18 +308,18 @@ namespace Halibut.Queue.Redis
             return (string?)value;
         }
 
-        public async Task ListRightPushAsync(string key, string payload)
+        public async Task ListRightPushAsync(string key, string payload, TimeSpan ttlForAllInList, CancellationToken cancellationToken)
         {
             key = "list:" + keyPrefix + ":" + key;
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                // TODO can we set TTL on this?
                 await database.ListRightPushAsync(key, payload);
-            }, CancellationToken.None);
-        }
+            }, cancellationToken);
 
-        public async Task<string?> ListLeftPopAsync(string key)
+            await SetTtlForKeyRaw(key, ttlForAllInList, cancellationToken);        }
+
+        public async Task<string?> ListLeftPopAsync(string key, CancellationToken cancellationToken)
         {
             key = "list:" + keyPrefix + ":" + key;
             return await ExecuteWithRetry<string?>(async () =>
@@ -367,12 +332,11 @@ namespace Halibut.Queue.Redis
                 }
 
                 return (string?)value;
-            }, CancellationToken.None);
+            }, cancellationToken);
         }
 
         public async Task SetString(string key, string value, TimeSpan ttl, CancellationToken cancellationToken)
         {
-            // TODO TTL
             key = ToStringKey(key);
             await ExecuteWithRetry(async () =>
             {
@@ -380,7 +344,6 @@ namespace Halibut.Queue.Redis
                 await database.StringSetAsync(key, value);
             }, cancellationToken);
 
-            // TODO unit test.
             await SetTtlForKeyRaw(key, ttl, cancellationToken);
         }
 
@@ -414,15 +377,14 @@ namespace Halibut.Queue.Redis
             }, cancellationToken);
         }
         
-        public async Task<bool> DeleteString(string key)
+        public async Task<bool> DeleteString(string key, CancellationToken cancellationToken)
         {
-            key = "string:" + keyPrefix + ":" + key;
+            key = ToStringKey(key);
             return await ExecuteWithRetry<bool>(async () =>
             {
                 var database = Connection.GetDatabase();
                 return await database.KeyDeleteAsync(key);
-            }, CancellationToken.None);
+            }, cancellationToken);
         }
     }
-
 }

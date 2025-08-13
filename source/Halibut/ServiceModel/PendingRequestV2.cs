@@ -24,21 +24,20 @@ using Nito.AsyncEx;
 
 namespace Halibut.ServiceModel
 {
-    public class PendingRequest : IDisposable
+    public class RedisPendingRequest : IDisposable
     {
         readonly RequestMessage request;
         readonly ILog log;
         readonly AsyncManualResetEvent responseWaiter = new(false);
         readonly SemaphoreSlim transferLock = new(1, 1);
-        //bool transferBegun;
-        AsyncManualResetEvent requestCollected = new(false);
+        readonly AsyncManualResetEvent requestCollected = new(false);
         readonly CancellationTokenSource pendingRequestCancellationTokenSource;
         ResponseMessage? response;
 
-        public PendingRequest(RequestMessage request, ILog log)
+        public RedisPendingRequest(RequestMessage request, ILog log)
         {
             this.request = request;
-            this.log = log.ForContext<PendingRequest>();
+            this.log = log.ForContext<RedisPendingRequest>();
 
             pendingRequestCancellationTokenSource = new CancellationTokenSource();
             PendingRequestCancellationToken = pendingRequestCancellationTokenSource.Token;

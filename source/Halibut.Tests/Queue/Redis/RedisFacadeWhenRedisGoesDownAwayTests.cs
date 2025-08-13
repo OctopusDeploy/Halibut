@@ -92,7 +92,7 @@ namespace Halibut.Tests.Queue.Redis
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            await redisFacade.PublishToChannel("test-channel", "test-message");
+            await redisFacade.PublishToChannel("test-channel", "test-message", CancellationToken);
         }
 
         [Test]
@@ -109,7 +109,7 @@ namespace Halibut.Tests.Queue.Redis
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            await redisFacade.SetInHash("test-hash", "test-field", "test-value");
+            await redisFacade.SetInHash("test-hash", "test-field", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
         }
 
         [Test]
@@ -120,13 +120,13 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection and set up test data
-            await redisFacade.SetInHash("test-hash", "test-field", "test-value");
+            await redisFacade.SetInHash("test-hash", "test-field", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            var result = await redisFacade.TryGetAndDeleteFromHash("test-hash", "test-field");
+            var result = await redisFacade.TryGetAndDeleteFromHash("test-hash", "test-field", CancellationToken);
             result.Should().Be("test-value");
         }
 
@@ -144,7 +144,7 @@ namespace Halibut.Tests.Queue.Redis
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            await redisFacade.ListRightPushAsync("test-list", "test-item");
+            await redisFacade.ListRightPushAsync("test-list", "test-item", TimeSpan.FromMinutes(1), CancellationToken );
         }
 
         [Test]
@@ -155,13 +155,13 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection and set up test data
-            await redisFacade.ListRightPushAsync("test-list", "test-item");
+            await redisFacade.ListRightPushAsync("test-list", "test-item", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            var result = await redisFacade.ListLeftPopAsync("test-list");
+            var result = await redisFacade.ListLeftPopAsync("test-list", CancellationToken);
             result.Should().Be("test-item");
         }
 
@@ -208,13 +208,13 @@ namespace Halibut.Tests.Queue.Redis
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
             // Establish connection and set up test data
-            await redisFacade.SetInHash("test-hash", "test-field", "test-value");
+            await redisFacade.SetInHash("test-hash", "test-field", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
             // No delay here - should retry and succeed
-            var exists = await redisFacade.HashContainsKey("test-hash", "test-field");
+            var exists = await redisFacade.HashContainsKey("test-hash", "test-field", CancellationToken);
             exists.Should().BeTrue();
         }
 
@@ -241,7 +241,7 @@ namespace Halibut.Tests.Queue.Redis
 
             // Give everything enough time to have a crack at trying to subscribe to messages.
             await Task.Delay(2000);
-            await redisStableConnection.PublishToChannel("bob", "MISSED");
+            await redisStableConnection.PublishToChannel("bob", "MISSED", CancellationToken);
             
             // Just in case the subscriber reconnects faster than the publish call. 
             await Task.Delay(2000);
@@ -252,7 +252,7 @@ namespace Halibut.Tests.Queue.Redis
             while (msgs.Count == 0)
             {
                 Logger.Information("Trying again");
-                await redisStableConnection.PublishToChannel("bob", "RECONNECT");
+                await redisStableConnection.PublishToChannel("bob", "RECONNECT", CancellationToken);
                 await Task.Delay(1000);
             }
 
@@ -283,7 +283,7 @@ namespace Halibut.Tests.Queue.Redis
 
             // Give everything enough time to have a crack at trying to subscribe to messages.
             await Task.Delay(2000);
-            await redisStableConnection.PublishToChannel("bob", "MISSED");
+            await redisStableConnection.PublishToChannel("bob", "MISSED", CancellationToken);
             
             // Just in case the subscriber reconnects faster than the publish call. 
             await Task.Delay(2000);
@@ -294,7 +294,7 @@ namespace Halibut.Tests.Queue.Redis
             while (msgs.Count == 0)
             {
                 Logger.Information("Trying again");
-                await redisStableConnection.PublishToChannel("bob", "RECONNECT");
+                await redisStableConnection.PublishToChannel("bob", "RECONNECT", CancellationToken);
                 await Task.Delay(1000);
             }
 
@@ -323,22 +323,22 @@ namespace Halibut.Tests.Queue.Redis
             }, CancellationToken); 
             
             // Check both sides can publish.
-            await redisViaPortForwarder.PublishToChannel("bob", "hello unstable");
-            await redisStableConnection.PublishToChannel("bob", "hello stable");
+            await redisViaPortForwarder.PublishToChannel("bob", "hello unstable", CancellationToken);
+            await redisStableConnection.PublishToChannel("bob", "hello stable", CancellationToken);
             await Task.Delay(1000); // TODO better
             msgs.Should().BeEquivalentTo("hello unstable", "hello stable");
             
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             // The stable connection should still be able to publish to redis.
             // But the subscriber on the unstable connection will not got the message.
-            await redisStableConnection.PublishToChannel("bob", "MISSED");
+            await redisStableConnection.PublishToChannel("bob", "MISSED", CancellationToken);
             await Task.Delay(1111);
             portForwarder.ReturnToNormalMode();
 
             while (msgs.Count <= 2)
             {
                 Logger.Information("Trying again");
-                await redisStableConnection.PublishToChannel("bob", "RECONNECT");
+                await redisStableConnection.PublishToChannel("bob", "RECONNECT", CancellationToken);
                 await Task.Delay(1000);
             }
 

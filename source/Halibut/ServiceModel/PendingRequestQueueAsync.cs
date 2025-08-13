@@ -12,8 +12,8 @@ namespace Halibut.ServiceModel
 {
     public class PendingRequestQueueAsync : IPendingRequestQueue, IAsyncDisposable
     {
-        readonly List<PendingRequest> queue = new();
-        readonly Dictionary<string, PendingRequest> inProgress = new();
+        readonly List<RedisPendingRequest> queue = new();
+        readonly Dictionary<string, RedisPendingRequest> inProgress = new();
         readonly SemaphoreSlim queueLock = new(1, 1);
         readonly AsyncManualResetEvent itemAddedToQueue = new(false);
         readonly ILog log;
@@ -40,7 +40,7 @@ namespace Halibut.ServiceModel
             using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, this.entireQueueCancellationTokenSource.Token);
             cancellationToken = cancellationTokenSource.Token;
             
-            using var pending = new PendingRequest(request, log);
+            using var pending = new RedisPendingRequest(request, log);
 
             try
             {
@@ -116,7 +116,7 @@ namespace Halibut.ServiceModel
             }
         }
 
-        async Task<PendingRequest?> DequeueNextAsync(TimeSpan timeout, CancellationToken cancellationToken)
+        async Task<RedisPendingRequest?> DequeueNextAsync(TimeSpan timeout, CancellationToken cancellationToken)
         {
             var first = await TakeFirst(cancellationToken);
             if (first != null || timeout <= TimeSpan.Zero)
@@ -139,7 +139,7 @@ namespace Halibut.ServiceModel
             return await TakeFirst(cancellationToken);
         }
 
-        async Task<PendingRequest?> TakeFirst(CancellationToken cancellationToken)
+        async Task<RedisPendingRequest?> TakeFirst(CancellationToken cancellationToken)
         {
             using (await queueLock.LockAsync(cancellationToken))
             {

@@ -142,30 +142,8 @@ namespace Halibut.Tests
                 
                 callsMade.Should().Be(total);
 
-                
-                for (int i = 0; i < 20; i++)
-                {
-                    if (redisFacade.TotalSubscribers == pollEndpoints.Length) break;
-                    await Task.Delay(100);
-                }
-
-                var s = "";
-                foreach (var subsKey in redisFacade.subs.Keys)
-                {
-                    if(subsKey.Contains("RequestMessagesPulseChannelName")) continue;
-                    s += "\n" + subsKey;
-                }
-                
-                Logger.Information("F {F}", s);
-
                 if(isRedis)
                 {
-                    if (redisFacade.TotalSubscribers != pollEndpoints.Length)
-                    {
-                        Logger.Information("OH NO!");
-
-                        await Task.Delay(TimeSpan.FromMinutes(1));
-                    }
                     redisFacade.TotalSubscribers.Should().Be(pollEndpoints.Length);
                 }
                 
