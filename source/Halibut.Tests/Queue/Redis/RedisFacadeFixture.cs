@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using Halibut.Util.AsyncEx;
 using NUnit.Framework;
@@ -12,7 +13,6 @@ namespace Halibut.Tests.Queue.Redis
 {
     public class RedisFacadeFixture : BaseTest
     {
-        // AI generated :S
         private static RedisFacade CreateRedisFacade() => new("localhost", Guid.NewGuid().ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
 
         [Test]
@@ -341,32 +341,6 @@ namespace Halibut.Tests.Queue.Redis
             retrievedValue2.Should().Be(value2);
         }
 
-        // [Test]
-        // public void Dispose_ShouldNotThrowException()
-        // {
-        //     // Arrange
-        //     var redisFacade = CreateRedisFacade();
-        //
-        //     // Act & Assert
-        //     Action act = () => redisFacade.Dispose();
-        //     act.Should().NotThrow();
-        // }
-        //
-        // [Test]
-        // public void Dispose_CalledMultipleTimes_ShouldNotThrowException()
-        // {
-        //     // Arrange
-        //     var redisFacade = CreateRedisFacade();
-        //
-        //     // Act & Assert
-        //     Action act = () =>
-        //     {
-        //         redisFacade.Dispose();
-        //         redisFacade.Dispose(); // Second call
-        //     };
-        //     act.Should().NotThrow();
-        // }
-
         [Test]
         public async Task SetInHash_WithTTL_ShouldExpireAfterSpecifiedTime()
         {
@@ -376,17 +350,251 @@ namespace Halibut.Tests.Queue.Redis
             var field = "test-field";
             var payload = "test-payload";
 
-            // Act - Set a value in hash (it has a TTL of 9:9:9 according to the implementation)
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
+            // Act - Set a value in hash with short TTL that we can actually test
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(3), CancellationToken);
 
-            // Immediately try to get the value - should exist
+            // Immediately verify it exists
+            var immediateExists = await redisFacade.HashContainsKey(key, field, CancellationToken);
+            immediateExists.Should().BeTrue();
+
+            // Also verify we can retrieve the value immediately
             var immediateValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
+            immediateValue.Should().Be(payload);
+
+            // Set the value again to test expiration (since TryGetAndDeleteFromHash removes it)
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMilliseconds(3), CancellationToken);
+
+            // Assert - Should eventually expire
+            await ShouldEventually.Eventually(async () =>
+            {
+                var exists = await redisFacade.HashContainsKey(key, field, CancellationToken);
+                exists.Should().BeFalse("the hash key should expire after TTL");
+            }, TimeSpan.FromSeconds(5), CancellationToken);
+
+            // Verify TryGetAndDeleteFromHash also returns null for expired key
+            var expiredValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
+            expiredValue.Should().BeNull();
+        }
+
+        [Test]
+        public async Task DeleteString_WithExistingKey_ShouldReturnTrueAndDeleteValue()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+            var key = Guid.NewGuid().ToString();
+            var value = "test-value";
+
+            // Set a value first
+            await redisFacade.SetString(key, value, TimeSpan.FromMinutes(1), CancellationToken);
+
+            // Verify it exists
+            var existingValue = await redisFacade.GetString(key, CancellationToken);
+            existingValue.Should().Be(value);
+
+            // Act
+            var deleteResult = await redisFacade.DeleteString(key, CancellationToken);
 
             // Assert
-            immediateValue.Should().Be(payload);
+            deleteResult.Should().BeTrue();
             
-            // Note: We can't easily test the actual TTL expiration in a unit test
-            // as it would require waiting 9+ hours, but we've verified the value is set correctly
+            // Verify the value is gone
+            var deletedValue = await redisFacade.GetString(key, CancellationToken);
+            deletedValue.Should().BeNull();
         }
+
+        [Test]
+        public async Task DeleteString_WithNonExistentKey_ShouldReturnFalse()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+            var nonExistentKey = Guid.NewGuid().ToString();
+
+            // Act
+            var deleteResult = await redisFacade.DeleteString(nonExistentKey, CancellationToken);
+
+            // Assert
+            deleteResult.Should().BeFalse();
+        }
+
+        [Test]
+        public async Task SetTtlForString_WithExistingKey_ShouldUpdateTTL()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+            var key = Guid.NewGuid().ToString();
+            var value = "test-value";
+
+            // Set a value first with a long TTL
+            await redisFacade.SetString(key, value, TimeSpan.FromHours(1), CancellationToken);
+
+            // Verify it exists
+            var existingValue = await redisFacade.GetString(key, CancellationToken);
+            existingValue.Should().Be(value);
+
+            // Act - Update TTL to a shorter time
+            await redisFacade.SetTtlForString(key, TimeSpan.FromMinutes(1), CancellationToken);
+
+            // Assert - Value should still exist immediately after TTL update
+            var valueAfterTtlUpdate = await redisFacade.GetString(key, CancellationToken);
+            valueAfterTtlUpdate.Should().Be(value);
+
+            // Note: We can't easily test the actual TTL expiration in a unit test
+            // without waiting, but we've verified the operation completes successfully
+        }
+
+        [Test]
+        public async Task SetString_WithShortTTL_ShouldExpire()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+            var key = Guid.NewGuid().ToString();
+            var value = "test-value";
+
+            // Act - Set with very short TTL
+            await redisFacade.SetString(key, value, TimeSpan.FromMilliseconds(3), CancellationToken);
+
+            // Immediately verify it exists
+            var immediateValue = await redisFacade.GetString(key, CancellationToken);
+            immediateValue.Should().Be(value);
+
+            // Assert - Should eventually expire
+            await ShouldEventually.Eventually(async () =>
+            {
+                var expiredValue = await redisFacade.GetString(key, CancellationToken);
+                expiredValue.Should().BeNull("the string should expire after TTL");
+            }, TimeSpan.FromSeconds(5), CancellationToken);
+        }
+
+        [Test]
+        public async Task ListRightPushAsync_WithShortTTL_ShouldExpire()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+            var key = Guid.NewGuid().ToString();
+            var payload = "test-payload";
+
+            // Act - Push with very short TTL
+            await redisFacade.ListRightPushAsync(key, payload, TimeSpan.FromMilliseconds(3), CancellationToken);
+
+            // Immediately verify it exists
+            var immediateValue = await redisFacade.ListLeftPopAsync(key, CancellationToken);
+            immediateValue.Should().Be(payload);
+
+            // Push another item and test expiration
+            await redisFacade.ListRightPushAsync(key, payload, TimeSpan.FromMilliseconds(3), CancellationToken);
+
+            // Assert - Should eventually expire
+            await ShouldEventually.Eventually(async () =>
+            {
+                var listValue = await redisFacade.ListLeftPopAsync(key, CancellationToken);
+                listValue.Should().BeNull("the list should expire after TTL");
+            }, TimeSpan.FromSeconds(5), CancellationToken);
+        }
+
+        [Test]
+        public void IsConnected_WhenNotInitialized_ShouldReturnFalse()
+        {
+            // Arrange
+            var redisFacade = new RedisFacade("localhost", "test-prefix", new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+
+            // Act & Assert
+            redisFacade.IsConnected.Should().BeFalse();
+        }
+
+        [Test]
+        public async Task IsConnected_AfterSuccessfulOperation_ShouldReturnTrue()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+
+            // Act - Perform an operation to initialize connection
+            await redisFacade.SetString(Guid.NewGuid().ToString(), "test", TimeSpan.FromMinutes(1), CancellationToken);
+
+            // Assert
+            redisFacade.IsConnected.Should().BeTrue();
+        }
+
+        [Test]
+        public async Task TotalSubscribers_ShouldTrackActiveSubscriptions()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+            var channelName = Guid.NewGuid().ToString();
+
+            // Act & Assert - Initially no subscribers
+            redisFacade.TotalSubscribers.Should().Be(0);
+
+            // Subscribe to channels
+            await using var subscription1 = await redisFacade.SubscribeToChannel(channelName + "1", _ => Task.CompletedTask, CancellationToken);
+            redisFacade.TotalSubscribers.Should().Be(1);
+
+            await using var subscription2 = await redisFacade.SubscribeToChannel(channelName + "2", _ => Task.CompletedTask, CancellationToken);
+            redisFacade.TotalSubscribers.Should().Be(2);
+
+            // Dispose one subscription
+            await subscription1.DisposeAsync();
+            redisFacade.TotalSubscribers.Should().Be(1);
+
+            // Dispose second subscription
+            await subscription2.DisposeAsync();
+            redisFacade.TotalSubscribers.Should().Be(0);
+        }
+
+        [Test]
+        public async Task MultipleSetString_WithDifferentTTLs_ShouldRespectIndividualTTLs()
+        {
+            // Arrange
+            await using var redisFacade = CreateRedisFacade();
+            var key1 = Guid.NewGuid().ToString();
+            var key2 = Guid.NewGuid().ToString();
+            var value1 = "value1";
+            var value2 = "value2";
+
+            // Act - Set with different TTLs
+            await redisFacade.SetString(key1, value1, TimeSpan.FromMilliseconds(3), CancellationToken); // Short TTL
+            await redisFacade.SetString(key2, value2, TimeSpan.FromMinutes(1), CancellationToken); // Long TTL
+
+            // Assert - First should eventually expire, second should still exist
+            await ShouldEventually.Eventually(async () =>
+            {
+                var expiredValue1 = await redisFacade.GetString(key1, CancellationToken);
+                expiredValue1.Should().BeNull("the first string should expire after short TTL");
+            }, TimeSpan.FromSeconds(5), CancellationToken);
+            
+            // Verify the second key still exists after the first expires
+            var stillExists2 = await redisFacade.GetString(key2, CancellationToken);
+            stillExists2.Should().Be(value2);
+        }
+
+        [Test]
+        public async Task DisposeAsync_ShouldCleanupResourcesAndNotThrow()
+        {
+            // Arrange
+            var redisFacade = CreateRedisFacade();
+            
+            // Perform some operations to initialize resources
+            await redisFacade.SetString(Guid.NewGuid().ToString(), "test", TimeSpan.FromMinutes(1), CancellationToken);
+            await using var subscription = await redisFacade.SubscribeToChannel(Guid.NewGuid().ToString(), _ => Task.CompletedTask, CancellationToken);
+
+            // Act & Assert - Dispose should not throw
+            Func<Task> disposeAction = async () => await redisFacade.DisposeAsync();
+            await disposeAction.Should().NotThrowAsync();
+        }
+
+        [Test]
+        public async Task DisposeAsync_CalledMultipleTimes_ShouldNotThrow()
+        {
+            // Arrange
+            var redisFacade = CreateRedisFacade();
+            await redisFacade.SetString(Guid.NewGuid().ToString(), "test", TimeSpan.FromMinutes(1), CancellationToken);
+
+            // Act & Assert - Multiple dispose calls should not throw
+            await redisFacade.DisposeAsync();
+            
+            Func<Task> secondDisposeAction = async () => await redisFacade.DisposeAsync();
+            await secondDisposeAction.Should().NotThrowAsync();
+        }
+
+
     }
 } 

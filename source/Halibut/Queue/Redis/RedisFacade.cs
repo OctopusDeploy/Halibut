@@ -221,7 +221,7 @@ namespace Halibut.Queue.Redis
                     var disposable = new FuncAsyncDisposable(async () =>
                     {
                         Interlocked.Decrement(ref TotalSubscribers);
-                        await channel.UnsubscribeAsync();
+                        await Try.IgnoringError(async () => await channel.UnsubscribeAsync());
                     });
                     
                     Interlocked.Increment(ref TotalSubscribers);
