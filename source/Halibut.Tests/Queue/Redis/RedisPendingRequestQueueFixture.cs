@@ -627,8 +627,62 @@ namespace Halibut.Tests.Queue.Redis
             response.Result.Should().Be("Yay");
             
         }
-
         
+        [Test]
+        public async Task WhenTheRequestReceiverDetectsRedisDataLose_AndTheRequestSenderDoesNot_TheSenderReceivesARetryableResponse()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var guid = Guid.NewGuid();
+            
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            await using var stableConnection = CreateRedisFacade(guid: guid);
+
+            var redisDataLoseDetectorOnReceiver = new CancellableDataLossWatchForRedisLosingAllItsData();
+            var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(stableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, redisDataLoseDetectorOnReceiver, log, new HalibutRedisTransport(stableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
+            
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            var queueAndWaitTask = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+            
+            var dequeuedRequest = await node2Receiver.DequeueAsync(CancellationToken);
+            
+            // Act
+            await redisDataLoseDetectorOnReceiver.DataLossHasOccured();
+
+            var responseThatWouldNotBeRetried = ResponseMessage.FromException(dequeuedRequest!.RequestMessage, new NoMatchingServiceOrMethodHalibutClientException(""));
+            CreateExceptionFromResponse(responseThatWouldNotBeRetried, log)
+                .IsRetryableError().Should().Be(HalibutRetryableErrorType.NotRetryable);
+            
+            await node2Receiver.ApplyResponse(ResponseMessage.FromResult(dequeuedRequest!.RequestMessage, "Yay"), dequeuedRequest!.RequestMessage.ActivityId);
+
+            var response = await queueAndWaitTask;
+            response.Error.Should().NotBeNull();
+            
+            // Assert
+            CreateExceptionFromResponse(response, log)
+                .IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
+        }
+
+        static Exception CreateExceptionFromResponse(ResponseMessage responseThatWouldNotBeRetried, ILog log)
+        {
+            try
+            {
+                HalibutProxyWithAsync.ThrowExceptionFromReceivedError(responseThatWouldNotBeRetried.Error!, log);
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
+            Assert.Fail("Excpected an exception in the response message");
+            throw new Exception("it failed");
+        }
+
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
         public async Task WhenUsingTheRedisQueue_ASimpleEchoServiceCanBeCalled(ClientAndServiceTestCase clientAndServiceTestCase)
@@ -659,6 +713,8 @@ namespace Halibut.Tests.Queue.Redis
                 }
             }
         }
+        
+        
 
         
         [Test]
