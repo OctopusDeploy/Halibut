@@ -24,13 +24,12 @@ namespace Halibut.Queue.Redis
     
     public class WatchForRequestCancellationOrSenderDisconnect : IAsyncDisposable
     {
-        readonly CancellationTokenSource RequestCancellationTokenSource;
+        readonly CancelOnDisposeCancellationToken requestCancellationTokenSource;
         public CancellationToken RequestProcessingCancellationToken { get; }
-        readonly WatchForRequestCancellation watchForRequestCancellation;
 
-        readonly CancelOnDisposeCancellationTokenSource KeepWatchingCancellationTokenSource;
+        readonly CancelOnDisposeCancellationToken keepWatchingCancellationToken;
         
-        DisposableCollection disposableCollection = new DisposableCollection();
+        DisposableCollection disposableCollection = new();
 
         public WatchForRequestCancellationOrSenderDisconnect(
             Uri endpoint,
@@ -41,15 +40,15 @@ namespace Halibut.Queue.Redis
         {
             try
             {
-                watchForRequestCancellation = new WatchForRequestCancellation(endpoint, requestActivityId, halibutRedisTransport, log);
+                var watchForRequestCancellation = new WatchForRequestCancellation(endpoint, requestActivityId, halibutRedisTransport, log);
                 disposableCollection.AddAsyncDisposable(watchForRequestCancellation);
 
-                RequestCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(watchForRequestCancellation.RequestCancelledCancellationToken);
-                disposableCollection.Add(RequestCancellationTokenSource);
-                RequestProcessingCancellationToken = RequestCancellationTokenSource.Token;
+                requestCancellationTokenSource = new CancelOnDisposeCancellationToken(watchForRequestCancellation.RequestCancelledCancellationToken);
+                disposableCollection.AddAsyncDisposable(requestCancellationTokenSource);
+                RequestProcessingCancellationToken = requestCancellationTokenSource.Token;
 
-                KeepWatchingCancellationTokenSource = new CancellationTokenSource().CancelOnDispose();
-                disposableCollection.AddAsyncDisposable(KeepWatchingCancellationTokenSource);
+                keepWatchingCancellationToken = new CancelOnDisposeCancellationToken();
+                disposableCollection.AddAsyncDisposable(keepWatchingCancellationToken);
 
                 Task.Run(() => WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, nodeOfflineTimeoutBetweenHeartBeatsFromSender, log));
             }
@@ -58,19 +57,18 @@ namespace Halibut.Queue.Redis
                 Try.IgnoringError(async () => await disposableCollection.DisposeAsync()).GetAwaiter().GetResult();
                 throw;
             }
-
         }
 
         async Task WatchThatNodeWhichSentTheRequestIsStillAlive(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, TimeSpan nodeOfflineTimeoutBetweenHeartBeatsFromSender, ILog log)
         {
-            var watchCancellationToken = KeepWatchingCancellationTokenSource.CancellationToken;
+            var watchCancellationToken = keepWatchingCancellationToken.Token;
             try
             {
                 var res = await NodeHeartBeatSender
                     .WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, log, nodeOfflineTimeoutBetweenHeartBeatsFromSender, watchCancellationToken);
                 if (res == NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected)
                 {
-                    await RequestCancellationTokenSource.CancelAsync();
+                    await requestCancellationTokenSource.CancelAsync();
                 }
             }
             catch (Exception) when (watchCancellationToken.IsCancellationRequested)

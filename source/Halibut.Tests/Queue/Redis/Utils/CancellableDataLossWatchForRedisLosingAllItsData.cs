@@ -23,25 +23,25 @@ namespace Halibut.Tests.Queue.Redis.Utils
 {
     public class CancellableDataLossWatchForRedisLosingAllItsData : IWatchForRedisLosingAllItsData
     {
-        CancelOnDisposeCancellationTokenSource cancellationTokenSource = new CancellationTokenSource().CancelOnDispose();
+        CancelOnDisposeCancellationToken cancellationToken = new();
 
         public TaskCompletionSource<CancellationToken> TaskCompletionSource = new();
         public CancellableDataLossWatchForRedisLosingAllItsData()
         {
-            TaskCompletionSource.SetResult(cancellationTokenSource.CancellationToken);
+            TaskCompletionSource.SetResult(cancellationToken.Token);
         }
 
         public async Task DataLossHasOccured()
         {
-            await cancellationTokenSource.DisposeAsync();
-            cancellationTokenSource = new CancellationTokenSource().CancelOnDispose();
+            await cancellationToken.DisposeAsync();
+            cancellationToken = new CancelOnDisposeCancellationToken();
             TaskCompletionSource = new TaskCompletionSource<CancellationToken>();
-            TaskCompletionSource.SetResult(cancellationTokenSource.CancellationToken);
+            TaskCompletionSource.SetResult(cancellationToken.Token);
         }
 
         public async ValueTask DisposeAsync()
         {
-            await Try.CatchingError(async () => await cancellationTokenSource.DisposeAsync());
+            await Try.CatchingError(async () => await cancellationToken.DisposeAsync());
         }
 
         public async Task<CancellationToken> GetTokenForDataLoseDetection(TimeSpan timeToWait, CancellationToken cancellationToken)

@@ -34,7 +34,7 @@ namespace Halibut.Queue.Redis
         readonly MessageReaderWriter messageReaderWriter;
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
 
-        readonly CancellationTokenSource queueCts = new ();
+        readonly CancelOnDisposeCancellationToken queueCts = new ();
         internal ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
         
         // TODO: this needs to be used in all public methods.
@@ -72,15 +72,14 @@ namespace Halibut.Queue.Redis
         
         public async ValueTask DisposeAsync()
         {
-            await Try.IgnoringError(async () => await queueCts.CancelAsync());
-            Try.IgnoringError(() => queueCts.Dispose());
+            await Try.IgnoringError(async () => await queueCts.DisposeAsync());
             await Try.IgnoringError(async () => await (await PulseChannelSubDisposer).DisposeAsync());
         }
 
         private async Task<CancellationToken> DataLossCancellationToken(CancellationToken? cancellationToken)
         {
-            // TODO must throw something that can be retried.
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, cancellationToken ?? CancellationToken.None);
+            // TODO this must throw something that can be retried.
+            await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, cancellationToken ?? CancellationToken.None);
             return await watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), cts.Token);
         }
 
@@ -89,7 +88,7 @@ namespace Halibut.Queue.Redis
             
             var dataLoseCt = await DataLossCancellationToken(requestCancellationToken);
             
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(queueCts.Token, requestCancellationToken, dataLoseCt);
+            await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, requestCancellationToken, dataLoseCt);
             
             var cancellationToken = cts.Token;
             // TODO RedisConnectionException can be raised out of here, what should the queue do?
@@ -115,7 +114,7 @@ namespace Halibut.Queue.Redis
                 try
                 {
 
-                    await using var watcherCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token).CancelOnDispose();
+                    await using var watcherCts = new CancelOnDisposeCancellationToken(cts.Token);
                     WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
 
                     // TODO: We need to ensure that no matter what exceptions are thrown we eventually exit.
@@ -154,11 +153,11 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        void WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancelOnDisposeCancellationTokenSource watcherCts)
+        void WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, PendingRequest pending, CancelOnDisposeCancellationToken watcherCts)
         {
             Task.Run(async () =>
             {
-                var watcherCtsCancellationToken = watcherCts.CancellationToken;
+                var watcherCtsCancellationToken = watcherCts.Token;
                 try
                 {
                     var disconnected = await NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(
@@ -203,7 +202,7 @@ namespace Halibut.Queue.Redis
                     // TODO: log
                     return false;
                 }
-                using var cts = new CancellationTokenSource();
+                await using var cts = new CancelOnDisposeCancellationToken();
                 cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
                 var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
                 if (requestJson != null)
@@ -299,8 +298,8 @@ namespace Halibut.Queue.Redis
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
                 disposables.AddAsyncDisposable(watcher);
                 
-                var cts = CancellationTokenSource.CreateLinkedTokenSource(watcher.RequestProcessingCancellationToken, dataLossCT);
-                disposables.Add(cts);
+                var cts = new CancelOnDisposeCancellationToken(watcher.RequestProcessingCancellationToken, dataLossCT);
+                disposables.AddAsyncDisposable(cts);
                 
                 var response = new RequestMessageWithCancellationToken(pending, cts.Token);
                 disposablesForInFlightRequests[pending.ActivityId] = disposables;
@@ -365,10 +364,8 @@ namespace Halibut.Queue.Redis
 
         async Task<RequestMessage?> DequeueNextAsync()
         {
-            // TODO use queue token.
-            var cancellationToken = CancellationToken.None;
             
-            using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            await using var cts = new CancelOnDisposeCancellationToken(queueToken);
             try
             {
                 // TODO can we avoid going to redis here?
@@ -376,13 +373,13 @@ namespace Halibut.Queue.Redis
                 // TODO: test this.
                 hasItemsForEndpoint.Reset();
                 
-                var first = await TryRemoveNextItemFromQueue(cancellationToken);
+                var first = await TryRemoveNextItemFromQueue(cts.Token);
                 if (first != null) return first;
                 
 
                 await Task.WhenAny(
-                    hasItemsForEndpoint.WaitAsync(cancellationTokenSource.Token), 
-                    Task.Delay(halibutTimeoutsAndLimits.PollingQueueWaitTimeout, cancellationTokenSource.Token));
+                    hasItemsForEndpoint.WaitAsync(cts.Token), 
+                    Task.Delay(halibutTimeoutsAndLimits.PollingQueueWaitTimeout, cts.Token));
 
                 if (!hasItemsForEndpoint.IsSet)
                 {
@@ -391,11 +388,11 @@ namespace Halibut.Queue.Redis
                     return null;
                 }
                 
-                return await TryRemoveNextItemFromQueue(cancellationToken);
+                return await TryRemoveNextItemFromQueue(cts.Token);
             }
             finally
             {
-                await cancellationTokenSource.CancelAsync();
+                await cts.CancelAsync();
             }
         }
 

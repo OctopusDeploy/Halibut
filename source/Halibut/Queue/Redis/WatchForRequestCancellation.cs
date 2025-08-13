@@ -31,7 +31,7 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Attempting to send cancellation for request - Endpoint: {0}, ActivityId: {1}", endpoint, request.ActivityId);
             
-            using var cts = new CancellationTokenSource();
+            await using var cts = new CancelOnDisposeCancellationToken();
             cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
             
             try
@@ -59,10 +59,10 @@ namespace Halibut.Queue.Redis
         // causing the request-processor to cancel the request anyway. 
         static TimeSpan CancelRequestMarkerTTL = TimeSpan.FromMinutes(5);
 
-        readonly CancellationTokenSource requestCancelledCts = new();
+        readonly CancelOnDisposeCancellationToken requestCancelledCts = new();
         public CancellationToken RequestCancelledCancellationToken => requestCancelledCts.Token;
 
-        readonly CancellationTokenSource watchForCancellationTokenSource = new();
+        readonly CancelOnDisposeCancellationToken watchForCancellationTokenSource = new();
 
         readonly ILog log;
 
@@ -130,10 +130,8 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Disposing WatchForRequestCancellation");
             
-            await Try.IgnoringError(async () => await watchForCancellationTokenSource.CancelAsync());
-            Try.IgnoringError(() => watchForCancellationTokenSource.Dispose());
-            await Try.IgnoringError(async () => await requestCancelledCts.CancelAsync());
-            Try.IgnoringError(() => requestCancelledCts.Dispose());
+            await Try.IgnoringError(async () => await watchForCancellationTokenSource.DisposeAsync());
+            await Try.IgnoringError(async () => await requestCancelledCts.DisposeAsync());
             
             log.Write(EventType.Diagnostic, "WatchForRequestCancellation disposed");
         }

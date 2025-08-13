@@ -64,7 +64,7 @@ namespace Halibut.Queue.Redis
         string keyPrefix;
 
 
-        CancellationTokenSource cts;
+        CancelOnDisposeCancellationToken cts;
         CancellationToken facadeCancellationToken;
 
         public RedisFacade(string configuration, string? keyPrefix, ILog log) : this(ConfigurationOptions.Parse(configuration), keyPrefix, log)
@@ -75,7 +75,7 @@ namespace Halibut.Queue.Redis
         {
             this.keyPrefix = keyPrefix ?? "halibut";
             this.log = log;
-            this.cts = new CancellationTokenSource();
+            this.cts = new CancelOnDisposeCancellationToken();
             this.facadeCancellationToken = cts.Token;
 
             // aka have more goes at connecting.
@@ -150,7 +150,7 @@ namespace Halibut.Queue.Redis
         /// </summary>
         private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
         {
-            using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
+            await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, facadeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
             
             var retryDelay = TimeSpan.FromSeconds(1);
@@ -177,7 +177,7 @@ namespace Halibut.Queue.Redis
         /// </summary>
         private async Task ExecuteWithRetry(Func<Task> operation, CancellationToken cancellationToken)
         {
-            using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, facadeCancellationToken);
+            await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, facadeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
             
             var retryDelay = TimeSpan.FromSeconds(1);
@@ -204,8 +204,7 @@ namespace Halibut.Queue.Redis
 
         public async ValueTask DisposeAsync()
         {
-            await Try.IgnoringError(async () => await cts.CancelAsync());
-            Try.IgnoringError(() => cts.Dispose());
+            await Try.IgnoringError(async () => await cts.DisposeAsync());
             
             if (connection.IsValueCreated)
             {

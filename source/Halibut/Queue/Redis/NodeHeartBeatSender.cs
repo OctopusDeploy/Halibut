@@ -40,7 +40,7 @@ namespace Halibut.Queue.Redis
         private readonly Uri endpoint;
         private readonly Guid requestActivityId; 
         private readonly HalibutRedisTransport halibutRedisTransport;
-        private readonly CancelOnDisposeCancellationTokenSource cancellationTokenSource;
+        private readonly CancelOnDisposeCancellationToken cancellationToken;
         private readonly ILog log;
         private readonly HalibutQueueNodeSendingPulses nodeSendingPulsesType;
 
@@ -57,10 +57,10 @@ namespace Halibut.Queue.Redis
             this.requestActivityId = requestActivityId;
             this.halibutRedisTransport = halibutRedisTransport;
             this.nodeSendingPulsesType = nodeSendingPulsesType;
-            cancellationTokenSource = new CancellationTokenSource().CancelOnDispose();
+            cancellationToken = new CancelOnDisposeCancellationToken();
             this.log = log.ForContext<NodeHeartBeatSender>();
             this.log.Write(EventType.Diagnostic, "Starting NodeHeartBeatSender for {0} node, request {1}, endpoint {2}", nodeSendingPulsesType, requestActivityId, endpoint);
-            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(defaultDelayBetweenPulses, cancellationTokenSource.CancellationToken));
+            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(defaultDelayBetweenPulses, cancellationToken.Token));
         }
 
         private async Task SendPulsesWhileProcessingRequest(TimeSpan defaultDelayBetweenPulses, CancellationToken cancellationToken)
@@ -106,10 +106,10 @@ namespace Halibut.Queue.Redis
         {
             log = log.ForContext<NodeHeartBeatSender>();
             // Once the pending's CT has been cancelled we no longer care to keep observing
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(watchCancellationToken, pending.PendingRequestCancellationToken);
-            // TODO: test this is indeed called first.
+            await using var cts = new CancelOnDisposeCancellationToken(watchCancellationToken, pending.PendingRequestCancellationToken);
             try
             {
+                // TODO: test this is indeed called first.
                 await WaitForRequestToBeCollected(endpoint, request, pending, halibutRedisTransport, timeBetweenCheckingIfRequestWasCollected, log, cts.Token);
 
                 return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.Receiver, cts.Token);
@@ -253,7 +253,7 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Disposing NodeHeartBeatSender for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
             
-            await Try.IgnoringError(async () => await cancellationTokenSource.DisposeAsync());
+            await Try.IgnoringError(async () => await cancellationToken.DisposeAsync());
             
             log.Write(EventType.Diagnostic, "NodeHeartBeatSender disposed for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
         }

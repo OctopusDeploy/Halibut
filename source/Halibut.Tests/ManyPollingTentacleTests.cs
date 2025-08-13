@@ -47,13 +47,14 @@ namespace Halibut.Tests
             var logFactory = new CachingLogFactory(new TestContextLogCreator("", LogLevel.Trace));
             var services = GetDelegateServiceFactory();
             await using var disposables = new DisposableCollection();
+            var isRedis = queueTestCase.ToString().ToLower().Contains("redis");
             var log = new TestContextLogCreator("Redis", LogLevel.Fatal);
             await using var redisFacade = new RedisFacade("localhost:6379", Guid.NewGuid().ToString(), log.CreateNewForPrefix(""));
             await using (var octopus = new HalibutRuntimeBuilder()
                              .WithServerCertificate(Certificates.Octopus)
                              .WithPendingRequestQueueFactory(msgSer =>
                              {
-                                 if (queueTestCase.ToString().ToLower().Contains("redis"))
+                                 if (isRedis)
                                  {
                                      var watchForRedisLosingAllItsData = new WatchForRedisLosingAllItsData(redisFacade, log.CreateNewForPrefix("watcher"));
                                      disposables.AddAsyncDisposable(watchForRedisLosingAllItsData);
@@ -156,10 +157,17 @@ namespace Halibut.Tests
                 }
                 
                 Logger.Information("F {F}", s);
-                
-                Logger.Information("Created queues: {Count}", RedisPendingRequestQueue.CountCreated);
-                
-                redisFacade.TotalSubscribers.Should().Be(pollEndpoints.Length);
+
+                if(isRedis)
+                {
+                    if (redisFacade.TotalSubscribers != pollEndpoints.Length)
+                    {
+                        Logger.Information("OH NO!");
+
+                        await Task.Delay(TimeSpan.FromMinutes(1));
+                    }
+                    redisFacade.TotalSubscribers.Should().Be(pollEndpoints.Length);
+                }
                 
                 foreach (var task in tasks)
                 {

@@ -298,13 +298,13 @@ namespace Halibut.Tests.Queue.Redis
             
             // Assert
             bool heartBeatSent = false;
-            var cts = new CancellationTokenSource().CancelOnDispose();
+            var cts = new CancelOnDisposeCancellationToken();
             using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.Sender, async () =>
             {
                 await Task.CompletedTask;
                 heartBeatSent = true;
             }, 
-                cts.CancellationToken);
+                cts.Token);
             
             await Task.Delay(5000);
             heartBeatSent.Should().BeFalse();
@@ -341,13 +341,13 @@ namespace Halibut.Tests.Queue.Redis
             
             // Assert
             bool heartBeatSent = false;
-            var cts = new CancellationTokenSource().CancelOnDispose();
+            var cts = new CancelOnDisposeCancellationToken();
             using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
             {
                 await Task.CompletedTask;
                 heartBeatSent = true;
             }, 
-                cts.CancellationToken);
+                cts.Token);
             
             await Task.Delay(5000);
             heartBeatSent.Should().BeFalse();

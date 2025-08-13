@@ -39,7 +39,7 @@ namespace Halibut.Queue.Redis
         internal TimeSpan SetupDelay { get;}
         internal TimeSpan WatchInterval { get; }
         internal TimeSpan KeyTTL { get;  }
-        CancelOnDisposeCancellationTokenSource cancelOnDisposeCancellationTokenSource = new CancellationTokenSource().CancelOnDispose();
+        CancelOnDisposeCancellationToken cts = new();
 
         public WatchForRedisLosingAllItsData(RedisFacade redisFacade, ILog log, TimeSpan? setupDelay = null, TimeSpan? watchInterval = null, TimeSpan? keyTTL = null)
         {
@@ -48,7 +48,7 @@ namespace Halibut.Queue.Redis
             this.SetupDelay = setupDelay ?? TimeSpan.FromSeconds(1);
             this.WatchInterval = watchInterval ?? TimeSpan.FromSeconds(60);
             this.KeyTTL = keyTTL ?? TimeSpan.FromMinutes(60);
-            var _ = Task.Run(async () => await KeepWatchingForDataLose(cancelOnDisposeCancellationTokenSource.CancellationToken));
+            var _ = Task.Run(async () => await KeepWatchingForDataLose(cts.Token));
         }
 
         private TaskCompletionSource<CancellationToken> taskCompletionSource = new TaskCompletionSource<CancellationToken>();
@@ -67,9 +67,9 @@ namespace Halibut.Queue.Redis
             }
             
             // TODO: Check if tentacle needs this to be classified as exception that can be retried.
-            await using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken).CancelOnDispose();
-            cts.CancellationTokenSource.CancelAfter(timeToWait);
-            return await taskCompletionSource.Task.WaitAsync(cts.CancellationToken);
+            await using var cts = new CancelOnDisposeCancellationToken(cancellationToken);
+            cts.CancelAfter(timeToWait);
+            return await taskCompletionSource.Task.WaitAsync(cts.Token);
         }
 
         private async Task KeepWatchingForDataLose(CancellationToken cancellationToken)
@@ -88,7 +88,7 @@ namespace Halibut.Queue.Redis
             
             log.Write(EventType.Diagnostic, "Starting Redis data loss monitoring with key {0}", key);
             
-            await using var cts = new CancellationTokenSource().CancelOnDispose();
+            await using var cts = new CancelOnDisposeCancellationToken();
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
@@ -97,7 +97,7 @@ namespace Halibut.Queue.Redis
                     {
                         log.Write(EventType.Diagnostic, "Setting initial data loss monitoring key {0} with TTL {1} minutes", key, KeyTTL.TotalMinutes);
                         await redisFacade.SetString(key, guid, KeyTTL, cancellationToken);
-                        taskCompletionSource.TrySetResult(cts.CancellationToken);
+                        taskCompletionSource.TrySetResult(cts.Token);
                         hasSetKey = true;
                         log.Write(EventType.Diagnostic, "Successfully set initial data loss monitoring key {0}, monitoring is now active", key);
                     }
@@ -109,7 +109,7 @@ namespace Halibut.Queue.Redis
                             log.Write(EventType.Error, "Redis data loss detected! Expected value {0} for key {1}, but got {2}. This indicates Redis has lost data.", guid, key, data ?? "null");
                             // Anyone new will be given a new thing to wait on.
                             taskCompletionSource = new TaskCompletionSource<CancellationToken>();
-                            await Try.IgnoringError(async () => await cts.CancellationTokenSource.CancelAsync());
+                            await Try.IgnoringError(async () => await cts.CancelAsync());
                             return;
                         }
 
@@ -136,7 +136,7 @@ namespace Halibut.Queue.Redis
         public async ValueTask DisposeAsync()
         {
             log.Write(EventType.Diagnostic, "Disposing WatchForRedisLosingAllItsData");
-            await cancelOnDisposeCancellationTokenSource.DisposeAsync();
+            await cts.DisposeAsync();
         }
     }
 }

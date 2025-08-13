@@ -34,7 +34,7 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Attempting to set {0} for - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
             
-            using var cts = new CancellationTokenSource();
+            await using var cts = new CancelOnDisposeCancellationToken();
             cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
             
             try
@@ -57,7 +57,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        readonly CancellationTokenSource watcherTokenSource = new();
+        readonly CancelOnDisposeCancellationToken watcherToken;
 
         readonly ILog log;
         readonly string messageTypeName;
@@ -83,8 +83,9 @@ namespace Halibut.Queue.Redis
                 TimeSpan.FromMinutes(2)     // Maximum delay: 2 minutes
             );
             this.log.Write(EventType.Diagnostic, "Starting to watch for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
-            
-            var token = watcherTokenSource.Token;
+
+            watcherToken = new CancelOnDisposeCancellationToken();
+            var token = watcherToken.Token;
             var _ = Task.Run(async () => await WatchAndWaitForMessage(token));
         }
 
@@ -132,7 +133,7 @@ namespace Halibut.Queue.Redis
                         
                         log.Write(EventType.Diagnostic, "Cancelling  polling loop for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
                         
-                        await Try.IgnoringError(async () => await watcherTokenSource.CancelAsync());
+                        await Try.IgnoringError(async () => await watcherToken.CancelAsync());
                         
                         log.Write(EventType.Diagnostic, "Is token cancelled: {0} - Endpoint: {1}, ActivityId: {2} {3}", messageTypeName, endpoint, activityId, token.IsCancellationRequested);
                         
@@ -153,7 +154,7 @@ namespace Halibut.Queue.Redis
                             log.Write(EventType.Diagnostic, "{0} detected via polling - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
                             pollBackoffStrategy.Success(); // Reset backoff strategy on successful retrieval
                             await TrySetResultAndRemoveValueFromRedis(value, token);
-                            await watcherTokenSource.CancelAsync();
+                            await watcherToken.CancelAsync();
                             break;
                         }
                     }
@@ -184,11 +185,11 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Disposing GenericWatcher for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
             
-            await Try.IgnoringError(async () => await watcherTokenSource.CancelAsync());
-            Try.IgnoringError(() => watcherTokenSource.Dispose());
+            await Try.IgnoringError(async () => await watcherToken.CancelAsync());
+            //Try.IgnoringError(() => watcherTokenSource.Dispose());
             
             // If the message task is not yet complete, then complete if now with null since we have nothing for it.
-            Try.IgnoringError(() => message.TrySetCanceled());
+            Try.IgnoringError(() => message.TrySetCanceled()); // TODO: try set cancelled? you sure?
             
             log.Write(EventType.Diagnostic, "Disposed GenericWatcher for {0} - Endpoint: {1}, ActivityId: {2}", messageTypeName, endpoint, activityId);
         }
