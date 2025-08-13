@@ -31,6 +31,9 @@ namespace Halibut.Queue.Redis
         
         DisposableCollection disposableCollection = new();
 
+        WatchForRequestCancellation watchForRequestCancellation;
+        public bool SenderCancelledTheRequest => watchForRequestCancellation.SenderCancelledTheRequest;
+
         public WatchForRequestCancellationOrSenderDisconnect(
             Uri endpoint,
             Guid requestActivityId,
@@ -40,7 +43,7 @@ namespace Halibut.Queue.Redis
         {
             try
             {
-                var watchForRequestCancellation = new WatchForRequestCancellation(endpoint, requestActivityId, halibutRedisTransport, log);
+                watchForRequestCancellation = new WatchForRequestCancellation(endpoint, requestActivityId, halibutRedisTransport, log);
                 disposableCollection.AddAsyncDisposable(watchForRequestCancellation);
 
                 requestCancellationTokenSource = new CancelOnDisposeCancellationToken(watchForRequestCancellation.RequestCancelledCancellationToken);

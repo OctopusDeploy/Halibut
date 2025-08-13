@@ -48,7 +48,14 @@ namespace Halibut.Diagnostics
             {
                 return HalibutNetworkExceptionType.IsNetworkError;
             }
+
+            if (exception is HalibutClientException)
+            {
+                if (exception.Message.Contains(RedisPendingRequestQueue.RequestAbandonedMessage)) return HalibutNetworkExceptionType.IsNetworkError;
+            }
             
+            // TODO end
+
             if (exception is NoMatchingServiceOrMethodHalibutClientException)
             {
                 return HalibutNetworkExceptionType.NotANetworkError;

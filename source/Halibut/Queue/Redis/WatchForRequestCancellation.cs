@@ -61,6 +61,7 @@ namespace Halibut.Queue.Redis
 
         readonly CancelOnDisposeCancellationToken requestCancelledCts = new();
         public CancellationToken RequestCancelledCancellationToken => requestCancelledCts.Token;
+        public bool SenderCancelledTheRequest { get; private set; }
 
         readonly CancelOnDisposeCancellationToken watchForCancellationTokenSource = new();
 
@@ -86,8 +87,7 @@ namespace Halibut.Queue.Redis
                     {
                         await Task.CompletedTask;
                         log.Write(EventType.Diagnostic, "Received cancellation notification via subscription - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
-                        await requestCancelledCts.CancelAsync();
-                        await watchForCancellationTokenSource.CancelAsync();
+                        await RequestHasBeenCancelled();
                     },
                     token);
                 
@@ -103,8 +103,7 @@ namespace Halibut.Queue.Redis
                         if (await halibutRedisTransport.IsRequestMarkedAsCancelled(endpoint, requestActivityId, token))
                         {
                             log.Write(EventType.Diagnostic, "Request cancellation detected via polling - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
-                            await requestCancelledCts.CancelAsync();
-                            await watchForCancellationTokenSource.CancelAsync();
+                            await RequestHasBeenCancelled();
                             break;
                         }
                     }
@@ -124,6 +123,13 @@ namespace Halibut.Queue.Redis
                     log.Write(EventType.Error, "Unexpected error in request cancellation watcher - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, requestActivityId, ex.Message);
                 }
             }
+        }
+
+        async Task RequestHasBeenCancelled()
+        {
+            SenderCancelledTheRequest = true;
+            await requestCancelledCts.CancelAsync();
+            await watchForCancellationTokenSource.CancelAsync();
         }
 
         public async ValueTask DisposeAsync()

@@ -35,7 +35,7 @@ namespace Halibut.Queue.Redis
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
 
         readonly CancelOnDisposeCancellationToken queueCts = new ();
-        internal ConcurrentDictionary<Guid, DisposableCollection> disposablesForInFlightRequests = new();
+        internal ConcurrentDictionary<Guid, WatcherAndDisposables> disposablesForInFlightRequests = new();
         
         // TODO: this needs to be used in all public methods.
         readonly CancellationToken queueToken;
@@ -295,6 +295,8 @@ namespace Halibut.Queue.Redis
                 // There is a chance the data loss occured after we got the data but before here.
                 // In that case we will just time out because of the lack of heart beats.
                 var dataLossCT = await this.watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), queueToken);
+                // TODO: We should only mark the request as cancelled in the event we are told it was cancelled. Otherwise
+                // we need to correctly say that we decided to abandon the request such that it can be retried.
                 
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, DelayBetweenHeartBeatsForRequestProcessor));
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
@@ -304,7 +306,7 @@ namespace Halibut.Queue.Redis
                 disposables.AddAsyncDisposable(cts);
                 
                 var response = new RequestMessageWithCancellationToken(pending, cts.Token);
-                disposablesForInFlightRequests[pending.ActivityId] = disposables;
+                disposablesForInFlightRequests[pending.ActivityId] = new WatcherAndDisposables(disposables, cts.Token, watcher);
                 return response;
             }
             catch (Exception)
@@ -314,9 +316,34 @@ namespace Halibut.Queue.Redis
             }
         }
 
+        public class WatcherAndDisposables : IAsyncDisposable
+        {
+            readonly DisposableCollection disposableCollection;
+            public CancellationToken RequestCancelledForAnyReasonCancellationToken { get; }
+            public WatchForRequestCancellationOrSenderDisconnect watcher { get; }
+
+            public WatcherAndDisposables(DisposableCollection disposableCollection, CancellationToken requestCancelledForAnyReasonCancellationToken, WatchForRequestCancellationOrSenderDisconnect watcher)
+            {
+                this.disposableCollection = disposableCollection;
+                this.RequestCancelledForAnyReasonCancellationToken = requestCancelledForAnyReasonCancellationToken;
+                this.watcher = watcher;
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                await Try.IgnoringError(async () => await disposableCollection.DisposeAsync());
+            }
+        }
+
+        public const string RequestAbandonedMessage = "The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.";
         public async Task ApplyResponse(ResponseMessage response, Guid requestActivityId)
         {
             log.Write(EventType.MessageExchange, "Applying response for request {0}", requestActivityId);
+            WatcherAndDisposables? watcherAndDisposables = null;
+            if (!disposablesForInFlightRequests.TryRemove(requestActivityId, out watcherAndDisposables))
+            {
+                log.Write(EventType.Diagnostic, "No in-flight request resources found to dispose for request {0}", requestActivityId);
+            }
             
             try
             {
@@ -332,6 +359,14 @@ namespace Halibut.Queue.Redis
                 // This node has now completed the RPC, and so the response must be sent
                 // back to the node which sent the response
 
+                if (watcherAndDisposables != null && watcherAndDisposables.RequestCancelledForAnyReasonCancellationToken.IsCancellationRequested)
+                {
+                    if (!watcherAndDisposables.watcher.SenderCancelledTheRequest)
+                    {
+                        log.Write(EventType.Diagnostic, "Response for request {0}, has been overridden with an abandon message as the request was abandoned", requestActivityId);
+                        response = ResponseMessage.FromException(response, new HalibutClientException(RequestAbandonedMessage));
+                    }
+                }
                 var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
                 await PollAndSubscribeToResponse.TrySendMessage(ResponseMessageSubscriptionName, halibutRedisTransport, endpoint, requestActivityId, payload, TTLOfResponseMessage, log);
@@ -344,24 +379,13 @@ namespace Halibut.Queue.Redis
             }
             finally
             {
-                if (disposablesForInFlightRequests.TryRemove(requestActivityId, out var disposables))
-                {
                     log.Write(EventType.Diagnostic, "Disposing in-flight request resources for request {0}", requestActivityId);
-                    try
+                    if (watcherAndDisposables != null)
                     {
-                        await disposables.DisposeAsync();
-                        log.Write(EventType.Diagnostic, "Successfully disposed in-flight request resources for request {0}", requestActivityId);
+                        await watcherAndDisposables.DisposeAsync();
                     }
-                    catch (Exception ex)
-                    {
-                        log.WriteException(EventType.Diagnostic, "Error disposing in-flight request resources for request {0}", ex, requestActivityId);
-                    }
-                }
-                else
-                {
-                    log.Write(EventType.Diagnostic, "No in-flight request resources found to dispose for request {0}", requestActivityId);
-                }
             }
+            
         }
 
         async Task<RequestMessage?> DequeueNextAsync()
