@@ -328,6 +328,7 @@ namespace Halibut.Queue.Redis
             }, CancellationToken.None);
             
             // TODO: If we retry this is not idempotent.
+            // TODO: Test
             var res = await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();

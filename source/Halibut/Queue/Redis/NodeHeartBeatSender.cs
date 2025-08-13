@@ -164,7 +164,6 @@ namespace Halibut.Queue.Redis
                 
                 while (!watchCancellationToken.IsCancellationRequested)
                 {
-                    // TODO: I am sure a fancy pants delay could be done here calculated from the now and last heart beat etc.
                     
                     var timeSinceLastHeartBeat = DateTimeOffset.Now - lastHeartBeat.Value;
                     if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline)
@@ -197,7 +196,7 @@ namespace Halibut.Queue.Redis
             log = log.ForContext<NodeHeartBeatSender>();
             log.Write(EventType.Diagnostic, "Waiting for request {0} to be collected from queue", request.ActivityId);
 
-            // Is this worthwhile?
+            // TODO: Is this worthwhile?
             var asyncManualResetEvent = new AsyncManualResetEvent(false);
             // await using var subscription = await halibutRedisTransport.SubscribeToNodeHeartBeatChannel(
             //     endpoint,
@@ -215,7 +214,6 @@ namespace Halibut.Queue.Redis
                 {
                     asyncManualResetEvent.Reset();
                     // Has something else determined the request was collected?
-                    // TODO should we bail out of here if the PendingRequest is complete? 
                     if(pending.HasRequestBeenMarkedAsCollected) 
                     {
                         log.Write(EventType.Diagnostic, "Request {0} has been marked as collected", request.ActivityId);

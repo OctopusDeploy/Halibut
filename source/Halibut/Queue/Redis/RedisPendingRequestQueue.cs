@@ -281,7 +281,7 @@ namespace Halibut.Queue.Redis
         
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
         {
-            // TODO: is it god or bad that redis exceptions will bubble out of here.
+            // TODO: is it good or bad that redis exceptions will bubble out of here.
             // I think it will kill the TCP connection, which will force re-connect (in perhaps a backoff function)
             // This could result in connecting to a node that is actually connected to redis. It could also
             // cause a cascade of failure from high load.
@@ -295,8 +295,6 @@ namespace Halibut.Queue.Redis
                 // There is a chance the data loss occured after we got the data but before here.
                 // In that case we will just time out because of the lack of heart beats.
                 var dataLossCT = await this.watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), queueToken);
-                // TODO: We should only mark the request as cancelled in the event we are told it was cancelled. Otherwise
-                // we need to correctly say that we decided to abandon the request such that it can be retried.
                 
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, DelayBetweenHeartBeatsForRequestProcessor));
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
@@ -361,6 +359,7 @@ namespace Halibut.Queue.Redis
 
                 if (watcherAndDisposables != null && watcherAndDisposables.RequestCancelledForAnyReasonCancellationToken.IsCancellationRequested)
                 {
+                    // TODO: test
                     if (!watcherAndDisposables.watcher.SenderCancelledTheRequest)
                     {
                         log.Write(EventType.Diagnostic, "Response for request {0}, has been overridden with an abandon message as the request was abandoned", requestActivityId);
