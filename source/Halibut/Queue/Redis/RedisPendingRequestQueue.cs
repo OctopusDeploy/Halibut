@@ -505,8 +505,8 @@ namespace Halibut.Queue.Redis
                     // It is very likely a queue error means every tentacle will return an error.
                     // Add a random delay to help avoid every client coming back at exactly the same time.
                     await Task.Delay(TimeSpan.FromSeconds(new Random().Next(15)), cts.Token);
-                    throw;
                 }
+                throw;
             }
             finally
             {
