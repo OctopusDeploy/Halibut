@@ -51,7 +51,8 @@ namespace Halibut.Diagnostics
 
             if (exception is HalibutClientException)
             {
-                if (exception.Message.Contains(RedisPendingRequestQueue.RequestAbandonedMessage)) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.")) return HalibutNetworkExceptionType.IsNetworkError;
+                if(exception.Message.Contains("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.")) return HalibutNetworkExceptionType.IsNetworkError;
             }
             
             // TODO end

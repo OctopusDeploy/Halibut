@@ -385,7 +385,6 @@ namespace Halibut.Tests.Queue.Redis
             requestReceived!.RequestMessage.ActivityId.Should().Be(request.ActivityId);
         }
         
-        
         [Test]
         public async Task WhenTheReceiverDoesntCollectWorkImmediately_TheRequestCanSitOnTheQueueForSometime_AndBeOnTheQueueLongerThanTheHeartBeatTimeout()
         {
@@ -508,6 +507,8 @@ namespace Halibut.Tests.Queue.Redis
             var response = await queueAndWaitTask;
             response.Error.Should().NotBeNull();
             response.Error!.Message.Should().Contain("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.");
+
+            CreateExceptionFromResponse(response, log).IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
         }
         
         [Test]

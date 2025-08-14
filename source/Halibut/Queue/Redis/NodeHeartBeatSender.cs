@@ -13,14 +13,12 @@
 // limitations under the License.
 
 using System;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
-using Nito.AsyncEx;
 
 namespace Halibut.Queue.Redis
 {
@@ -36,11 +34,11 @@ namespace Halibut.Queue.Redis
             NodeMayHaveDisconnected,
             NoDisconnectSeen
         }
-        
-        private readonly Uri endpoint;
-        private readonly Guid requestActivityId; 
+
+        readonly Uri endpoint;
+        readonly Guid requestActivityId; 
         private readonly HalibutRedisTransport halibutRedisTransport;
-        private readonly CancelOnDisposeCancellationToken cancellationToken;
+        private readonly CancelOnDisposeCancellationToken cts;
         private readonly ILog log;
         private readonly HalibutQueueNodeSendingPulses nodeSendingPulsesType;
 
@@ -57,13 +55,13 @@ namespace Halibut.Queue.Redis
             this.requestActivityId = requestActivityId;
             this.halibutRedisTransport = halibutRedisTransport;
             this.nodeSendingPulsesType = nodeSendingPulsesType;
-            cancellationToken = new CancelOnDisposeCancellationToken();
+            cts = new CancelOnDisposeCancellationToken();
             this.log = log.ForContext<NodeHeartBeatSender>();
             this.log.Write(EventType.Diagnostic, "Starting NodeHeartBeatSender for {0} node, request {1}, endpoint {2}", nodeSendingPulsesType, requestActivityId, endpoint);
-            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(defaultDelayBetweenPulses, cancellationToken.Token));
+            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(defaultDelayBetweenPulses, cts.Token));
         }
 
-        private async Task SendPulsesWhileProcessingRequest(TimeSpan defaultDelayBetweenPulses, CancellationToken cancellationToken)
+        async Task SendPulsesWhileProcessingRequest(TimeSpan defaultDelayBetweenPulses, CancellationToken cancellationToken)
         {
             log.Write(EventType.Diagnostic, "Starting heartbeat pulse loop for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
             
@@ -194,24 +192,11 @@ namespace Halibut.Queue.Redis
         {
             log = log.ForContext<NodeHeartBeatSender>();
             log.Write(EventType.Diagnostic, "Waiting for request {0} to be collected from queue", request.ActivityId);
-
-            // TODO: Is this worthwhile?
-            var asyncManualResetEvent = new AsyncManualResetEvent(false);
-            // await using var subscription = await halibutRedisTransport.SubscribeToNodeHeartBeatChannel(
-            //     endpoint,
-            //     request.ActivityId,
-            //     HalibutQueueNodeSendingPulses.Receiver, async () =>
-            //     {
-            //         await Task.CompletedTask;
-            //         asyncManualResetEvent.Set();
-            //         log.Write(EventType.Diagnostic, "While waiting for request to be collected received heartbeat from {0} node, request {1}", HalibutQueueNodeSendingPulses.Receiver, request.ActivityId);
-            //     }, cancellationToken);
             
             while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    asyncManualResetEvent.Reset();
                     // Has something else determined the request was collected?
                     if(redisPending.HasRequestBeenMarkedAsCollected) 
                     {
@@ -238,7 +223,6 @@ namespace Halibut.Queue.Redis
                 {
                     await Task.WhenAny(
                         Task.Delay(timeBetweenCheckingIfRequestWasCollected, cancellationToken),
-                        asyncManualResetEvent.WaitAsync(cancellationToken),
                         redisPending.WaitForRequestToBeMarkedAsCollected(cancellationToken));
                 });
             }
@@ -250,7 +234,7 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Disposing NodeHeartBeatSender for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
             
-            await Try.IgnoringError(async () => await cancellationToken.DisposeAsync());
+            await Try.IgnoringError(async () => await cts.DisposeAsync());
             
             log.Write(EventType.Diagnostic, "NodeHeartBeatSender disposed for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
         }
