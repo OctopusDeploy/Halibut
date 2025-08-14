@@ -18,12 +18,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Util;
 using Newtonsoft.Json;
-using Nito.AsyncEx;
 using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis
 {
-    public class HalibutRedisTransport
+    public class HalibutRedisTransport : IHalibutRedisTransport
     {
         const string Namespace = "octopus:server:halibut";
 
@@ -238,13 +237,13 @@ namespace Halibut.Queue.Redis
             await facade.SetString(key, value, ttl, cancellationToken);
         }
         
-        public async Task<string?> GetGenericMarker(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public async Task<string?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
             var key = ResponseMarkerKey(endpoint, identifier);
             return await facade.GetString(key, cancellationToken);
         }
         
-        public async Task<bool> DeleteResponseMarker(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public async Task<bool> DeleteResponse(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
             var key = ResponseMarkerKey(endpoint, identifier);
             return await facade.DeleteString(key, cancellationToken);

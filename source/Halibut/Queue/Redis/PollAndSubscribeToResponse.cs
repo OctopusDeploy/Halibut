@@ -24,7 +24,7 @@ namespace Halibut.Queue.Redis
     public class PollAndSubscribeToResponse : IAsyncDisposable
     {
         public static async Task TrySendMessage(
-            HalibutRedisTransport halibutRedisTransport, 
+            IHalibutRedisTransport halibutRedisTransport, 
             Uri endpoint, 
             Guid activityId,
             string value,
@@ -60,16 +60,16 @@ namespace Halibut.Queue.Redis
 
         readonly ILog log;
 
-        readonly HalibutRedisTransport halibutRedisTransport;
+        readonly IHalibutRedisTransport halibutRedisTransport;
         readonly Uri endpoint;
         readonly Guid activityId;
         readonly LinearBackoffStrategy pollBackoffStrategy;
 
-        TaskCompletionSource<string> message = new();
+        TaskCompletionSource<string> ResponseJsonCompletionSource = new();
         
-        public Task<string> ResultTask => message.Task;
+        public Task<string> ResponseJson => ResponseJsonCompletionSource.Task;
 
-        public PollAndSubscribeToResponse(Uri endpoint, Guid activityId, HalibutRedisTransport halibutRedisTransport, ILog log)
+        public PollAndSubscribeToResponse(Uri endpoint, Guid activityId, IHalibutRedisTransport halibutRedisTransport, ILog log)
         {
             this.log = log.ForContext<PollAndSubscribeToResponse>();
 
@@ -90,28 +90,6 @@ namespace Halibut.Queue.Redis
 
         readonly SemaphoreSlim trySetResultSemaphore = new SemaphoreSlim(1, 1);
 
-        public async Task TrySetResultAndRemoveValueFromRedis(string value, CancellationToken cancellationToken)
-        {
-            using var l = await trySetResultSemaphore.LockAsync(cancellationToken);
-            try
-            {
-                if(!message.Task.IsCompleted) message.TrySetResult(value);
-            }
-            catch (Exception)
-            {
-                // TODO log we could not set result.
-            }
-
-            try
-            {
-                await halibutRedisTransport.DeleteResponseMarker(endpoint, activityId, cancellationToken);
-            }
-            catch (Exception)
-            {
-                // TODO log we could not remove value
-            }
-
-        }
         async Task WaitForResponse(CancellationToken token)
         {
             try
@@ -123,16 +101,7 @@ namespace Halibut.Queue.Redis
                     {
                         
                         log.Write(EventType.Diagnostic, "Received response notification via subscription - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                        
-                        var value = await halibutRedisTransport.GetGenericMarker(endpoint, activityId, token);
-                        if (value != null)
-                        {
-                            await TrySetResultAndRemoveValueFromRedis(value, token);
-                        }
-                        
-                        log.Write(EventType.Diagnostic, "Cancelling  polling loop for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                        
-                        await Try.IgnoringError(async () => await watcherToken.CancelAsync());
+                        await TryGetResponseFromRedis("subscription", token);
                     },
                     token);
                 
@@ -144,12 +113,8 @@ namespace Halibut.Queue.Redis
                 {
                     try
                     {
-                        var value = await halibutRedisTransport.GetGenericMarker(endpoint, activityId, token);
-                        if (value != null)
+                        if (await TryGetResponseFromRedis("polling", token))
                         {
-                            log.Write(EventType.Diagnostic, "Response detected via polling - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                            await TrySetResultAndRemoveValueFromRedis(value, token);
-                            await watcherToken.CancelAsync();
                             break;
                         }
                     }
@@ -176,6 +141,53 @@ namespace Halibut.Queue.Redis
             }
         }
 
+        /// <summary>
+        /// Makes an attempt to get the response from redis.
+        /// </summary>
+        /// <param name="detectedBy"></param>
+        /// <param name="token"></param>
+        /// <returns>true if a response message is available.</returns>
+        public async Task<bool> TryGetResponseFromRedis(string detectedBy, CancellationToken token)
+        {
+            using var l = await trySetResultSemaphore.LockAsync(token);
+            
+            if (ResponseJsonCompletionSource.Task.IsCompleted) return true;
+            
+            var responseJson = await halibutRedisTransport.GetResponseMessage(endpoint, activityId, token);
+            if (responseJson != null)
+            {
+                log.Write(EventType.Diagnostic, "Response detected  via {0} - Endpoint: {1}, ActivityId: {2}", detectedBy, endpoint, activityId);
+                await TrySetResponse(responseJson, token);
+                await Try.IgnoringError(async () => await watcherToken.CancelAsync());
+                log.Write(EventType.Diagnostic, "Cancelling  polling loop for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
+                return true;
+            }
+
+            return false;
+        }
+        
+        async Task TrySetResponse(string value, CancellationToken cancellationToken)
+        {
+            try
+            {
+                ResponseJsonCompletionSource.TrySetResult(value);
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to set response - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, activityId, ex.Message);
+            }
+
+            try
+            {
+                await halibutRedisTransport.DeleteResponse(endpoint, activityId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to delete response from Redis - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, activityId, ex.Message);
+            }
+
+        }
+
         public async ValueTask DisposeAsync()
         {
             log.Write(EventType.Diagnostic, "Disposing GenericWatcher for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
@@ -183,7 +195,7 @@ namespace Halibut.Queue.Redis
             await Try.IgnoringError(async () => await watcherToken.CancelAsync());
             
             // If the message task is not yet complete, then mark it as cancelled
-            Try.IgnoringError(() => message.TrySetCanceled());
+            Try.IgnoringError(() => ResponseJsonCompletionSource.TrySetCanceled());
             
             log.Write(EventType.Diagnostic, "Disposed GenericWatcher for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
         }

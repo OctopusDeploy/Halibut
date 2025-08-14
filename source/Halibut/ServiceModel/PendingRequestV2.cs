@@ -104,8 +104,7 @@ namespace Halibut.ServiceModel
                     OperationCanceledException operationCanceledException;
                     if (!requestCollected.IsSet)
                     {
-                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint", request);
-                        operationCanceledException = new OperationCanceledException($"Request {request} was cancelled before it could be collected by the polling endpoint");
+                        operationCanceledException = CreateExceptionForRequestWasCancelledBeforeCollected(request, log);
                     }
                     else
                     {
@@ -174,8 +173,14 @@ namespace Halibut.ServiceModel
                     false);
             }
         }
-        
-        
+
+        public static OperationCanceledException CreateExceptionForRequestWasCancelledBeforeCollected(RequestMessage request, ILog log)
+        {
+            
+            log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint", request);
+            return new OperationCanceledException($"Request {request} was cancelled before it could be collected by the polling endpoint");
+        }
+
         public async Task<bool> RequestHasBeenCollectedAndWillBeTransferred()
         {
             // The PendingRequest is Disposed at the end of QueueAndWaitAsync but a race condition 
@@ -206,26 +211,27 @@ namespace Halibut.ServiceModel
         public ResponseMessage Response => response ?? throw new InvalidOperationException("Response has not been set.");
         public CancellationToken PendingRequestCancellationToken { get; }
 
-        public void SetResponse(ResponseMessage response)
+        public async Task<ResponseMessage> SetResponse(ResponseMessage response)
         {
             // If someone is calling this then we know for sure they collected the request
-            this.SetResponseAsync(response, true).GetAwaiter().GetResult();
+            return await SetResponseAsync(response, true);
         }
         
-        async Task SetResponseAsync(ResponseMessage response, bool requestWasCollected)
+        async Task<ResponseMessage> SetResponseAsync(ResponseMessage response, bool requestWasCollected)
         {
             using (await transferLock.LockAsync(CancellationToken.None))
             {
-                SetResponseNoLock(response, requestWasCollected);
+                return SetResponseNoLock(response, requestWasCollected);
             }
         }
 
-        void SetResponseNoLock(ResponseMessage response, bool requestWasCollected)
+        ResponseMessage SetResponseNoLock(ResponseMessage response, bool requestWasCollected)
         {
-            if(this.response != null) return;
+            if(this.response != null) return this.response;
             this.response = response;
             responseWaiter.Set();
             if(requestWasCollected) requestCollected.Set(); // Also the request has been collected, if we have a response.
+            return this.response;
         }
 
         public void Dispose()

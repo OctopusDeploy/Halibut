@@ -26,35 +26,68 @@ namespace Halibut.Tests.Queue.Redis.Utils
         {
             return new MessageReaderWriterThatThrowsWhenReadingResponse(messageReaderWriter, exceptionFactory);
         }
-    }
 
-    class MessageReaderWriterThatThrowsWhenReadingResponse : IMessageReaderWriter
+        public static IMessageReaderWriter ThrowsOnPrepareRequest(this IMessageReaderWriter messageReaderWriter, Func<Exception> exception)
+        {
+            return new MessageReaderWriterThatThrowsOnPrepareRequest(messageReaderWriter, exception);
+        }
+}
+
+    class MessageReaderWriterWithVirtualMethods : IMessageReaderWriter
     {
         readonly IMessageReaderWriter messageReaderWriter;
-        readonly Func<Exception> exception;
 
-        public MessageReaderWriterThatThrowsWhenReadingResponse(IMessageReaderWriter messageReaderWriter, Func<Exception> exception)
+        public MessageReaderWriterWithVirtualMethods(IMessageReaderWriter messageReaderWriter)
         {
             this.messageReaderWriter = messageReaderWriter;
-            this.exception = exception;
         }
 
-        public Task<string> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public virtual Task<string> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             return messageReaderWriter.PrepareRequest(request, cancellationToken);
         }
 
-        public Task<RequestMessage> ReadRequest(string jsonRequest, CancellationToken cancellationToken)
+        public virtual Task<RequestMessage> ReadRequest(string jsonRequest, CancellationToken cancellationToken)
         {
             return messageReaderWriter.ReadRequest(jsonRequest, cancellationToken);
         }
 
-        public Task<string> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
+        public virtual Task<string> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
         {
             return messageReaderWriter.PrepareResponse(response, cancellationToken);
         }
 
-        public Task<ResponseMessage> ReadResponse(string jsonResponse, CancellationToken cancellationToken)
+        public virtual Task<ResponseMessage> ReadResponse(string jsonResponse, CancellationToken cancellationToken)
+        {
+            return messageReaderWriter.ReadResponse(jsonResponse, cancellationToken);
+        }
+    }
+
+    class MessageReaderWriterThatThrowsWhenReadingResponse : MessageReaderWriterWithVirtualMethods
+    {
+        readonly Func<Exception> exception;
+
+        public MessageReaderWriterThatThrowsWhenReadingResponse(IMessageReaderWriter messageReaderWriter, Func<Exception> exception) : base(messageReaderWriter)
+        {
+            this.exception = exception;
+        }
+
+        public override Task<ResponseMessage> ReadResponse(string jsonResponse, CancellationToken cancellationToken)
+        {
+            throw exception();
+        }
+    }
+    
+    class MessageReaderWriterThatThrowsOnPrepareRequest : MessageReaderWriterWithVirtualMethods
+    {
+        readonly Func<Exception> exception;
+
+        public MessageReaderWriterThatThrowsOnPrepareRequest(IMessageReaderWriter messageReaderWriter, Func<Exception> exception) : base(messageReaderWriter)
+        {
+            this.exception = exception;
+        }
+
+        public override Task<string> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             throw exception();
         }

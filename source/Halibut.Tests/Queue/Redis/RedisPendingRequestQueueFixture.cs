@@ -27,6 +27,7 @@ using Halibut.Transport.Protocol;
 using Halibut.Util;
 using Nito.AsyncEx;
 using NSubstitute;
+using NSubstitute.Extensions;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
 using Serilog;
@@ -161,6 +162,94 @@ namespace Halibut.Tests.Queue.Redis
             CreateExceptionFromResponse(responseMessage, log).IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
         }
         
+        
+        [Test]
+        public async Task WhenEnteringTheQueue_AndRedisIsUnavailable_ARetryableExceptionIsThrown()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+            redisFacade.MaxDurationToRetryFor = TimeSpan.FromSeconds(1);
+            
+            var redisTransport = new HalibutRedisTransport(redisFacade);
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            
+            // Act Assert
+            var exception = await AssertThrowsAny.Exception(async () => await queue.QueueAndWaitAsync(request, CancellationToken.None));
+            exception.IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
+            exception.Message.Should().Contain("ailed since an error occured inserting the data into the queue");
+        }
+        
+        [Test]
+        public async Task WhenEnteringTheQueue_AndRedisIsUnavailableAndDataLoseOccurs_ARetryableExceptionIsThrown()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
+            redisFacade.MaxDurationToRetryFor = TimeSpan.FromSeconds(1);
+            
+            var redisDataLoseDetector = new CancellableDataLossWatchForRedisLosingAllItsData();
+            
+            var redisTransport = Substitute.ForPartsOf<HalibutRedisTransportWithVirtuals>(new HalibutRedisTransport(redisFacade));
+            redisTransport.Configure().PutRequest(Arg.Any<Uri>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+                .Returns(async callInfo => 
+                {
+                    await redisDataLoseDetector.DataLossHasOccured();
+                    throw new OperationCanceledException();
+                });
+                
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            
+            var queue = new RedisPendingRequestQueue(endpoint, redisDataLoseDetector, log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            
+            
+            // Act Assert
+            var exception = await AssertThrowsAny.Exception(async () => await queue.QueueAndWaitAsync(request, CancellationToken.None));
+            exception.IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
+            exception.Message.Should().Contain("was cancelled because we detected that redis lost all of its data.");
+        }
+        
+        [Test]
+        public async Task WhenPreparingRequestFails_ARetryableExceptionIsThrown()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+
+            
+            await using var redisFacade = CreateRedisFacade();
+            
+            var redisTransport = new HalibutRedisTransport(redisFacade);
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore)
+                .ThrowsOnPrepareRequest(() => new OperationCanceledException());
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            
+            // Act Assert
+            var exception = await AssertThrowsAny.Exception(async () => await queue.QueueAndWaitAsync(request, CancellationToken.None));
+            exception.IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
+            exception.Message.Should().Contain("error occured when preparing request for queue");
+        }
+        
         [Test]
         public async Task WhenDataLostIsDetected_InFlightRequestShouldBeAbandoned_AndARetryableExceptionIsThrown()
         {
@@ -234,7 +323,7 @@ namespace Halibut.Tests.Queue.Redis
             responseMessage.Result.Should().Be("Yay");
             
             // Assert
-            queue.disposablesForInFlightRequests.Should().BeEmpty();
+            queue.DisposablesForInFlightRequests.Should().BeEmpty();
         }
         
         [Test]

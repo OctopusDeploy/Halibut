@@ -57,7 +57,9 @@ namespace Halibut.Queue.Redis
     {
         readonly Lazy<ConnectionMultiplexer> connection;
         readonly ILog log;
-
+        // We can survive redis being unavailable for this amount of time.
+        internal TimeSpan MaxDurationToRetryFor = TimeSpan.FromSeconds(30);
+        
         ConnectionMultiplexer Connection => connection.Value;
         
         string keyPrefix;
@@ -122,9 +124,6 @@ namespace Halibut.Queue.Redis
             var message = $"Redis connection restored - EndPoint: {e.EndPoint}";
             log?.Write(EventType.Diagnostic, message);
         }
-        
-        // We can survive redis being unavailable for this amount of time.
-        static readonly TimeSpan MaxDurationToRetryFor = TimeSpan.FromSeconds(30);
 
         /// <summary>
         /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.

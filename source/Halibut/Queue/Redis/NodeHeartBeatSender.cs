@@ -37,7 +37,7 @@ namespace Halibut.Queue.Redis
 
         readonly Uri endpoint;
         readonly Guid requestActivityId; 
-        private readonly HalibutRedisTransport halibutRedisTransport;
+        private readonly IHalibutRedisTransport halibutRedisTransport;
         private readonly CancelOnDisposeCancellationToken cts;
         private readonly ILog log;
         private readonly HalibutQueueNodeSendingPulses nodeSendingPulsesType;
@@ -46,7 +46,7 @@ namespace Halibut.Queue.Redis
         public NodeHeartBeatSender(
             Uri endpoint,
             Guid requestActivityId,
-            HalibutRedisTransport halibutRedisTransport,
+            IHalibutRedisTransport halibutRedisTransport,
             ILog log,
             HalibutQueueNodeSendingPulses nodeSendingPulsesType,
             TimeSpan defaultDelayBetweenPulses)
@@ -96,7 +96,7 @@ namespace Halibut.Queue.Redis
             Uri endpoint,
             RequestMessage request, 
             RedisPendingRequest redisPending,
-            HalibutRedisTransport halibutRedisTransport,
+            IHalibutRedisTransport halibutRedisTransport,
             TimeSpan timeBetweenCheckingIfRequestWasCollected,
             ILog log,
             TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
@@ -111,11 +111,7 @@ namespace Halibut.Queue.Redis
 
                 return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.Receiver, cts.Token);
             }
-            catch (Exception) when (!cts.Token.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception)
+            catch (Exception) when (cts.Token.IsCancellationRequested)
             {
                 return NodeProcessingRequestWatcherResult.NoDisconnectSeen;
             }
@@ -124,7 +120,7 @@ namespace Halibut.Queue.Redis
         public static async Task<NodeProcessingRequestWatcherResult> WatchThatNodeWhichSentTheRequestIsStillAlive(
             Uri endpoint,
             Guid requestActivityId,
-            HalibutRedisTransport halibutRedisTransport,
+            IHalibutRedisTransport halibutRedisTransport,
             ILog log,
             TimeSpan maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
@@ -135,7 +131,7 @@ namespace Halibut.Queue.Redis
         private static async Task<NodeProcessingRequestWatcherResult> WatchForPulsesFromNode(
             Uri endpoint,
             Guid requestActivityId, 
-            HalibutRedisTransport halibutRedisTransport,
+            IHalibutRedisTransport halibutRedisTransport,
             ILog log,
             TimeSpan maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline,
             HalibutQueueNodeSendingPulses watchingForPulsesFrom,
@@ -186,7 +182,7 @@ namespace Halibut.Queue.Redis
             }
         }
         
-        static async Task WaitForRequestToBeCollected(Uri endpoint, RequestMessage request, RedisPendingRequest redisPending, HalibutRedisTransport halibutRedisTransport,
+        static async Task WaitForRequestToBeCollected(Uri endpoint, RequestMessage request, RedisPendingRequest redisPending, IHalibutRedisTransport halibutRedisTransport,
             TimeSpan timeBetweenCheckingIfRequestWasCollected,
             ILog log, CancellationToken cancellationToken)
         {

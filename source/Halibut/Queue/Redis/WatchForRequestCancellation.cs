@@ -24,7 +24,7 @@ namespace Halibut.Queue.Redis
     public class WatchForRequestCancellation : IAsyncDisposable
     {
         public static async Task TrySendCancellation(
-            HalibutRedisTransport halibutRedisTransport, 
+            IHalibutRedisTransport halibutRedisTransport, 
             Uri endpoint, 
             RequestMessage request,
             ILog log)
@@ -67,7 +67,7 @@ namespace Halibut.Queue.Redis
 
         readonly ILog log;
 
-        public WatchForRequestCancellation(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, ILog log)
+        public WatchForRequestCancellation(Uri endpoint, Guid requestActivityId, IHalibutRedisTransport halibutRedisTransport, ILog log)
         {
             this.log = log;
             log.Write(EventType.Diagnostic, "Starting to watch for request cancellation - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
@@ -76,7 +76,7 @@ namespace Halibut.Queue.Redis
             var _ = Task.Run(async () => await WatchForCancellation(endpoint, requestActivityId, halibutRedisTransport, token));
         }
 
-        async Task WatchForCancellation(Uri endpoint, Guid requestActivityId, HalibutRedisTransport halibutRedisTransport, CancellationToken token)
+        async Task WatchForCancellation(Uri endpoint, Guid requestActivityId, IHalibutRedisTransport halibutRedisTransport, CancellationToken token)
         {
             try
             {
