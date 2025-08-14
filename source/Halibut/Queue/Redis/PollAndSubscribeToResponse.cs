@@ -85,7 +85,7 @@ namespace Halibut.Queue.Redis
 
             watcherToken = new CancelOnDisposeCancellationToken();
             var token = watcherToken.Token;
-            var _ = Task.Run(async () => await WaitForResponse(token));
+            watcherToken.AwaitTasksBeforeCTSDispose(Task.Run(async () => await WaitForResponse(token)));
         }
 
         readonly SemaphoreSlim trySetResultSemaphore = new SemaphoreSlim(1, 1);

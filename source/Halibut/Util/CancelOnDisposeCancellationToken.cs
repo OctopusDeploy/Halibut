@@ -2,6 +2,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.Redis;
+using Halibut.Transport.Protocol;
 
 namespace Halibut.Util
 {
@@ -13,6 +15,8 @@ namespace Halibut.Util
     {
         readonly CancellationTokenSource cancellationTokenSource;
         bool disposed;
+
+        AwaitAllAndIgnoreException awaitAllAndIgnoreException = new AwaitAllAndIgnoreException();
         
         public CancelOnDisposeCancellationToken(params CancellationToken[] token)
         : this(CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -39,9 +43,10 @@ namespace Halibut.Util
 
             await Try.IgnoringError(async () => await CancelAsync());
 
-            // And then don't dispose the CancellationTokenSource.
-            // Since doing so WILL result in race conditions where
-            // callbacks will be silently not executed.
+            // Wait for any tasks that are using the token, before disposal
+            await Try.IgnoringError(async () => await awaitAllAndIgnoreException.DisposeAsync());
+
+            Try.IgnoringError(() => cancellationTokenSource.Dispose());
         }
 
         public async Task CancelAsync()
@@ -56,6 +61,11 @@ namespace Halibut.Util
         public void CancelAfter(TimeSpan timeSpan)
         {
             cancellationTokenSource.CancelAfter(timeSpan);
+        }
+
+        public void AwaitTasksBeforeCTSDispose(params Task[] tasksUsingToken)
+        {
+            awaitAllAndIgnoreException.AddTasks(tasksUsingToken);
         }
     }
 } 

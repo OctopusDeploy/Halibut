@@ -160,6 +160,8 @@ namespace Halibut.Queue.Redis
                         CancellationReason,
                         cancellationToken);
                     
+                    cts.AwaitTasksBeforeCTSDispose(watchProcessingNodeStillHasHeartBeat, waitingForResponse, pendingRequestWaitUntilComplete);
+                    
                     await Task.WhenAny(waitingForResponse, pendingRequestWaitUntilComplete, watchProcessingNodeStillHasHeartBeat);
 
                     if (pendingRequestWaitUntilComplete.IsCompleted || cancellationToken.IsCancellationRequested)
@@ -315,7 +317,7 @@ namespace Halibut.Queue.Redis
             try
             {
                 log.Write(EventType.Diagnostic, "Waiting for response for request {0}", activityId);
-                responseJson = await pollAndSubscribeToResponse.ResponseJson;
+                responseJson = await pollAndSubscribeToResponse.ResponseJson.WaitAsync(cancellationToken);
                 log.Write(EventType.Diagnostic, "Received response JSON for request {0}, deserializing", activityId);
             }
             catch (Exception ex)
