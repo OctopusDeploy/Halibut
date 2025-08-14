@@ -19,7 +19,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Queue.Redis
 {
-    public class MessageReaderWriter
+    public class MessageReaderWriter : IMessageReaderWriter
     {
         readonly QueueMessageSerializer queueMessageSerializer;
         readonly IStoreDataStreamsForDistributedQueues storeDataStreamsForDistributedQueues;

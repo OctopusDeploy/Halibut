@@ -181,9 +181,8 @@ namespace Halibut.Queue.Redis
             log.Write(EventType.Diagnostic, "Disposing GenericWatcher for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
             
             await Try.IgnoringError(async () => await watcherToken.CancelAsync());
-            //Try.IgnoringError(() => watcherTokenSource.Dispose());
             
-            // If the message task is not yet complete, then complete if now with null since we have nothing for it.
+            // If the message task is not yet complete, then mark it as cancelled
             Try.IgnoringError(() => message.TrySetCanceled());
             
             log.Write(EventType.Diagnostic, "Disposed GenericWatcher for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);

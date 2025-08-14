@@ -133,6 +133,35 @@ namespace Halibut.Tests.Queue.Redis
         }
         
         [Test]
+        public async Task WhenReadingTheResponseFromTheQueueFails_TheQueueAndWaitTaskReturnsAnUnknownError()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore)
+                .ThrowsOnReadResponse(() => new OperationCanceledException());
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
+
+            var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
+
+            var requestMessageWithCancellationToken = await queue.DequeueAsync(CancellationToken);
+            await queue.ApplyResponse(ResponseMessage.FromResult(requestMessageWithCancellationToken! .RequestMessage, "Yay"), 
+                requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+            responseMessage.Error.Should().NotBeNull();
+
+            CreateExceptionFromResponse(responseMessage, log).IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
+        }
+        
+        [Test]
         public async Task WhenDataLostIsDetected_InFlightRequestShouldBeAbandoned_AndARetryableExceptionIsThrown()
         {
             // Arrange
@@ -490,8 +519,7 @@ namespace Halibut.Tests.Queue.Redis
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
-            // TODO: Setting this low shows we don't timeout because the request was not picked up in time.
-            // Could be its own test.
+            // Setting this low shows we don't timeout because the request was not picked up in time.
             request.Destination.PollingRequestQueueTimeout = TimeSpan.FromSeconds(5);
             var queueAndWaitTask = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
             

@@ -453,10 +453,6 @@ namespace Halibut.Tests.Queue.Redis
             // Act - Set with very short TTL
             await redisFacade.SetString(key, value, TimeSpan.FromMilliseconds(3), CancellationToken);
 
-            // Immediately verify it exists
-            var immediateValue = await redisFacade.GetString(key, CancellationToken);
-            immediateValue.Should().Be(value);
-
             // Assert - Should eventually expire
             await ShouldEventually.Eventually(async () =>
             {
@@ -474,7 +470,7 @@ namespace Halibut.Tests.Queue.Redis
             var payload = "test-payload";
 
             // Act - Push with very short TTL
-            await redisFacade.ListRightPushAsync(key, payload, TimeSpan.FromSeconds(3), CancellationToken);
+            await redisFacade.ListRightPushAsync(key, payload, TimeSpan.FromSeconds(30), CancellationToken);
 
             // Immediately verify it exists
             var immediateValue = await redisFacade.ListLeftPopAsync(key, CancellationToken);

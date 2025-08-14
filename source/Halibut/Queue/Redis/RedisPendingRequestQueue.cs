@@ -31,7 +31,7 @@ namespace Halibut.Queue.Redis
         readonly ILog log;
         readonly HalibutRedisTransport halibutRedisTransport;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
-        readonly MessageReaderWriter messageReaderWriter;
+        readonly IMessageReaderWriter messageReaderWriter;
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
 
         readonly CancelOnDisposeCancellationToken queueCts = new ();
@@ -49,7 +49,7 @@ namespace Halibut.Queue.Redis
             IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData,
             ILog log, 
             HalibutRedisTransport halibutRedisTransport, 
-            MessageReaderWriter messageReaderWriter, 
+            IMessageReaderWriter messageReaderWriter, 
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.endpoint = endpoint;
@@ -100,7 +100,7 @@ namespace Halibut.Queue.Redis
             var payload = await messageReaderWriter.PrepareRequest(request, cancellationToken);
             
             // Start listening for a response to the request, we don't want to miss the response.
-            await using var _ = await SubscribeToResponse(request.ActivityId, pending.SetResponse, cancellationToken);
+            await using var pollAndSubscribeToResponse = new PollAndSubscribeToResponse(endpoint, request.ActivityId, halibutRedisTransport, log);
 
             var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(request, pending));
             try
@@ -116,16 +116,47 @@ namespace Halibut.Queue.Redis
 
                     await using var watcherCts = new CancelOnDisposeCancellationToken(cts.Token);
                     WatchProcessingNodeIsStillConnectedInBackground(request, pending, watcherCts);
-
+                    
                     // TODO: We need to ensure that no matter what exceptions are thrown we eventually exit.
                     // For example can the subscription to the response, fail and never come back?
                     // Can the WatchProcessProcessingNodeIsStillConnected fail and never come back?
-                    await pending.WaitUntilComplete(
+                    
+                    var waitingForResponse = WaitForResponse(pollAndSubscribeToResponse, request, cancellationToken);
+                    var pendingRequestWaitUntilComplete = pending.WaitUntilComplete(
                         async () => await tryClearRequestFromQueueAtMostOnce.Task,
                         () => dataLoseCt.IsCancellationRequested ? 
                             new RedisDataLoseHalibutClientException($"Request {request.ActivityId} was cancelled because we detected that redis lost all of its data.") 
                             : null,
                         cancellationToken);
+                    
+                    await Task.WhenAny(waitingForResponse, pendingRequestWaitUntilComplete);
+
+                    if (pendingRequestWaitUntilComplete.IsCompleted || cancellationToken.IsCancellationRequested)
+                    {
+                        await pendingRequestWaitUntilComplete;
+                        return pending.Response!;
+                    }
+                    
+                    if (waitingForResponse.IsCompleted)
+                    {
+                        var response = await waitingForResponse;
+                        if (response != null)
+                        {
+                            pending.SetResponse(response);
+                            return pending.Response!;
+                        }
+                        else if(!cancellationToken.IsCancellationRequested)
+                        {
+                            // We are no longer waiting for a response and have no response.
+                            // The cancellation token has not been set so the request is not going to be cancelled.
+                            // It is unclear how we got into this state, but lets at least error out.
+                            pending.SetResponse(ResponseMessage.FromError(request, "Queue unexpectedly stopped waiting for a response"));
+                            return pending.Response!;
+                        }
+                    }
+                    
+                    pending.SetResponse(ResponseMessage.FromError(request, "Impossible queue state reached"));
+                    return pending.Response!;
                 }
                 finally
                 {
@@ -142,7 +173,7 @@ namespace Halibut.Queue.Redis
                 });
             }
 
-            return pending.Response!;
+            
         }
 
         async Task SendCancellationIfRequestWasCancelled(RequestMessage request, RedisPendingRequest redisPending)
@@ -232,33 +263,38 @@ namespace Halibut.Queue.Redis
 
         const string ResponseMessageSubscriptionName = "ResponseMessage";
         
-        async Task<IAsyncDisposable> SubscribeToResponse(Guid activityId,
-            Action<ResponseMessage> onResponse,
+        async Task<ResponseMessage?> WaitForResponse(
+            PollAndSubscribeToResponse pollAndSubscribeToResponse,
+            RequestMessage requestMessage,
             CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
-            var sub = new PollAndSubscribeToResponse(endpoint, activityId, halibutRedisTransport, log);
-            var _ = Task.Run(async () =>
+            await Task.Yield();
+            var activityId = requestMessage.ActivityId;
+            string responseJson;
+            try
             {
-                try
-                {
-                    log.Write(EventType.Diagnostic, "Waiting for response for request {0}", activityId);
-                    var responseJson = await sub.ResultTask;
-                    log.Write(EventType.Diagnostic, "Received response JSON for request {0}, deserializing", activityId);
-                    var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
-                    log.Write(EventType.Diagnostic, "Successfully deserialized response for request {0}, invoking callback", activityId);
-                    onResponse(response);
-                }
-                catch (OperationCanceledException)
-                {
-                    log.Write(EventType.Diagnostic, "Response subscription cancelled for request {0}", activityId);
-                }
-                catch (Exception ex)
-                {
-                    log.WriteException(EventType.Error, "Error while processing response for request {0}", ex, activityId);
-                }
-            });
-            return sub;
+                log.Write(EventType.Diagnostic, "Waiting for response for request {0}", activityId);
+                responseJson = await pollAndSubscribeToResponse.ResultTask;
+                log.Write(EventType.Diagnostic, "Received response JSON for request {0}, deserializing", activityId);
+            }
+            catch (Exception ex)
+            {
+                log.WriteException(EventType.Error, "Error while processing response for request {0}", ex, activityId);
+                return null;
+            }
+
+            try
+            {
+                var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
+                log.Write(EventType.Diagnostic, "Successfully deserialized response for request {0}", activityId);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Error deserializeing response for request {0}", activityId);
+                return ResponseMessage.FromException(requestMessage, new Exception("Error occured when reading data from the queue", ex));
+            }
+            
         }
 
         public bool IsEmpty => Count == 0;
