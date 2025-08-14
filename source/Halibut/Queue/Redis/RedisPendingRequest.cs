@@ -17,12 +17,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
+using Halibut.ServiceModel;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 using Nito.AsyncEx;
 
-namespace Halibut.ServiceModel
+namespace Halibut.Queue.Redis
 {
     public class RedisPendingRequest : IDisposable
     {
@@ -91,7 +92,6 @@ namespace Halibut.ServiceModel
                 
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    // TODO: This seems sus, we throw here but we don't throw below. This should be straightened out.
                     await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
                     
                     var cancellationException = overrideCancellationReason();
@@ -236,7 +236,6 @@ namespace Halibut.ServiceModel
 
         public void Dispose()
         {
-            pendingRequestCancellationTokenSource?.Dispose();
             transferLock?.Dispose();
         }
     }

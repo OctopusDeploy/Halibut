@@ -478,17 +478,14 @@ namespace Halibut.Queue.Redis
             await using var cts = new CancelOnDisposeCancellationToken(queueToken);
             try
             {
-                // TODO can we avoid going to redis here?
-                // TODO: Does this work well for multiple clients? We might go round before we collect work.
-                // TODO: test this.
                 hasItemsForEndpoint.Reset();
-                
+
                 var first = await TryRemoveNextItemFromQueue(cts.Token);
                 if (first != null) return first;
-                
+
 
                 await Task.WhenAny(
-                    hasItemsForEndpoint.WaitAsync(cts.Token), 
+                    hasItemsForEndpoint.WaitAsync(cts.Token),
                     Task.Delay(halibutTimeoutsAndLimits.PollingQueueWaitTimeout, cts.Token));
 
                 if (!hasItemsForEndpoint.IsSet)
@@ -497,8 +494,19 @@ namespace Halibut.Queue.Redis
                     // to keep the connection healthy.
                     return null;
                 }
-                
+
                 return await TryRemoveNextItemFromQueue(cts.Token);
+            }
+            catch (Exception ex)
+            {
+                if (!queueToken.IsCancellationRequested)
+                {
+                    log.WriteException(EventType.Error, "Error occured dequeuing from the queue", ex);
+                    // It is very likely a queue error means every tentacle will return an error.
+                    // Add a random delay to help avoid every client coming back at exactly the same time.
+                    await Task.Delay(TimeSpan.FromSeconds(new Random().Next(15)), cts.Token);
+                    throw;
+                }
             }
             finally
             {
