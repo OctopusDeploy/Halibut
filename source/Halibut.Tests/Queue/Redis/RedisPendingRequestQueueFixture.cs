@@ -97,60 +97,7 @@ namespace Halibut.Tests.Queue.Redis
             result.Should().BeNull();
         }
 
-        //[Test]
-        public async Task When100kTentaclesAreSubscribed_TheQueueStillWorks()
-        {
-            // Arrange
-            var endpoint = new Uri("poll://" + Guid.NewGuid());
-            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
-
-            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
-            var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
-
-            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimits();
-
-            await using var disposableCollection = new DisposableCollection();
-            for (int i = 0; i < 300000; i++)
-            {
-                disposableCollection.Add(new RedisPendingRequestQueue(new Uri("poll://" + Guid.NewGuid()), new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits));
-                if (i % 10000 == 0)
-                {
-                    Logger.Information("Up to: {i}", i);
-                }
-            }
-
-            this.Logger.Fatal("Waiting");
-            await Task.Delay(30000);
-            this.Logger.Fatal("Done");
-
-            for (int i = 0; i < 10; i++)
-            {
-                var request = new RequestMessageBuilder(endpoint.ToString()).Build();
-
-                await using var sut = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(CreateRedisFacade()), messageReaderWriter, halibutTimeoutsAndLimits);
-
-                var resultTask = sut.DequeueAsync(CancellationToken);
-
-                await Task.Delay(100);
-
-                var sw = Stopwatch.StartNew();
-
-                var task = sut.QueueAndWaitAsync(request, CancellationToken.None);
-
-                var result = await resultTask;
-                // Act
-
-                // Assert
-                result.Should().NotBeNull();
-                result!.RequestMessage.Id.Should().Be(request.Id);
-                result.RequestMessage.MethodName.Should().Be(request.MethodName);
-                result.RequestMessage.ServiceName.Should().Be(request.ServiceName);
-                Logger.Information("It took {F}", sw.Elapsed.TotalSeconds.ToString("0.00"));
-            }
-        }
-
+        
         [Test]
         public async Task FullSendAndReceiveShouldWork()
         {
@@ -186,7 +133,7 @@ namespace Halibut.Tests.Queue.Redis
         }
         
         [Test]
-        public async Task WhenDataLostIsDetected_InFlightRequestShouldBeAbandoned()
+        public async Task WhenDataLostIsDetected_InFlightRequestShouldBeAbandoned_AndARetryableExceptionIsThrown()
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
@@ -387,8 +334,6 @@ namespace Halibut.Tests.Queue.Redis
             (await returnObject.Payload2!.ReadAsString(CancellationToken)).Should().Be("bye");
         }
         
-        // TODO when receiver (dequeue) can not connect to redis it should not throw an exception.
-        // Or should it to try to encourage a new TCP connection which could go to a different node.
         
         [Test]
         public async Task WhenTheReceiversConnectionToRedisIsInterruptedAndRestoredBeforeWorkIsPublished_TheReceiverShouldBeAbleToCollectThatWorkQuickly()
@@ -438,6 +383,35 @@ namespace Halibut.Tests.Queue.Redis
             var requestReceived = await dequeueTask;
             requestReceived.Should().NotBeNull();
             requestReceived!.RequestMessage.ActivityId.Should().Be(request.ActivityId);
+        }
+        
+        
+        [Test]
+        public async Task WhenTheReceiverDoesntCollectWorkImmediately_TheRequestCanSitOnTheQueueForSometime_AndBeOnTheQueueLongerThanTheHeartBeatTimeout()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());
+            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            await using var redisFacade = CreateRedisFacade();
+            
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+
+            var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(redisFacade), messageReaderWriter, new HalibutTimeoutsAndLimits());
+            // We are testing that we don't expect heart beats before the request is collected.
+            node1Sender.RequestReceivingNodeIsOfflineHeartBeatTimeout = TimeSpan.FromSeconds(1);
+            await node1Sender.WaitUntilQueueIsSubscribedToReceiveMessages();
+            
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            request.Destination.PollingRequestQueueTimeout = TimeSpan.FromHours(1);
+            await using var cts = new CancelOnDisposeCancellationToken(CancellationToken);
+            
+            var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, cts.Token);
+            
+            await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(5), CancellationToken), queueAndWaitAsync);
+
+            queueAndWaitAsync.IsCompleted.Should().BeFalse();
         }
 
         [Test]
@@ -512,8 +486,8 @@ namespace Halibut.Tests.Queue.Redis
             // Lower this to complete the test sooner.
             node1Sender.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
             node2Receiver.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
-            node1Sender.NodeIsOfflineHeartBeatTimeoutForRequestProcessor = TimeSpan.FromSeconds(10);
-            node2Receiver.NodeIsOfflineHeartBeatTimeoutForRequestProcessor = TimeSpan.FromSeconds(10);
+            node1Sender.RequestReceivingNodeIsOfflineHeartBeatTimeout = TimeSpan.FromSeconds(10);
+            node2Receiver.RequestReceivingNodeIsOfflineHeartBeatTimeout = TimeSpan.FromSeconds(10);
             
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             
@@ -629,7 +603,7 @@ namespace Halibut.Tests.Queue.Redis
         }
         
         [Test]
-        public async Task WhenTheRequestReceiverDetectsRedisDataLose_AndTheRequestSenderDoesNot_TheSenderReceivesARetryableResponse()
+        public async Task WhenTheRequestReceiverDetectsRedisDataLose_AndTheRequestSenderDoesNotYetDetectDataLose_TheSenderReceivesARetryableResponse()
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid().ToString());

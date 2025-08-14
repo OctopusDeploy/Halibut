@@ -172,7 +172,7 @@ namespace Halibut.Queue.Redis
                         halibutRedisTransport,
                         TimeBetweenCheckingIfRequestWasCollected,
                         log,
-                        NodeIsOfflineHeartBeatTimeoutForRequestProcessor,
+                        RequestReceivingNodeIsOfflineHeartBeatTimeout,
                         watcherCtsCancellationToken);
                     if (!watcherCtsCancellationToken.IsCancellationRequested && disconnected == NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected)
                     {
@@ -271,8 +271,13 @@ namespace Halibut.Queue.Redis
         
         internal TimeSpan DelayBetweenHeartBeatsForRequestSender { get; set; }  = TimeSpan.FromSeconds(15);
         
-        // Setting this too high means things above the RPC might not have time to retry.
-        public TimeSpan NodeIsOfflineHeartBeatTimeoutForRequestProcessor { get; set; } = TimeSpan.FromSeconds(60);
+        /// <summary>
+        /// The amount of time since the last heart beat from the node sending the request to Tentacle
+        /// before the node is assumed to be offline.
+        ///
+        /// Setting this too high means things above the RPC might not have time to retry.
+        /// </summary>
+        public TimeSpan RequestReceivingNodeIsOfflineHeartBeatTimeout { get; set; } = TimeSpan.FromSeconds(60);
         
         internal TimeSpan DelayBetweenHeartBeatsForRequestProcessor { get; set; }  = TimeSpan.FromSeconds(15);
         
