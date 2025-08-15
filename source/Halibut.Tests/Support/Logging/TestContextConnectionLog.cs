@@ -38,6 +38,11 @@ namespace Halibut.Tests.Support.Logging
             throw new NotImplementedException();
         }
 
+        public ILog ForContext<T>()
+        {
+            return new TestContextConnectionLog(endpoint, typeof(T).Name, logLevel);
+        }
+
         void WriteInternal(LogEvent logEvent)
         {
             var logEventLogLevel = GetLogLevel(logEvent);

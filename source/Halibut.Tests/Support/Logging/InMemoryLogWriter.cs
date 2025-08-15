@@ -30,5 +30,10 @@ namespace Halibut.Tests.Support.Logging
         {
             return events.ToArray();
         }
+
+        public ILog ForContext<T>()
+        {
+            return this;
+        }
     }
 }

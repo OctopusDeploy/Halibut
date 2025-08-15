@@ -2,14 +2,39 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using Halibut.Exceptions;
+using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.Exceptions;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Diagnostics
 {
+    public enum HalibutRetryableErrorType
+    {
+        IsRetryable,
+        UnknownError,
+        NotRetryable
+    }
+    
     public static class ExceptionReturnedByHalibutProxyExtensionMethod
     {
+        public static HalibutRetryableErrorType IsRetryableError(this Exception exception)
+        {
+            var halibutNetworkExceptionType = IsNetworkError(exception);
+            switch (halibutNetworkExceptionType)
+            {
+                case HalibutNetworkExceptionType.IsNetworkError:
+                    return HalibutRetryableErrorType.IsRetryable;
+                case HalibutNetworkExceptionType.UnknownError:
+                    return HalibutRetryableErrorType.UnknownError;
+                case HalibutNetworkExceptionType.NotANetworkError:
+                    return HalibutRetryableErrorType.NotRetryable;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+        
         /// <summary>
         ///     Classifies the exception thrown from a halibut proxy as a network error or not.
         ///     In some cases it is not possible to tell if the exception is a network error.
@@ -19,6 +44,26 @@ namespace Halibut.Diagnostics
         ///     <returns></returns>
         public static HalibutNetworkExceptionType IsNetworkError(this Exception exception)
         {
+            // TODO: This should be in is retryable but for now it needs to be here to work with tentacle client.
+            if (exception is RedisDataLoseHalibutClientException 
+                || exception is RedisQueueShutdownClientException
+                || exception is CouldNotGetDataLoseTokenInTimeHalibutClientException
+                || exception is ErrorWhilePreparingRequestForQueueHalibutClientException
+                || exception is ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueue)
+            {
+                return HalibutNetworkExceptionType.IsNetworkError;
+            }
+
+            if (exception is HalibutClientException)
+            {
+                if (exception.Message.Contains("The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("Error occured when reading data from the queue")) return HalibutNetworkExceptionType.IsNetworkError;
+                if(exception.Message.Contains("error occured when preparing request for queue")) return HalibutNetworkExceptionType.IsNetworkError;
+            }
+            
+            // TODO end
+
             if (exception is NoMatchingServiceOrMethodHalibutClientException)
             {
                 return HalibutNetworkExceptionType.NotANetworkError;

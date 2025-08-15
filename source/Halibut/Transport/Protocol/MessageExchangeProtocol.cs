@@ -232,7 +232,7 @@ namespace Halibut.Transport.Protocol
                     var linkedCancellationToken = linkedTokenSource.Token;
 
                     var response = await SendAndReceiveRequest(nextRequest.RequestMessage, linkedCancellationToken);
-                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
+                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.ActivityId);
                 }
                 else
                 {
@@ -246,7 +246,7 @@ namespace Halibut.Transport.Protocol
                     var cancellationException = nextRequest.CancellationToken.IsCancellationRequested ? new TransferringRequestCancelledException(ex) : ex;
 
                     var response = ResponseMessage.FromException(nextRequest.RequestMessage, cancellationException);
-                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.Destination);
+                    await pendingRequests.ApplyResponse(response, nextRequest.RequestMessage.ActivityId);
 
                     if (nextRequest.CancellationToken.IsCancellationRequested)
                     {

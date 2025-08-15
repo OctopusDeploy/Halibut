@@ -6,6 +6,19 @@ namespace Halibut.Tests.Support
 {
     public static class Try
     {
+        public static Exception? CatchingError(Action tryThisAction)
+        {
+            try
+            {
+                tryThisAction();
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
+
+            return null;
+        }
         public static void CatchingError(Action tryThisAction, Action<Exception> onFailure) 
         {
             try

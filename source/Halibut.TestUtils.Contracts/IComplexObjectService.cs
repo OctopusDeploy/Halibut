@@ -13,6 +13,16 @@ namespace Halibut.TestUtils.Contracts
 
     public class ComplexObjectMultipleDataStreams
     {
+        public ComplexObjectMultipleDataStreams()
+        {
+        }
+        
+        public ComplexObjectMultipleDataStreams(DataStream? payload1, DataStream? payload2)
+        {
+            Payload1 = payload1;
+            Payload2 = payload2;
+        }
+        
         public DataStream? Payload1;
         public DataStream? Payload2;
     }
