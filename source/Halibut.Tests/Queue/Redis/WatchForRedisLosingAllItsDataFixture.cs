@@ -1,3 +1,4 @@
+#if NET8_0_OR_GREATER
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -115,4 +116,5 @@ namespace Halibut.Tests.Queue.Redis
             nextToken.IsCancellationRequested.Should().BeFalse("The new token should have no data loss");
         }
     }
-} 
+}
+#endif

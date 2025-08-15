@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+#if NET8_0_OR_GREATER
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -263,3 +263,4 @@ namespace Halibut.Queue.Redis
         public string PayloadJson { get; protected set; }
     }
 }
+#endif

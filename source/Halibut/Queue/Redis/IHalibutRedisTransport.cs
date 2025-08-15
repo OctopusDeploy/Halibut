@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+#if NET8_0_OR_GREATER
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,3 +64,4 @@ namespace Halibut.Queue.Redis
         Task<bool> DeleteResponse(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
     }
 }
+#endif

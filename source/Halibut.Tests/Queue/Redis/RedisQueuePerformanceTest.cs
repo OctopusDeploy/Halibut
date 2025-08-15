@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
+#if NET8_0_OR_GREATER
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -21,10 +21,11 @@ using Halibut.Logging;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.Tests.Builders;
+using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support.Logging;
 using Halibut.Util;
 
-namespace Halibut.Tests.Queue.Redis.Utils
+namespace Halibut.Tests.Queue.Redis
 {
     public class RedisQueuePerformanceTest : BaseTest
     {
@@ -87,3 +88,4 @@ namespace Halibut.Tests.Queue.Redis.Utils
         }
     }
 }
+#endif

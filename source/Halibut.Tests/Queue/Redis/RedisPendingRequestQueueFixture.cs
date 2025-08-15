@@ -1,3 +1,4 @@
+#if NET8_0_OR_GREATER
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -864,3 +865,4 @@ namespace Halibut.Tests.Queue.Redis
         }
     }
 }
+#endif

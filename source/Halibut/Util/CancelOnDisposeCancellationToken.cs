@@ -54,7 +54,8 @@ namespace Halibut.Util
 #if NET8_0_OR_GREATER
             await cancellationTokenSource.CancelAsync();
 #else
-            CancellationTokenSource.Cancel();
+            await Task.CompletedTask;
+            cancellationTokenSource.Cancel();
 #endif
         }
 

@@ -1,3 +1,4 @@
+#if NET8_0_OR_GREATER
 using System;
 using System.IO;
 using System.Linq;
@@ -138,3 +139,4 @@ namespace Halibut.Tests.Queue
         }
     }
 } 
+#endif

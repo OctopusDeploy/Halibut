@@ -25,7 +25,9 @@ namespace Halibut.Tests.Support.TestAttributes
             public static IEnumerable GetEnumerator()
             {
                 var factories = new List<PendingRequestQueueTestCase>();
+#if NET8_0_OR_GREATER
                 factories.Add(new PendingRequestQueueTestCase("Redis", () => new RedisPendingRequestQueueBuilder()));
+#endif
                 factories.Add(new PendingRequestQueueTestCase("InMemory", () => new PendingRequestQueueBuilder()));
 
                 return factories;

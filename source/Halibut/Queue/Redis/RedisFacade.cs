@@ -97,16 +97,6 @@ namespace Halibut.Queue.Redis
             });
         }
         
-        public class ShouldAbandonAndReconnectHelper
-        {
-            readonly TaskCompletionSource connectionInError = new TaskCompletionSource();
-            
-            public bool IsConnectionInError => connectionInError.Task.IsCompleted;
-            
-            public void SetReconnectionIsAdvised() => connectionInError.SetResult();
-            
-            public Task WaitUntilShouldReSubscribeTask => connectionInError.Task;
-        }
         private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
         {
             var message = $"Redis connection failed - EndPoint: {e.EndPoint}, Failure: {e.FailureType}, Exception: {e.Exception?.Message}";
