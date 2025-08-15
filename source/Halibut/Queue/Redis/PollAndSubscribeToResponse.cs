@@ -153,11 +153,16 @@ namespace Halibut.Queue.Redis
             
             if (ResponseJsonCompletionSource.Task.IsCompleted) return true;
             
+            // TODO wrap in try
             var responseJson = await halibutRedisTransport.GetResponseMessage(endpoint, activityId, token);
+            
             if (responseJson != null)
             {
-                log.Write(EventType.Diagnostic, "Response detected  via {0} - Endpoint: {1}, ActivityId: {2}", detectedBy, endpoint, activityId);
-                await TrySetResponse(responseJson, token);
+                log.Write(EventType.Diagnostic, "Response detected via {0} - Endpoint: {1}, ActivityId: {2}", detectedBy, endpoint, activityId);
+                
+                await DeleteResponseFromRedis(detectedBy, token);
+                
+                TrySetResponse(responseJson, token);
                 await Try.IgnoringError(async () => await watcherToken.CancelAsync());
                 log.Write(EventType.Diagnostic, "Cancelling  polling loop for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
                 return true;
@@ -165,8 +170,20 @@ namespace Halibut.Queue.Redis
 
             return false;
         }
-        
-        async Task TrySetResponse(string value, CancellationToken cancellationToken)
+
+        async Task DeleteResponseFromRedis(string detectedBy, CancellationToken token)
+        {
+            try
+            {
+                await halibutRedisTransport.DeleteResponse(endpoint, activityId, token);
+            }
+            catch (Exception ex)
+            {
+                log.Write(EventType.Error, "Failed to delete response from Redis via {0} - Endpoint: {1}, ActivityId: {2}, Error: {3}", detectedBy, endpoint, activityId, ex.Message);
+            }
+        }
+
+        void TrySetResponse(string value, CancellationToken cancellationToken)
         {
             try
             {
@@ -176,16 +193,6 @@ namespace Halibut.Queue.Redis
             {
                 log.Write(EventType.Error, "Failed to set response - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, activityId, ex.Message);
             }
-
-            try
-            {
-                await halibutRedisTransport.DeleteResponse(endpoint, activityId, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                log.Write(EventType.Error, "Failed to delete response from Redis - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, activityId, ex.Message);
-            }
-
         }
 
         public async ValueTask DisposeAsync()

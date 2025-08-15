@@ -16,7 +16,7 @@ namespace Halibut.Util
         readonly CancellationTokenSource cancellationTokenSource;
         bool disposed;
 
-        AwaitAllAndIgnoreException awaitAllAndIgnoreException = new AwaitAllAndIgnoreException();
+        readonly AwaitAllAndIgnoreException awaitAllAndIgnoreException = new();
         
         public CancelOnDisposeCancellationToken(params CancellationToken[] token)
         : this(CancellationTokenSource.CreateLinkedTokenSource(token))
