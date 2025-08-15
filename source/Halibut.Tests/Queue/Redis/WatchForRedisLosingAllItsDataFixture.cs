@@ -67,7 +67,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenRedisRunsForLongerThanTheKeyTTL_NoDataLoseShouldBeDetected()
         {
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromMilliseconds(100), keyTTL: TimeSpan.FromSeconds(2));
             var watcherCt = await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
 

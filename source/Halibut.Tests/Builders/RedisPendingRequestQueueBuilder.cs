@@ -19,6 +19,7 @@ using Halibut.Queue.Redis;
 using Halibut.Tests.Queue;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestSetup.Redis;
 using Halibut.Util;
 using ILog = Halibut.Diagnostics.ILog;
 
@@ -26,9 +27,6 @@ namespace Halibut.Tests.Builders
 {
     public class RedisPendingRequestQueueBuilder : IPendingRequestQueueBuilder
     {
-        
-        const int redisPort = 6379;
-        
         ILog? log;
         string? endpoint;
         TimeSpan? pollingQueueWaitTimeout;
@@ -64,7 +62,7 @@ namespace Halibut.Tests.Builders
 
             var disposableCollection = new DisposableCollection();
 
-            var redisFacade = new RedisFacade("localhost:" + redisPort, (Guid.NewGuid()).ToString(), log);
+            var redisFacade = new RedisFacade("localhost:" + RedisPort.Port(), (Guid.NewGuid()).ToString(), log);
             disposableCollection.AddAsyncDisposable(redisFacade);
             
             var redisTransport = new HalibutRedisTransport(redisFacade);

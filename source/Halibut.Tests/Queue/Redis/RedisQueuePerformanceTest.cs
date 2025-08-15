@@ -41,7 +41,8 @@ namespace Halibut.Tests.Queue.Redis
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -66,8 +67,7 @@ namespace Halibut.Tests.Queue.Redis
             for (int i = 0; i < 10; i++)
             {
                 var request = new RequestMessageBuilder(endpoint.ToString()).Build();
-
-                await using var sut = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(CreateRedisFacade()), messageReaderWriter, halibutTimeoutsAndLimits);
+                await using var sut = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits);
 
                 var resultTask = sut.DequeueAsync(CancellationToken);
 

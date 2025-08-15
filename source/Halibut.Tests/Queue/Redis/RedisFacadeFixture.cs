@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestSetup.Redis;
 using Halibut.Util.AsyncEx;
 using NUnit.Framework;
 
@@ -14,7 +16,6 @@ namespace Halibut.Tests.Queue.Redis
 {
     public class RedisFacadeFixture : BaseTest
     {
-        private static RedisFacade CreateRedisFacade() => new("localhost", Guid.NewGuid().ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
 
         [Test]
         public void Constructor_WithRedisHostAndKeyPrefix_ShouldCreateInstance()
@@ -40,7 +41,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task SetString_AndGetString_ShouldStoreAndRetrieveValue()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var value = "test-value";
 
@@ -56,7 +57,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task GetString_WithNonExistentKey_ShouldReturnNull()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var nonExistentKey = Guid.NewGuid().ToString();
 
             // Act
@@ -70,7 +71,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task SetInHash_ShouldStoreValueInHash()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
@@ -87,7 +88,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task TryGetAndDeleteFromHash_WithExistingValue_ShouldReturnValueAndDelete()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
@@ -105,7 +106,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task HashContainsKey_WithExistingField_ShouldReturnTrue()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
@@ -123,7 +124,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task HashContainsKey_WithNonExistentField_ShouldReturnFalse()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var nonExistentField = "non-existent-field";
 
@@ -138,7 +139,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task HashContainsKey_WithNonExistentKey_ShouldReturnFalse()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var nonExistentKey = Guid.NewGuid().ToString();
             var field = "test-field";
 
@@ -153,7 +154,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task TryGetAndDeleteFromHash_ShouldDeleteTheEntireKey()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
@@ -183,7 +184,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task ListRightPushAsync_AndListLeftPopAsync_ShouldWorkAsQueue()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var payload1 = "first-item";
             var payload2 = "second-item";
@@ -205,7 +206,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task ListLeftPopAsync_WithEmptyList_ShouldReturnNull()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var emptyListKey = Guid.NewGuid().ToString();
 
             // Act
@@ -219,7 +220,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task PublishToChannel_AndSubscribeToChannel_ShouldDeliverMessage()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var channelName = Guid.NewGuid().ToString();
             var testMessage = "test-message";
             var receivedMessages = new List<string>();
@@ -251,7 +252,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task PublishToChannel_WithMultipleMessages_ShouldDeliverAllMessages()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var channelName = Guid.NewGuid().ToString();
             var messages = new[] { "message1", "message2", "message3" };
             var receivedMessages = new List<string>();
@@ -289,7 +290,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task SubscribeToChannel_WhenDisposed_ShouldUnsubscribe()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var channelName = Guid.NewGuid().ToString();
             var receivedMessages = new List<string>();
 
@@ -346,7 +347,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task SetInHash_WithTTL_ShouldExpireAfterSpecifiedTime()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
@@ -381,7 +382,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task DeleteString_WithExistingKey_ShouldReturnTrueAndDeleteValue()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var value = "test-value";
 
@@ -407,7 +408,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task DeleteString_WithNonExistentKey_ShouldReturnFalse()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var nonExistentKey = Guid.NewGuid().ToString();
 
             // Act
@@ -421,7 +422,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task SetTtlForString_WithExistingKey_ShouldUpdateTTL()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var value = "test-value";
 
@@ -447,7 +448,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task SetString_WithShortTTL_ShouldExpire()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var value = "test-value";
 
@@ -466,7 +467,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task ListRightPushAsync_WithShortTTL_ShouldExpire()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key = Guid.NewGuid().ToString();
             var payload = "test-payload";
 
@@ -502,7 +503,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task IsConnected_AfterSuccessfulOperation_ShouldReturnTrue()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
 
             // Act - Perform an operation to initialize connection
             await redisFacade.SetString(Guid.NewGuid().ToString(), "test", TimeSpan.FromMinutes(1), CancellationToken);
@@ -515,7 +516,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task TotalSubscribers_ShouldTrackActiveSubscriptions()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var channelName = Guid.NewGuid().ToString();
 
             // Act & Assert - Initially no subscribers
@@ -541,7 +542,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task MultipleSetString_WithDifferentTTLs_ShouldRespectIndividualTTLs()
         {
             // Arrange
-            await using var redisFacade = CreateRedisFacade();
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var key1 = Guid.NewGuid().ToString();
             var key2 = Guid.NewGuid().ToString();
             var value1 = "value1";
@@ -567,7 +568,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task DisposeAsync_ShouldCleanupResourcesAndNotThrow()
         {
             // Arrange
-            var redisFacade = CreateRedisFacade();
+            var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             
             // Perform some operations to initialize resources
             await redisFacade.SetString(Guid.NewGuid().ToString(), "test", TimeSpan.FromMinutes(1), CancellationToken);
@@ -582,7 +583,7 @@ namespace Halibut.Tests.Queue.Redis
         public async Task DisposeAsync_CalledMultipleTimes_ShouldNotThrow()
         {
             // Arrange
-            var redisFacade = CreateRedisFacade();
+            var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             await redisFacade.SetString(Guid.NewGuid().ToString(), "test", TimeSpan.FromMinutes(1), CancellationToken);
 
             // Act & Assert - Multiple dispose calls should not throw

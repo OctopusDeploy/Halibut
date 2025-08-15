@@ -27,7 +27,7 @@ namespace Halibut.Tests.TestSetup.Redis
         {
 #if NETFRAMEWORK
             return;
-#endif
+#else
             var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             bool shouldCreateRedis = !isWindows && TeamCityDetection.IsRunningInTeamCity();
 
@@ -56,6 +56,7 @@ namespace Halibut.Tests.TestSetup.Redis
                 RedisPort.SetPort(redisContainer.container!.RedisPort);
                 logger.Information("RedisPort is: {RedisPort}", RedisPort.Port());
             }
+#endif
         }
 
         public void OneTimeTearDown(ILogger logger)

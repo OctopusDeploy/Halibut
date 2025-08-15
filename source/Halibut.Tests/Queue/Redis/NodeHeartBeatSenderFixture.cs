@@ -1,20 +1,17 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
-using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
+using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support.Logging;
-using Halibut.Transport.Protocol;
-using Halibut.Util;
+using Halibut.Tests.TestSetup.Redis;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
@@ -25,11 +22,11 @@ namespace Halibut.Tests.Queue.Redis
     [SuppressMessage("Usage", "VSTHRD003:Avoid awaiting foreign Tasks")]
     public class NodeHeartBeatSenderFixture : BaseTest
     {
-        const int redisPort = 6379;
-        
-        private static RedisFacade CreateRedisFacade(int? port = redisPort, Guid? guid = null) => 
-            new("localhost:" + port, (guid ?? Guid.NewGuid()).ToString(), 
-                new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+        private static RedisFacade CreateRedisFacade(int? port = 0, Guid? guid = null)
+        {
+            port = port == 0 ? RedisPort.Port() : port; 
+            return new RedisFacade("localhost:" + port, (guid ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+        }
 
         // TODO: ai tests need review
         [Test]
@@ -39,7 +36,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var requestActivityId = Guid.NewGuid();
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
             
             var anyHeartBeatReceived = new AsyncManualResetEvent(false);
             
@@ -71,9 +69,9 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
             await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(redisPort, guid);
+            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
             
             var redisTransport = new HalibutRedisTransport(unstableRedisFacade);
             
@@ -122,7 +120,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var requestActivityId = Guid.NewGuid();
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
             
             var heartbeatsReceived = new ConcurrentBag<DateTimeOffset>();
             var anyHeartBeatReceived = new AsyncManualResetEvent(false);
@@ -162,9 +161,9 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
             await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(redisPort, guid);
+            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
@@ -209,7 +208,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var requestActivityId = Guid.NewGuid();
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
             
             var request = new RequestMessageBuilder(endpoint.ToString())
                 .WithActivityId(requestActivityId)
@@ -248,9 +248,9 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
             await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(redisPort, guid);
+            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
@@ -295,7 +295,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var requestActivityId = Guid.NewGuid();
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
             
             var heartbeatsReceived = new ConcurrentBag<DateTimeOffset>();
             
@@ -328,9 +329,9 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(redisPort, Logger).Build();
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
             await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(redisPort, guid);
+            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
@@ -379,7 +380,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var requestActivityId = Guid.NewGuid();
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
             
             var senderHeartbeatsReceived = new AsyncManualResetEvent(false);
             var receiverHeartbeatsReceived = new AsyncManualResetEvent(false);
@@ -424,7 +426,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var requestActivityId = Guid.NewGuid();
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
-            var redisTransport = new HalibutRedisTransport(CreateRedisFacade());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
             
             var receiverHeartbeatsReceived = new AsyncManualResetEvent(false);
             
