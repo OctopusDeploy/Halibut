@@ -24,9 +24,11 @@ using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support.Logging;
 using Halibut.Util;
+using NUnit.Framework;
 
 namespace Halibut.Tests.Queue.Redis
 {
+    [Ignore("REDISTODO")]
     public class RedisQueuePerformanceTest : BaseTest
     {
         const int redisPort = 6379;

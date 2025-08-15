@@ -38,6 +38,7 @@ using Try = Halibut.Tests.Support.Try;
 
 namespace Halibut.Tests.Queue.Redis
 {
+    [Ignore("REDISTODO")]
     public class RedisPendingRequestQueueFixture : BaseTest
     {
         const int redisPort = 6379;

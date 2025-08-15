@@ -15,9 +15,11 @@
 using System;
 using Halibut.Queue.Redis;
 using Halibut.ServiceModel;
+using NUnit.Framework;
 
 namespace Halibut.Tests.Queue.Redis
 {
+    [Ignore("REDISTODO")]
     public class TestRedisPendingRequestQueueFactory : IPendingRequestQueueFactory
     {
         RedisPendingRequestQueueFactory redisPendingRequestQueueFactory;

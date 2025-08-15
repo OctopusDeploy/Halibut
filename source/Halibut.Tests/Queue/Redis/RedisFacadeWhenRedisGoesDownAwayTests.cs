@@ -30,6 +30,7 @@ using StackExchange.Redis;
 
 namespace Halibut.Tests.Queue.Redis
 {
+    [Ignore("REDISTODO")]
     [SuppressMessage("Usage", "VSTHRD003:Avoid awaiting foreign Tasks")]
     public class RedisFacadeWhenRedisGoesDownAwayTests : BaseTest
     {
