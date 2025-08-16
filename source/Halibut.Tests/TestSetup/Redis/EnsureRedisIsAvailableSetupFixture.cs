@@ -22,30 +22,33 @@ namespace Halibut.Tests.TestSetup.Redis
 {
     public class EnsureRedisIsAvailableSetupFixture : ISetupFixture
     {
+        public static bool WillRunRedisTests =>
+#if NETFRAMEWORK
+            false;
+#else
+            !RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
+                || !TeamCityDetection.IsRunningInTeamCity();
+        
         CreateRedisDockerContainerForTests? redisContainer = null;
         public void OneTimeSetUp(ILogger logger)
         {
-#if NETFRAMEWORK
-            return;
-#else
+            if (!WillRunRedisTests) return;
+            
             var isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            bool shouldCreateRedis = !isWindows && TeamCityDetection.IsRunningInTeamCity();
+            bool shouldCreateRedis = WillRunRedisTests;
 
             if (!TeamCityDetection.IsRunningInTeamCity())
             {
-                if (!isWindows)
+                // Does the user already have redis running on the normal port?
+                try
                 {
-                    // Does the user already have redis running on the normal port?
-                    try
-                    {
-                        using var multiplexer = ConnectionMultiplexer.Connect("localhost:6379");
-                        var ts = multiplexer.GetDatabase().Ping();
-                        RedisPort.SetPort(6379);
-                    }
-                    catch
-                    {
-                        shouldCreateRedis = true;
-                    }
+                    using var multiplexer = ConnectionMultiplexer.Connect("localhost:6379");
+                    var ts = multiplexer.GetDatabase().Ping();
+                    RedisPort.SetPort(6379);
+                }
+                catch
+                {
+                    shouldCreateRedis = true;
                 }
             }
             

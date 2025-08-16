@@ -13,21 +13,15 @@ using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Queue.Redis
 {
+    [RedisTest]
     public class WatchForRedisLosingAllItsDataFixture : BaseTest
     {
-        
-        private static RedisFacade CreateRedisFacade(int? port = 0, Guid? guid = null)
-        {
-            port = port == 0 ? RedisPort.Port() : port; 
-            return new RedisFacade("localhost:" + port, (guid ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
-        }
-
         [Test]
         public async Task WhenTheConnectionToRedisCanNotBeCreated_WhenAskingForALostDataCancellationToken_ATimeoutOccurs()
         {
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
             portForwarder.EnterKillNewAndExistingConnectionsMode();
-            await using var redisFacade = CreateRedisFacade(port: portForwarder.ListeningPort);
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
 
 
@@ -39,7 +33,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
             portForwarder.EnterKillNewAndExistingConnectionsMode();
-            await using var redisFacade = CreateRedisFacade(port: portForwarder.ListeningPort);
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
 
             var _ = Task.Run(async () =>
@@ -57,7 +51,7 @@ namespace Halibut.Tests.Queue.Redis
         {
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
             portForwarder.EnterKillNewAndExistingConnectionsMode();
-            await using var redisFacade = CreateRedisFacade(port: portForwarder.ListeningPort);
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
 
 
@@ -90,7 +84,7 @@ namespace Halibut.Tests.Queue.Redis
             Logger.Information("Redis container started successfully with connection string: {ConnectionString}", container.ConnectionString);
 
             // Create RedisFacade connected to the containerized Redis
-            await using var redisFacade = CreateRedisFacade(port: container.RedisPort);
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(container.RedisPort, null);
             
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
             

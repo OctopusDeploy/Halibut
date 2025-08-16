@@ -1,7 +1,6 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,16 +17,9 @@ using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Queue.Redis
 {
-    [Ignore("REDISTODO")]
-    [SuppressMessage("Usage", "VSTHRD003:Avoid awaiting foreign Tasks")]
+    [RedisTest]
     public class NodeHeartBeatSenderFixture : BaseTest
     {
-        private static RedisFacade CreateRedisFacade(int? port = 0, Guid? guid = null)
-        {
-            port = port == 0 ? RedisPort.Port() : port; 
-            return new RedisFacade("localhost:" + port, (guid ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
-        }
-
         // TODO: ai tests need review
         [Test]
         public async Task WhenCreated_ShouldStartSendingHeartbeats()
@@ -70,8 +62,8 @@ namespace Halibut.Tests.Queue.Redis
             var guid = Guid.NewGuid();
             
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
-            await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisPort.Port(), guid);
             
             var redisTransport = new HalibutRedisTransport(unstableRedisFacade);
             
@@ -162,8 +154,8 @@ namespace Halibut.Tests.Queue.Redis
             var guid = Guid.NewGuid();
             
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
-            await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisPort.Port(), guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
@@ -249,8 +241,8 @@ namespace Halibut.Tests.Queue.Redis
             var guid = Guid.NewGuid();
             
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
-            await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisPort.Port(), guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
@@ -330,8 +322,8 @@ namespace Halibut.Tests.Queue.Redis
             var guid = Guid.NewGuid();
             
             using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
-            await using var unstableRedisFacade = CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = CreateRedisFacade(RedisPort.Port(), guid);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisPort.Port(), guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);

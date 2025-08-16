@@ -28,13 +28,9 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.Queue.Redis
 {
-    [Ignore("REDISTODO")]
+    [RedisTest]
     public class RedisQueuePerformanceTest : BaseTest
     {
-        const int redisPort = 6379;
-        private static RedisFacade CreateRedisFacade(int? port = redisPort, Guid? guid = null) => new("localhost:" + port, (guid ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
-
-        
         //[Test]
         public async Task When100kTentaclesAreSubscribed_TheQueueStillWorks()
         {

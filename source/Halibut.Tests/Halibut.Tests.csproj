@@ -7,7 +7,7 @@
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <LangVersion>9.0</LangVersion>
-    <NoWarn>VSTHRD002</NoWarn>
+    <NoWarn>VSTHRD002,VSTHRD003</NoWarn>
     <Nullable>enable</Nullable>
 	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>

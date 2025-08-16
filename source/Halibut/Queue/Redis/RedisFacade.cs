@@ -68,11 +68,11 @@ namespace Halibut.Queue.Redis
         CancelOnDisposeCancellationToken cts;
         CancellationToken facadeCancellationToken;
 
-        public RedisFacade(string configuration, string? keyPrefix, ILog log) : this(ConfigurationOptions.Parse(configuration), keyPrefix, log)
+        public RedisFacade(string configuration, string keyPrefix, ILog log) : this(ConfigurationOptions.Parse(configuration), keyPrefix, log)
         {
             
         }
-        public RedisFacade(ConfigurationOptions redisOptions, string? keyPrefix, ILog log)
+        public RedisFacade(ConfigurationOptions redisOptions, string keyPrefix, ILog log)
         {
             this.keyPrefix = keyPrefix ?? "halibut";
             this.log = log;

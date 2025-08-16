@@ -8,34 +8,14 @@ using Halibut.Queue.Redis;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.TestSetup.Redis;
 using Halibut.Util.AsyncEx;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Queue.Redis
 {
+    [RedisTest]
     public class RedisFacadeFixture : BaseTest
     {
-
-        [Test]
-        public void Constructor_WithRedisHostAndKeyPrefix_ShouldCreateInstance()
-        {
-            // Arrange & Act
-            var redisFacade = new RedisFacade("localhost", "test-prefix", new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
-
-            // Assert
-            redisFacade.Should().NotBeNull();
-        }
-
-        [Test]
-        public void Constructor_WithNullKeyPrefix_ShouldUseDefaultPrefix()
-        {
-            // Arrange & Act
-            var redisFacade = new RedisFacade("localhost", null, new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
-
-            // Assert
-            redisFacade.Should().NotBeNull();
-        }
 
         [Test]
         public async Task SetString_AndGetString_ShouldStoreAndRetrieveValue()
@@ -320,11 +300,11 @@ namespace Halibut.Tests.Queue.Redis
         public async Task KeyPrefixing_ShouldIsolateDataBetweenDifferentPrefixes()
         {
             // Arrange
-            var prefix1 = Guid.NewGuid().ToString();
-            var prefix2 = Guid.NewGuid().ToString();
+            var prefix1 = Guid.NewGuid();
+            var prefix2 = Guid.NewGuid();
             
-            await using var redisFacade1 = new RedisFacade("localhost", prefix1, new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
-            await using var redisFacade2 = new RedisFacade("localhost", prefix2, new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+            await using var redisFacade1 = RedisFacadeBuilder.CreateRedisFacade(prefix: prefix1);
+            await using var redisFacade2 = RedisFacadeBuilder.CreateRedisFacade(prefix: prefix2);
             
             var key = "shared-key";
             var value1 = "value-from-facade1";

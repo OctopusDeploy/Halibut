@@ -25,6 +25,7 @@ using Halibut.Logging;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.ServiceModel;
+using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.Support.TestAttributes;
@@ -37,6 +38,7 @@ using DisposableCollection = Halibut.Util.DisposableCollection;
 namespace Halibut.Tests
 {
     [NonParallelizable]
+    [RedisTest]
     public class ManyPollingTentacleTests : BaseTest
     {
         [Test]
@@ -49,7 +51,7 @@ namespace Halibut.Tests
             await using var disposables = new DisposableCollection();
             var isRedis = queueTestCase.ToString().ToLower().Contains("redis");
             var log = new TestContextLogCreator("Redis", LogLevel.Fatal);
-            await using var redisFacade = new RedisFacade("localhost:6379", Guid.NewGuid().ToString(), log.CreateNewForPrefix(""));
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             await using (var octopus = new HalibutRuntimeBuilder()
                              .WithServerCertificate(Certificates.Octopus)
                              .WithPendingRequestQueueFactory(msgSer =>
