@@ -30,7 +30,7 @@ namespace Halibut.Tests
                 .Build()
                 .ForContext(GetType());
             
-            HalibutLog = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
+            HalibutLog = new TestContextLogCreator("", LogLevel.Trace).CreateNewForPrefix("");
             
             Logger.Information("Trace log file {LogFile}", traceLogFileLogger.logFilePath);
 

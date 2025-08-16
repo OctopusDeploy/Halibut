@@ -24,12 +24,13 @@ namespace Halibut.Tests
         public void OneTimeSetup()
         {
             var sb = new StringBuilder();
+            var traceLogFileLogger = new TraceLogFileLogger("TestsSetupClass");
+
             var logger = new SerilogLoggerBuilder()
-                // Ideally we would write the logs to a static string and have a test print those out.
-                // So that we can see what is happening in start up in teamcity.
-                // However, the logging is a bit of a mess in halibut currently.
+                .SetTraceLogFileLogger(traceLogFileLogger)
                 .Build()
                 .ForContext<TestsSetupClass>();
+            logger.Information("Trace log file {LogFile}", traceLogFileLogger.logFilePath);
             foreach (var setupFixture in setupFixtures)
             {
                 setupFixture.OneTimeSetUp(logger.ForContext(setupFixture.GetType()));
