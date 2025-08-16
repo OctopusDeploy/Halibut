@@ -30,6 +30,8 @@ namespace Halibut.Tests.TestSetup.Redis
                 || !TeamCityDetection.IsRunningInTeamCity();
 #endif
         
+        static readonly int RedisPortToTry = EnvironmentVariableReaderHelper.TryReadIntFromEnvironmentVariable("HALIBUT_REDIS_PORT") ?? 6379;
+        static readonly string RedisHost = Environment.GetEnvironmentVariable("HALIBUT_REDIS_HOST") ?? "localhost";
         CreateRedisDockerContainerForTests? redisContainer = null;
         public void OneTimeSetUp(ILogger logger)
         {
@@ -43,9 +45,9 @@ namespace Halibut.Tests.TestSetup.Redis
                 // Does the user already have redis running on the normal port?
                 try
                 {
-                    using var multiplexer = ConnectionMultiplexer.Connect("localhost:6379");
+                    using var multiplexer = ConnectionMultiplexer.Connect(RedisHost + ":" + RedisPortToTry);
                     var ts = multiplexer.GetDatabase().Ping();
-                    RedisPort.SetPort(6379);
+                    RedisPort.SetPort(RedisPortToTry);
                 }
                 catch
                 {
