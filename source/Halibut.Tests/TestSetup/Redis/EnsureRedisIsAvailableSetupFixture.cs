@@ -28,6 +28,7 @@ namespace Halibut.Tests.TestSetup.Redis
 #else
             !RuntimeInformation.IsOSPlatform(OSPlatform.Windows) 
                 || !TeamCityDetection.IsRunningInTeamCity();
+#endif
         
         CreateRedisDockerContainerForTests? redisContainer = null;
         public void OneTimeSetUp(ILogger logger)
@@ -59,7 +60,6 @@ namespace Halibut.Tests.TestSetup.Redis
                 RedisPort.SetPort(redisContainer.container!.RedisPort);
                 logger.Information("RedisPort is: {RedisPort}", RedisPort.Port());
             }
-#endif
         }
 
         public void OneTimeTearDown(ILogger logger)
