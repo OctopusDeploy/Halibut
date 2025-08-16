@@ -24,8 +24,8 @@ namespace Halibut.Tests.Queue.Redis.Utils
     {
         public static RedisFacade CreateRedisFacade(int? port = 0, Guid? prefix = null)
         {
-            port = port == 0 ? RedisPort.Port() : port; 
-            return new RedisFacade("localhost:" + port, (prefix ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+            port = port == 0 ? RedisTestHost.Port() : port; 
+            return new RedisFacade(RedisTestHost.RedisHost + ":" + port, (prefix ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
         }
     }
 }

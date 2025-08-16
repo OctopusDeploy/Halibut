@@ -16,7 +16,7 @@ using System;
 
 namespace Halibut.Tests.TestSetup.Redis
 {
-    public static class RedisPort
+    public static class RedisTestHost
     {
         static int redisPort = 0;
         public static void SetPort(int value)
@@ -33,5 +33,7 @@ namespace Halibut.Tests.TestSetup.Redis
 
             return redisPort;
         }
+
+        public static string RedisHost { get; set; } = "localhost";
     }
 }

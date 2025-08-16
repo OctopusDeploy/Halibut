@@ -19,7 +19,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionToRedisCanNotBeCreated_WhenAskingForALostDataCancellationToken_ATimeoutOccurs()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
@@ -31,7 +31,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionToRedisIsInitiallyDown_WhenAskingForALostDataCancellationToken_AndTheConnectionToRedisReturns_TheCTIsReturned()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
@@ -49,7 +49,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WatchForARealRedisLosingAllOfItsData_TimesOutWhenWaitingForCTWhenNoConnectionToRedisCanBeEstablished()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisPort.Port(), Logger).Build();
+            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));

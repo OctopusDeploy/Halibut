@@ -47,7 +47,9 @@ namespace Halibut.Tests.TestSetup.Redis
                 {
                     using var multiplexer = ConnectionMultiplexer.Connect(RedisHost + ":" + RedisPortToTry);
                     var ts = multiplexer.GetDatabase().Ping();
-                    RedisPort.SetPort(RedisPortToTry);
+                    RedisTestHost.SetPort(RedisPortToTry);
+                    RedisTestHost.RedisHost = RedisHost;
+                    return;
                 }
                 catch
                 {
@@ -59,8 +61,8 @@ namespace Halibut.Tests.TestSetup.Redis
             {
                 redisContainer = new CreateRedisDockerContainerForTests(logger);
                 redisContainer.InitializeAsync().GetAwaiter().GetResult();
-                RedisPort.SetPort(redisContainer.container!.RedisPort);
-                logger.Information("RedisPort is: {RedisPort}", RedisPort.Port());
+                RedisTestHost.SetPort(redisContainer.container!.RedisPort);
+                logger.Information("RedisPort is: {RedisPort}", RedisTestHost.Port());
             }
         }
 
