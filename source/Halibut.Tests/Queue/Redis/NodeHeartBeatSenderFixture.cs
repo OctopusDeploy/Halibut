@@ -9,6 +9,7 @@ using Halibut.Logging;
 using Halibut.Queue.Redis;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestSetup.Redis;
 using Nito.AsyncEx;
@@ -61,9 +62,9 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisTestHost.Port(), guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(port: RedisTestHost.Port(), prefix: guid);
             
             var redisTransport = new HalibutRedisTransport(unstableRedisFacade);
             
@@ -153,9 +154,9 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisTestHost.Port(), guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
@@ -240,9 +241,9 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisTestHost.Port(), guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
@@ -321,48 +322,40 @@ namespace Halibut.Tests.Queue.Redis
             var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
             var guid = Guid.NewGuid();
             
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
-            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(RedisTestHost.Port(), guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
             
             var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
             var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
             
             var heartbeatTimestamps = new ConcurrentBag<DateTimeOffset>();
             
+            var heartBeatsReceived = new AsyncManualResetEvent(false);
+            
             await using var subscription = await stableRedisTransport.SubscribeToNodeHeartBeatChannel(
                 endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
                 {
                     await Task.CompletedTask;
                     heartbeatTimestamps.Add(DateTimeOffset.Now);
+                    heartBeatsReceived.Set();
                 }, CancellationToken);
 
             // Act
             await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
             
             // Wait for initial heartbeats (normal 15s interval)
-            await Task.Delay(TimeSpan.FromSeconds(5), CancellationToken);
+            await heartBeatsReceived.WaitAsync(CancellationToken);
             
             // Interrupt connection to trigger panic mode (7s interval)
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);
+            heartBeatsReceived.Reset();
             
             // Restore connection
             portForwarder.ReturnToNormalMode();
             
-            // Wait for recovery and return to normal intervals
-            await Task.Delay(TimeSpan.FromSeconds(20), CancellationToken);
-
-            // Assert
-            heartbeatTimestamps.Should().NotBeEmpty("Should have received heartbeats after recovery");
-            
-            // Verify we have heartbeats spanning the recovery period
-            var timestamps = heartbeatTimestamps.ToArray();
-            if (timestamps.Length > 1)
-            {
-                var timeSpan = timestamps.Max() - timestamps.Min();
-                timeSpan.Should().BeGreaterThan(TimeSpan.FromSeconds(10), "Should have heartbeats over recovery period");
-            }
+            await heartBeatsReceived.WaitAsync(CancellationToken);
         }
 
         [Test]

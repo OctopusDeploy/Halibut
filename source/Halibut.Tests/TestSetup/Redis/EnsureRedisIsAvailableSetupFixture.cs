@@ -49,6 +49,7 @@ namespace Halibut.Tests.TestSetup.Redis
                     var ts = multiplexer.GetDatabase().Ping();
                     RedisTestHost.SetPort(RedisPortToTry);
                     RedisTestHost.RedisHost = RedisHost;
+                    logger.Information("Able to connect to redis using {Host}:{Port}", RedisHost, RedisPortToTry);
                     return;
                 }
                 catch

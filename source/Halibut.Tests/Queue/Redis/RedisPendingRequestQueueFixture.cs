@@ -163,8 +163,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
 
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, null);
             redisFacade.MaxDurationToRetryFor = TimeSpan.FromSeconds(1);
 
             var redisTransport = new HalibutRedisTransport(redisFacade);
@@ -189,8 +189,8 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
 
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, null);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, null);
             redisFacade.MaxDurationToRetryFor = TimeSpan.FromSeconds(1);
 
             var redisDataLoseDetector = new CancellableDataLossWatchForRedisLosingAllItsData();
@@ -455,8 +455,8 @@ namespace Halibut.Tests.Queue.Redis
             var guid = Guid.NewGuid();
             await using var redisFacadeSender = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
 
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var redisFacadeReceiver = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var redisFacadeReceiver = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -533,8 +533,8 @@ namespace Halibut.Tests.Queue.Redis
             var guid = Guid.NewGuid();
             await using var redisFacadeReceiver = RedisFacadeBuilder.CreateRedisFacade(prefix:  guid);
 
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var redisFacadeSender = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var redisFacadeSender = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
@@ -583,8 +583,8 @@ namespace Halibut.Tests.Queue.Redis
 
             await using var stableRedisConnection = RedisFacadeBuilder.CreateRedisFacade(prefix:  guid);
 
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var unstableRedisConnection = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unstableRedisConnection = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
@@ -636,8 +636,8 @@ namespace Halibut.Tests.Queue.Redis
 
             await using var stableRedisConnection = RedisFacadeBuilder.CreateRedisFacade(prefix:  guid);
 
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var unstableRedisConnection = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unstableRedisConnection = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(unstableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
@@ -678,8 +678,8 @@ namespace Halibut.Tests.Queue.Redis
             var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
 
             await using var stableConnection = RedisFacadeBuilder.CreateRedisFacade(prefix:  guid);
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
-            await using var unreliableConnection = RedisFacadeBuilder.CreateRedisFacade(portForwarder.ListeningPort, guid);
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unreliableConnection = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(unreliableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(stableConnection), messageReaderWriter, new HalibutTimeoutsAndLimits());

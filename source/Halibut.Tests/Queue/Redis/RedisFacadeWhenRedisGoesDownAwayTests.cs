@@ -20,11 +20,14 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Tests.Queue.Redis.Utils;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestSetup.Redis;
 using Halibut.Util;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
+using Try = Halibut.Util.Try;
 
 namespace Halibut.Tests.Queue.Redis
 {
@@ -41,7 +44,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_SometimeLaterOnWeCanDoBasicCalls()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -61,7 +64,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyDoBasicCalls()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -80,7 +83,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyPublishToChannel()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -97,7 +100,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelySetInHash()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -114,7 +117,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyTryGetAndDeleteFromHash()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -132,7 +135,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyListRightPush()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -149,7 +152,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyListLeftPop()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -167,7 +170,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelySetString()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -184,7 +187,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyGetString()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -202,7 +205,7 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndThenReConnected_WeCanImmediatelyHashContainsKey()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             await using var redisFacade = CreateRedisFacade(portForwarder.ListeningPort);
 
@@ -220,12 +223,11 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionHasBeenEstablishedAndThenTerminated_AndWeTryToSubscribe_WhenTheConnectionIsRestored_WeCanReceiveMessages()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
             var redisLogCreator = new TestContextLogCreator("Redis", LogLevel.Trace);
-            var guid = Guid.NewGuid().ToString();
-            await using var redisViaPortForwarder = new RedisFacade("localhost:" + portForwarder.ListeningPort, guid, redisLogCreator.CreateNewForPrefix("Unstable"));
-            await using var redisStableConnection = new RedisFacade("localhost:" + RedisTestHost.Port(), guid, redisLogCreator.CreateNewForPrefix("Stable"));
-
+            var guid = Guid.NewGuid();
+            await using var redisViaPortForwarder = RedisFacadeBuilder.CreateRedisFacade(portForwarder: portForwarder, prefix: guid);
+            await using var redisStableConnection = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
             await redisViaPortForwarder.SetString("Establish connection", "before we subscribe", TimeSpan.FromMinutes(1), CancellationToken);
 
             portForwarder.EnterKillNewAndExistingConnectionsMode();
@@ -262,11 +264,11 @@ namespace Halibut.Tests.Queue.Redis
         [Test]
         public async Task WhenTheConnectionIsNeverEstablished_AndWeTryToSubscribe_WhenTheConnectionIsRestored_WeCanReceiveMessages()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
             var redisLogCreator = new TestContextLogCreator("Redis", LogLevel.Trace);
-            var guid = Guid.NewGuid().ToString();
-            await using var redisViaPortForwarder = new RedisFacade("localhost:" + portForwarder.ListeningPort, guid, redisLogCreator.CreateNewForPrefix("Unstable"));
-            await using var redisStableConnection = new RedisFacade("localhost:" + RedisTestHost.Port(), guid, redisLogCreator.CreateNewForPrefix("Stable"));
+            var guid = Guid.NewGuid();
+            await using var redisViaPortForwarder = RedisFacadeBuilder.CreateRedisFacade(portForwarder: portForwarder, prefix: guid);
+            await using var redisStableConnection = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
 
             portForwarder.EnterKillNewAndExistingConnectionsMode();
 
@@ -304,7 +306,7 @@ namespace Halibut.Tests.Queue.Redis
         [WindowsTest]
         public async Task WhenSubscribedAndTheConnectionGoesDown_WhenTheConnectionIsRestored_MessagesCanEventuallyBeSentToTheSubscriberAgain()
         {
-            using var portForwarder = PortForwarderBuilder.ForwardingToLocalPort(RedisTestHost.Port(), Logger).Build();
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
 
             var redisLogCreator = new TestContextLogCreator("Redis", LogLevel.Trace);
 
