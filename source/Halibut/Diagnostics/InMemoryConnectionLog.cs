@@ -39,6 +39,8 @@ namespace Halibut.Diagnostics
             return events.ToArray();
         }
 
+        public ILog ForContext<T>() => this;
+
         void WriteInternal(LogEvent logEvent)
         {
             var logLevel = GetLogLevel(logEvent);
