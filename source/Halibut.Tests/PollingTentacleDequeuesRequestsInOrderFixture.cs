@@ -33,7 +33,8 @@ namespace Halibut.Tests
                                pendingRequestQueue = new PendingRequestQueueBuilder()
                                    .WithLog(logFactory.ForEndpoint(uri))
                                    .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                                   .Build();
+                                   .Build()
+                                   .PendingRequestQueue;
                                return pendingRequestQueue;
                            });
                        })
