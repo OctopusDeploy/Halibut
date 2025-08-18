@@ -13,12 +13,12 @@ namespace Halibut.Queue.Redis
         Task PulseRequestPushedToEndpoint(Uri endpoint, CancellationToken cancellationToken);
         Task PushRequestGuidOnToQueue(Uri endpoint, Guid guid, CancellationToken cancellationToken);
         Task<Guid?> TryPopNextRequestGuid(Uri endpoint, CancellationToken cancellationToken);
-        Task PutRequest(Uri endpoint, Guid requestId, string payload, TimeSpan requestPickupTimeout, CancellationToken cancellationToken);
+        Task PutRequest(Uri endpoint, Guid requestId, string requestMessage, TimeSpan requestPickupTimeout, CancellationToken cancellationToken);
         Task<string?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
         Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
 
         Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request,
-            Func<Task> onCancellationReceived,
+            Func<Task> onRpcCancellation,
             CancellationToken cancellationToken);
 
         Task PublishCancellation(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
@@ -33,23 +33,16 @@ namespace Halibut.Queue.Redis
             Func<Task> onHeartBeat,
             CancellationToken cancellationToken);
 
-        Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken);
-        Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
-
-        Task<IAsyncDisposable> SubscribeToNodeProcessingTheRequestHeartBeatChannel(
-            Uri endpoint, 
-            Guid request,
-            Func<Task> onHeartBeat,
-            CancellationToken cancellationToken);
-
+        Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken);
+        
         Task<IAsyncDisposable> SubscribeToResponseChannel(Uri endpoint, Guid identifier,
             Func<string, Task> onValueReceived,
             CancellationToken cancellationToken);
 
         Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken);
-        Task MarkThatResponseIsSet(Uri endpoint, Guid identifier, string value, TimeSpan ttl, CancellationToken cancellationToken);
+        Task SetResponseMessage(Uri endpoint, Guid identifier, string responseMessage, TimeSpan ttl, CancellationToken cancellationToken);
         Task<string?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
-        Task<bool> DeleteResponse(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
+        Task<bool> DeleteResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
     }
 }
 #endif

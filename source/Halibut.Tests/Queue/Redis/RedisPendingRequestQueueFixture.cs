@@ -352,7 +352,7 @@ namespace Halibut.Tests.Queue.Redis
             // Assert
             var heartBeatSent = false;
             var cts = new CancelOnDisposeCancellationToken();
-            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.Sender, async () =>
+            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.RequestSenderNode, async () =>
                 {
                     await Task.CompletedTask;
                     heartBeatSent = true;
@@ -396,7 +396,7 @@ namespace Halibut.Tests.Queue.Redis
             // Assert
             var heartBeatSent = false;
             var cts = new CancelOnDisposeCancellationToken();
-            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                 {
                     await Task.CompletedTask;
                     heartBeatSent = true;

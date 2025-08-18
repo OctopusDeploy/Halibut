@@ -12,7 +12,7 @@ namespace Halibut.Queue.Redis
 {
     public class HalibutRedisTransport : IHalibutRedisTransport
     {
-        const string Namespace = "octopus:server:halibut";
+        const string Namespace = "octopus::server::halibut";
 
         readonly RedisFacade facade;
 
@@ -20,11 +20,14 @@ namespace Halibut.Queue.Redis
         {
             this.facade = facade;
         }
-
-        // Request Pulse
+        
+        // Request pulse channel.
+        // Polling services will be notified of new request via this channel.
+        // The Service will subscribe to the channel, while the client will publish (pulse)
+        // the channel when a request is available.
         static string RequestMessagesPulseChannelName(Uri endpoint)
         {
-            return $"{Namespace}::RequestMessagesPulseChannelName::{endpoint}";
+            return $"{Namespace}::RequestMessagesPulseChannel::{endpoint}";
         }
 
         public async Task<IAsyncDisposable> SubscribeToRequestMessagePulseChannel(Uri endpoint, Action<ChannelMessage> onRequestMessagePulse, CancellationToken cancellationToken)
@@ -45,93 +48,124 @@ namespace Halibut.Queue.Redis
             await facade.PublishToChannel(channelName, emptyJson, cancellationToken);
         }
 
-        // Request IDs list
+        // Pending Request IDs list
+        // A list in redis holding the set of available Pending Requests a Service can collect.
+        // The Service will Pop the Ids while the Client will Push new Pending Request Ids to the list.
 
-        static string KeyForNextRequestGuidInListForEndpoint(Uri endpoint)
+        static string PendingRequestGuidsQueueKey(Uri endpoint)
         {
-            return $"{Namespace}::NextRequestInListForEndpoint::{endpoint}";
+            return $"{Namespace}::PendingRequestGuidsQueue::{endpoint}";
         }
 
         public async Task PushRequestGuidOnToQueue(Uri endpoint, Guid guid, CancellationToken cancellationToken)
         {
             // TTL is high since it applies to all GUIDs in the queue.
             var ttlForAllRequestsGuidsInList = TimeSpan.FromDays(1);
-            await facade.ListRightPushAsync(KeyForNextRequestGuidInListForEndpoint(endpoint), guid.ToString(), ttlForAllRequestsGuidsInList, cancellationToken);
+            await facade.ListRightPushAsync(PendingRequestGuidsQueueKey(endpoint), guid.ToString(), ttlForAllRequestsGuidsInList, cancellationToken);
         }
 
         public async Task<Guid?> TryPopNextRequestGuid(Uri endpoint, CancellationToken cancellationToken)
         {
-            var result = await facade.ListLeftPopAsync(KeyForNextRequestGuidInListForEndpoint(endpoint), cancellationToken);
+            var result = await facade.ListLeftPopAsync(PendingRequestGuidsQueueKey(endpoint), cancellationToken);
             return result.ToGuid();
         }
 
-        // Request Message
+        // Pending Request Message
+        // Stores the Pending Request Message for collection by the service.
+        // Note that the service will first need to TryPopNextRequestGuid to be able to
+        // fins the RequestMessage.
 
         static string RequestMessageKey(Uri endpoint, Guid requestId)
         {
-            return $"{Namespace}::RequestMessageKey::{endpoint}::{requestId}";
+            return $"{Namespace}::RequestMessage::{endpoint}::{requestId}";
         }
 
-        static string RequestField = "RequestField";
+        static readonly string RequestMessageField = "RequestMessageField";
+        
+        /// <summary>
+        /// The amount of time on top of the requestPickupTimout, the request will stay on the queue
+        /// before being automatically picked up.
+        /// The theory being we might need some grace period where it takes some time to collect
+        /// the request. It is not clear if we need this. This will be addressed in:
+        /// https://whimsical.com/under-some-circumstances-old-requests-can-still-be-sent-to-tenta-79CoT5PpvE1n5wApB6e2Zx
+        /// </summary>
+        static readonly TimeSpan AdditionalRequestMessageTtl = TimeSpan.FromMinutes(2);
 
-        public async Task PutRequest(Uri endpoint, Guid requestId, string payload, TimeSpan requestPickupTimeout, CancellationToken cancellationToken)
+        public async Task PutRequest(Uri endpoint, Guid requestId, string requestMessage, TimeSpan requestPickupTimeout, CancellationToken cancellationToken)
         {
-            var redisQueueItem = new RedisHalibutQueueItem2(requestId, payload);
-
-            var serialisedQueueItem = JsonConvert.SerializeObject(redisQueueItem);
-
             var requestKey = RequestMessageKey(endpoint, requestId);
             
-            var ttl = requestPickupTimeout + TimeSpan.FromMinutes(2);
+            var ttl = requestPickupTimeout + AdditionalRequestMessageTtl;
 
-            await facade.SetInHash(requestKey, RequestField, serialisedQueueItem, ttl, cancellationToken);
+            await facade.SetInHash(requestKey, RequestMessageField, requestMessage, ttl, cancellationToken);
         }
-
+        
+        /// <summary>
+        /// Atomically Gets and removes the request from the queue.
+        /// Exactly up to one caller of this method will be given the RequestMessage, all
+        /// other calls will get null.
+        /// Note: currently a minor issue exists where redis disconnecting mid "Delete" call
+        /// can result in the Delete succeeding but no caller know if it succeeded. Thus,
+        /// it might be possible that no one Gets the request. In this case normal heart beat
+        /// timeouts will cause the request to be failed.
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="requestId"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public async Task<string?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var requestKey = RequestMessageKey(endpoint, requestId);
-            var requestMessage = await facade.TryGetAndDeleteFromHash(requestKey, RequestField, cancellationToken);
-            if (requestMessage == null) return null;
-
-            var redisQueueItem = JsonConvert.DeserializeObject<RedisHalibutQueueItem2>(requestMessage);
-            if (redisQueueItem is null) return null;
-
-            return redisQueueItem.PayloadJson;
+            var requestMessage = await facade.TryGetAndDeleteFromHash(requestKey, RequestMessageField, cancellationToken);
+            return requestMessage;
         }
 
         public async Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var requestKey = RequestMessageKey(endpoint, requestId);
-            return await facade.HashContainsKey(requestKey, RequestField, cancellationToken);
+            return await facade.HashContainsKey(requestKey, RequestMessageField, cancellationToken);
         }
 
         // Cancellation channel
-        static string RequestCancelledChannel(Uri endpoint, Guid requestId)
+        // The node processing the request will subscribe to this channel, and the node
+        // sending the request will publish to this channel when the RPC has been cancelled.
+        static string RequestCancelledChannelName(Uri endpoint, Guid requestId)
         {
             return $"{Namespace}::RequestCancelledChannel::{endpoint}::{requestId}";
         }
 
-        public async Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request,
-            Func<Task> onCancellationReceived,
-            CancellationToken cancellationToken)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="request"></param>
+        /// <param name="onRpcCancellation">Called when the RPC has been cancelled.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request, Func<Task> onRpcCancellation, CancellationToken cancellationToken)
         {
-            var channelName = RequestCancelledChannel(endpoint, request);
+            var channelName = RequestCancelledChannelName(endpoint, request);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? response = foo.Message;
-                if (response is not null) await onCancellationReceived();
+                if (response is not null) await onRpcCancellation();
             }, cancellationToken);
         }
 
         public async Task PublishCancellation(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
-            var channelName = RequestCancelledChannel(endpoint, requestId);
+            var channelName = RequestCancelledChannelName(endpoint, requestId);
             await facade.PublishToChannel(channelName, "{}", cancellationToken);
         }
         
+        // Request cancellation
+        // Since pub/sub does not have guaranteed deliver, cancellation can also
+        // be detected by the RequestCancelledMarker. The node processing the request
+        // will poll for the existence of the RequestCancelledMarker, and if found
+        // it knows the RPC has been cancelled.
         public string RequestCancelledMarkerKey(Uri endpoint, Guid requestId)
         {
-            return $"{Namespace}::RequestCancelledMarkerKey::{endpoint}::{requestId}";
+            return $"{Namespace}::RequestCancelledMarker::{endpoint}::{requestId}";
         }
 
         public async Task MarkRequestAsCancelled(Uri endpoint, Guid requestId, TimeSpan ttl, CancellationToken cancellationToken)
@@ -146,8 +180,17 @@ namespace Halibut.Queue.Redis
             return (await facade.GetString(key, cancellationToken)) != null;
         }
         
+        // Node heartbeat channels (per request).
+        // Each unique request has two node heart beat channels.
+        // One channel for the `RequestSenderNode` where the node that executes the RPC,
+        // publishes heart beats, for the duration of the time it is waiting for the RPC
+        // to be executed.
+        // Another channel for the `RequestProcessorNode` where the node that is sending the
+        // request to the service (e.g. Tentacle) is publishing heart beats, for the duration
+        // of processing the request.
+        // Both nodes are able to monitor to the heart beat channel of the other node to detect
+        // if the other node has gone offline.
         
-        // Node Processing the request heart beat channel
         static string NodeHeartBeatChannel(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType)
         {
             return $"{Namespace}::NodeHeartBeatChannel::{endpoint}::{requestId}::{nodeSendingPulsesType}";
@@ -168,30 +211,17 @@ namespace Halibut.Queue.Redis
             }, cancellationToken);
         }
 
-        public async Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
+        public async Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
         {
             var channelName = NodeHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType);
             await facade.PublishToChannel(channelName, "{}", cancellationToken);
         }
-
-        // Backward compatibility methods (defaulting to Receiver for existing code)
-        public async Task<IAsyncDisposable> SubscribeToNodeProcessingTheRequestHeartBeatChannel(
-            Uri endpoint, 
-            Guid request,
-            Func<Task> onHeartBeat,
-            CancellationToken cancellationToken)
-        {
-            return await SubscribeToNodeHeartBeatChannel(endpoint, request, HalibutQueueNodeSendingPulses.Receiver, onHeartBeat, cancellationToken);
-        }
-
-        public async Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
-        {
-            await SendHeartBeatFromNodeProcessingTheRequest(endpoint, requestId, HalibutQueueNodeSendingPulses.Receiver, cancellationToken);
-        }
         
-        // Generic methods for watching for any string value being set
+        // Response channel.
+        // The node processing the request `RequestProcessorNode` will publish to this channel
+        // once the Response is available.
         
-        string ResponseAvailableChannel(Uri endpoint, Guid identifier)
+        string ResponseChannelName(Uri endpoint, Guid identifier)
         {
             return $"{Namespace}::ResponseAvailableChannel::{endpoint}::{identifier}";
         }
@@ -200,7 +230,7 @@ namespace Halibut.Queue.Redis
             Func<string, Task> onValueReceived,
             CancellationToken cancellationToken)
         {
-            var channelName = ResponseAvailableChannel(endpoint, identifier);
+            var channelName = ResponseChannelName(endpoint, identifier);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? value = foo.Message;
@@ -210,45 +240,35 @@ namespace Halibut.Queue.Redis
         
         public async Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
         {
-            var channelName = ResponseAvailableChannel(endpoint, identifier);
+            var channelName = ResponseChannelName(endpoint, identifier);
             await facade.PublishToChannel(channelName, value, cancellationToken);
         }
         
-        string ResponseMarkerKey(Uri endpoint, Guid identifier)
+        // Response 
+        // This is where the Response is placed in Redis.
+        
+        string ResponseMessageKey(Uri endpoint, Guid identifier)
         {
-            return $"{Namespace}::ResponseMarkerKey::{endpoint}::{identifier}";
+            return $"{Namespace}::Response::{endpoint}::{identifier}";
         }
         
-        public async Task MarkThatResponseIsSet(Uri endpoint, Guid identifier, string value, TimeSpan ttl, CancellationToken cancellationToken)
+        public async Task SetResponseMessage(Uri endpoint, Guid identifier, string responseMessage, TimeSpan ttl, CancellationToken cancellationToken)
         {
-            var key = ResponseMarkerKey(endpoint, identifier);
-            await facade.SetString(key, value, ttl, cancellationToken);
+            var key = ResponseMessageKey(endpoint, identifier);
+            await facade.SetString(key, responseMessage, ttl, cancellationToken);
         }
         
         public async Task<string?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
-            var key = ResponseMarkerKey(endpoint, identifier);
+            var key = ResponseMessageKey(endpoint, identifier);
             return await facade.GetString(key, cancellationToken);
         }
         
-        public async Task<bool> DeleteResponse(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public async Task<bool> DeleteResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
-            var key = ResponseMarkerKey(endpoint, identifier);
+            var key = ResponseMessageKey(endpoint, identifier);
             return await facade.DeleteString(key, cancellationToken);
         }
-    }
-
-
-    public class RedisHalibutQueueItem2
-    {
-        public RedisHalibutQueueItem2(Guid requestId, string payloadJson)
-        {
-            RequestId = requestId;
-            PayloadJson = payloadJson;
-        }
-
-        public Guid RequestId { get; protected set; }
-        public string PayloadJson { get; protected set; }
     }
 }
 #endif

@@ -122,7 +122,7 @@ namespace Halibut.Queue.Redis
             var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(request, pending));
             try
             {
-                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Sender, DelayBetweenHeartBeatsForRequestSender);
+                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, DelayBetweenHeartBeatsForRequestSender);
                 // Make the request available before we tell people it is available.
                 try
                 {
@@ -371,7 +371,7 @@ namespace Halibut.Queue.Redis
                 // In that case we will just time out because of the lack of heart beats.
                 var dataLossCT = await this.watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), queueToken);
                 
-                disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, DelayBetweenHeartBeatsForRequestProcessor));
+                disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, DelayBetweenHeartBeatsForRequestProcessor));
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
                 disposables.AddAsyncDisposable(watcher);
                 
@@ -441,9 +441,9 @@ namespace Halibut.Queue.Redis
                         response = ResponseMessage.FromException(response, new HalibutClientException(RequestAbandonedMessage));
                     }
                 }
-                var payload = await messageReaderWriter.PrepareResponse(response, cancellationToken);
+                var responseJson = await messageReaderWriter.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
-                await PollAndSubscribeToResponse.TrySendMessage(halibutRedisTransport, endpoint, requestActivityId, payload, TTLOfResponseMessage, log);
+                await PollAndSubscribeToResponse.SendResponse(halibutRedisTransport, endpoint, requestActivityId, responseJson, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
             }
             catch (Exception ex)

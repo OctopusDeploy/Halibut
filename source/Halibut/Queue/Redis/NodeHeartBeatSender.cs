@@ -12,8 +12,13 @@ namespace Halibut.Queue.Redis
 {
     public enum HalibutQueueNodeSendingPulses
     {
-        Sender,
-        Receiver
+        // The node the RPC is executing on.
+        // The node that calls QueueAndWait
+        RequestSenderNode,
+        
+        // The node sending/receiving the Request to/from the service.
+        // The node that calls Dequeue and ApplyResponse.
+        RequestProcessorNode
     }
     public class NodeHeartBeatSender : IAsyncDisposable
     {
@@ -58,7 +63,7 @@ namespace Halibut.Queue.Redis
             {
                 try
                 {
-                    await halibutRedisTransport.SendHeartBeatFromNodeProcessingTheRequest(endpoint, requestActivityId, nodeSendingPulsesType, cancellationToken);
+                    await halibutRedisTransport.SendNodeHeartBeat(endpoint, requestActivityId, nodeSendingPulsesType, cancellationToken);
                     delayBetweenPulse = defaultDelayBetweenPulses;
                     log.Write(EventType.Diagnostic, "Successfully sent heartbeat for {0} node, request {1}, next pulse in {2} seconds", nodeSendingPulsesType, requestActivityId, delayBetweenPulse.TotalSeconds);
                 }
@@ -97,7 +102,7 @@ namespace Halibut.Queue.Redis
             {
                 await WaitForRequestToBeCollected(endpoint, request, redisPending, halibutRedisTransport, timeBetweenCheckingIfRequestWasCollected, log, cts.Token);
 
-                return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.Receiver, cts.Token);
+                return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.RequestProcessorNode, cts.Token);
             }
             catch (Exception) when (cts.Token.IsCancellationRequested)
             {
@@ -113,7 +118,7 @@ namespace Halibut.Queue.Redis
             TimeSpan maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
-            return await WatchForPulsesFromNode(endpoint, requestActivityId, halibutRedisTransport, log, maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.Sender, watchCancellationToken);
+            return await WatchForPulsesFromNode(endpoint, requestActivityId, halibutRedisTransport, log, maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.RequestSenderNode, watchCancellationToken);
         }
 
         private static async Task<NodeProcessingRequestWatcherResult> WatchForPulsesFromNode(

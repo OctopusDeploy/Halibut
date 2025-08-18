@@ -36,14 +36,14 @@ namespace Halibut.Tests.Queue.Redis
             
             // Subscribe to heartbeats before creating the sender
             await using var subscription = await redisTransport.SubscribeToNodeHeartBeatChannel(
-                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                 {
                     await Task.CompletedTask;
                     anyHeartBeatReceived.Set();
                 }, CancellationToken);
 
             // Act
-            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Receiver, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
+            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
             
             // Wait for a few heartbeats
             await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(20), CancellationToken), anyHeartBeatReceived.WaitAsync());
@@ -73,14 +73,14 @@ namespace Halibut.Tests.Queue.Redis
             // Subscribe with stable connection to monitor heartbeats
             await using var subscription = await new HalibutRedisTransport(stableRedisFacade)
                 .SubscribeToNodeHeartBeatChannel(
-                    endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+                    endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                     {
                         await Task.CompletedTask;
                         heartbeatsReceived.Add(DateTimeOffset.Now);
                     }, CancellationToken);
 
             // Act
-            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
+            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, TimeSpan.FromSeconds(1));
             
             // Wait for initial heartbeat
             await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);
@@ -120,7 +120,7 @@ namespace Halibut.Tests.Queue.Redis
             var anyHeartBeatReceived = new AsyncManualResetEvent(false);
             
             await using var subscription = await redisTransport.SubscribeToNodeHeartBeatChannel(
-                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                 {
                     await Task.CompletedTask;
                     anyHeartBeatReceived.Set();
@@ -128,7 +128,7 @@ namespace Halibut.Tests.Queue.Redis
                 }, CancellationToken);
 
             // Act
-            var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Receiver, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
+            var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
             
             // Wait for some heartbeats
             await anyHeartBeatReceived.WaitAsync(CancellationToken);
@@ -167,7 +167,7 @@ namespace Halibut.Tests.Queue.Redis
             var pendingRequest = new RedisPendingRequest(request, log);
             
             // Start heartbeat sender
-            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
+            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, TimeSpan.FromSeconds(1));
             
             // Mark request as collected so watcher proceeds to monitoring phase
             await pendingRequest.RequestHasBeenCollectedAndWillBeTransferred();
@@ -211,7 +211,7 @@ namespace Halibut.Tests.Queue.Redis
             await pendingRequest.RequestHasBeenCollectedAndWillBeTransferred();
             
             // Start heartbeat sender
-            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
+            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, TimeSpan.FromSeconds(1));
             
             // Start the watcher without marking request as collected
             using var cts = new CancellationTokenSource();
@@ -254,7 +254,7 @@ namespace Halibut.Tests.Queue.Redis
             var pendingRequest = new RedisPendingRequest(request, log);
             
             // Start heartbeat sender with unstable connection
-            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
+            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, TimeSpan.FromSeconds(1));
             
             // Mark request as collected
             await pendingRequest.RequestHasBeenCollectedAndWillBeTransferred();
@@ -294,15 +294,15 @@ namespace Halibut.Tests.Queue.Redis
             var heartbeatsReceived = new ConcurrentBag<DateTimeOffset>();
             
             await using var subscription = await redisTransport.SubscribeToNodeHeartBeatChannel(
-                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                 {
                     await Task.CompletedTask;
                     heartbeatsReceived.Add(DateTimeOffset.Now);
                 }, CancellationToken);
 
             // Act - Create multiple senders for the same request
-            await using var heartBeatSender1 = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
-            await using var heartBeatSender2 = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
+            await using var heartBeatSender1 = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, TimeSpan.FromSeconds(1));
+            await using var heartBeatSender2 = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, TimeSpan.FromSeconds(1));
             
             // Wait for heartbeats
             await Task.Delay(TimeSpan.FromSeconds(10), CancellationToken);
@@ -334,7 +334,7 @@ namespace Halibut.Tests.Queue.Redis
             var heartBeatsReceived = new AsyncManualResetEvent(false);
             
             await using var subscription = await stableRedisTransport.SubscribeToNodeHeartBeatChannel(
-                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                 {
                     await Task.CompletedTask;
                     heartbeatTimestamps.Add(DateTimeOffset.Now);
@@ -342,7 +342,7 @@ namespace Halibut.Tests.Queue.Redis
                 }, CancellationToken);
 
             // Act
-            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.Receiver, TimeSpan.FromSeconds(1));
+            await using var heartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, unstableRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, TimeSpan.FromSeconds(1));
             
             // Wait for initial heartbeats (normal 15s interval)
             await heartBeatsReceived.WaitAsync(CancellationToken);
@@ -373,7 +373,7 @@ namespace Halibut.Tests.Queue.Redis
             
             // Subscribe to sender heartbeats
             await using var senderSubscription = await redisTransport.SubscribeToNodeHeartBeatChannel(
-                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Sender, async () =>
+                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestSenderNode, async () =>
                 {
                     await Task.CompletedTask;
                     senderHeartbeatsReceived.Set();
@@ -381,20 +381,20 @@ namespace Halibut.Tests.Queue.Redis
 
             // Subscribe to receiver heartbeats
             await using var receiverSubscription = await redisTransport.SubscribeToNodeHeartBeatChannel(
-                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                 {
                     await Task.CompletedTask;
                     receiverHeartbeatsReceived.Set();
                 }, CancellationToken);
 
             // Act - Create sender node heartbeat sender
-            await using var senderHeartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Sender, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
+            await using var senderHeartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
             
             // Wait for sender heartbeat
             await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(5), CancellationToken), senderHeartbeatsReceived.WaitAsync());
 
             // Create receiver node heartbeat sender
-            await using var receiverHeartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Receiver, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
+            await using var receiverHeartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
             
             // Wait for receiver heartbeat
             await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(5), CancellationToken), receiverHeartbeatsReceived.WaitAsync());
@@ -418,14 +418,14 @@ namespace Halibut.Tests.Queue.Redis
             
             // Subscribe only to receiver heartbeats
             await using var receiverSubscription = await redisTransport.SubscribeToNodeHeartBeatChannel(
-                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.Receiver, async () =>
+                endpoint, requestActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
                 {
                     await Task.CompletedTask;
                     receiverHeartbeatsReceived.Set();
                 }, CancellationToken);
 
             // Act - Create sender node heartbeat sender (should not trigger receiver subscription)
-            await using var senderHeartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.Sender, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
+            await using var senderHeartBeatSender = new NodeHeartBeatSender(endpoint, requestActivityId, redisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, defaultDelayBetweenPulses: TimeSpan.FromSeconds(1));
             
             // Wait to see if receiver subscription gets triggered (it shouldn't)
             await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(3), CancellationToken), receiverHeartbeatsReceived.WaitAsync());

@@ -11,26 +11,27 @@ namespace Halibut.Queue.Redis
 {
     public class PollAndSubscribeToResponse : IAsyncDisposable
     {
-        public static async Task TrySendMessage(
+        public static async Task SendResponse(
             IHalibutRedisTransport halibutRedisTransport, 
             Uri endpoint, 
             Guid activityId,
-            string value,
+            string responseMessage,
             TimeSpan ttl,
             ILog log)
         {
             log.Write(EventType.Diagnostic, "Attempting to set response for - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
             
             await using var cts = new CancelOnDisposeCancellationToken();
-            cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
+            // More than ten minutes to send the response to redis, seems sus.
+            cts.CancelAfter(TimeSpan.FromMinutes(10));
             
             try
             {
                 log.Write(EventType.Diagnostic, "Marking response as set - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                await halibutRedisTransport.MarkThatResponseIsSet(endpoint, activityId, value, ttl, cts.Token);
+                await halibutRedisTransport.SetResponseMessage(endpoint, activityId, responseMessage, ttl, cts.Token);
                 
                 log.Write(EventType.Diagnostic, "Publishing response notification - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                await halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, activityId, value, cts.Token);
+                await halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, activityId, responseMessage, cts.Token);
                 
                 log.Write(EventType.Diagnostic, "Successfully set response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
             }
@@ -141,7 +142,6 @@ namespace Halibut.Queue.Redis
             
             if (ResponseJsonCompletionSource.Task.IsCompleted) return true;
             
-            // TODO wrap in try
             var responseJson = await halibutRedisTransport.GetResponseMessage(endpoint, activityId, token);
             
             if (responseJson != null)
@@ -163,7 +163,7 @@ namespace Halibut.Queue.Redis
         {
             try
             {
-                await halibutRedisTransport.DeleteResponse(endpoint, activityId, token);
+                await halibutRedisTransport.DeleteResponseMessage(endpoint, activityId, token);
             }
             catch (Exception ex)
             {

@@ -37,9 +37,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.TryPopNextRequestGuid(endpoint, cancellationToken);
         }
 
-        public virtual Task PutRequest(Uri endpoint, Guid requestId, string payload, TimeSpan requestPickupTimeout, CancellationToken cancellationToken)
+        public virtual Task PutRequest(Uri endpoint, Guid requestId, string requestMessage, TimeSpan requestPickupTimeout, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.PutRequest(endpoint, requestId, payload, requestPickupTimeout, cancellationToken);
+            return halibutRedisTransport.PutRequest(endpoint, requestId, requestMessage, requestPickupTimeout, cancellationToken);
         }
 
         public Task<string?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
@@ -52,9 +52,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.IsRequestStillOnQueue(endpoint, requestId, cancellationToken);
         }
 
-        public Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request, Func<Task> onCancellationReceived, CancellationToken cancellationToken)
+        public Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request, Func<Task> onRpcCancellation, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.SubscribeToRequestCancellation(endpoint, request, onCancellationReceived, cancellationToken);
+            return halibutRedisTransport.SubscribeToRequestCancellation(endpoint, request, onRpcCancellation, cancellationToken);
         }
 
         public Task PublishCancellation(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
@@ -82,19 +82,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request, nodeSendingPulsesType, onHeartBeat, cancellationToken);
         }
 
-        public Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
+        public Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.SendHeartBeatFromNodeProcessingTheRequest(endpoint, requestId, nodeSendingPulsesType, cancellationToken);
-        }
-
-        public Task SendHeartBeatFromNodeProcessingTheRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
-        {
-            return halibutRedisTransport.SendHeartBeatFromNodeProcessingTheRequest(endpoint, requestId, cancellationToken);
-        }
-
-        public Task<IAsyncDisposable> SubscribeToNodeProcessingTheRequestHeartBeatChannel(Uri endpoint, Guid request, Func<Task> onHeartBeat, CancellationToken cancellationToken)
-        {
-            return halibutRedisTransport.SubscribeToNodeProcessingTheRequestHeartBeatChannel(endpoint, request, onHeartBeat, cancellationToken);
+            return halibutRedisTransport.SendNodeHeartBeat(endpoint, requestId, nodeSendingPulsesType, cancellationToken);
         }
 
         public Task<IAsyncDisposable> SubscribeToResponseChannel(Uri endpoint, Guid identifier, Func<string, Task> onValueReceived, CancellationToken cancellationToken)
@@ -107,9 +97,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, identifier, value, cancellationToken);
         }
 
-        public Task MarkThatResponseIsSet(Uri endpoint, Guid identifier, string value, TimeSpan ttl, CancellationToken cancellationToken)
+        public Task SetResponseMessage(Uri endpoint, Guid identifier, string responseMessage, TimeSpan ttl, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.MarkThatResponseIsSet(endpoint, identifier, value, ttl, cancellationToken);
+            return halibutRedisTransport.SetResponseMessage(endpoint, identifier, responseMessage, ttl, cancellationToken);
         }
 
         public Task<string?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
@@ -117,9 +107,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.GetResponseMessage(endpoint, identifier, cancellationToken);
         }
 
-        public Task<bool> DeleteResponse(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public Task<bool> DeleteResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.DeleteResponse(endpoint, identifier, cancellationToken);
+            return halibutRedisTransport.DeleteResponseMessage(endpoint, identifier, cancellationToken);
         }
     }
 }
