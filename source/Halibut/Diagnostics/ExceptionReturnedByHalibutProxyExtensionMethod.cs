@@ -10,6 +10,22 @@ namespace Halibut.Diagnostics
 {
     public static class ExceptionReturnedByHalibutProxyExtensionMethod
     {
+        public static HalibutRetryableErrorType IsRetryableError(this Exception exception)
+        {
+            var halibutNetworkExceptionType = IsNetworkError(exception);
+            switch (halibutNetworkExceptionType)
+            {
+                case HalibutNetworkExceptionType.IsNetworkError:
+                    return HalibutRetryableErrorType.IsRetryable;
+                case HalibutNetworkExceptionType.UnknownError:
+                    return HalibutRetryableErrorType.UnknownError;
+                case HalibutNetworkExceptionType.NotANetworkError:
+                    return HalibutRetryableErrorType.NotRetryable;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+        
         /// <summary>
         ///     Classifies the exception thrown from a halibut proxy as a network error or not.
         ///     In some cases it is not possible to tell if the exception is a network error.
