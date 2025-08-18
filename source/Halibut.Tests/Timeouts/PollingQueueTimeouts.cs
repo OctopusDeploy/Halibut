@@ -43,7 +43,7 @@ namespace Halibut.Tests.Timeouts
                              .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
                                  .WithLog(logFactory.ForEndpoint(uri))
                                  .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                                 .Build()))
+                                 .Build().PendingRequestQueue))
                              .WithEchoService()
                              .Build(CancellationToken))
             {
@@ -76,7 +76,8 @@ namespace Halibut.Tests.Timeouts
                              .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
                                  .WithLog(logFactory.ForEndpoint(uri))
                                  .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(100)) // Increase the time between sending null requests back to trigger the timeout.
-                                 .Build()))
+                                 .Build()
+                                 .PendingRequestQueue))
                              .WithEchoService()
                              .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder()
                                  .Build()
