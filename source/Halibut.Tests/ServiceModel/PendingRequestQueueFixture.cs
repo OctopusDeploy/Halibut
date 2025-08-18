@@ -15,7 +15,6 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.ServiceModel
 {
-    [Ignore("REDISTODO")]
     public class PendingRequestQueueFixture : BaseTest
     {
         [Test]
