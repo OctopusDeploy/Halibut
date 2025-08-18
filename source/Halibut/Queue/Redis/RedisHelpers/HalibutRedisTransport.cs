@@ -3,6 +3,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Util;
 using StackExchange.Redis;
 

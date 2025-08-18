@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Queue.Redis.RedisDataLoseDetection;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -179,7 +180,7 @@ namespace Halibut.Queue.Redis
                     if (watchProcessingNodeStillHasHeartBeat.IsCompleted)
                     {
                         var watcherResult = await watchProcessingNodeStillHasHeartBeat;
-                        if (watcherResult == NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected)
+                        if (watcherResult == NodeWatcherResult.NodeMayHaveDisconnected)
                         {
                             // Make a list ditch effort to check if a response exists now.
                             if (await pollAndSubscribeToResponse.TryGetResponseFromRedis("Watcher", cancellationToken))
@@ -233,27 +234,19 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<NodeHeartBeatSender.NodeProcessingRequestWatcherResult?> WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, RedisPendingRequest redisPending, CancellationToken cancellationToken)
+        async Task<NodeWatcherResult?> WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, RedisPendingRequest redisPending, CancellationToken cancellationToken)
         {
             await Task.Yield();
-            try
-            {
-                return await NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(
-                    endpoint,
-                    request,
-                    redisPending,
-                    halibutRedisTransport,
-                    TimeBetweenCheckingIfRequestWasCollected,
-                    log,
-                    RequestReceivingNodeIsOfflineHeartBeatTimeout,
-                    cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                log.WriteException(EventType.Error, "Error watching processing node for request {0}, endpoint {1}", ex, request.ActivityId, endpoint);
-            }
-
-            return null;
+            
+            return await NodeHeartBeatWatcher.WatchThatNodeProcessingTheRequestIsStillAlive(
+                endpoint,
+                request,
+                redisPending,
+                halibutRedisTransport,
+                TimeBetweenCheckingIfRequestWasCollected,
+                log,
+                RequestReceivingNodeIsOfflineHeartBeatTimeout,
+                cancellationToken);
         }
 
         async Task<bool> TryClearRequestFromQueue(RequestMessage request, RedisPendingRequest redisPending)

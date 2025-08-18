@@ -11,6 +11,7 @@ using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;

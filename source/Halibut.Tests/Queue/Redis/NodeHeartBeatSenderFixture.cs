@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
@@ -174,7 +175,7 @@ namespace Halibut.Tests.Queue.Redis
             await pendingRequest.RequestHasBeenCollectedAndWillBeTransferred();
             
             // Start the watcher
-            var watcherTask = NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(
+            var watcherTask = NodeHeartBeatWatcher.WatchThatNodeProcessingTheRequestIsStillAlive(
                 endpoint, 
                 request, 
                 pendingRequest, 
@@ -216,7 +217,7 @@ namespace Halibut.Tests.Queue.Redis
             
             // Start the watcher without marking request as collected
             using var cts = new CancellationTokenSource();
-            var watcherTask = NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(
+            var watcherTask = NodeHeartBeatWatcher.WatchThatNodeProcessingTheRequestIsStillAlive(
                 endpoint, 
                 request, 
                 pendingRequest, 
@@ -261,7 +262,7 @@ namespace Halibut.Tests.Queue.Redis
             await pendingRequest.RequestHasBeenCollectedAndWillBeTransferred();
             
             // Start watcher with stable connection
-            var watcherTask = NodeHeartBeatSender.WatchThatNodeProcessingTheRequestIsStillAlive(
+            var watcherTask = NodeHeartBeatWatcher.WatchThatNodeProcessingTheRequestIsStillAlive(
                 endpoint, 
                 request, 
                 pendingRequest, 

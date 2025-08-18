@@ -5,6 +5,7 @@ using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Util;
 
 namespace Halibut.Queue.Redis
@@ -55,9 +56,9 @@ namespace Halibut.Queue.Redis
             var watchCancellationToken = keepWatchingCancellationToken.Token;
             try
             {
-                var res = await NodeHeartBeatSender
+                var res = await NodeHeartBeatWatcher
                     .WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, log, nodeOfflineTimeoutBetweenHeartBeatsFromSender, watchCancellationToken);
-                if (res == NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected)
+                if (res == NodeWatcherResult.NodeMayHaveDisconnected)
                 {
                     await requestCancellationTokenSource.CancelAsync();
                 }
