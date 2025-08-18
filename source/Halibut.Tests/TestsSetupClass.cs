@@ -23,7 +23,6 @@ namespace Halibut.Tests
         [OneTimeSetUp]
         public void OneTimeSetup()
         {
-            var sb = new StringBuilder();
             var traceLogFileLogger = new TraceLogFileLogger("TestsSetupClass");
 
             var logger = new SerilogLoggerBuilder()
@@ -33,12 +32,26 @@ namespace Halibut.Tests
             logger.Information("Trace log file {LogFile}", traceLogFileLogger.logFilePath);
             foreach (var setupFixture in setupFixtures)
             {
+                logger.Information("Calling OneTimeSetupFor {SetupFixture}", setupFixture.GetType().Name);
                 setupFixture.OneTimeSetUp(logger.ForContext(setupFixture.GetType()));
             }
             
 #if SUPPORTS_WEB_SOCKET_CLIENT
             WebSocketSslCertificateHelper.AddSslCertToLocalStore();
 #endif
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            var logger = new SerilogLoggerBuilder()
+                .Build()
+                .ForContext<TestsSetupClass>();
+            foreach (var setupFixture in setupFixtures)
+            {
+                logger.Information("Calling OneTimeTearDown {SetupFixture}", setupFixture.GetType().Name);
+                setupFixture.OneTimeTearDown(logger.ForContext(setupFixture.GetType()));
+            }
         }
         
     }
