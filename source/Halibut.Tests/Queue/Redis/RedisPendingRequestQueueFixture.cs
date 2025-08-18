@@ -9,6 +9,7 @@ using Halibut.Logging;
 using Halibut.Queue;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.Exceptions;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;

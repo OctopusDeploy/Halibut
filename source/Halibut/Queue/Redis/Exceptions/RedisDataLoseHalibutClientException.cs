@@ -1,6 +1,6 @@
 using System;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.Exceptions
 {
     public class RedisDataLoseHalibutClientException : HalibutClientException
     {

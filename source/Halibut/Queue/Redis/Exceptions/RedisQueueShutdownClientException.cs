@@ -1,4 +1,6 @@
-namespace Halibut.Queue.Redis
+using System;
+
+namespace Halibut.Queue.Redis.Exceptions
 {
     public class RedisQueueShutdownClientException : HalibutClientException
     {

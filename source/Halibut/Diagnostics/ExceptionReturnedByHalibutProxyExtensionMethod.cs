@@ -10,13 +10,6 @@ using Halibut.Transport.Proxy.Exceptions;
 
 namespace Halibut.Diagnostics
 {
-    public enum HalibutRetryableErrorType
-    {
-        IsRetryable,
-        UnknownError,
-        NotRetryable
-    }
-    
     public static class ExceptionReturnedByHalibutProxyExtensionMethod
     {
         public static HalibutRetryableErrorType IsRetryableError(this Exception exception)

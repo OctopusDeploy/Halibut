@@ -1,19 +1,17 @@
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.QueuedDataStreams;
 
-namespace Halibut.Queue.QueuedDataStreams
+namespace Halibut.Tests.Queue.Redis.Utils
 {
     public class InMemoryStoreDataStreamsForDistributedQueues : IStoreDataStreamsForDistributedQueues
     {
-        public IDictionary<Guid, byte[]> dataStreamsStored = new Dictionary<Guid, byte[]>();
+        readonly IDictionary<Guid, byte[]> dataStreamsStored = new Dictionary<Guid, byte[]>();
         public async Task StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
-            
             foreach (var dataStream in dataStreams)
             {
                 using var memoryStream = new MemoryStream();
