@@ -62,11 +62,6 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.PublishCancellation(endpoint, requestId, cancellationToken);
         }
 
-        public string RequestCancelledMarkerKey(Uri endpoint, Guid requestId)
-        {
-            return halibutRedisTransport.RequestCancelledMarkerKey(endpoint, requestId);
-        }
-
         public Task MarkRequestAsCancelled(Uri endpoint, Guid requestId, TimeSpan ttl, CancellationToken cancellationToken)
         {
             return halibutRedisTransport.MarkRequestAsCancelled(endpoint, requestId, ttl, cancellationToken);

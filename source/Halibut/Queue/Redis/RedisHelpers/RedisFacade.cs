@@ -2,11 +2,11 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Diagnostics;
 using Halibut.Util;
-using Halibut.Diagnostics; // Add logging support
 using StackExchange.Redis;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.RedisHelpers
 {
     public class RedisFacade : IAsyncDisposable
     {
@@ -16,12 +16,15 @@ namespace Halibut.Queue.Redis
         internal TimeSpan MaxDurationToRetryFor = TimeSpan.FromSeconds(30);
         
         ConnectionMultiplexer Connection => connection.Value;
-        
-        string keyPrefix;
 
+        /// <summary>
+        /// All Keys will be prefixed with this, this allows for multiple halibuts to use
+        /// the same redis without interfering with each other.
+        /// </summary>
+        readonly string keyPrefix;
 
-        CancelOnDisposeCancellationToken cts;
-        CancellationToken facadeCancellationToken;
+        readonly CancelOnDisposeCancellationToken objectLifetimeCts;
+        readonly CancellationToken objectLifeTimeCancellationToken;
 
         public RedisFacade(string configuration, string keyPrefix, ILog log) : this(ConfigurationOptions.Parse(configuration), keyPrefix, log)
         {
@@ -29,19 +32,17 @@ namespace Halibut.Queue.Redis
         }
         public RedisFacade(ConfigurationOptions redisOptions, string keyPrefix, ILog log)
         {
-            this.keyPrefix = keyPrefix ?? "halibut";
-            this.log = log;
-            this.cts = new CancelOnDisposeCancellationToken();
-            this.facadeCancellationToken = cts.Token;
+            this.keyPrefix = keyPrefix;
+            this.log = log.ForContext<RedisFacade>();
+            objectLifetimeCts = new CancelOnDisposeCancellationToken();
+            objectLifeTimeCancellationToken = objectLifetimeCts.Token;
 
-            // aka have more goes at connecting.
+            // Tells the client to make multiple attempts to create the TCP connection to redis.
             redisOptions.AbortOnConnectFail = false;
             
             connection = new Lazy<ConnectionMultiplexer>(() =>
             {
                 var multiplexer = ConnectionMultiplexer.Connect(redisOptions);
-                
-                //redisOptions.ReconnectRetryPolicy = new LinearRetry()
                 
                 // Subscribe to connection events
                 multiplexer.ConnectionFailed += OnConnectionFailed;
@@ -51,31 +52,25 @@ namespace Halibut.Queue.Redis
                 return multiplexer;
             });
         }
-        
-        private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
+
+        void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
         {
-            var message = $"Redis connection failed - EndPoint: {e.EndPoint}, Failure: {e.FailureType}, Exception: {e.Exception?.Message}";
-            log?.Write(EventType.Error, message);
+            log.Write(EventType.Error, "Redis connection failed - EndPoint: {0}, Failure: {1}, Exception: {2}", e.EndPoint, e.FailureType, e.Exception?.Message);
         }
 
-        private void OnErrorMessage(object? sender, RedisErrorEventArgs e)
+        void OnErrorMessage(object? sender, RedisErrorEventArgs e)
         {
-            var message = $"Redis error - EndPoint: {e.EndPoint}, Message: {e.Message}";
-            log?.Write(EventType.Error, message);
-        }
-        
-        private void OnConnectionRestored(object? sender, ConnectionFailedEventArgs e)
-        {
-            var message = $"Redis connection restored - EndPoint: {e.EndPoint}";
-            log?.Write(EventType.Diagnostic, message);
+            log.Write(EventType.Error, "Redis error - EndPoint: {0}, Message: {1}", e.EndPoint, e.Message);
         }
 
-        /// <summary>
-        /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.
-        /// </summary>
-        private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+        void OnConnectionRestored(object? sender, ConnectionFailedEventArgs e)
         {
-            await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, facadeCancellationToken);
+            log.Write(EventType.Diagnostic, "Redis connection restored - EndPoint: {0}", e.EndPoint);
+        }
+
+        async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+        {
+            await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, objectLifeTimeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
             
             var retryDelay = TimeSpan.FromSeconds(1);
@@ -102,7 +97,7 @@ namespace Halibut.Queue.Redis
         /// </summary>
         private async Task ExecuteWithRetry(Func<Task> operation, CancellationToken cancellationToken)
         {
-            await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, facadeCancellationToken);
+            await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, objectLifeTimeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
             
             var retryDelay = TimeSpan.FromSeconds(1);
@@ -129,7 +124,7 @@ namespace Halibut.Queue.Redis
 
         public async ValueTask DisposeAsync()
         {
-            await Try.IgnoringError(async () => await cts.DisposeAsync());
+            await Try.IgnoringError(async () => await objectLifetimeCts.DisposeAsync());
             
             if (connection.IsValueCreated)
             {

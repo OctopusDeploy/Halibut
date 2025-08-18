@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;

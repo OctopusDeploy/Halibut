@@ -2,58 +2,59 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.Tests.Queue.Redis.Utils
 {
     public static class MessageReaderWriterExtensionsMethods
     {
-        public static IMessageReaderWriter ThrowsOnReadResponse(this IMessageReaderWriter messageReaderWriter, Func<Exception> exceptionFactory)
+        public static IMessageSerialiserAndDataStreamStorage ThrowsOnReadResponse(this IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage, Func<Exception> exceptionFactory)
         {
-            return new MessageReaderWriterThatThrowsWhenReadingResponse(messageReaderWriter, exceptionFactory);
+            return new MessageSerialiserAndDataStreamStorageThatThrowsWhenReadingResponse(messageSerialiserAndDataStreamStorage, exceptionFactory);
         }
 
-        public static IMessageReaderWriter ThrowsOnPrepareRequest(this IMessageReaderWriter messageReaderWriter, Func<Exception> exception)
+        public static IMessageSerialiserAndDataStreamStorage ThrowsOnPrepareRequest(this IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage, Func<Exception> exception)
         {
-            return new MessageReaderWriterThatThrowsOnPrepareRequest(messageReaderWriter, exception);
+            return new MessageSerialiserAndDataStreamStorageThatThrowsOnPrepareRequest(messageSerialiserAndDataStreamStorage, exception);
         }
 }
 
-    class MessageReaderWriterWithVirtualMethods : IMessageReaderWriter
+    class MessageSerialiserAndDataStreamStorageWithVirtualMethods : IMessageSerialiserAndDataStreamStorage
     {
-        readonly IMessageReaderWriter messageReaderWriter;
+        readonly IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage;
 
-        public MessageReaderWriterWithVirtualMethods(IMessageReaderWriter messageReaderWriter)
+        public MessageSerialiserAndDataStreamStorageWithVirtualMethods(IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage)
         {
-            this.messageReaderWriter = messageReaderWriter;
+            this.messageSerialiserAndDataStreamStorage = messageSerialiserAndDataStreamStorage;
         }
 
         public virtual Task<string> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            return messageReaderWriter.PrepareRequest(request, cancellationToken);
+            return messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
         }
 
         public virtual Task<RequestMessage> ReadRequest(string jsonRequest, CancellationToken cancellationToken)
         {
-            return messageReaderWriter.ReadRequest(jsonRequest, cancellationToken);
+            return messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
         }
 
         public virtual Task<string> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
         {
-            return messageReaderWriter.PrepareResponse(response, cancellationToken);
+            return messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
         }
 
         public virtual Task<ResponseMessage> ReadResponse(string jsonResponse, CancellationToken cancellationToken)
         {
-            return messageReaderWriter.ReadResponse(jsonResponse, cancellationToken);
+            return messageSerialiserAndDataStreamStorage.ReadResponse(jsonResponse, cancellationToken);
         }
     }
 
-    class MessageReaderWriterThatThrowsWhenReadingResponse : MessageReaderWriterWithVirtualMethods
+    class MessageSerialiserAndDataStreamStorageThatThrowsWhenReadingResponse : MessageSerialiserAndDataStreamStorageWithVirtualMethods
     {
         readonly Func<Exception> exception;
 
-        public MessageReaderWriterThatThrowsWhenReadingResponse(IMessageReaderWriter messageReaderWriter, Func<Exception> exception) : base(messageReaderWriter)
+        public MessageSerialiserAndDataStreamStorageThatThrowsWhenReadingResponse(IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage, Func<Exception> exception) : base(messageSerialiserAndDataStreamStorage)
         {
             this.exception = exception;
         }
@@ -64,11 +65,11 @@ namespace Halibut.Tests.Queue.Redis.Utils
         }
     }
     
-    class MessageReaderWriterThatThrowsOnPrepareRequest : MessageReaderWriterWithVirtualMethods
+    class MessageSerialiserAndDataStreamStorageThatThrowsOnPrepareRequest : MessageSerialiserAndDataStreamStorageWithVirtualMethods
     {
         readonly Func<Exception> exception;
 
-        public MessageReaderWriterThatThrowsOnPrepareRequest(IMessageReaderWriter messageReaderWriter, Func<Exception> exception) : base(messageReaderWriter)
+        public MessageSerialiserAndDataStreamStorageThatThrowsOnPrepareRequest(IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage, Func<Exception> exception) : base(messageSerialiserAndDataStreamStorage)
         {
             this.exception = exception;
         }

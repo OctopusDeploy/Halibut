@@ -2,11 +2,12 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.RedisDataLoseDetection
 {
     public interface IWatchForRedisLosingAllItsData : IAsyncDisposable
     {
         /// <summary>
+        /// Returns a Cancellation token which is triggered when data lose occurs.
         /// Will cause the caller to wait until we are connected to redis and so can detect datalose.
         /// </summary>
         /// <param name="timeToWait">Time to wait for this to reach a state where it can detect datalose</param>

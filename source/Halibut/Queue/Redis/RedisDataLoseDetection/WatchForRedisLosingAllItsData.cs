@@ -3,27 +3,43 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.RedisDataLoseDetection
 {
     public class WatchForRedisLosingAllItsData : IWatchForRedisLosingAllItsData
     {
-        RedisFacade redisFacade;
+        readonly RedisFacade redisFacade;
         readonly ILog log;
         
-        internal TimeSpan SetupDelay { get;}
-        internal TimeSpan WatchInterval { get; }
-        internal TimeSpan KeyTTL { get;  }
+        /// <summary>
+        /// If we are yet to contact redis to watch it for data lose, this is the delay
+        /// between errors used when retrying to connect to redis.
+        /// </summary>
+        internal TimeSpan SetupErrorBackoffDelay { get;}
+        
+        /// <summary>
+        /// The amount of time between checks to check if redis has had data lose.
+        /// </summary>
+        internal TimeSpan DataLoseCheckInterval { get; }
+        
+        /// <summary>
+        /// The TTL of the key used for data lose detection. The TTL is reset
+        /// each time we check for data lose. This exists so that the data is
+        /// eventually removed from redis.
+        /// </summary>
+        internal TimeSpan DataLostKeyTtl { get;  }
+        
         CancelOnDisposeCancellationToken cts = new();
 
         public WatchForRedisLosingAllItsData(RedisFacade redisFacade, ILog log, TimeSpan? setupDelay = null, TimeSpan? watchInterval = null, TimeSpan? keyTTL = null)
         {
             this.redisFacade = redisFacade;
             this.log = log;
-            this.SetupDelay = setupDelay ?? TimeSpan.FromSeconds(1);
-            this.WatchInterval = watchInterval ?? TimeSpan.FromSeconds(60);
-            this.KeyTTL = keyTTL ?? TimeSpan.FromMinutes(60);
+            this.SetupErrorBackoffDelay = setupDelay ?? TimeSpan.FromSeconds(1);
+            this.DataLoseCheckInterval = watchInterval ?? TimeSpan.FromSeconds(60);
+            this.DataLostKeyTtl = keyTTL ?? TimeSpan.FromHours(8);
             var _ = Task.Run(async () => await KeepWatchingForDataLose(cts.Token));
         }
 
@@ -42,7 +58,6 @@ namespace Halibut.Queue.Redis
                 return await taskCompletionSource.Task;
             }
             
-            // TODO: Check if tentacle needs this to be classified as exception that can be retried.
             await using var cts = new CancelOnDisposeCancellationToken(cancellationToken);
             cts.CancelAfter(timeToWait);
             return await taskCompletionSource.Task.WaitAsync(cts.Token);
@@ -71,8 +86,8 @@ namespace Halibut.Queue.Redis
                 {
                     if (!hasSetKey)
                     {
-                        log.Write(EventType.Diagnostic, "Setting initial data loss monitoring key {0} with TTL {1} minutes", key, KeyTTL.TotalMinutes);
-                        await redisFacade.SetString(key, guid, KeyTTL, cancellationToken);
+                        log.Write(EventType.Diagnostic, "Setting initial data loss monitoring key {0} with TTL {1} minutes", key, DataLostKeyTtl.TotalMinutes);
+                        await redisFacade.SetString(key, guid, DataLostKeyTtl, cancellationToken);
                         taskCompletionSource.TrySetResult(cts.Token);
                         hasSetKey = true;
                         log.Write(EventType.Diagnostic, "Successfully set initial data loss monitoring key {0}, monitoring is now active", key);
@@ -89,7 +104,7 @@ namespace Halibut.Queue.Redis
                             return;
                         }
 
-                        await redisFacade.SetTtlForString(key, KeyTTL, cancellationToken);
+                        await redisFacade.SetTtlForString(key, DataLostKeyTtl, cancellationToken);
                     }
                 }
                 catch (Exception ex)
@@ -99,8 +114,8 @@ namespace Halibut.Queue.Redis
 
                 await Try.IgnoringError(async () =>
                 {
-                    if (!hasSetKey) await Task.Delay(SetupDelay, cancellationToken);
-                    else await Task.Delay(WatchInterval, cancellationToken);
+                    if (!hasSetKey) await Task.Delay(SetupErrorBackoffDelay, cancellationToken);
+                    else await Task.Delay(DataLoseCheckInterval, cancellationToken);
                 });
 
             }

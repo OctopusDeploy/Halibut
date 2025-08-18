@@ -1,6 +1,7 @@
 using System;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestSetup.Redis;
 using Octopus.TestPortForwarder;

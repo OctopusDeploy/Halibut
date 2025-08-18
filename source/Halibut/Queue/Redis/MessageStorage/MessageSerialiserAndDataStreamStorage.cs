@@ -1,16 +1,17 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Transport.Protocol;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.MessageStorage
 {
-    public class MessageReaderWriter : IMessageReaderWriter
+    public class MessageSerialiserAndDataStreamStorage : IMessageSerialiserAndDataStreamStorage
     {
         readonly QueueMessageSerializer queueMessageSerializer;
         readonly IStoreDataStreamsForDistributedQueues storeDataStreamsForDistributedQueues;
 
-        public MessageReaderWriter(QueueMessageSerializer queueMessageSerializer, IStoreDataStreamsForDistributedQueues storeDataStreamsForDistributedQueues)
+        public MessageSerialiserAndDataStreamStorage(QueueMessageSerializer queueMessageSerializer, IStoreDataStreamsForDistributedQueues storeDataStreamsForDistributedQueues)
         {
             this.queueMessageSerializer = queueMessageSerializer;
             this.storeDataStreamsForDistributedQueues = storeDataStreamsForDistributedQueues;

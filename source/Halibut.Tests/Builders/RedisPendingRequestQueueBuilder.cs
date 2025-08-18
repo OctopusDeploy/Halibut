@@ -4,6 +4,8 @@ using System;
 using Halibut.Logging;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Queue;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support.Logging;
@@ -56,7 +58,7 @@ namespace Halibut.Tests.Builders
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 

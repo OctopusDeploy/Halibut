@@ -1,14 +1,12 @@
 
 #if NET8_0_OR_GREATER
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Util;
-using Newtonsoft.Json;
 using StackExchange.Redis;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.RedisHelpers
 {
     public class HalibutRedisTransport : IHalibutRedisTransport
     {

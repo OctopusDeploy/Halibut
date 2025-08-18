@@ -10,6 +10,8 @@ using Halibut.Queue;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.Exceptions;
+using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
@@ -44,7 +46,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -73,7 +75,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint")
                 .WithServiceEndpoint(b => b.WithPollingRequestQueueTimeout(TimeSpan.FromMilliseconds(100)))
@@ -102,7 +104,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -137,7 +139,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore)
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore)
                 .ThrowsOnReadResponse(() => new OperationCanceledException());
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
@@ -171,7 +173,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
@@ -206,7 +208,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -230,7 +232,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore)
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore)
                 .ThrowsOnPrepareRequest(() => new OperationCanceledException());
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
@@ -252,7 +254,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -296,7 +298,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -329,7 +331,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -373,7 +375,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -418,7 +420,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             request.Params = new[] { new ComplexObjectMultipleDataStreams(DataStream.FromString("hello"), DataStream.FromString("world")) };
@@ -461,7 +463,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -507,7 +509,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, new HalibutRedisTransport(redisFacade), messageReaderWriter, new HalibutTimeoutsAndLimits());
             // We are testing that we don't expect heart beats before the request is collected.
@@ -539,7 +541,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -576,7 +578,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutAndLimits.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
@@ -629,7 +631,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var halibutTimeoutAndLimits = new HalibutTimeoutsAndLimits();
             halibutTimeoutAndLimits.PollingRequestQueueTimeout = TimeSpan.FromDays(1);
@@ -676,7 +678,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             await using var stableConnection = RedisFacadeBuilder.CreateRedisFacade(prefix:  guid);
             using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
@@ -719,7 +721,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             await using var stableConnection = RedisFacadeBuilder.CreateRedisFacade(prefix:  guid);
 
@@ -804,7 +806,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var messageReaderWriter = new MessageReaderWriter(messageSerializer, dataStreamStore);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             request.Params = new[] { new ComplexObjectMultipleDataStreams(DataStream.FromString("hello"), DataStream.FromString("world")) };

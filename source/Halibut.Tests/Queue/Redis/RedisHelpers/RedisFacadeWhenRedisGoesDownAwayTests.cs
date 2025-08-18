@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestSetup.Redis;
 using Halibut.Util;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 using Try = Halibut.Util.Try;
 
-namespace Halibut.Tests.Queue.Redis
+namespace Halibut.Tests.Queue.Redis.RedisHelpers
 {
     [RedisTest]
     [SuppressMessage("Usage", "VSTHRD003:Avoid awaiting foreign Tasks")]

@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Queue.Redis.Exceptions;
+using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.RedisDataLoseDetection;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
@@ -20,7 +22,7 @@ namespace Halibut.Queue.Redis
         readonly ILog log;
         readonly IHalibutRedisTransport halibutRedisTransport;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
-        readonly IMessageReaderWriter messageReaderWriter;
+        readonly IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage;
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
 
         readonly CancelOnDisposeCancellationToken queueCts = new ();
@@ -38,13 +40,13 @@ namespace Halibut.Queue.Redis
             IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData,
             ILog log, 
             IHalibutRedisTransport halibutRedisTransport, 
-            IMessageReaderWriter messageReaderWriter, 
+            IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage, 
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.endpoint = endpoint;
             this.watchForRedisLosingAllItsData = watchForRedisLosingAllItsData;
             this.log = log.ForContext<RedisPendingRequestQueue>();
-            this.messageReaderWriter = messageReaderWriter;
+            this.messageSerialiserAndDataStreamStorage = messageSerialiserAndDataStreamStorage;
             this.halibutRedisTransport = halibutRedisTransport;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.queueToken = queueCts.Token;
@@ -107,7 +109,7 @@ namespace Halibut.Queue.Redis
             string payload;
             try
             {
-                payload = await messageReaderWriter.PrepareRequest(request, cancellationToken);
+                payload = await messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -316,7 +318,7 @@ namespace Halibut.Queue.Redis
 
             try
             {
-                var response = await messageReaderWriter.ReadResponse(responseJson, cancellationToken);
+                var response = await messageSerialiserAndDataStreamStorage.ReadResponse(responseJson, cancellationToken);
                 log.Write(EventType.Diagnostic, "Successfully deserialized response for request {0}", activityId);
                 return response;
             }
@@ -441,7 +443,7 @@ namespace Halibut.Queue.Redis
                         response = ResponseMessage.FromException(response, new HalibutClientException(RequestAbandonedMessage));
                     }
                 }
-                var responseJson = await messageReaderWriter.PrepareResponse(response, cancellationToken);
+                var responseJson = await messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
                 await PollAndSubscribeToResponse.SendResponse(halibutRedisTransport, endpoint, requestActivityId, responseJson, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
@@ -524,7 +526,7 @@ namespace Halibut.Queue.Redis
                     continue;
                 }
 
-                var request = await messageReaderWriter.ReadRequest(jsonRequest, cancellationToken);
+                var request = await messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
                 log.Write(EventType.Diagnostic, "Successfully collected request {0} from queue for endpoint {1}", request.ActivityId, endpoint);
 
                 return request;

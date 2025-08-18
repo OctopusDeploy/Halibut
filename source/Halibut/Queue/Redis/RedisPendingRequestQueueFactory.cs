@@ -4,6 +4,9 @@ using System;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Queue.QueuedDataStreams;
+using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.RedisDataLoseDetection;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.ServiceModel;
 
 namespace Halibut.Queue.Redis
@@ -41,7 +44,7 @@ namespace Halibut.Queue.Redis
                 watchForRedisLosingAllItsData,
                 logFactory.ForEndpoint(endpoint),
                 halibutRedisTransport,
-                new MessageReaderWriter(queueMessageSerializer, dataStreamStorage),
+                new MessageSerialiserAndDataStreamStorage(queueMessageSerializer, dataStreamStorage),
                 halibutTimeoutsAndLimits);
         }
 
