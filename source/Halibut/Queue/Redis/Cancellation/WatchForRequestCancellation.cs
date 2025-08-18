@@ -7,46 +7,10 @@ using Halibut.Diagnostics;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.Cancellation
 {
     public class WatchForRequestCancellation : IAsyncDisposable
     {
-        public static async Task TrySendCancellation(
-            IHalibutRedisTransport halibutRedisTransport, 
-            Uri endpoint, 
-            RequestMessage request,
-            ILog log)
-        {
-            log.Write(EventType.Diagnostic, "Attempting to send cancellation for request - Endpoint: {0}, ActivityId: {1}", endpoint, request.ActivityId);
-            
-            await using var cts = new CancelOnDisposeCancellationToken();
-            cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
-            
-            try
-            {
-                log.Write(EventType.Diagnostic, "Publishing cancellation notification - Endpoint: {0}, ActivityId: {1}", endpoint, request.ActivityId);
-                await halibutRedisTransport.PublishCancellation(endpoint, request.ActivityId, cts.Token);
-                
-                log.Write(EventType.Diagnostic, "Marking request as cancelled - Endpoint: {0}, ActivityId: {1}", endpoint, request.ActivityId);
-                await halibutRedisTransport.MarkRequestAsCancelled(endpoint, request.ActivityId, CancelRequestMarkerTTL, cts.Token);
-                
-                log.Write(EventType.Diagnostic, "Successfully sent cancellation for request - Endpoint: {0}, ActivityId: {1}", endpoint, request.ActivityId);
-            }
-            catch (OperationCanceledException ex)
-            {
-                log.Write(EventType.Error, "Cancellation send operation timed out after 2 minutes - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, request.ActivityId, ex.Message);
-            }
-            catch (Exception ex)
-            {
-                log.Write(EventType.Error, "Failed to send cancellation for request - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, request.ActivityId, ex.Message);
-            }
-        }
-
-        // How long the CancelRequestMarker will sit in redis before it times out.
-        // If it does timeout it won't matter since the request-sender will stop sending heart beats
-        // causing the request-processor to cancel the request anyway. 
-        static TimeSpan CancelRequestMarkerTTL = TimeSpan.FromMinutes(5);
-
         readonly CancelOnDisposeCancellationToken requestCancelledCts = new();
         public CancellationToken RequestCancelledCancellationToken => requestCancelledCts.Token;
         public bool SenderCancelledTheRequest { get; private set; }
@@ -81,9 +45,7 @@ namespace Halibut.Queue.Redis
                 
                 log.Write(EventType.Diagnostic, "Starting polling loop for request cancellation - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
                 
-                // Also poll to see if the request is cancelled since we can miss
-                // the publication.
-                // TODO: reconsider if we need this since the heart beats should take care of this.
+                // Also poll to see if the request is cancelled since we can miss the publication.
                 while (!token.IsCancellationRequested)
                 {
                     try

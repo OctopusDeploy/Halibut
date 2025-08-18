@@ -1,10 +1,10 @@
 
 #if NET8_0_OR_GREATER
 using System;
-using System.Security.Policy;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.Redis.Cancellation;
 using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Util;
 
@@ -17,10 +17,10 @@ namespace Halibut.Queue.Redis
         public CancellationToken RequestProcessingCancellationToken { get; }
 
         readonly CancelOnDisposeCancellationToken keepWatchingCancellationToken;
-        
-        DisposableCollection disposableCollection = new();
 
-        WatchForRequestCancellation watchForRequestCancellation;
+        readonly DisposableCollection disposableCollection = new();
+
+        readonly WatchForRequestCancellation watchForRequestCancellation;
         public bool SenderCancelledTheRequest => watchForRequestCancellation.SenderCancelledTheRequest;
 
         public WatchForRequestCancellationOrSenderDisconnect(

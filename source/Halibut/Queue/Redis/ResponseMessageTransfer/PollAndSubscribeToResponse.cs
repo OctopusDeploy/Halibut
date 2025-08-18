@@ -7,56 +7,23 @@ using Halibut.Diagnostics;
 using Halibut.Util;
 using Nito.AsyncEx;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.ResponseMessageTransfer
 {
     public class PollAndSubscribeToResponse : IAsyncDisposable
     {
-        public static async Task SendResponse(
-            IHalibutRedisTransport halibutRedisTransport, 
-            Uri endpoint, 
-            Guid activityId,
-            string responseMessage,
-            TimeSpan ttl,
-            ILog log)
-        {
-            log.Write(EventType.Diagnostic, "Attempting to set response for - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-            
-            await using var cts = new CancelOnDisposeCancellationToken();
-            // More than ten minutes to send the response to redis, seems sus.
-            cts.CancelAfter(TimeSpan.FromMinutes(10));
-            
-            try
-            {
-                log.Write(EventType.Diagnostic, "Marking response as set - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                await halibutRedisTransport.SetResponseMessage(endpoint, activityId, responseMessage, ttl, cts.Token);
-                
-                log.Write(EventType.Diagnostic, "Publishing response notification - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                await halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, activityId, responseMessage, cts.Token);
-                
-                log.Write(EventType.Diagnostic, "Successfully set response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-            }
-            catch (OperationCanceledException ex)
-            {
-                log.Write(EventType.Error, "Set response operation timed out after 2 minutes - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, activityId, ex.Message);
-            }
-            catch (Exception ex)
-            {
-                log.Write(EventType.Error, "Failed to set response - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, activityId, ex.Message);
-            }
-        }
-
-        readonly CancelOnDisposeCancellationToken watcherToken;
-
+        readonly CancelOnDisposeCancellationToken objectLifeTimeCts;
         readonly ILog log;
-
         readonly IHalibutRedisTransport halibutRedisTransport;
         readonly Uri endpoint;
         readonly Guid activityId;
         readonly LinearBackoffStrategy pollBackoffStrategy;
 
-        TaskCompletionSource<string> ResponseJsonCompletionSource = new();
+        readonly TaskCompletionSource<string> responseJsonCompletionSource = new();
         
-        public Task<string> ResponseJson => ResponseJsonCompletionSource.Task;
+        /// <summary>
+        /// An awaitable task that returns when the response is available.
+        /// </summary>
+        public Task<string> ResponseJson => responseJsonCompletionSource.Task;
 
         public PollAndSubscribeToResponse(Uri endpoint, Guid activityId, IHalibutRedisTransport halibutRedisTransport, ILog log)
         {
@@ -72,12 +39,10 @@ namespace Halibut.Queue.Redis
             );
             this.log.Write(EventType.Diagnostic, "Starting to watch for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
 
-            watcherToken = new CancelOnDisposeCancellationToken();
-            var token = watcherToken.Token;
-            watcherToken.AwaitTasksBeforeCTSDispose(Task.Run(async () => await WaitForResponse(token)));
+            objectLifeTimeCts = new CancelOnDisposeCancellationToken();
+            var token = objectLifeTimeCts.Token;
+            objectLifeTimeCts.AwaitTasksBeforeCTSDispose(Task.Run(async () => await WaitForResponse(token)));
         }
-
-        readonly SemaphoreSlim trySetResultSemaphore = new SemaphoreSlim(1, 1);
 
         async Task WaitForResponse(CancellationToken token)
         {
@@ -85,6 +50,9 @@ namespace Halibut.Queue.Redis
             {
                 log.Write(EventType.Diagnostic, "Subscribing to response notifications - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
                 
+                // This could wait forever to subscribe to redis if redis is offline. We need some way of limiting how long we take
+                // to subscribe.
+                // https://whimsical.com/subscribetonodeheartbeatchannel-should-timeout-while-waiting-to--NFWwmPkE7pTBdm2PRUC8Tf
                 await using var _ = await halibutRedisTransport.SubscribeToResponseChannel(endpoint, activityId,
                     async _ =>
                     {
@@ -96,8 +64,7 @@ namespace Halibut.Queue.Redis
                 
                 log.Write(EventType.Diagnostic, "Starting polling loop for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
                 
-                // Also poll to see if the value is set since we can miss
-                // the publication.
+                // Also poll to see if the value is set since we can miss the publication.
                 while (!token.IsCancellationRequested)
                 {
                     try
@@ -129,6 +96,8 @@ namespace Halibut.Queue.Redis
                 }
             }
         }
+        
+        readonly SemaphoreSlim trySetResultSemaphore = new(1, 1);
 
         /// <summary>
         /// Makes an attempt to get the response from redis.
@@ -140,7 +109,7 @@ namespace Halibut.Queue.Redis
         {
             using var l = await trySetResultSemaphore.LockAsync(token);
             
-            if (ResponseJsonCompletionSource.Task.IsCompleted) return true;
+            if (responseJsonCompletionSource.Task.IsCompleted) return true;
             
             var responseJson = await halibutRedisTransport.GetResponseMessage(endpoint, activityId, token);
             
@@ -150,8 +119,8 @@ namespace Halibut.Queue.Redis
                 
                 await DeleteResponseFromRedis(detectedBy, token);
                 
-                TrySetResponse(responseJson, token);
-                await Try.IgnoringError(async () => await watcherToken.CancelAsync());
+                TrySetResponse(responseJson);
+                await Try.IgnoringError(async () => await objectLifeTimeCts.CancelAsync());
                 log.Write(EventType.Diagnostic, "Cancelling  polling loop for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
                 return true;
             }
@@ -171,11 +140,11 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        void TrySetResponse(string value, CancellationToken cancellationToken)
+        void TrySetResponse(string value)
         {
             try
             {
-                ResponseJsonCompletionSource.TrySetResult(value);
+                responseJsonCompletionSource.TrySetResult(value);
             }
             catch (Exception ex)
             {
@@ -187,10 +156,10 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.Diagnostic, "Disposing GenericWatcher for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
             
-            await Try.IgnoringError(async () => await watcherToken.CancelAsync());
+            await Try.IgnoringError(async () => await objectLifeTimeCts.CancelAsync());
             
             // If the message task is not yet complete, then mark it as cancelled
-            Try.IgnoringError(() => ResponseJsonCompletionSource.TrySetCanceled());
+            Try.IgnoringError(() => responseJsonCompletionSource.TrySetCanceled());
             
             log.Write(EventType.Diagnostic, "Disposed GenericWatcher for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
         }

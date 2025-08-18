@@ -5,10 +5,12 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.Redis.Cancellation;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Queue.Redis.RedisDataLoseDetection;
+using Halibut.Queue.Redis.ResponseMessageTransfer;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
@@ -226,7 +228,7 @@ namespace Halibut.Queue.Redis
             if (redisPending.PendingRequestCancellationToken.IsCancellationRequested)
             {
                 log.Write(EventType.Diagnostic, "Request {0} was cancelled, sending cancellation to endpoint {1}", request.ActivityId, endpoint);
-                Task.Run(async () => await WatchForRequestCancellation.TrySendCancellation(halibutRedisTransport, endpoint, request, log));
+                Task.Run(async () => await RequestCancelledSender.TrySendCancellation(halibutRedisTransport, endpoint, request, log));
             }
             else
             {
@@ -351,20 +353,19 @@ namespace Halibut.Queue.Redis
         
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
         {
-            // TODO: is it good or bad that redis exceptions will bubble out of here.
-            // I think it will kill the TCP connection, which will force re-connect (in perhaps a backoff function)
+            // Is it good or bad that redis exceptions will bubble out of here?
+            // It will kill the TCP connection, which will force re-connect (in perhaps a backoff function)
             // This could result in connecting to a node that is actually connected to redis. It could also
             // cause a cascade of failure from high load.
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
-
             
             var disposables = new DisposableCollection();
             try
             {
                 // There is a chance the data loss occured after we got the data but before here.
                 // In that case we will just time out because of the lack of heart beats.
-                var dataLossCT = await this.watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), queueToken);
+                var dataLossCT = await watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), queueToken);
                 
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, DelayBetweenHeartBeatsForRequestProcessor));
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
@@ -438,7 +439,7 @@ namespace Halibut.Queue.Redis
                 }
                 var responseJson = await messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
-                await PollAndSubscribeToResponse.SendResponse(halibutRedisTransport, endpoint, requestActivityId, responseJson, TTLOfResponseMessage, log);
+                await ResponseMessageSender.SendResponse(halibutRedisTransport, endpoint, requestActivityId, responseJson, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
             }
             catch (Exception ex)

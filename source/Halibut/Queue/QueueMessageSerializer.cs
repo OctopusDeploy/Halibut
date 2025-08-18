@@ -8,7 +8,6 @@ using Newtonsoft.Json;
 
 namespace Halibut.Queue
 {
-    // TODO make an  interface
     public class QueueMessageSerializer
     {
         readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
@@ -50,8 +49,6 @@ namespace Halibut.Queue
                 return (result.Message, streamCapturingSerializer.DataStreams);
             }
         }
-
-
 
         // By making this a generic type, each message specifies the exact type it sends/expects
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize

@@ -45,7 +45,8 @@ namespace Halibut.Queue.Redis
         /// This gives the user an opportunity to remove the pending request from shared places and optionally
         /// call BeginTransfer
         /// </param>
-        /// <param name="overrideCancellationReason"></param>
+        /// <param name="overrideCancellationReason">Should the cancellationToken be triggered, this allows for overriding
+        /// the reason the cancellation token was triggered. The returned error will be thrown.</param>
         /// <param name="cancellationToken"></param>
         public async Task WaitUntilComplete(Func<Task> checkIfPendingRequestWasCollectedOrRemoveIt,
             Func<Exception?> overrideCancellationReason,

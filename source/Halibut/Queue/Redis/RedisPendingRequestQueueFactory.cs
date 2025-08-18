@@ -36,8 +36,6 @@ namespace Halibut.Queue.Redis
             this.watchForRedisLosingAllItsData = watchForRedisLosingAllItsData;
         }
 
-        
-
         public IPendingRequestQueue CreateQueue(Uri endpoint)
         {
             return new RedisPendingRequestQueue(endpoint,
