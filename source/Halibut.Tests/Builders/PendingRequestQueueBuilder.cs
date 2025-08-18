@@ -3,7 +3,6 @@ using System;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
-using Halibut.Tests.Support;
 using DisposableCollection = Halibut.Util.DisposableCollection;
 using ILog = Halibut.Diagnostics.ILog;
 
@@ -49,8 +48,8 @@ namespace Halibut.Tests.Builders
     {
         public IPendingRequestQueue PendingRequestQueue { get; }
         public DisposableCollection DisposableCollection { get; }
-
-        public QueueHolder(IPendingRequestQueue pendingRequestQueue, Halibut.Util.DisposableCollection disposableCollection)
+        
+        public QueueHolder(IPendingRequestQueue pendingRequestQueue, DisposableCollection disposableCollection)
         {
             this.PendingRequestQueue = pendingRequestQueue;
             this.DisposableCollection = disposableCollection;
