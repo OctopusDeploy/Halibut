@@ -8,37 +8,6 @@ using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis
 {
-    /// <summary>
-    /// Facade for Redis operations with built-in connection monitoring and disconnect detection.
-    /// 
-    /// Usage example for connection monitoring:
-    /// <code>
-    /// var facade = new RedisFacade("localhost:6379", "myapp", logger);
-    /// 
-    /// // Monitor overall connection events
-    /// facade.ConnectionFailed += message => Console.WriteLine($"Connection failed: {message}");
-    /// facade.ConnectionRestored += message => Console.WriteLine($"Connection restored: {message}");
-    /// facade.ErrorOccurred += message => Console.WriteLine($"Redis error: {message}");
-    /// 
-    /// // Subscribe with per-subscription monitoring
-    /// var subscription = await facade.SubscribeToChannel("my-channel", async message => {
-    ///     Console.WriteLine($"Received: {message}");
-    /// });
-    /// 
-    /// // Monitor individual subscription disconnects
-    /// if (subscription is RedisSubscriptionWrapper wrapper)
-    /// {
-    ///     wrapper.SubscriptionDisconnected += message => Console.WriteLine($"Subscription lost: {message}");
-    ///     wrapper.SubscriptionReconnected += message => Console.WriteLine($"Subscription restored: {message}");
-    /// }
-    /// 
-    /// // Check connection status
-    /// if (!facade.IsConnected)
-    /// {
-    ///     Console.WriteLine("Redis is not connected!");
-    /// }
-    /// </code>
-    /// </summary>
     public class RedisFacade : IAsyncDisposable
     {
         readonly Lazy<ConnectionMultiplexer> connection;
