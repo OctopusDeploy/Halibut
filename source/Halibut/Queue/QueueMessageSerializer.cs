@@ -8,6 +8,11 @@ using Newtonsoft.Json;
 
 namespace Halibut.Queue
 {
+    /// <summary>
+    /// Uses the same JSON serializer used by Halibit to send messages over the wire to
+    /// serialise messages for the queue. Note that the queue serialises to JSON rather
+    /// than BSON which is what is sent over the wire.
+    /// </summary>
     public class QueueMessageSerializer
     {
         readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
