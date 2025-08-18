@@ -1,7 +1,6 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -16,7 +15,6 @@ using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestSetup.Redis;
 using Nito.AsyncEx;
 using NUnit.Framework;
-using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Queue.Redis
 {
@@ -193,7 +191,7 @@ namespace Halibut.Tests.Queue.Redis
             
             // Assert
             var result = await watcherTask;
-            result.Should().Be(NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected);
+            result.Should().Be(NodeWatcherResult.NodeMayHaveDisconnected);
         }
 
         [Test]
@@ -231,7 +229,7 @@ namespace Halibut.Tests.Queue.Redis
             
             // Assert
             var result = await watcherTask;
-            result.Should().Be(NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NoDisconnectSeen);
+            result.Should().Be(NodeWatcherResult.NoDisconnectSeen);
         }
 
         [Test]
@@ -280,7 +278,7 @@ namespace Halibut.Tests.Queue.Redis
             
             // Assert - Watcher should detect flatline
             var result = await watcherTask;
-            result.Should().Be(NodeHeartBeatSender.NodeProcessingRequestWatcherResult.NodeMayHaveDisconnected);
+            result.Should().Be(NodeWatcherResult.NodeMayHaveDisconnected);
         }
 
         [Test] 
