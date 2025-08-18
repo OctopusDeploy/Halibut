@@ -13,6 +13,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         readonly Lazy<ConnectionMultiplexer> connection;
         readonly ILog log;
         // We can survive redis being unavailable for this amount of time.
+        // Generally redis will try for 5s, we add our own retries to try for longer.
         internal TimeSpan MaxDurationToRetryFor = TimeSpan.FromSeconds(30);
         
         ConnectionMultiplexer Connection => connection.Value;
@@ -92,10 +93,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             }
         }
 
-        /// <summary>
-        /// Executes an operation with retry logic. Retries for up to 12 seconds with 1-second intervals.
-        /// </summary>
-        private async Task ExecuteWithRetry(Func<Task> operation, CancellationToken cancellationToken)
+        async Task ExecuteWithRetry(Func<Task> operation, CancellationToken cancellationToken)
         {
             await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, objectLifeTimeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
@@ -200,7 +198,6 @@ namespace Halibut.Queue.Redis.RedisHelpers
         {
             key = "hash:" + keyPrefix + ":" + key;
             
-            // Retry each operation independently
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
@@ -210,9 +207,14 @@ namespace Halibut.Queue.Redis.RedisHelpers
             await SetTtlForKeyRaw(key, ttl, cancellationToken);
         }
 
+        string ToHashKey(string key)
+        {
+            return "hash:" + keyPrefix + ":" + key;
+        }
+        
         public async Task<bool> HashContainsKey(string key, string field, CancellationToken cancellationToken)
         {
-            key = "hash:" + keyPrefix + ":" + key;
+            key = ToHashKey(key);
             return await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
@@ -222,7 +224,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         public async Task<string?> TryGetAndDeleteFromHash(string key, string field, CancellationToken cancellationToken)
         {
-            key = "hash:" + keyPrefix + ":" + key;
+            key = ToHashKey(key);
             
             // Retry each operation independently
             var value = await ExecuteWithRetry(async () =>
@@ -231,8 +233,11 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 return await database.HashGetAsync(key, new RedisValue(field));
             }, cancellationToken);
             
-            // TODO: If we retry this is not idempotent.
-            // TODO: This needs to be tested in RedisPendingRequestsQueueFixture
+            // Retry does make this non-idempotent, what can happen is the key is deleted on redis.
+            // But we do not get a response saying it is deleted. We try again and get told
+            // it is already deleted.
+            // In the Redis Queue this can result in no-body picking up the Request, and the
+            // request eventually timing out.
             var res = await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
@@ -244,12 +249,17 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 // Someone else deleted this, so return nothing to make the get and delete appear to be atomic. 
                 return null;
             } 
-            return (string?)value;
+            return value;
+        }
+        
+        string ToListKey(string key)
+        {
+            return "list:" + keyPrefix + ":" + key;
         }
 
         public async Task ListRightPushAsync(string key, string payload, TimeSpan ttlForAllInList, CancellationToken cancellationToken)
         {
-            key = "list:" + keyPrefix + ":" + key;
+            key = ToListKey(key);
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
@@ -260,7 +270,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         public async Task<string?> ListLeftPopAsync(string key, CancellationToken cancellationToken)
         {
-            key = "list:" + keyPrefix + ":" + key;
+            key = ToListKey(key);
             return await ExecuteWithRetry<string?>(async () =>
             {
                 var database = Connection.GetDatabase();
@@ -270,8 +280,13 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     return null;
                 }
 
-                return (string?)value;
+                return value;
             }, cancellationToken);
+        }
+
+        string ToStringKey(string key)
+        {
+            return "string:" + keyPrefix + ":" + key;
         }
 
         public async Task SetString(string key, string value, TimeSpan ttl, CancellationToken cancellationToken)
@@ -286,24 +301,10 @@ namespace Halibut.Queue.Redis.RedisHelpers
             await SetTtlForKeyRaw(key, ttl, cancellationToken);
         }
 
-        string ToStringKey(string key)
-        {
-            return "string:" + keyPrefix + ":" + key;
-        }
-
         public async Task SetTtlForString(string key, TimeSpan ttl, CancellationToken cancellationToken)
         {
             await SetTtlForKeyRaw(ToStringKey(key), ttl, cancellationToken);
 
-        }
-
-        async Task SetTtlForKeyRaw(string key, TimeSpan ttl, CancellationToken cancellationToken)
-        {
-            await ExecuteWithRetry(async () =>
-            {
-                var database = Connection.GetDatabase();
-                await database.KeyExpireAsync(key, ttl);
-            }, cancellationToken);
         }
 
         public async Task<string?> GetString(string key, CancellationToken cancellationToken)
@@ -323,6 +324,15 @@ namespace Halibut.Queue.Redis.RedisHelpers
             {
                 var database = Connection.GetDatabase();
                 return await database.KeyDeleteAsync(key);
+            }, cancellationToken);
+        }
+        
+        async Task SetTtlForKeyRaw(string key, TimeSpan ttl, CancellationToken cancellationToken)
+        {
+            await ExecuteWithRetry(async () =>
+            {
+                var database = Connection.GetDatabase();
+                await database.KeyExpireAsync(key, ttl);
             }, cancellationToken);
         }
     }
