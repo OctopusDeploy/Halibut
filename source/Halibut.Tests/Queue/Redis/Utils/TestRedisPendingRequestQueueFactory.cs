@@ -4,7 +4,7 @@ using System;
 using Halibut.Queue.Redis;
 using Halibut.ServiceModel;
 
-namespace Halibut.Tests.Queue.Redis
+namespace Halibut.Tests.Queue.Redis.Utils
 {
     public class TestRedisPendingRequestQueueFactory : IPendingRequestQueueFactory
     {
