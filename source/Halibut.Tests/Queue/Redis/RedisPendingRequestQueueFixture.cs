@@ -173,7 +173,6 @@ namespace Halibut.Tests.Queue.Redis
         {
             // Arrange
             var endpoint = new Uri("poll://" + Guid.NewGuid());
-            var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
 
             using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, null);
@@ -191,7 +190,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
-            var queue = new RedisPendingRequestQueue(endpoint, redisDataLoseDetector, log, redisTransport, CreateMessageSerialiserAndDataStreamStorage(), new HalibutTimeoutsAndLimits());
+            var queue = new RedisPendingRequestQueue(endpoint, redisDataLoseDetector, HalibutLog, redisTransport, CreateMessageSerialiserAndDataStreamStorage(), new HalibutTimeoutsAndLimits());
 
             // Act
             var exception = await AssertThrowsAny.Exception(async () => await queue.QueueAndWaitAsync(request, CancellationToken.None));
