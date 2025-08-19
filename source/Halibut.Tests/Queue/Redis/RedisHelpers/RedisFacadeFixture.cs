@@ -1,6 +1,7 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
@@ -10,6 +11,7 @@ using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using Halibut.Util.AsyncEx;
+using Nito.AsyncEx;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Queue.Redis.RedisHelpers
@@ -17,7 +19,6 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
     [RedisTest]
     public class RedisFacadeFixture : BaseTest
     {
-
         [Test]
         public async Task SetString_AndGetString_ShouldStoreAndRetrieveValue()
         {
@@ -546,6 +547,48 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
         }
 
         [Test]
+        public async Task TryGetAndDeleteFromHash_WithConcurrentCalls_ShouldReturnValueToExactlyOneCall()
+        {
+            // Arrange
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var key = Guid.NewGuid().ToString();
+            var field = "test-field";
+            var payload = "test-payload";
+            const int concurrentCallCount = 20;
+
+            // Set a value in the hash
+            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
+
+            var countDownLatch = new AsyncCountdownEvent(concurrentCallCount);
+
+            // Act - Make multiple concurrent calls to TryGetAndDeleteFromHash
+            var concurrentTasks = new Task<string?>[concurrentCallCount];
+            for (int i = 0; i < concurrentCallCount; i++)
+            {
+                concurrentTasks[i] = Task.Run(async () =>
+                {
+                    countDownLatch.Signal();
+                    await countDownLatch.WaitAsync();
+                    return await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
+                });
+            }
+
+            var results = await Task.WhenAll(concurrentTasks);
+
+            // Assert - Exactly one call should get the payload, all others should get null
+            var nonNullResults = results.Where(result => result != null).ToArray();
+            var nullResults = results.Where(result => result == null).ToArray();
+
+            nonNullResults.Should().HaveCount(1, "exactly one concurrent call should retrieve the value");
+            nonNullResults[0].Should().Be(payload, "the successful call should return the correct payload");
+            nullResults.Should().HaveCount(concurrentCallCount - 1, "all other concurrent calls should return null");
+
+            // Verify the hash key no longer exists
+            var existsAfterConcurrentCalls = await redisFacade.HashContainsKey(key, field, CancellationToken);
+            existsAfterConcurrentCalls.Should().BeFalse("the hash key should be deleted after the successful TryGetAndDeleteFromHash call");
+        }
+
+        [Test]
         public async Task DisposeAsync_ShouldCleanupResourcesAndNotThrow()
         {
             // Arrange
@@ -573,8 +616,6 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             Func<Task> secondDisposeAction = async () => await redisFacade.DisposeAsync();
             await secondDisposeAction.Should().NotThrowAsync();
         }
-
-
     }
 } 
 #endif

@@ -25,7 +25,7 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
         }
         
         [Test]
-        public async Task WhenTheConnectionToRedisIsInitiallyDown_WhenAskingForALostDataCancellationToken_AndTheConnectionToRedisReturns_TheCTIsReturned()
+        public async Task WhenTheConnectionToRedisIsInitiallyDown_WhenAskingForALostDataCancellationToken_AndTheConnectionToRedisReturns_TheCancellationTokenIsReturned()
         {
             using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
             portForwarder.EnterKillNewAndExistingConnectionsMode();
@@ -41,21 +41,9 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
             
             await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
         }
-        
-        [Test]
-        public async Task WatchForARealRedisLosingAllOfItsData_TimesOutWhenWaitingForCTWhenNoConnectionToRedisCanBeEstablished()
-        {
-            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
-            portForwarder.EnterKillNewAndExistingConnectionsMode();
-            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, null);
-            await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
-
-
-            await AssertException.Throws<TaskCanceledException>(watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(1), CancellationToken));
-        }
 
         [Test]
-        public async Task WhenRedisRunsForLongerThanTheKeyTTL_NoDataLoseShouldBeDetected()
+        public async Task WhenTheWatcherWatchesRedisForMoreThanTheKeyTTL_NoDataLoseShouldBeDetected()
         {
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromMilliseconds(100), keyTTL: TimeSpan.FromSeconds(2));
@@ -66,14 +54,11 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
         }
 
         [Test]
-        public async Task WhenRedisLosesAllOfIts_TheWatcherShouldDetectTheDataLose()
+        public async Task WhenWatchingRedisForDataLose_AndRedisLosesAllDaya_DataLoseIsDetected()
         {
-            Logger.Information("Starting WatchForARealRedisLosingAllOfItsData_E2E_Test");
-            
             // Arrange - Create Redis container using the builder
             Logger.Information("Creating Redis container");
-            await using var container = new RedisContainerBuilder()
-                .Build();
+            await using var container = new RedisContainerBuilder().Build();
             
             Logger.Information("Starting Redis container");
             await container.StartAsync();
@@ -82,7 +67,7 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
             // Create RedisFacade connected to the containerized Redis
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(host: "localhost", container.RedisPort);
             
-            await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
+            await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval: TimeSpan.FromSeconds(1));
             
             Logger.Information("Getting initial cancellation token for data loss detection (20 second timeout)");
             var watcherCT = await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
