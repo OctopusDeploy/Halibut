@@ -54,13 +54,11 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-            
             var pendingRequestPickupTimeout = Try.IgnoringError(async () => await Task.Delay(request.Destination.PollingRequestQueueTimeout, cancellationToken));
             var responseWaiterTask = responseWaiter.WaitAsync(cancellationToken);
             
             await Task.WhenAny(pendingRequestPickupTimeout, responseWaiterTask);
 
-            
             // Response has been returned so just say we are done.
             if (responseWaiter.IsSet)
             {
@@ -68,10 +66,13 @@ namespace Halibut.Queue.Redis
                 return;
             }
 
-            if (!requestCollected.IsSet) await checkIfPendingRequestWasCollectedOrRemoveIt();
+            if (!requestCollected.IsSet)
+            {
+                await checkIfPendingRequestWasCollectedOrRemoveIt();
+            }
             
-            using (await transferLock.LockAsync(CancellationToken.None)) {
-                
+            using (await transferLock.LockAsync(CancellationToken.None))
+            {
                 if (responseWaiter.IsSet)
                 {
                     log.Write(EventType.MessageExchange, "Request {0} was collected by the polling endpoint", request);
@@ -100,8 +101,9 @@ namespace Halibut.Queue.Redis
                         operationCanceledException = new OperationCanceledException($"Request {request} was collected by the polling endpoint, will try to cancel the request");
                     }
                         
-                    throw requestCollected.IsSet ? new TransferringRequestCancelledException(operationCanceledException) : new ConnectingRequestCancelledException(operationCanceledException);
-
+                    throw requestCollected.IsSet
+                        ? new TransferringRequestCancelledException(operationCanceledException)
+                        : new ConnectingRequestCancelledException(operationCanceledException);
                 }
                 
                 if (!requestCollected.IsSet)
@@ -112,14 +114,13 @@ namespace Halibut.Queue.Redis
                     
                     log.Write(EventType.MessageExchange, "Request {0} timed out before it could be collected by the polling endpoint", request);
                     SetResponseNoLock(ResponseMessage.FromException(
-                        request, 
-                        new TimeoutException($"A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({request.Destination.PollingRequestQueueTimeout}), so the request timed out."),
-                        ConnectionState.Connecting),
-                        false);
+                            request,
+                            new TimeoutException($"A request was sent to a polling endpoint, but the polling endpoint did not collect the request within the allowed time ({request.Destination.PollingRequestQueueTimeout}), so the request timed out."),
+                            ConnectionState.Connecting),
+                        requestWasCollected: false);
                     return;
                 }
             }
-            
             
             // The request has been collected so now wait patiently for a response
             log.Write(EventType.MessageExchange, "Request {0} was eventually collected by the polling endpoint", request);
@@ -143,10 +144,10 @@ namespace Halibut.Queue.Redis
                         
                         log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received" + overrideCancellationReason()??"", request);
                         SetResponseNoLock(ResponseMessage.FromException(
-                            request,
-                            new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded." + overrideCancellationReason()??""),
-                            ConnectionState.Connecting),
-                            false);
+                                request,
+                                new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded." + overrideCancellationReason()??""),
+                                ConnectionState.Connecting),
+                            requestWasCollected: false);
                         await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
                     }
                 }
@@ -156,15 +157,14 @@ namespace Halibut.Queue.Redis
                 // This should never happen.
                 log.Write(EventType.MessageExchange, "Request {0} had an internal error, unexpectedly stopped waiting for the response.", request);
                 await SetResponseAsync(ResponseMessage.FromException(
-                    request, 
-                    new PendingRequestQueueInternalException($"Request {request.Id} had an internal error, unexpectedly stopped waiting for the response.")),
-                    false);
+                        request,
+                        new PendingRequestQueueInternalException($"Request {request.Id} had an internal error, unexpectedly stopped waiting for the response.")),
+                    requestWasCollected: false);
             }
         }
 
         public static OperationCanceledException CreateExceptionForRequestWasCancelledBeforeCollected(RequestMessage request, ILog log)
         {
-            
             log.Write(EventType.MessageExchange, "Request {0} was cancelled before it could be collected by the polling endpoint", request);
             return new OperationCanceledException($"Request {request} was cancelled before it could be collected by the polling endpoint");
         }
@@ -202,7 +202,7 @@ namespace Halibut.Queue.Redis
         public async Task<ResponseMessage> SetResponse(ResponseMessage response)
         {
             // If someone is calling this then we know for sure they collected the request
-            return await SetResponseAsync(response, true);
+            return await SetResponseAsync(response, requestWasCollected: true);
         }
         
         async Task<ResponseMessage> SetResponseAsync(ResponseMessage response, bool requestWasCollected)
@@ -215,10 +215,18 @@ namespace Halibut.Queue.Redis
 
         ResponseMessage SetResponseNoLock(ResponseMessage response, bool requestWasCollected)
         {
-            if(this.response != null) return this.response;
+            if (this.response != null)
+            {
+                return this.response;
+            }
+
             this.response = response;
             responseWaiter.Set();
-            if(requestWasCollected) requestCollected.Set(); // Also the request has been collected, if we have a response.
+            if (requestWasCollected)
+            {
+                requestCollected.Set(); // Also the request has been collected, if we have a response.
+            }
+
             return this.response;
         }
 
