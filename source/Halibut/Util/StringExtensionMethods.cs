@@ -8,7 +8,11 @@ namespace Halibut.Util
         [return: NotNullIfNotNull("str")]
         public static Guid? ToGuid(this string? str)
         {
-            if (str == null) return null;
+            if (str == null)
+            {
+                return null;
+            }
+
             return Guid.Parse(str);
         }
     }
