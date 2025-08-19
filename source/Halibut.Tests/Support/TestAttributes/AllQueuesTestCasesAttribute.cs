@@ -6,6 +6,7 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.BackwardsCompatibility;
 using Halibut.Tests.Support.TestCases;
+using Halibut.Tests.TestSetup.Redis;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Support.TestAttributes
@@ -26,7 +27,10 @@ namespace Halibut.Tests.Support.TestAttributes
             {
                 var factories = new List<PendingRequestQueueTestCase>();
 #if NET8_0_OR_GREATER
-                factories.Add(new PendingRequestQueueTestCase("Redis", () => new RedisPendingRequestQueueBuilder()));
+                if (EnsureRedisIsAvailableSetupFixture.WillRunRedisTests)
+                {
+                    factories.Add(new PendingRequestQueueTestCase("Redis", () => new RedisPendingRequestQueueBuilder()));
+                }
 #endif
                 factories.Add(new PendingRequestQueueTestCase("InMemory", () => new PendingRequestQueueBuilder()));
 
