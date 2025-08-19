@@ -51,7 +51,7 @@ namespace Halibut.Queue.Redis.RedisDataLoseDetection
         /// <param name="timeToWait">Time to wait for this to reach a state where it can detect datalose</param>
         /// <param name="cancellationToken"></param>
         /// <returns>A cancellation token which is triggered when data lose occurs.</returns>
-        public async Task<CancellationToken> GetTokenForDataLoseDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
+        public async Task<CancellationToken> GetTokenForDataLossDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
         {
             if (taskCompletionSource.Task.IsCompleted)
             {

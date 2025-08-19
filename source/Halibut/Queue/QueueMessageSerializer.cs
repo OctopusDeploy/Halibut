@@ -9,7 +9,7 @@ using Newtonsoft.Json;
 namespace Halibut.Queue
 {
     /// <summary>
-    /// Uses the same JSON serializer used by Halibit to send messages over the wire to
+    /// Uses the same JSON serializer used by Halibut to send messages over the wire to
     /// serialise messages for the queue. Note that the queue serialises to JSON rather
     /// than BSON which is what is sent over the wire.
     /// </summary>
@@ -41,18 +41,15 @@ namespace Halibut.Queue
         public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(string json)
         {
             using var reader = new JsonTextReader(new StringReader(json));
-            {
-                
-                var streamCapturingSerializer = createStreamCapturingSerializer();
-                var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
+            var streamCapturingSerializer = createStreamCapturingSerializer();
+            var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
             
-                if (result == null)
-                {
-                    throw new Exception("messageEnvelope is null");
-                }
-
-                return (result.Message, streamCapturingSerializer.DataStreams);
+            if (result == null)
+            {
+                throw new Exception("messageEnvelope is null");
             }
+
+            return (result.Message, streamCapturingSerializer.DataStreams);
         }
 
         // By making this a generic type, each message specifies the exact type it sends/expects

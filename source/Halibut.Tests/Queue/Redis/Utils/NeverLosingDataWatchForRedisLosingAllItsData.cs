@@ -14,7 +14,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
     /// </summary>
     public class NeverLosingDataWatchForRedisLosingAllItsData : IWatchForRedisLosingAllItsData
     {
-        public Task<CancellationToken> GetTokenForDataLoseDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
+        public Task<CancellationToken> GetTokenForDataLossDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
         {
             return Task.FromResult(CancellationToken.None);
         }

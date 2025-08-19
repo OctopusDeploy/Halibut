@@ -2,8 +2,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Queue.Redis;
-using Halibut.Transport.Protocol;
 
 namespace Halibut.Util
 {
@@ -19,7 +17,7 @@ namespace Halibut.Util
         readonly AwaitAllAndIgnoreException awaitAllAndIgnoreException = new();
         
         public CancelOnDisposeCancellationToken(params CancellationToken[] token)
-        : this(CancellationTokenSource.CreateLinkedTokenSource(token))
+            : this(CancellationTokenSource.CreateLinkedTokenSource(token))
         {
         }
         public CancelOnDisposeCancellationToken() : this(new CancellationTokenSource())
@@ -37,7 +35,9 @@ namespace Halibut.Util
         public async ValueTask DisposeAsync()
         {
             if (disposed)
+            {
                 return;
+            }
 
             disposed = true;
 
@@ -69,4 +69,4 @@ namespace Halibut.Util
             awaitAllAndIgnoreException.AddTasks(tasksUsingToken);
         }
     }
-} 
+}

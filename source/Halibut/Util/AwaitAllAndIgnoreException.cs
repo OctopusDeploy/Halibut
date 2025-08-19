@@ -13,7 +13,7 @@ namespace Halibut.Util
             foreach (var task in tasksToAdd)
             {
 #pragma warning disable VSTHRD003
-                tasks.Add(Halibut.Util.Try.IgnoringError(async () => await task));
+                tasks.Add(Try.IgnoringError(async () => await task));
 #pragma warning restore VSTHRD003
             }
         }

@@ -31,7 +31,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             await Try.CatchingError(async () => await cancellationToken.DisposeAsync());
         }
 
-        public async Task<CancellationToken> GetTokenForDataLoseDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
+        public async Task<CancellationToken> GetTokenForDataLossDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
         {
 #pragma warning disable VSTHRD003
             return await TaskCompletionSource.Task;

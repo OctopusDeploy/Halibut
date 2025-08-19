@@ -161,9 +161,9 @@ namespace Halibut
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
             
-            
             var queueMessageSerializer = new QueueMessageSerializer(messageSerializer.CreateStreamCapturingSerializer);
-            var queueFactory = this.queueFactoryFactory?.Invoke(queueMessageSerializer)??new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
+            var queueFactory = this.queueFactoryFactory?.Invoke(queueMessageSerializer)
+                               ?? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
             
             var streamFactory = this.streamFactory ?? new StreamFactory();
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;

@@ -21,7 +21,7 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
 
 
-            await AssertException.Throws<TaskCanceledException>(watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(1), CancellationToken));
+            await AssertException.Throws<TaskCanceledException>(watcher.GetTokenForDataLossDetection(TimeSpan.FromSeconds(1), CancellationToken));
         }
         
         [Test]
@@ -39,7 +39,7 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
 
             });
             
-            await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
+            await watcher.GetTokenForDataLossDetection(TimeSpan.FromSeconds(20), CancellationToken);
         }
 
         [Test]
@@ -47,7 +47,7 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
         {
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromMilliseconds(100), keyTTL: TimeSpan.FromSeconds(2));
-            var watcherCt = await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
+            var watcherCt = await watcher.GetTokenForDataLossDetection(TimeSpan.FromSeconds(20), CancellationToken);
 
             await Task.Delay(TimeSpan.FromSeconds(4));
             watcherCt.IsCancellationRequested.Should().BeFalse();
@@ -70,7 +70,7 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval: TimeSpan.FromSeconds(1));
             
             Logger.Information("Getting initial cancellation token for data loss detection (20 second timeout)");
-            var watcherCT = await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
+            var watcherCT = await watcher.GetTokenForDataLossDetection(TimeSpan.FromSeconds(20), CancellationToken);
             Logger.Information("Initial cancellation token obtained, IsCancellationRequested: {IsCancellationRequested}", watcherCT.IsCancellationRequested);
 
             watcherCT.IsCancellationRequested.Should().BeFalse();
@@ -91,7 +91,7 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
             watcherCT.IsCancellationRequested.Should().BeTrue("Should have detected the data loss");
 
             Logger.Information("Getting new cancellation token to verify recovery");
-            var nextToken = await watcher.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(20), CancellationToken);
+            var nextToken = await watcher.GetTokenForDataLossDetection(TimeSpan.FromSeconds(20), CancellationToken);
             
             nextToken.IsCancellationRequested.Should().BeFalse("The new token should have no data loss");
         }

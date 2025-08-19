@@ -66,10 +66,12 @@ namespace Halibut.Util
         public virtual TimeSpan GetSleepPeriod()
         {
             if (attemptCount <= 0)
+            {
                 return TimeSpan.Zero;
+            }
 
             var delay = InitialDelay + TimeSpan.FromTicks((attemptCount - 1) * Increment.Ticks);
-            
+
             // Cap at maximum delay
             return delay > MaximumDelay ? MaximumDelay : delay;
         }
@@ -80,7 +82,9 @@ namespace Halibut.Util
         public TimeSpan CalculateDelayForAttempt(int attemptNumber)
         {
             if (attemptNumber <= 0)
+            {
                 return TimeSpan.Zero;
+            }
 
             var delay = InitialDelay + TimeSpan.FromTicks((attemptNumber - 1) * Increment.Ticks);
             

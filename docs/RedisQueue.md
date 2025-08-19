@@ -5,7 +5,7 @@ a cluster of multiple clients need to send commands to polling services which co
 clients. 
 
 For example if we have two clients ClientA and ClientB and the Service connects to B, yet A wants
-to execute an RPC. Currently that wont work as the request will end up in the in memory queue for ClientA
+to execute an RPC. Currently that won't work as the request will end up in the in memory queue for ClientA
 but it needs to be accessible to ClientB.
 
 The Redis queue solves this, as the request is placed into Redis allowing ClientB to access the request and

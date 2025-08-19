@@ -74,7 +74,7 @@ namespace Halibut.Queue.Redis
         {
             // TODO this must throw something that can be retried.
             await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, cancellationToken ?? CancellationToken.None);
-            return await watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), cts.Token);
+            return await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), cts.Token);
         }
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
@@ -365,7 +365,7 @@ namespace Halibut.Queue.Redis
             {
                 // There is a chance the data loss occured after we got the data but before here.
                 // In that case we will just time out because of the lack of heart beats.
-                var dataLossCT = await watchForRedisLosingAllItsData.GetTokenForDataLoseDetection(TimeSpan.FromSeconds(30), queueToken);
+                var dataLossCT = await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), queueToken);
                 
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, DelayBetweenHeartBeatsForRequestProcessor));
                 var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
