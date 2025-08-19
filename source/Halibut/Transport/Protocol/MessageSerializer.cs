@@ -14,7 +14,6 @@ namespace Halibut.Transport.Protocol
 {
     public class MessageSerializer : IMessageSerializer
     {
-        readonly ITypeRegistry typeRegistry;
         readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
         readonly IMessageSerializerObserver observer;
         readonly long readIntoMemoryLimitBytes;
@@ -29,17 +28,11 @@ namespace Halibut.Transport.Protocol
             long writeIntoMemoryLimitBytes,
             ILogFactory logFactory)
         {
-            this.typeRegistry = typeRegistry;
             this.createStreamCapturingSerializer = createStreamCapturingSerializer;
             this.observer = observer;
             this.readIntoMemoryLimitBytes = readIntoMemoryLimitBytes;
             this.writeIntoMemoryLimitBytes = writeIntoMemoryLimitBytes;
             deflateReflector = new DeflateStreamInputBufferReflector(logFactory.ForPrefix(nameof(MessageSerializer)));
-        }
-
-        public void AddToMessageContract(params Type[] types) // kept for backwards compatibility
-        {
-            typeRegistry.AddToMessageContract(types);
         }
 
         public async Task<IReadOnlyList<DataStream>> WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken)

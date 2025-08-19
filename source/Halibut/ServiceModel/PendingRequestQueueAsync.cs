@@ -36,6 +36,8 @@ namespace Halibut.ServiceModel
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken)
         {
+            //cancellationToken = CancellationToken.None;
+            
             using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, this.entireQueueCancellationTokenSource.Token);
             cancellationToken = cancellationTokenSource.Token;
             
