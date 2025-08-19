@@ -19,9 +19,9 @@ namespace Halibut.Diagnostics
             // All network errors can be retried.
             if (halibutNetworkExceptionType == HalibutNetworkExceptionType.IsNetworkError) return HalibutRetryableErrorType.IsRetryable;
             
-            if(IsRedisRetryableError(exception)) return HalibutRetryableErrorType.IsRetryable;
+            if (IsRedisRetryableError(exception)) return HalibutRetryableErrorType.IsRetryable;
             
-            if(halibutNetworkExceptionType == HalibutNetworkExceptionType.NotANetworkError) return HalibutRetryableErrorType.NotRetryable;
+            if (halibutNetworkExceptionType == HalibutNetworkExceptionType.NotANetworkError) return HalibutRetryableErrorType.NotRetryable;
             
             return HalibutRetryableErrorType.UnknownError;
         }
@@ -42,7 +42,7 @@ namespace Halibut.Diagnostics
                 if (exception.Message.Contains("The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.")) return true;
                 if (exception.Message.Contains("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.")) return true;
                 if (exception.Message.Contains("Error occured when reading data from the queue")) return true;
-                if(exception.Message.Contains("error occured when preparing request for queue")) return true;
+                if (exception.Message.Contains("error occured when preparing request for queue")) return true;
             }
             
             if (exception is HalibutClientException && exception.InnerException != null)
