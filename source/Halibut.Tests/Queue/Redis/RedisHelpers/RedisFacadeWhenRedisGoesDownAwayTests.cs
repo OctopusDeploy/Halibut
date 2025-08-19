@@ -3,15 +3,9 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Logging;
-using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.Logging;
-using Halibut.Tests.TestSetup.Redis;
-using Halibut.Util;
 using NUnit.Framework;
-using Try = Halibut.Util.Try;
 
 namespace Halibut.Tests.Queue.Redis.RedisHelpers
 {
@@ -45,8 +39,12 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             
             await using var redisFacadeReliable = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
 
-            // TODO subscribe to test-channel using redisFacadeReliable, and record messages received.
-            // then at the end of the test check that we got the published message.
+            var receivedMessages = new ConcurrentBag<string>();
+            await using var subscription = await redisFacadeReliable.SubscribeToChannel("test-channel", async message =>
+            {
+                await Task.CompletedTask;
+                receivedMessages.Add(message.Message!);
+            }, CancellationToken);
             
             // Establish connection first
             await redisFacade.SetString("connection", "established", TimeSpan.FromMinutes(1), CancellationToken);
@@ -55,8 +53,11 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
 
-            // No delay here - should retry and succeed
+            // Assert
             await redisFacade.PublishToChannel("test-channel", "test-message", CancellationToken);
+            
+            // Check that publish actually happened.
+            await ShouldEventually.Eventually(() => receivedMessages.Should().Contain("test-message"), TimeSpan.FromSeconds(10), CancellationToken);
         }
 
         [Test]
@@ -72,8 +73,12 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
+            // Assert
             await redisFacade.SetInHash("test-hash", "test-field", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
-            // TODO: check we can get the value from the hash.
+            
+            // Check that the value was set.
+            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash("test-hash", "test-field", CancellationToken);
+            retrievedValue.Should().Be("test-value");
         }
 
         [Test]
@@ -107,7 +112,10 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             portForwarder.ReturnToNormalMode();
             
             await redisFacade.ListRightPushAsync("test-list", "test-item", TimeSpan.FromMinutes(1), CancellationToken);
-            // TODO: check that we can pop test-list.
+            
+            // Check we actually added something to the queue.
+            var poppedValue = await redisFacade.ListLeftPopAsync("test-list", CancellationToken);
+            poppedValue.Should().Be("test-item");
         }
 
         [Test]
@@ -141,7 +149,10 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             portForwarder.ReturnToNormalMode();
             
             await redisFacade.SetString("test-key", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
-            // TODO: assert we can read back the string here.
+            
+            // Verify we can read back the string
+            var retrievedValue = await redisFacade.GetString("test-key", CancellationToken);
+            retrievedValue.Should().Be("test-value");
         }
 
         [Test]
