@@ -88,9 +88,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.SubscribeToResponseChannel(endpoint, identifier, onValueReceived, cancellationToken);
         }
 
-        public Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
+        public Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, identifier, value, cancellationToken);
+            return halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, identifier, cancellationToken);
         }
 
         public Task SetResponseMessage(Uri endpoint, Guid identifier, string responseMessage, TimeSpan ttl, CancellationToken cancellationToken)

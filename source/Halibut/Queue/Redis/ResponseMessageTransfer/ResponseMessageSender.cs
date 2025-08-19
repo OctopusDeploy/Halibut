@@ -28,7 +28,7 @@ namespace Halibut.Queue.Redis.ResponseMessageTransfer
                 await halibutRedisTransport.SetResponseMessage(endpoint, activityId, responseMessage, ttl, cts.Token);
                 
                 log.Write(EventType.Diagnostic, "Publishing response notification - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
-                await halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, activityId, responseMessage, cts.Token);
+                await halibutRedisTransport.PublishThatResponseIsAvailable(endpoint, activityId, cts.Token);
                 
                 log.Write(EventType.Diagnostic, "Successfully set response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
             }

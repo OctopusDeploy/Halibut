@@ -237,10 +237,10 @@ namespace Halibut.Queue.Redis.RedisHelpers
             }, cancellationToken);
         }
         
-        public async Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken)
+        public async Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
             var channelName = ResponseChannelName(endpoint, identifier);
-            await facade.PublishToChannel(channelName, value, cancellationToken);
+            await facade.PublishToChannel(channelName, "{}", cancellationToken);
         }
         
         // Response 

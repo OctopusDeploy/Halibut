@@ -44,7 +44,7 @@ namespace Halibut.Queue.Redis
         Task<IAsyncDisposable> SubscribeToResponseChannel(Uri endpoint, Guid identifier,
             Func<string, Task> onValueReceived,
             CancellationToken cancellationToken);
-        Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, string value, CancellationToken cancellationToken);
+        Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
         
         
         Task SetResponseMessage(Uri endpoint, Guid identifier, string responseMessage, TimeSpan ttl, CancellationToken cancellationToken);
