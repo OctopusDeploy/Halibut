@@ -48,7 +48,7 @@ namespace Halibut.Tests.Builders
     {
         public IPendingRequestQueue PendingRequestQueue { get; }
         public DisposableCollection DisposableCollection { get; }
-        
+
         public QueueHolder(IPendingRequestQueue pendingRequestQueue, DisposableCollection disposableCollection)
         {
             this.PendingRequestQueue = pendingRequestQueue;
