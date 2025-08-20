@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Halibut.Queue.Redis.RedisDataLoseDetection
+namespace Halibut.Queue.Redis.RedisDataLossDetection
 {
     public interface IWatchForRedisLosingAllItsData : IAsyncDisposable
     {

@@ -2,7 +2,7 @@
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Queue.Redis.RedisDataLoseDetection;
+using Halibut.Queue.Redis.RedisDataLossDetection;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
 using NUnit.Framework;

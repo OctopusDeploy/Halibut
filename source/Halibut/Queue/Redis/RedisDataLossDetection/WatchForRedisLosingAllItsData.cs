@@ -6,7 +6,7 @@ using Halibut.Diagnostics;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
 
-namespace Halibut.Queue.Redis.RedisDataLoseDetection
+namespace Halibut.Queue.Redis.RedisDataLossDetection
 {
     public class WatchForRedisLosingAllItsData : IWatchForRedisLosingAllItsData
     {
