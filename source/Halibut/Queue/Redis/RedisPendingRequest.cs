@@ -142,10 +142,10 @@ namespace Halibut.Queue.Redis
                             throw cancellationException;
                         }
                         
-                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received" + overrideCancellationReason()??"", request);
+                        log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received", request);
                         SetResponseNoLock(ResponseMessage.FromException(
                                 request,
-                                new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded." + overrideCancellationReason()??""),
+                                new TimeoutException("A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded."),
                                 ConnectionState.Connecting),
                             requestWasCollected: false);
                         await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
