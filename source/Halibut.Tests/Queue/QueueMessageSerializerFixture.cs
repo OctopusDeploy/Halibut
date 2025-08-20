@@ -1,7 +1,6 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -15,11 +14,10 @@ namespace Halibut.Tests.Queue
     public class QueueMessageSerializerFixture : BaseTest
     {
         [Test]
-        public void SerializeAndDeserializeMessage_ShouldRoundTrip()
+        public void SerializeAndDeserializeSimpleStringMessage_ShouldRoundTrip()
         {
             // Arrange
-            var sut = new QueueMessageSerializerBuilder()
-                .Build();
+            var sut = new QueueMessageSerializerBuilder().Build();
 
             const string testMessage = "Hello, Queue!";
 
@@ -34,11 +32,10 @@ namespace Halibut.Tests.Queue
         }
         
         [Test]
-        public void SerializeAndDeserializeMessage_ShouldRoundTrip_RequestMessage()
+        public void SerializeAndDeserializeRequestMessage_ShouldRoundTrip_RequestMessage()
         {
             // Arrange
-            var sut = new QueueMessageSerializerBuilder()
-                .Build();
+            var sut = new QueueMessageSerializerBuilder().Build();
 
             var request = new RequestMessage()
             {
@@ -61,7 +58,7 @@ namespace Halibut.Tests.Queue
         }
         
         [Test]
-        public void SerializeAndDeserializeMessageWithDataStream_ShouldRoundTrip_RequestMessage()
+        public void SerializeAndDeserializeRequestMessageWithDataStream_ShouldRoundTrip_RequestMessage()
         {
             var typeRegistry = new TypeRegistry();
             typeRegistry.Register(typeof(IHaveTypeWithDataStreamsService));
@@ -95,7 +92,18 @@ namespace Halibut.Tests.Queue
             var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<RequestMessage>(json);
 
             // Assert
-            //deserializedMessage.Should().BeEquivalentTo(request);
+            // Manually check each field of the deserializedMessage matches the request
+            deserializedMessage.Id.Should().Be(request.Id);
+            deserializedMessage.ActivityId.Should().Be(request.ActivityId);
+            deserializedMessage.Destination.BaseUri.Should().Be(request.Destination.BaseUri);
+            deserializedMessage.ServiceName.Should().Be(request.ServiceName);
+            deserializedMessage.MethodName.Should().Be(request.MethodName);
+            
+            // Check Params array structure (DataStreams are replaced with placeholders during serialization)
+            deserializedMessage.Params.Should().HaveCount(request.Params.Length);
+            deserializedMessage.Params[0].Should().Be(request.Params[0]); // First param is a simple string
+            // Note: Params[1] and Params[2] contain DataStreams which get replaced during serialization
+            
             deserializedDataStreams.Count.Should().Be(2);
         }
 

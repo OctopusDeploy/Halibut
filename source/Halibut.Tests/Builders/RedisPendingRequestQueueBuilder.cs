@@ -62,7 +62,7 @@ namespace Halibut.Tests.Builders
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
-            var queue = new RedisPendingRequestQueue(endpoint, new NeverLosingDataWatchForRedisLosingAllItsData(), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits);
+            var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits);
             
 #pragma warning disable VSTHRD002
             queue.WaitUntilQueueIsSubscribedToReceiveMessages().GetAwaiter().GetResult();
