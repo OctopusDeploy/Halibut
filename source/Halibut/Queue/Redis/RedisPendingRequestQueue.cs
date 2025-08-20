@@ -9,7 +9,7 @@ using Halibut.Queue.Redis.Cancellation;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.NodeHeartBeat;
-using Halibut.Queue.Redis.RedisDataLoseDetection;
+using Halibut.Queue.Redis.RedisDataLossDetection;
 using Halibut.Queue.Redis.ResponseMessageTransfer;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;

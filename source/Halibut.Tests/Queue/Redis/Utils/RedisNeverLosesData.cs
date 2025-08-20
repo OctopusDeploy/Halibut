@@ -4,7 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.Redis;
-using Halibut.Queue.Redis.RedisDataLoseDetection;
+using Halibut.Queue.Redis.RedisDataLossDetection;
 
 namespace Halibut.Tests.Queue.Redis.Utils
 {
