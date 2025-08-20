@@ -18,7 +18,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
         {
             return new MessageSerialiserAndDataStreamStorageThatThrowsOnPrepareRequest(messageSerialiserAndDataStreamStorage, exception);
         }
-}
+    }
 
     class MessageSerialiserAndDataStreamStorageWithVirtualMethods : IMessageSerialiserAndDataStreamStorage
     {
