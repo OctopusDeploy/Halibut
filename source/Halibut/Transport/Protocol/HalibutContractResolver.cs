@@ -12,6 +12,8 @@ namespace Halibut.Transport.Protocol
         
         public override JsonContract ResolveContract(Type type)
         {
+            // Halibut supports sub classing of DataStream, over the wire we will send only the
+            // DataStream itself.
             if (typeof(DataStream).IsAssignableFrom(type))
             {
                 var contract = base.ResolveContract(typeof(DataStream));
