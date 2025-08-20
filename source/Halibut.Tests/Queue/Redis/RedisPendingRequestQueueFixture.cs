@@ -384,7 +384,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, redisTransport, CreateMessageSerialiserAndDataStreamStorage(), new HalibutTimeoutsAndLimits());
             await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
-            queue.DelayBetweenHeartBeatsForRequestSender = TimeSpan.FromSeconds(1);
+            queue.RequestSenderNodeHeartBeatRate = TimeSpan.FromSeconds(1);
 
             // Act
             var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
@@ -424,7 +424,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, redisTransport, CreateMessageSerialiserAndDataStreamStorage(), new HalibutTimeoutsAndLimits());
             await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
-            queue.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
+            queue.RequestReceiverNodeHeartBeatRate = TimeSpan.FromSeconds(1);
 
             // Act
             var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
@@ -519,7 +519,7 @@ namespace Halibut.Tests.Queue.Redis
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, new HalibutRedisTransport(redisFacade), messageReaderWriter, new HalibutTimeoutsAndLimits());
             // We are testing that we don't expect heart beats before the request is collected.
-            node1Sender.RequestReceivingNodeIsOfflineHeartBeatTimeout = TimeSpan.FromSeconds(1);
+            node1Sender.RequestReceiverNodeHeartBeatTimeout = TimeSpan.FromSeconds(1);
             await node1Sender.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
@@ -591,10 +591,10 @@ namespace Halibut.Tests.Queue.Redis
             await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             // Lower this to complete the test sooner.
-            node1Sender.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
-            node2Receiver.DelayBetweenHeartBeatsForRequestProcessor = TimeSpan.FromSeconds(1);
-            node1Sender.RequestReceivingNodeIsOfflineHeartBeatTimeout = TimeSpan.FromSeconds(10);
-            node2Receiver.RequestReceivingNodeIsOfflineHeartBeatTimeout = TimeSpan.FromSeconds(10);
+            node1Sender.RequestReceiverNodeHeartBeatRate = TimeSpan.FromSeconds(1);
+            node2Receiver.RequestReceiverNodeHeartBeatRate = TimeSpan.FromSeconds(1);
+            node1Sender.RequestReceiverNodeHeartBeatTimeout = TimeSpan.FromSeconds(10);
+            node2Receiver.RequestReceiverNodeHeartBeatTimeout = TimeSpan.FromSeconds(10);
 
             // Act
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
@@ -642,10 +642,10 @@ namespace Halibut.Tests.Queue.Redis
             var node2Receiver = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, new HalibutRedisTransport(stableRedisConnection), messageReaderWriter, halibutTimeoutAndLimits);
             await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
 
-            node1Sender.DelayBetweenHeartBeatsForRequestSender = TimeSpan.FromSeconds(1);
-            node2Receiver.DelayBetweenHeartBeatsForRequestSender = TimeSpan.FromSeconds(1);
-            node1Sender.NodeIsOfflineHeartBeatTimeoutForRequestSender = TimeSpan.FromSeconds(10);
-            node2Receiver.NodeIsOfflineHeartBeatTimeoutForRequestSender = TimeSpan.FromSeconds(10);
+            node1Sender.RequestSenderNodeHeartBeatRate = TimeSpan.FromSeconds(1);
+            node2Receiver.RequestSenderNodeHeartBeatRate = TimeSpan.FromSeconds(1);
+            node1Sender.RequestSenderNodeHeartBeatTimeout = TimeSpan.FromSeconds(10);
+            node2Receiver.RequestSenderNodeHeartBeatTimeout = TimeSpan.FromSeconds(10);
             node1Sender.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromSeconds(1);
             node2Receiver.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromSeconds(1);
 

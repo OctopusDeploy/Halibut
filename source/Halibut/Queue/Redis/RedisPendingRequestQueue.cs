@@ -31,12 +31,39 @@ namespace Halibut.Queue.Redis
         readonly CancelOnDisposeCancellationToken queueCts = new ();
         internal ConcurrentDictionary<Guid, WatcherAndDisposables> DisposablesForInFlightRequests = new();
         
-        // TODO: this needs to be used in all public methods.
         readonly CancellationToken queueToken;
         
+        // Used for testing.
         int numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection = 0;
 
-        Task<IAsyncDisposable> PulseChannelSubDisposer { get; }
+        Task<IAsyncDisposable> RequestMessageAvailablePulseChannelSubscriberDisposer { get; }
+        
+        public bool IsEmpty => Count == 0;
+        public int Count => numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection;
+
+        // The timespan is more generous for the sender going offline, since if it does go offline,
+        // under some cases the request completing is advantageous. That node needs to
+        // re-do the entire RPC for idempotent RPCs this might mean that the task required is already done.
+        internal TimeSpan RequestSenderNodeHeartBeatTimeout { get; set; }  = TimeSpan.FromSeconds(90);
+        
+        // How often the Request Sender sends a heart beat.
+        internal TimeSpan RequestSenderNodeHeartBeatRate { get; set; }  = TimeSpan.FromSeconds(15);
+        
+        /// <summary>
+        /// The amount of time since the last heart beat from the node sending the request to Tentacle
+        /// before the node is assumed to be offline.
+        ///
+        /// Setting this too high means things above the RPC might not have time to retry.
+        /// </summary>
+        public TimeSpan RequestReceiverNodeHeartBeatTimeout { get; set; } = TimeSpan.FromSeconds(60);
+        
+        // How often the Request Receiver node sends a heart beat.
+        internal TimeSpan RequestReceiverNodeHeartBeatRate { get; set; }  = TimeSpan.FromSeconds(15);
+        
+        // How long the response message can live in redis.
+        internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(20);
+        
+        internal TimeSpan TimeBetweenCheckingIfRequestWasCollected { get; set; } = TimeSpan.FromSeconds(30);
         
         public RedisPendingRequestQueue(
             Uri endpoint, 
@@ -54,25 +81,14 @@ namespace Halibut.Queue.Redis
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.queueToken = queueCts.Token;
             
-            // TODO: can we unsub if no tentacle is asking for a work for an extended period of time?
-            // and also NOT sub if the queue is being created to send work. 
-            // The advice is many channels with few subscribers is better than a single channel with many subscribers.
-            // If we end up with too many channels, we could shared the channels based on modulo of the hash of the endpoint,
-            // which means we might have only 1000 channels and num_tentacles/1000 subscribers to each channel. For 300K tentacles.
-            PulseChannelSubDisposer = Task.Run(async () => await this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set(), queueToken));
+            // Ideally we would only subscribe subscribers are using this queue.
+            RequestMessageAvailablePulseChannelSubscriberDisposer = Task.Run(async () => await this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set(), queueToken));
         }
 
-        internal async Task WaitUntilQueueIsSubscribedToReceiveMessages() => await PulseChannelSubDisposer;
-        
-        public async ValueTask DisposeAsync()
-        {
-            await Try.IgnoringError(async () => await queueCts.DisposeAsync());
-            await Try.IgnoringError(async () => await (await PulseChannelSubDisposer).DisposeAsync());
-        }
+        internal async Task WaitUntilQueueIsSubscribedToReceiveMessages() => await RequestMessageAvailablePulseChannelSubscriberDisposer;
 
-        private async Task<CancellationToken> DataLossCancellationToken(CancellationToken? cancellationToken)
+        async Task<CancellationToken> DataLossCancellationToken(CancellationToken? cancellationToken)
         {
-            // TODO this must throw something that can be retried.
             await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, cancellationToken ?? CancellationToken.None);
             return await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), cts.Token);
         }
@@ -127,7 +143,7 @@ namespace Halibut.Queue.Redis
             var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(request, pending));
             try
             {
-                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, DelayBetweenHeartBeatsForRequestSender);
+                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, RequestSenderNodeHeartBeatRate);
                 // Make the request available before we tell people it is available.
                 try
                 {
@@ -218,8 +234,6 @@ namespace Halibut.Queue.Redis
                     }
                 }));
             }
-
-            
         }
 
         
@@ -247,7 +261,7 @@ namespace Halibut.Queue.Redis
                 halibutRedisTransport,
                 TimeBetweenCheckingIfRequestWasCollected,
                 log,
-                RequestReceivingNodeIsOfflineHeartBeatTimeout,
+                RequestReceiverNodeHeartBeatTimeout,
                 cancellationToken);
         }
 
@@ -286,10 +300,6 @@ namespace Halibut.Queue.Redis
             }
             return false;
         }
-
-        
-
-        const string ResponseMessageSubscriptionName = "ResponseMessage";
         
         async Task<ResponseMessage?> WaitForResponse(
             PollAndSubscribeToResponse pollAndSubscribeToResponse,
@@ -324,32 +334,6 @@ namespace Halibut.Queue.Redis
             }
             
         }
-
-        public bool IsEmpty => Count == 0;
-        public int Count => numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection;
-
-        // The timespan is more generous for the sender going offline, since if it does go offline,
-        // since under some cases the request completing is advantageous. That node needs to
-        // re-do the entire RPC for idempotent RPCs this might mean that the task required is already done.
-        internal TimeSpan NodeIsOfflineHeartBeatTimeoutForRequestSender { get; set; }  = TimeSpan.FromSeconds(90);
-        
-        internal TimeSpan DelayBetweenHeartBeatsForRequestSender { get; set; }  = TimeSpan.FromSeconds(15);
-        
-        /// <summary>
-        /// The amount of time since the last heart beat from the node sending the request to Tentacle
-        /// before the node is assumed to be offline.
-        ///
-        /// Setting this too high means things above the RPC might not have time to retry.
-        /// </summary>
-        public TimeSpan RequestReceivingNodeIsOfflineHeartBeatTimeout { get; set; } = TimeSpan.FromSeconds(60);
-        
-        internal TimeSpan DelayBetweenHeartBeatsForRequestProcessor { get; set; }  = TimeSpan.FromSeconds(15);
-        
-        internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(20);
-        
-        internal TimeSpan TimeBetweenCheckingIfRequestWasCollected { get; set; } = TimeSpan.FromSeconds(30);
-        
-        
         
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
         {
@@ -367,8 +351,8 @@ namespace Halibut.Queue.Redis
                 // In that case we will just time out because of the lack of heart beats.
                 var dataLossCT = await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), queueToken);
                 
-                disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, DelayBetweenHeartBeatsForRequestProcessor));
-                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, NodeIsOfflineHeartBeatTimeoutForRequestSender, log);
+                disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, RequestReceiverNodeHeartBeatRate));
+                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, log);
                 disposables.AddAsyncDisposable(watcher);
                 
                 var cts = new CancelOnDisposeCancellationToken(watcher.RequestProcessingCancellationToken, dataLossCT);
@@ -405,6 +389,7 @@ namespace Halibut.Queue.Redis
         }
 
         public const string RequestAbandonedMessage = "The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.";
+        
         public async Task ApplyResponse(ResponseMessage response, Guid requestActivityId)
         {
             log.Write(EventType.MessageExchange, "Applying response for request {0}", requestActivityId);
@@ -527,7 +512,11 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        
+        public async ValueTask DisposeAsync()
+        {
+            await Try.IgnoringError(async () => await queueCts.DisposeAsync());
+            await Try.IgnoringError(async () => await (await RequestMessageAvailablePulseChannelSubscriberDisposer).DisposeAsync());
+        }
 
         public void Dispose()
         {
