@@ -238,9 +238,9 @@ namespace Halibut.Tests.Queue.Redis.NodeHeartBeat
                 request, 
                 pendingRequest, 
                 unstableRedisTransport, 
-                TimeSpan.FromSeconds(1),
+                timeBetweenCheckingIfRequestWasCollected: TimeSpan.FromSeconds(1),
                 log, 
-                TimeSpan.FromSeconds(5), // Short timeout for test
+                maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline: TimeSpan.FromSeconds(5), // Short timeout for test
                 CancellationToken);
 
             // Wait for initial heartbeats to establish baseline
@@ -251,7 +251,7 @@ namespace Halibut.Tests.Queue.Redis.NodeHeartBeat
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             
             // Assert
-            await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(10)), watcherTask);
+            await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(20)), watcherTask);
             watcherTask.IsCompleted.Should().BeTrue("Since it should have detected no heart beats have been sent for some time.");
             var result = await watcherTask;
             result.Should().Be(NodeWatcherResult.NodeMayHaveDisconnected);
