@@ -12,7 +12,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
     /// Test implementation of IWatchForRedisLosingAllItsData that returns CancellationToken.None
     /// to indicate no data loss detection is active during testing.
     /// </summary>
-    public class NeverLosingDataWatchForRedisLosingAllItsData : IWatchForRedisLosingAllItsData
+    public class RedisNeverLosesData : IWatchForRedisLosingAllItsData
     {
         public Task<CancellationToken> GetTokenForDataLossDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
         {
