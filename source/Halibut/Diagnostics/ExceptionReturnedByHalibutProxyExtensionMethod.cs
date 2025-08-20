@@ -30,7 +30,7 @@ namespace Halibut.Diagnostics
         {
             if (exception is RedisDataLoseHalibutClientException 
                 || exception is RedisQueueShutdownClientException
-                || exception is CouldNotGetDataLoseTokenInTimeHalibutClientException
+                || exception is CouldNotGetDataLossTokenInTimeHalibutClientException
                 || exception is ErrorWhilePreparingRequestForQueueHalibutClientException
                 || exception is ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueue)
             {

@@ -87,7 +87,7 @@ namespace Halibut.Queue.Redis
             catch (Exception ex)
             {
                 if (requestCancellationToken.IsCancellationRequested) throw RedisPendingRequest.CreateExceptionForRequestWasCancelledBeforeCollected(request, log);
-                throw new CouldNotGetDataLoseTokenInTimeHalibutClientException("Unable to reconnect to redis to get data loss detection CT", ex);
+                throw new CouldNotGetDataLossTokenInTimeHalibutClientException("Unable to reconnect to redis to get data loss detection CT", ex);
             }
 
             Exception? CancellationReason()
