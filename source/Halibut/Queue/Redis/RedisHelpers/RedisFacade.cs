@@ -145,7 +145,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         
         public async Task<IAsyncDisposable> SubscribeToChannel(string channelName, Func<ChannelMessage, Task> onMessage, CancellationToken cancellationToken)
         {
-            channelName = "channel:" + keyPrefix + ":" + channelName;
+            channelName = ToPrefixedChannelName(channelName);
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -183,10 +183,15 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 }
             }
         }
+
+        string ToPrefixedChannelName(string channelName)
+        {
+            return "channel:" + keyPrefix + ":" + channelName;
+        }
         
         public async Task PublishToChannel(string channelName, string payload, CancellationToken cancellationToken)
         {
-            channelName = "channel:" + keyPrefix + ":" + channelName;
+            channelName = ToPrefixedChannelName(channelName);
             await ExecuteWithRetry(async () =>
             {
                 var subscriber = Connection.GetSubscriber();
@@ -196,41 +201,41 @@ namespace Halibut.Queue.Redis.RedisHelpers
         
         public async Task SetInHash(string key, string field, string payload, TimeSpan ttl, CancellationToken cancellationToken)
         {
-            key = "hash:" + keyPrefix + ":" + key;
+            var hashKey = ToHashKey(key);
             
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                await database.HashSetAsync(key, new RedisValue(field), new RedisValue(payload));
+                await database.HashSetAsync(hashKey, new RedisValue(field), new RedisValue(payload));
             }, cancellationToken);
 
-            await SetTtlForKeyRaw(key, ttl, cancellationToken);
+            await SetTtlForKeyRaw(hashKey, ttl, cancellationToken);
         }
 
-        string ToHashKey(string key)
+        RedisKey ToHashKey(string key)
         {
             return "hash:" + keyPrefix + ":" + key;
         }
         
         public async Task<bool> HashContainsKey(string key, string field, CancellationToken cancellationToken)
         {
-            key = ToHashKey(key);
+            var hashKey = ToHashKey(key);
             return await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                return await database.HashExistsAsync(key, new RedisValue(field));
+                return await database.HashExistsAsync(hashKey, new RedisValue(field));
             }, cancellationToken);
         }
 
         public async Task<string?> TryGetAndDeleteFromHash(string key, string field, CancellationToken cancellationToken)
         {
-            key = ToHashKey(key);
-            
+            var hashKey = ToHashKey(key);
+
             // Retry each operation independently
             var value = await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                return await database.HashGetAsync(key, new RedisValue(field));
+                return await database.HashGetAsync(hashKey, new RedisValue(field));
             }, cancellationToken);
             
             // Retry does make this non-idempotent, what can happen is the key is deleted on redis.
@@ -241,7 +246,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var res = await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                return await database.KeyDeleteAsync(key);
+                return await database.KeyDeleteAsync(hashKey);
             }, cancellationToken);
             
             if (!res)
@@ -252,29 +257,30 @@ namespace Halibut.Queue.Redis.RedisHelpers
             return value;
         }
         
-        string ToListKey(string key)
+        RedisKey ToListKey(string key)
         {
             return "list:" + keyPrefix + ":" + key;
         }
 
         public async Task ListRightPushAsync(string key, string payload, TimeSpan ttlForAllInList, CancellationToken cancellationToken)
         {
-            key = ToListKey(key);
+            var listKey = ToListKey(key);
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                await database.ListRightPushAsync(key, payload);
+                await database.ListRightPushAsync(listKey, payload);
             }, cancellationToken);
 
-            await SetTtlForKeyRaw(key, ttlForAllInList, cancellationToken);        }
+            await SetTtlForKeyRaw(listKey, ttlForAllInList, cancellationToken);
+        }
 
         public async Task<string?> ListLeftPopAsync(string key, CancellationToken cancellationToken)
         {
-            key = ToListKey(key);
+            var listKey = ToListKey(key);
             return await ExecuteWithRetry<string?>(async () =>
             {
                 var database = Connection.GetDatabase();
-                var value = await database.ListLeftPopAsync(key);
+                var value = await database.ListLeftPopAsync(listKey);
                 if (value.IsNull)
                 {
                     return null;
@@ -284,50 +290,49 @@ namespace Halibut.Queue.Redis.RedisHelpers
             }, cancellationToken);
         }
 
-        string ToStringKey(string key)
+        RedisKey ToStringKey(string key)
         {
             return "string:" + keyPrefix + ":" + key;
         }
 
         public async Task SetString(string key, string value, TimeSpan ttl, CancellationToken cancellationToken)
         {
-            key = ToStringKey(key);
+            var stringKey = ToStringKey(key);
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                await database.StringSetAsync(key, value);
+                await database.StringSetAsync(stringKey, value);
             }, cancellationToken);
 
-            await SetTtlForKeyRaw(key, ttl, cancellationToken);
+            await SetTtlForKeyRaw(stringKey, ttl, cancellationToken);
         }
 
         public async Task SetTtlForString(string key, TimeSpan ttl, CancellationToken cancellationToken)
         {
             await SetTtlForKeyRaw(ToStringKey(key), ttl, cancellationToken);
-
         }
 
         public async Task<string?> GetString(string key, CancellationToken cancellationToken)
         {
-            key = ToStringKey(key);
+            var stringKey = ToStringKey(key);
             return await ExecuteWithRetry<string?>(async () =>
             {
                 var database = Connection.GetDatabase();
-                return await database.StringGetAsync(key);
+                return await database.StringGetAsync(stringKey);
             }, cancellationToken);
         }
         
         public async Task<bool> DeleteString(string key, CancellationToken cancellationToken)
         {
-            key = ToStringKey(key);
+            var stringKey = ToStringKey(key);
             return await ExecuteWithRetry<bool>(async () =>
             {
                 var database = Connection.GetDatabase();
-                return await database.KeyDeleteAsync(key);
+                return await database.KeyDeleteAsync(stringKey);
             }, cancellationToken);
         }
         
-        async Task SetTtlForKeyRaw(string key, TimeSpan ttl, CancellationToken cancellationToken)
+        async Task SetTtlForKeyRaw(RedisKey key, TimeSpan ttl, CancellationToken cancellationToken)
         {
             await ExecuteWithRetry(async () =>
             {

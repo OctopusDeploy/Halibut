@@ -137,13 +137,13 @@ namespace Halibut.Queue.Redis.RedisHelpers
         /// 
         /// </summary>
         /// <param name="endpoint"></param>
-        /// <param name="request"></param>
+        /// <param name="requestId"></param>
         /// <param name="onRpcCancellation">Called when the RPC has been cancelled.</param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request, Func<Task> onRpcCancellation, CancellationToken cancellationToken)
+        public async Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid requestId, Func<Task> onRpcCancellation, CancellationToken cancellationToken)
         {
-            var channelName = RequestCancelledChannelName(endpoint, request);
+            var channelName = RequestCancelledChannelName(endpoint, requestId);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? response = foo.Message;
@@ -197,12 +197,12 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         public async Task<IAsyncDisposable> SubscribeToNodeHeartBeatChannel(
             Uri endpoint, 
-            Guid request,
+            Guid requestId,
             HalibutQueueNodeSendingPulses nodeSendingPulsesType,
             Func<Task> onHeartBeat,
             CancellationToken cancellationToken)
         {
-            var channelName = NodeHeartBeatChannel(endpoint, request, nodeSendingPulsesType);
+            var channelName = NodeHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? response = foo.Message;
