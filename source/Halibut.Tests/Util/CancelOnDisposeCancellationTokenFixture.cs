@@ -110,7 +110,6 @@ namespace Halibut.Tests.Util
         public async Task AwaitTasksBeforeCTSDispose_ShouldWaitForTasksOnDispose()
         {
             // Arrange
-            var taskCompleted = false;
             var cancellationToken = new CancelOnDisposeCancellationToken();
             
             var manualResetEvent = new AsyncManualResetEvent();
@@ -124,10 +123,9 @@ namespace Halibut.Tests.Util
             
             manualResetEvent.Set();
             await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(1)), Task.Run(async () => await disposeTask));
-            await disposeTask;
 
             // Assert
-            taskCompleted.Should().BeTrue();
+            disposeTask.IsCompleted.Should().BeTrue();
         }
 
         [Test]
