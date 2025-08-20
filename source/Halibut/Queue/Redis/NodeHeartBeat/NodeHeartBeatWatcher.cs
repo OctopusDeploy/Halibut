@@ -96,7 +96,6 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                 
                 while (!watchCancellationToken.IsCancellationRequested)
                 {
-                    
                     var timeSinceLastHeartBeat = DateTimeOffset.Now - lastHeartBeat.Value;
                     if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline)
                     {
@@ -121,9 +120,14 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             }
         }
 
-        static async Task WaitForRequestToBeCollected(Uri endpoint, RequestMessage request, RedisPendingRequest redisPending, IHalibutRedisTransport halibutRedisTransport,
+        static async Task WaitForRequestToBeCollected(
+            Uri endpoint,
+            RequestMessage request,
+            RedisPendingRequest redisPending,
+            IHalibutRedisTransport halibutRedisTransport,
             TimeSpan timeBetweenCheckingIfRequestWasCollected,
-            ILog log, CancellationToken cancellationToken)
+            ILog log,
+            CancellationToken cancellationToken)
         {
             log = log.ForContext<NodeHeartBeatSender>();
             log.Write(EventType.Diagnostic, "Waiting for request {0} to be collected from queue", request.ActivityId);
@@ -133,16 +137,15 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                 try
                 {
                     // Has something else determined the request was collected?
-                    if(redisPending.HasRequestBeenMarkedAsCollected) 
+                    if (redisPending.HasRequestBeenMarkedAsCollected)
                     {
                         log.Write(EventType.Diagnostic, "Request {0} has been marked as collected", request.ActivityId);
                         return;
                     }
-                    
 
                     // Check ourselves if the request has been collected.
                     var requestIsStillOnQueue = await halibutRedisTransport.IsRequestStillOnQueue(endpoint, request.ActivityId, cancellationToken);
-                    if(!requestIsStillOnQueue) 
+                    if (!requestIsStillOnQueue)
                     {
                         log.Write(EventType.Diagnostic, "Request {0} is no longer on queue", request.ActivityId);
                         await redisPending.RequestHasBeenCollectedAndWillBeTransferred();
