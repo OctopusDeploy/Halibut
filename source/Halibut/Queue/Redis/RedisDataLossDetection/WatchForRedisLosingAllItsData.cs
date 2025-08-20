@@ -22,7 +22,7 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
         /// <summary>
         /// The amount of time between checks to check if redis has had data lose.
         /// </summary>
-        internal TimeSpan DataLoseCheckInterval { get; }
+        internal TimeSpan DataLossCheckInterval { get; }
         
         /// <summary>
         /// The TTL of the key used for data lose detection. The TTL is reset
@@ -38,9 +38,9 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
             this.redisFacade = redisFacade;
             this.log = log;
             this.SetupErrorBackoffDelay = setupDelay ?? TimeSpan.FromSeconds(1);
-            this.DataLoseCheckInterval = watchInterval ?? TimeSpan.FromSeconds(60);
+            this.DataLossCheckInterval = watchInterval ?? TimeSpan.FromSeconds(60);
             this.DataLostKeyTtl = keyTTL ?? TimeSpan.FromHours(8);
-            var _ = Task.Run(async () => await KeepWatchingForDataLose(cts.Token));
+            var _ = Task.Run(async () => await KeepWatchingForDataLoss(cts.Token));
         }
 
         private TaskCompletionSource<CancellationToken> taskCompletionSource = new TaskCompletionSource<CancellationToken>();
@@ -63,15 +63,15 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
             return await taskCompletionSource.Task.WaitAsync(cts.Token);
         }
 
-        private async Task KeepWatchingForDataLose(CancellationToken cancellationToken)
+        private async Task KeepWatchingForDataLoss(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Try.IgnoringError(async () => await WatchForDataLose(cancellationToken));
+                await Try.IgnoringError(async () => await WatchForDataLoss(cancellationToken));
             }
         }
 
-        async Task WatchForDataLose(CancellationToken cancellationToken)
+        async Task WatchForDataLoss(CancellationToken cancellationToken)
         {
             string guid = Guid.NewGuid().ToString();
             var key = "WatchForDataLose::" + guid;
@@ -115,7 +115,7 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
                 await Try.IgnoringError(async () =>
                 {
                     if (!hasSetKey) await Task.Delay(SetupErrorBackoffDelay, cancellationToken);
-                    else await Task.Delay(DataLoseCheckInterval, cancellationToken);
+                    else await Task.Delay(DataLossCheckInterval, cancellationToken);
                 });
 
             }
