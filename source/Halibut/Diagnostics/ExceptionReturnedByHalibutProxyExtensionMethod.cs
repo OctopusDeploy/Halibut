@@ -28,7 +28,7 @@ namespace Halibut.Diagnostics
 
         static bool IsRedisRetryableError(Exception exception)
         {
-            if (exception is RedisDataLoseHalibutClientException 
+            if (exception is RedisDataLossHalibutClientException
                 || exception is RedisQueueShutdownClientException
                 || exception is CouldNotGetDataLossTokenInTimeHalibutClientException
                 || exception is ErrorWhilePreparingRequestForQueueHalibutClientException

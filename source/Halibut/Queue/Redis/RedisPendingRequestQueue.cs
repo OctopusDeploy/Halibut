@@ -92,7 +92,7 @@ namespace Halibut.Queue.Redis
 
             Exception? CancellationReason()
             {
-                if (dataLoseCt.IsCancellationRequested) return new RedisDataLoseHalibutClientException($"Request {request.ActivityId} was cancelled because we detected that redis lost all of its data.");
+                if (dataLoseCt.IsCancellationRequested) return new RedisDataLossHalibutClientException($"Request {request.ActivityId} was cancelled because we detected that redis lost all of its data.");
                 if (queueToken.IsCancellationRequested) return new RedisQueueShutdownClientException($"Request {request.ActivityId} was cancelled because the queue is shutting down.");
                 return null;
             }
