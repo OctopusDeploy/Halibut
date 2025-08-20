@@ -1,7 +1,6 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
