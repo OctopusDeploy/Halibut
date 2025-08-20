@@ -53,9 +53,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.IsRequestStillOnQueue(endpoint, requestId, cancellationToken);
         }
 
-        public Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request, Func<Task> onRpcCancellation, CancellationToken cancellationToken)
+        public Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid requestId, Func<Task> onRpcCancellation, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.SubscribeToRequestCancellation(endpoint, request, onRpcCancellation, cancellationToken);
+            return halibutRedisTransport.SubscribeToRequestCancellation(endpoint, requestId, onRpcCancellation, cancellationToken);
         }
 
         public Task PublishCancellation(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
@@ -73,9 +73,9 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.IsRequestMarkedAsCancelled(endpoint, requestId, cancellationToken);
         }
 
-        public Task<IAsyncDisposable> SubscribeToNodeHeartBeatChannel(Uri endpoint, Guid request, HalibutQueueNodeSendingPulses nodeSendingPulsesType, Func<Task> onHeartBeat, CancellationToken cancellationToken)
+        public Task<IAsyncDisposable> SubscribeToNodeHeartBeatChannel(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, Func<Task> onHeartBeat, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request, nodeSendingPulsesType, onHeartBeat, cancellationToken);
+            return halibutRedisTransport.SubscribeToNodeHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType, onHeartBeat, cancellationToken);
         }
 
         public Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)

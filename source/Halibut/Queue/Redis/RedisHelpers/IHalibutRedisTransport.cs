@@ -22,7 +22,9 @@ namespace Halibut.Queue.Redis
         Task<string?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
         Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
 
-        Task<IAsyncDisposable> SubscribeToRequestCancellation(Uri endpoint, Guid request,
+        Task<IAsyncDisposable> SubscribeToRequestCancellation(
+            Uri endpoint,
+            Guid requestId,
             Func<Task> onRpcCancellation,
             CancellationToken cancellationToken);
         Task PublishCancellation(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
@@ -33,7 +35,7 @@ namespace Halibut.Queue.Redis
         
         Task<IAsyncDisposable> SubscribeToNodeHeartBeatChannel(
             Uri endpoint, 
-            Guid request,
+            Guid requestId,
             HalibutQueueNodeSendingPulses nodeSendingPulsesType,
             Func<Task> onHeartBeat,
             CancellationToken cancellationToken);
@@ -41,7 +43,9 @@ namespace Halibut.Queue.Redis
         Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken);
         
         
-        Task<IAsyncDisposable> SubscribeToResponseChannel(Uri endpoint, Guid identifier,
+        Task<IAsyncDisposable> SubscribeToResponseChannel(
+            Uri endpoint,
+            Guid identifier,
             Func<string, Task> onValueReceived,
             CancellationToken cancellationToken);
         Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
