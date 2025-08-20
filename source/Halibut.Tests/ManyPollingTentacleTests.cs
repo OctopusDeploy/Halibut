@@ -22,6 +22,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
+using Halibut.Util;
 using NUnit.Framework;
 using DisposableCollection = Halibut.Util.DisposableCollection;
 
@@ -31,15 +32,24 @@ namespace Halibut.Tests
     [RedisTest]
     public class ManyPollingTentacleTests : BaseTest
     {
+        /// <summary>
+        /// Fuzz test, to check under load the queue still works.
+        /// 
+        /// </summary>
+        /// <param name="queueTestCase"></param>
         [Test]
         [AllQueuesTestCases]
         [NonParallelizable]
-        public async Task ManyRequestToPollingTentacles_Works_AndDoesNotUseTooManyResources(PendingRequestQueueTestCase queueTestCase)
+        public async Task WhenMakingManyConcurrentRequestsToManyServices_AllRequestsCompleteSuccessfully_And(PendingRequestQueueTestCase queueTestCase)
         {
+            var numberOfPollingServices = 100;
+            int concurrency = 20;
+            int numberOfCallsToMake = Math.Min(numberOfPollingServices, 20);
+            
             var logFactory = new CachingLogFactory(new TestContextLogCreator("", LogLevel.Trace));
             var services = GetDelegateServiceFactory();
             await using var disposables = new DisposableCollection();
-            var isRedis = queueTestCase.ToString().ToLower().Contains("redis");
+            var isRedis = queueTestCase.Name == PendingRequestQueueTestCase.RedisTestCaseName;
             var log = new TestContextLogCreator("Redis", LogLevel.Fatal);
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             await using (var octopus = new HalibutRuntimeBuilder()
@@ -67,21 +77,20 @@ namespace Halibut.Tests
             {
                 var listenPort = octopus.Listen();
                 octopus.Trust(Certificates.TentacleListening.Thumbprint);
-                
-                var _ = Task.Run(async () =>
+
+                var watchSubscriberCountCts = new CancelOnDisposeCancellationToken(CancellationToken);
+                watchSubscriberCountCts.AwaitTasksBeforeCTSDispose(Task.Run(async () =>
                 {
-                    while (!CancellationToken.IsCancellationRequested)
+                    while (!watchSubscriberCountCts.Token.IsCancellationRequested)
                     {
-                        GC.Collect();
                         Logger.Information("Total subscribers: {TotalSubs}", redisFacade.TotalSubscribers);
-                        await Task.Delay(10000);
+                        await Task.Delay(1000);
                     }
-                });
+                }));
 
                 var serviceEndpoint = new ServiceEndPoint(new Uri("https://localhost:" + listenPort), Certificates.Octopus.Thumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build());
                 
-                
-                var pollEndpoints = Enumerable.Range(0, 100).Select(i => new Uri("poll://" + i + "Bob")).ToArray();
+                var pollEndpoints = Enumerable.Range(0, numberOfPollingServices).Select(i => new Uri("poll://" + i + "Bob")).ToArray();
                 
                 foreach (var pollEndpoint in pollEndpoints)
                 {
@@ -98,11 +107,9 @@ namespace Halibut.Tests
                     .ToList();
 
                 var tasks = new List<Task>();
-
-                int concurrency = 20;
-                int limit = 20;
-                int total = concurrency * Math.Min(clients.Count, limit);
-                int callsMade = 0;
+                
+                int expectedTotalNumberOfCallsToBeMade = concurrency * numberOfCallsToMake;
+                int actualCountOfCallsMade = 0;
 
                 var totalSw = Stopwatch.StartNew();
                 for (int i = 0; i < concurrency; i++)
@@ -111,15 +118,15 @@ namespace Halibut.Tests
                     {
                         var shuffle = clients.ToArray();
                         Random.Shared.Shuffle(shuffle);
-                        shuffle = shuffle.Take(limit).ToArray();
+                        shuffle = shuffle.Take(numberOfCallsToMake).ToArray();
                         foreach (var client in shuffle)
                         {
                             await client.SayHelloAsync("World");
-                            var v = Interlocked.Increment(ref callsMade);
+                            var v = Interlocked.Increment(ref actualCountOfCallsMade);
                             if (v % 5000 == 0)
                             {
                                 var timePerCall = totalSw.ElapsedMilliseconds / v;
-                                Logger.Information("Done: {CallsMade} / {Total} avg: {A}", v, total, timePerCall);
+                                Logger.Information("Done: {CallsMade} / {Total} avg: {A}", v, expectedTotalNumberOfCallsToBeMade, timePerCall);
                             }
                             
                         }
@@ -132,13 +139,14 @@ namespace Halibut.Tests
                 
                 Logger.Information("Time was {T}", totalSw.ElapsedMilliseconds);
                 
-                callsMade.Should().Be(total);
+                actualCountOfCallsMade.Should().Be(expectedTotalNumberOfCallsToBeMade);
 
                 if(isRedis)
                 {
                     redisFacade.TotalSubscribers.Should().Be(pollEndpoints.Length);
                 }
                 
+                // Check for exceptions.
                 foreach (var task in tasks)
                 {
                     await task;

@@ -1,5 +1,4 @@
-﻿
-using Halibut.Transport.Protocol;
+﻿using Halibut.Transport.Protocol;
 using System;
 using Halibut.Diagnostics;
 

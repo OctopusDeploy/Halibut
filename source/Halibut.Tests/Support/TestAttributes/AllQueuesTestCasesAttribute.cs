@@ -29,10 +29,11 @@ namespace Halibut.Tests.Support.TestAttributes
 #if NET8_0_OR_GREATER
                 if (EnsureRedisIsAvailableSetupFixture.WillRunRedisTests)
                 {
-                    factories.Add(new PendingRequestQueueTestCase("Redis", () => new RedisPendingRequestQueueBuilder()));
+                    
+                    factories.Add(new PendingRequestQueueTestCase(PendingRequestQueueTestCase.RedisTestCaseName, () => new RedisPendingRequestQueueBuilder()));
                 }
 #endif
-                factories.Add(new PendingRequestQueueTestCase("InMemory", () => new PendingRequestQueueBuilder()));
+                factories.Add(new PendingRequestQueueTestCase(PendingRequestQueueTestCase.InMemoryTestCaseName, () => new PendingRequestQueueBuilder()));
 
                 return factories;
             }
@@ -41,6 +42,11 @@ namespace Halibut.Tests.Support.TestAttributes
 
     public class PendingRequestQueueTestCase
     {
+        
+        public static string RedisTestCaseName = "Redis";
+        
+        public static string InMemoryTestCaseName = "InMemory";
+        
         public readonly string Name;
         private Func<IPendingRequestQueueBuilder> BuilderBuilder { get; }
         
