@@ -30,7 +30,6 @@ namespace Halibut.Tests
                        {
                            return new FuncPendingRequestQueueFactory(uri =>
                            {
-                               // TODO: Test the new queue here.
                                pendingRequestQueue = new PendingRequestQueueBuilder()
                                    .WithLog(logFactory.ForEndpoint(uri))
                                    .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
