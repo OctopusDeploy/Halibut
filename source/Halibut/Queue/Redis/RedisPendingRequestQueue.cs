@@ -329,10 +329,9 @@ namespace Halibut.Queue.Redis
             }
             catch (Exception ex)
             {
-                log.Write(EventType.Error, "Error deserializeing response for request {0}", activityId);
+                log.Write(EventType.Error, "Error deserializing response for request {0}", activityId);
                 return ResponseMessage.FromException(requestMessage, new Exception("Error occured when reading data from the queue", ex));
             }
-            
         }
         
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
@@ -373,13 +372,13 @@ namespace Halibut.Queue.Redis
         {
             readonly DisposableCollection disposableCollection;
             public CancellationToken RequestCancelledForAnyReasonCancellationToken { get; }
-            public WatchForRequestCancellationOrSenderDisconnect watcher { get; }
+            public WatchForRequestCancellationOrSenderDisconnect Watcher { get; }
 
             public WatcherAndDisposables(DisposableCollection disposableCollection, CancellationToken requestCancelledForAnyReasonCancellationToken, WatchForRequestCancellationOrSenderDisconnect watcher)
             {
                 this.disposableCollection = disposableCollection;
                 this.RequestCancelledForAnyReasonCancellationToken = requestCancelledForAnyReasonCancellationToken;
-                this.watcher = watcher;
+                this.Watcher = watcher;
             }
 
             public async ValueTask DisposeAsync()
@@ -416,7 +415,7 @@ namespace Halibut.Queue.Redis
                 if (watcherAndDisposables != null && watcherAndDisposables.RequestCancelledForAnyReasonCancellationToken.IsCancellationRequested)
                 {
                     // TODO: test
-                    if (!watcherAndDisposables.watcher.SenderCancelledTheRequest)
+                    if (!watcherAndDisposables.Watcher.SenderCancelledTheRequest)
                     {
                         log.Write(EventType.Diagnostic, "Response for request {0}, has been overridden with an abandon message as the request was abandoned", requestActivityId);
                         response = ResponseMessage.FromException(response, new HalibutClientException(RequestAbandonedMessage));
@@ -434,26 +433,26 @@ namespace Halibut.Queue.Redis
             }
             finally
             {
-                    log.Write(EventType.Diagnostic, "Disposing in-flight request resources for request {0}", requestActivityId);
-                    if (watcherAndDisposables != null)
-                    {
-                        await watcherAndDisposables.DisposeAsync();
-                    }
+                log.Write(EventType.Diagnostic, "Disposing in-flight request resources for request {0}", requestActivityId);
+                if (watcherAndDisposables != null)
+                {
+                    await watcherAndDisposables.DisposeAsync();
+                }
             }
-            
         }
 
         async Task<RequestMessage?> DequeueNextAsync()
         {
-            
             await using var cts = new CancelOnDisposeCancellationToken(queueToken);
             try
             {
                 hasItemsForEndpoint.Reset();
 
                 var first = await TryRemoveNextItemFromQueue(cts.Token);
-                if (first != null) return first;
-
+                if (first != null)
+                {
+                    return first;
+                }
 
                 await Task.WhenAny(
                     hasItemsForEndpoint.WaitAsync(cts.Token),
