@@ -339,7 +339,7 @@ namespace Halibut.Tests.Queue.Redis
             // Sigh it can go down either of these paths!
             var e = await AssertException.Throws<Exception>(queueAndWaitAsync);
             e.And.IsRetryableError().Should().Be(HalibutRetryableErrorType.IsRetryable);
-            e.And.Should().BeOfType<RedisDataLoseHalibutClientException>();
+            e.And.Should().BeOfType<RedisDataLossHalibutClientException>();
         }
 
         [Test]

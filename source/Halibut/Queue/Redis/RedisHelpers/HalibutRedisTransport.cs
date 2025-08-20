@@ -72,7 +72,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         // Pending Request Message
         // Stores the Pending Request Message for collection by the service.
         // Note that the service will first need to TryPopNextRequestGuid to be able to
-        // fins the RequestMessage.
+        // find the RequestMessage.
 
         static string RequestMessageKey(Uri endpoint, Guid requestId)
         {
@@ -158,7 +158,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         }
         
         // Request cancellation
-        // Since pub/sub does not have guaranteed deliver, cancellation can also
+        // Since pub/sub does not have guaranteed delivery, cancellation can also
         // be detected by the RequestCancelledMarker. The node processing the request
         // will poll for the existence of the RequestCancelledMarker, and if found
         // it knows the RPC has been cancelled.
@@ -187,7 +187,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         // Another channel for the `RequestProcessorNode` where the node that is sending the
         // request to the service (e.g. Tentacle) is publishing heart beats, for the duration
         // of processing the request.
-        // Both nodes are able to monitor to the heart beat channel of the other node to detect
+        // Both nodes are able to monitor the heart beat channel of the other node to detect
         // if the other node has gone offline.
         
         static string NodeHeartBeatChannel(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType)
@@ -220,12 +220,14 @@ namespace Halibut.Queue.Redis.RedisHelpers
         // The node processing the request `RequestProcessorNode` will publish to this channel
         // once the Response is available.
         
-        string ResponseChannelName(Uri endpoint, Guid identifier)
+        static string ResponseChannelName(Uri endpoint, Guid identifier)
         {
             return $"{Namespace}::ResponseAvailableChannel::{endpoint}::{identifier}";
         }
         
-        public async Task<IAsyncDisposable> SubscribeToResponseChannel(Uri endpoint, Guid identifier,
+        public async Task<IAsyncDisposable> SubscribeToResponseChannel(
+            Uri endpoint,
+            Guid identifier,
             Func<string, Task> onValueReceived,
             CancellationToken cancellationToken)
         {
@@ -246,7 +248,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         // Response 
         // This is where the Response is placed in Redis.
         
-        string ResponseMessageKey(Uri endpoint, Guid identifier)
+        static string ResponseMessageKey(Uri endpoint, Guid identifier)
         {
             return $"{Namespace}::Response::{endpoint}::{identifier}";
         }
