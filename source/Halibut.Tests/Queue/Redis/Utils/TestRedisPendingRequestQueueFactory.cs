@@ -18,9 +18,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
         public IPendingRequestQueue CreateQueue(Uri endpoint)
         {
             var queue = (RedisPendingRequestQueue) redisPendingRequestQueueFactory.CreateQueue(endpoint);
-#pragma warning disable VSTHRD002
             queue.WaitUntilQueueIsSubscribedToReceiveMessages().GetAwaiter().GetResult();
-#pragma warning restore VSTHRD002
             return queue;
         }
     }

@@ -2,7 +2,6 @@
 #if NET8_0_OR_GREATER
 using System;
 using Halibut.Logging;
-using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.RedisHelpers;
@@ -60,13 +59,9 @@ namespace Halibut.Tests.Builders
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
-            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
-
             var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits);
             
-#pragma warning disable VSTHRD002
             queue.WaitUntilQueueIsSubscribedToReceiveMessages().GetAwaiter().GetResult();
-#pragma warning restore VSTHRD002
             
             return new QueueHolder(queue, disposableCollection);
         }
