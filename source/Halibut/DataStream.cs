@@ -190,11 +190,12 @@ namespace Halibut
         }
 
         /// <summary>
-        /// Be carefull 
+        /// Used to re-hydrate deserialised data streams, which won't have a writer set. 
         /// </summary>
         /// <param name="writerAsync"></param>
         public void SetWriterAsync(Func<Stream, CancellationToken, Task> writerAsync)
         {
+            if(this.writerAsync != null) throw new InvalidOperationException("Cannot set writer more than once.");
             this.writerAsync = writerAsync;
         }
     }

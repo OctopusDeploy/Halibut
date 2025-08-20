@@ -165,29 +165,26 @@ namespace Halibut.Tests
     public class AsyncEchoServiceWithDelay : IAsyncEchoService
     {
         
-        public async Task<int> LongRunningOperationAsync(CancellationToken cancellationToken)
+        public Task<int> LongRunningOperationAsync(CancellationToken cancellationToken)
         {
-            await Task.Delay(10000, cancellationToken);
-            return 16;
+            throw new NotImplementedException();
         }
 
         public async Task<string> SayHelloAsync(string name, CancellationToken cancellationToken)
         {
             
-            await Task.Delay(0);
+            await Task.Delay(10, cancellationToken);
             return name + "...";
         }
 
-        public async Task<bool> CrashAsync(CancellationToken cancellationToken)
+        public Task<bool> CrashAsync(CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
-            throw new DivideByZeroException();
+            throw new NotImplementedException();
         }
 
-        public async Task<int> CountBytesAsync(DataStream dataStream, CancellationToken cancellationToken)
+        public Task<int> CountBytesAsync(DataStream dataStream, CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
-            throw new Exception();
+            throw new NotImplementedException();
         }
     }
 }
