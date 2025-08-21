@@ -134,6 +134,15 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             
             while (!cancellationToken.IsCancellationRequested)
             {
+                await Try.IgnoringError(async () =>
+                {
+                    await Task.WhenAny(
+                        Task.Delay(timeBetweenCheckingIfRequestWasCollected, cancellationToken),
+                        redisPending.WaitForRequestToBeMarkedAsCollected(cancellationToken));
+                });
+                
+                if(cancellationToken.IsCancellationRequested) break;
+                
                 try
                 {
                     // Has something else determined the request was collected?
@@ -156,13 +165,6 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                 {
                     log.WriteException(EventType.Diagnostic, "Error checking if request {0} is still on queue", ex, request.ActivityId);
                 }
-                
-                await Try.IgnoringError(async () =>
-                {
-                    await Task.WhenAny(
-                        Task.Delay(timeBetweenCheckingIfRequestWasCollected, cancellationToken),
-                        redisPending.WaitForRequestToBeMarkedAsCollected(cancellationToken));
-                });
             }
             
             log.Write(EventType.Diagnostic, "Stopped waiting for request {0} to be collected (cancelled)", request.ActivityId);
