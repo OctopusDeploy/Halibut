@@ -10,6 +10,7 @@ using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Queue.Redis.RedisDataLossDetection;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Queue.Redis.ResponseMessageTransfer;
 using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
@@ -125,10 +126,10 @@ namespace Halibut.Queue.Redis
             
             using var pending = new RedisPendingRequest(request, log);
 
-            string payload;
+            RedisStoredMessage messageToStore;
             try
             {
-                payload = await messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
+                messageToStore = await messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -147,7 +148,7 @@ namespace Halibut.Queue.Redis
                 // Make the request available before we tell people it is available.
                 try
                 {
-                    await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, payload, request.Destination.PollingRequestQueueTimeout, cancellationToken);
+                    await halibutRedisTransport.PutRequest(endpoint, request.ActivityId, messageToStore, request.Destination.PollingRequestQueueTimeout, cancellationToken);
                     await halibutRedisTransport.PushRequestGuidOnToQueue(endpoint, request.ActivityId, cancellationToken);
                     await halibutRedisTransport.PulseRequestPushedToEndpoint(endpoint, cancellationToken);
                 }
@@ -283,8 +284,8 @@ namespace Halibut.Queue.Redis
                 }
                 await using var cts = new CancelOnDisposeCancellationToken();
                 cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
-                var requestJson = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
-                if (requestJson != null)
+                var requestMessage = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
+                if (requestMessage != null)
                 {
                     log.Write(EventType.Diagnostic, "Successfully removed request {0} from queue - request was never collected by a processing node", request.ActivityId);
                     return true;
@@ -309,7 +310,7 @@ namespace Halibut.Queue.Redis
         {
             await Task.Yield();
             var activityId = requestMessage.ActivityId;
-            string responseJson;
+            RedisStoredMessage responseJson;
             try
             {
                 log.Write(EventType.Diagnostic, "Waiting for response for request {0}", activityId);
@@ -421,9 +422,9 @@ namespace Halibut.Queue.Redis
                         response = ResponseMessage.FromException(response, new HalibutClientException(RequestAbandonedMessage));
                     }
                 }
-                var responseJson = await messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
+                var responseStoredMessage = await messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
-                await ResponseMessageSender.SendResponse(halibutRedisTransport, endpoint, requestActivityId, responseJson, TTLOfResponseMessage, log);
+                await ResponseMessageSender.SendResponse(halibutRedisTransport, endpoint, requestActivityId, responseStoredMessage, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
             }
             catch (Exception ex)

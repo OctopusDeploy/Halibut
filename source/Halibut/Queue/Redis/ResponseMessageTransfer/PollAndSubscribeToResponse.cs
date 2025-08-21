@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
 using Nito.AsyncEx;
 
@@ -18,12 +19,12 @@ namespace Halibut.Queue.Redis.ResponseMessageTransfer
         readonly Guid activityId;
         readonly LinearBackoffStrategy pollBackoffStrategy;
 
-        readonly TaskCompletionSource<string> responseJsonCompletionSource = new();
+        readonly TaskCompletionSource<RedisStoredMessage> responseJsonCompletionSource = new();
         
         /// <summary>
         /// An awaitable task that returns when the response is available.
         /// </summary>
-        public Task<string> ResponseJson => responseJsonCompletionSource.Task;
+        public Task<RedisStoredMessage> ResponseJson => responseJsonCompletionSource.Task;
 
         public PollAndSubscribeToResponse(Uri endpoint, Guid activityId, IHalibutRedisTransport halibutRedisTransport, ILog log)
         {
@@ -145,7 +146,7 @@ namespace Halibut.Queue.Redis.ResponseMessageTransfer
             }
         }
 
-        void TrySetResponse(string value)
+        void TrySetResponse(RedisStoredMessage value)
         {
             try
             {

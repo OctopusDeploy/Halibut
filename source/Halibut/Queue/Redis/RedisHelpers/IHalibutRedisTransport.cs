@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.Redis.NodeHeartBeat;
+using Halibut.Queue.Redis.RedisHelpers;
 using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis
@@ -18,8 +19,8 @@ namespace Halibut.Queue.Redis
         Task<Guid?> TryPopNextRequestGuid(Uri endpoint, CancellationToken cancellationToken);
         
         
-        Task PutRequest(Uri endpoint, Guid requestId, string requestMessage, TimeSpan requestPickupTimeout, CancellationToken cancellationToken);
-        Task<string?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
+        Task PutRequest(Uri endpoint, Guid requestId, RedisStoredMessage requestMessage, TimeSpan requestPickupTimeout, CancellationToken cancellationToken);
+        Task<RedisStoredMessage?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
         Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken);
 
         Task<IAsyncDisposable> SubscribeToRequestCancellation(
@@ -51,9 +52,9 @@ namespace Halibut.Queue.Redis
         Task PublishThatResponseIsAvailable(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
         
         
-        Task SetResponseMessage(Uri endpoint, Guid identifier, string responseMessage, TimeSpan ttl, CancellationToken cancellationToken);
-        Task<string?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
-        Task<bool> DeleteResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
+        Task SetResponseMessage(Uri endpoint, Guid identifier, RedisStoredMessage responseMessage, TimeSpan ttl, CancellationToken cancellationToken);
+        Task<RedisStoredMessage?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
+        Task DeleteResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken);
     }
 }
 #endif

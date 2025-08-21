@@ -217,7 +217,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisDataLoseDetector = new CancellableDataLossWatchForRedisLosingAllItsData();
 
             var redisTransport = Substitute.ForPartsOf<HalibutRedisTransportWithVirtuals>(new HalibutRedisTransport(redisFacade));
-            redisTransport.Configure().PutRequest(Arg.Any<Uri>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            redisTransport.Configure().PutRequest(Arg.Any<Uri>(), Arg.Any<Guid>(), Arg.Any<RedisStoredMessage>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
                 .Returns(async callInfo =>
                 {
                     await redisDataLoseDetector.DataLossHasOccured();

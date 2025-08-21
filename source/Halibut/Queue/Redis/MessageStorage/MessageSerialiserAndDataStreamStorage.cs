@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.QueuedDataStreams;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.Queue.Redis.MessageStorage
@@ -17,31 +18,31 @@ namespace Halibut.Queue.Redis.MessageStorage
             this.storeDataStreamsForDistributedQueues = storeDataStreamsForDistributedQueues;
         }
 
-        public async Task<string> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public async Task<RedisStoredMessage> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var (payload, dataStreams) = queueMessageSerializer.WriteMessage(request);
-            await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
-            return payload;
+            var (jsonRequestMessage, dataStreams) = queueMessageSerializer.WriteMessage(request);
+            var dataStreamMetaData = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
+            return new RedisStoredMessage(jsonRequestMessage, dataStreamMetaData);
         }
         
-        public async Task<RequestMessage> ReadRequest(string jsonRequest, CancellationToken cancellationToken)
+        public async Task<RequestMessage> ReadRequest(RedisStoredMessage storedMessage, CancellationToken cancellationToken)
         {
-            var (request, dataStreams) = queueMessageSerializer.ReadMessage<RequestMessage>(jsonRequest);
-            await storeDataStreamsForDistributedQueues.ReHydrateDataStreams(dataStreams, cancellationToken);
+            var (request, dataStreams) = queueMessageSerializer.ReadMessage<RequestMessage>(storedMessage.Message);
+            await storeDataStreamsForDistributedQueues.ReHydrateDataStreams(storedMessage.DataStreamMetadata, dataStreams, cancellationToken);
             return request;
         }
         
-        public async Task<string> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
+        public async Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
         {
-            var (payload, dataStreams) = queueMessageSerializer.WriteMessage(response);
-            await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
-            return payload;
+            var (jsonResponseMessage, dataStreams) = queueMessageSerializer.WriteMessage(response);
+            var dataStreamMetaData = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
+            return new RedisStoredMessage(jsonResponseMessage, dataStreamMetaData);
         }
         
-        public async Task<ResponseMessage> ReadResponse(string jsonResponse, CancellationToken cancellationToken)
+        public async Task<ResponseMessage> ReadResponse(RedisStoredMessage storedMessage, CancellationToken cancellationToken)
         {
-            var (response, dataStreams) = queueMessageSerializer.ReadMessage<ResponseMessage>(jsonResponse);
-            await storeDataStreamsForDistributedQueues.ReHydrateDataStreams(dataStreams, cancellationToken);
+            var (response, dataStreams) = queueMessageSerializer.ReadMessage<ResponseMessage>(storedMessage.Message);
+            await storeDataStreamsForDistributedQueues.ReHydrateDataStreams(storedMessage.DataStreamMetadata, dataStreams, cancellationToken);
             return response;
         }
     }

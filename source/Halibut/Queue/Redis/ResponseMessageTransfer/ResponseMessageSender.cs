@@ -2,6 +2,7 @@
 using System;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
 
 namespace Halibut.Queue.Redis.ResponseMessageTransfer
@@ -12,7 +13,7 @@ namespace Halibut.Queue.Redis.ResponseMessageTransfer
             IHalibutRedisTransport halibutRedisTransport, 
             Uri endpoint, 
             Guid activityId,
-            string responseMessage,
+            RedisStoredMessage responseMessage,
             TimeSpan ttl,
             ILog log)
         {
