@@ -59,7 +59,13 @@ At a high level steps the Redis Queue goes through to execute an RPC are:
  9. Client B sends the request to the tentacle, waits for the response, and calls `ApplyResponse()` with the ResponseMessage.
  10. Client B writes the `ResponseMessage` to redis in a hash using the `GUID` as the key.
  11. Client B Pulses the `ResponseMessage channel` keyed by the RequestMessage `GUID`, that a Response is available.
- 12. Client A receives a pulse on the `ResponseMessage channel` and so knows a Response is available, it reads the response from Redis and returns from the `QueueAndWait()` method.    
+ 12. Client A receives a pulse on the `ResponseMessage channel` and so knows a Response is available, it reads the response from Redis and returns from the `QueueAndWait()` method.
+
+### Flow Diagram
+
+The following sequence diagram illustrates this high-level flow:
+
+![Redis Queue Solution Flow](images/redis-queue-flow-diagram.svg)
 
 ## Cancellation support.
 
