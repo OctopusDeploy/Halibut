@@ -33,7 +33,7 @@ namespace Halibut.Queue
             using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
             {
                 var streamCapturingSerializer = createStreamCapturingSerializer();
-                streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<object> { Message = message! });
+                streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
                 dataStreams = streamCapturingSerializer.DataStreams;
             }
 
