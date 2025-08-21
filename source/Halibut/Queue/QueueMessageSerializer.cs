@@ -53,17 +53,17 @@ namespace Halibut.Queue
 
             return (result.Message, streamCapturingSerializer.DataStreams);
         }
-
-        // This class is copied from `MessageSerializer`, since this class tries to
-        // use what it can from that battle tested class. That class had this envelope,
-        // and so shall we, since we don't want to learn the hard way why it was like that :D.
+        
         // By making this a generic type, each message specifies the exact type it sends/expects
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
         class MessageEnvelope<T>
         {
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-            public T Message { get; set; }
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+            public MessageEnvelope(T message)
+            {
+                Message = message;
+            }
+
+            public T Message { get; private set; }
         }
     }
 }
