@@ -91,7 +91,8 @@ namespace Halibut
             var queue = queues.GetOrAdd(target, u => createdQueue = queueFactory.CreateQueue(target));
             if (createdQueue != null && !ReferenceEquals(createdQueue, queue))
             {
-                createdQueue.DisposeAsync();
+                // We created a queue that won't be used, dispose of it in the background.
+                Task.Run(() => Try.IgnoringError(() => createdQueue.DisposeAsync()));
             }
 
             return queue;

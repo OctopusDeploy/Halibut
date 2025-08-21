@@ -39,6 +39,10 @@ namespace Halibut.Diagnostics
 
             if (exception is HalibutClientException)
             {
+                // Sometimes the error occurs NOT on the node executing the RPC, e.g. the Node talking to tentacle.
+                // In that case we need to look at error messages, since we won't have the original exception type.
+                // We will also need to check error messages any time Error Responses are raised rather than a raw exception
+                // bubbling out of the QueueAndWait method.
                 if (exception.Message.Contains("The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.")) return true;
                 if (exception.Message.Contains("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.")) return true;
                 if (exception.Message.Contains("Error occured when reading data from the queue")) return true;

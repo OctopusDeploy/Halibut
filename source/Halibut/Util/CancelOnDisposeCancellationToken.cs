@@ -1,5 +1,8 @@
 #nullable enable
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,7 +34,7 @@ namespace Halibut.Util
         readonly CancellationTokenSource cancellationTokenSource;
         bool disposed;
 
-        readonly AwaitAllAndIgnoreException awaitAllAndIgnoreException = new();
+        readonly ConcurrentBag<Task> tasks = new();
         
         public CancelOnDisposeCancellationToken(params CancellationToken[] token)
             : this(CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -61,7 +64,7 @@ namespace Halibut.Util
             await Try.IgnoringError(async () => await CancelAsync());
 
             // Wait for any tasks that are using the token, before disposal
-            await Try.IgnoringError(async () => await awaitAllAndIgnoreException.DisposeAsync());
+            await Task.WhenAll(tasks.Select(t => Try.IgnoringError(() => t)));
 
             Try.IgnoringError(() => cancellationTokenSource.Dispose());
         }
@@ -88,7 +91,10 @@ namespace Halibut.Util
         /// <param name="tasksUsingToken"></param>
         public void AwaitTasksBeforeCTSDispose(params Task[] tasksUsingToken)
         {
-            awaitAllAndIgnoreException.AddTasks(tasksUsingToken);
+            foreach (var task in tasksUsingToken)
+            {
+                tasks.Add(task);
+            }
         }
     }
 }

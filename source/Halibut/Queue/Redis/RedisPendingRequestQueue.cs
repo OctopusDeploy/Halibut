@@ -95,10 +95,10 @@ namespace Halibut.Queue.Redis
 
         public async Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken requestCancellationToken)
         {
-            CancellationToken dataLoseCt;
+            CancellationToken dataLossCt;
             try
             {
-                dataLoseCt = await DataLossCancellationToken(requestCancellationToken);
+                dataLossCt = await DataLossCancellationToken(requestCancellationToken);
             }
             catch (Exception ex)
             {
@@ -108,7 +108,7 @@ namespace Halibut.Queue.Redis
 
             Exception? CancellationReason()
             {
-                if (dataLoseCt.IsCancellationRequested) return new RedisDataLossHalibutClientException($"Request {request.ActivityId} was cancelled because we detected that redis lost all of its data.");
+                if (dataLossCt.IsCancellationRequested) return new RedisDataLossHalibutClientException($"Request {request.ActivityId} was cancelled because we detected that redis lost all of its data.");
                 if (queueToken.IsCancellationRequested) return new RedisQueueShutdownClientException($"Request {request.ActivityId} was cancelled because the queue is shutting down.");
                 return null;
             }
@@ -120,7 +120,7 @@ namespace Halibut.Queue.Redis
             }
             
 
-            await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, requestCancellationToken, dataLoseCt);
+            await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, requestCancellationToken, dataLossCt);
             var cancellationToken = cts.Token;
             
             using var pending = new RedisPendingRequest(request, log);
@@ -140,7 +140,7 @@ namespace Halibut.Queue.Redis
             // Start listening for a response to the request, we don't want to miss the response.
             await using var pollAndSubscribeToResponse = new PollAndSubscribeToResponse(endpoint, request.ActivityId, halibutRedisTransport, log);
 
-            var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(request, pending));
+            var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(pending));
             try
             {
                 await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, RequestSenderNodeHeartBeatRate);
@@ -265,8 +265,9 @@ namespace Halibut.Queue.Redis
                 cancellationToken);
         }
 
-        async Task<bool> TryClearRequestFromQueue(RequestMessage request, RedisPendingRequest redisPending)
-        { 
+        async Task<bool> TryClearRequestFromQueue(RedisPendingRequest redisPending)
+        {
+            var request = redisPending.Request;
             log.Write(EventType.Diagnostic, "Attempting to clear request {0} from queue for endpoint {1}", request.ActivityId, endpoint);
             
             // The time the message is allowed to sit on the queue for has elapsed.
@@ -414,7 +415,6 @@ namespace Halibut.Queue.Redis
 
                 if (watcherAndDisposables != null && watcherAndDisposables.RequestCancelledForAnyReasonCancellationToken.IsCancellationRequested)
                 {
-                    // TODO: test
                     if (!watcherAndDisposables.Watcher.SenderCancelledTheRequest)
                     {
                         log.Write(EventType.Diagnostic, "Response for request {0}, has been overridden with an abandon message as the request was abandoned", requestActivityId);

@@ -74,7 +74,7 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
         async Task WatchForDataLoss(CancellationToken cancellationToken)
         {
             string guid = Guid.NewGuid().ToString();
-            var key = "WatchForDataLose::" + guid;
+            var key = "WatchForDataLoss::" + guid;
             var hasSetKey = false;
             
             log.Write(EventType.Diagnostic, "Starting Redis data loss monitoring with key {0}", key);
