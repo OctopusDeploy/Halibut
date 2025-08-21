@@ -48,6 +48,10 @@ namespace Halibut.Queue.Redis.Cancellation
                 // Also poll to see if the request is cancelled since we can miss the publication.
                 while (!token.IsCancellationRequested)
                 {
+                    await Try.IgnoringError(async () => await Task.Delay(TimeSpan.FromSeconds(60), token));
+                    
+                    if(token.IsCancellationRequested) return;
+                    
                     try
                     {
                         if (await halibutRedisTransport.IsRequestMarkedAsCancelled(endpoint, requestActivityId, token))
@@ -61,7 +65,6 @@ namespace Halibut.Queue.Redis.Cancellation
                     {
                         log.Write(EventType.Diagnostic, "Error while polling for request cancellation - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, requestActivityId, ex.Message);
                     }
-                    await Try.IgnoringError(async () => await Task.Delay(TimeSpan.FromSeconds(60), token));
                 }
                 
                 log.Write(EventType.Diagnostic, "Exiting watch loop for request cancellation - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
