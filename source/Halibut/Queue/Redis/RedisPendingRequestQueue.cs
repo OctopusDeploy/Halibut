@@ -81,7 +81,7 @@ namespace Halibut.Queue.Redis
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.queueToken = queueCts.Token;
             
-            // Ideally we would only subscribe subscribers are using this queue.
+            // Ideally we would only subscribe subscribers which are using this queue.
             RequestMessageAvailablePulseChannelSubscriberDisposer = Task.Run(async () => await this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set(), queueToken));
         }
 
