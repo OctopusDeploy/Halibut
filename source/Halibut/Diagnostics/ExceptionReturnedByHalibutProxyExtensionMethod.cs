@@ -32,7 +32,7 @@ namespace Halibut.Diagnostics
                 || exception is RedisQueueShutdownClientException
                 || exception is CouldNotGetDataLossTokenInTimeHalibutClientException
                 || exception is ErrorWhilePreparingRequestForQueueHalibutClientException
-                || exception is ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueue)
+                || exception is ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueueHalibutClientException)
             {
                 return true;
             }

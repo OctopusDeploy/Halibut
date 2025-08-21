@@ -154,7 +154,7 @@ namespace Halibut.Queue.Redis
                 catch (Exception ex)
                 {
                     throw CreateCancellationExceptionIfCancelled() 
-                          ?? new ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueue($"Request {request.ActivityId} failed since an error occured inserting the data into the queue", ex);
+                          ?? new ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueueHalibutClientException($"Request {request.ActivityId} failed since an error occured inserting the data into the queue", ex);
                 }
 
                 Interlocked.Increment(ref numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection);
