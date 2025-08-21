@@ -64,11 +64,22 @@ namespace Halibut.Queue.Redis.ResponseMessageTransfer
                 
                 log.Write(EventType.Diagnostic, "Starting polling loop for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
                 
+                // We actually want a delay before we actually have a go at polling for the response, since it makes
+                // no sense to send a Request and expect an immediate reply.
+                pollBackoffStrategy.Try();
+                
                 // Also poll to see if the value is set since we can miss the publication.
                 while (!token.IsCancellationRequested)
                 {
+                    var delay = pollBackoffStrategy.GetSleepPeriod();
+                    log.Write(EventType.Diagnostic, "Waiting {0} seconds before next poll for response - Endpoint: {1}, ActivityId: {2}", delay.TotalSeconds, endpoint, activityId);
+                    await Try.IgnoringError(async () => await Task.Delay(delay, token));
+                    if(token.IsCancellationRequested) break;
+                    log.Write(EventType.Diagnostic, "Done waiting going to poll for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
+                    
                     try
                     {
+                        pollBackoffStrategy.Try();
                         if (await TryGetResponseFromRedis("polling", token))
                         {
                             break;
@@ -78,12 +89,6 @@ namespace Halibut.Queue.Redis.ResponseMessageTransfer
                     {
                         log.Write(EventType.Diagnostic, "Error while polling for response - Endpoint: {0}, ActivityId: {1}, Error: {2}", endpoint, activityId, ex.Message);
                     }
-                    
-                    pollBackoffStrategy.Try();
-                    var delay = pollBackoffStrategy.GetSleepPeriod();
-                    log.Write(EventType.Diagnostic, "Waiting {0} seconds before next poll for response - Endpoint: {1}, ActivityId: {2}", delay.TotalSeconds, endpoint, activityId);
-                    await Try.IgnoringError(async () => await Task.Delay(delay, token));
-                    log.Write(EventType.Diagnostic, "Done waiting going around the loop response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
                 }
                 
                 log.Write(EventType.Diagnostic, "Exiting watch loop for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
