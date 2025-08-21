@@ -21,8 +21,6 @@ docker run -v `pwd`/redis-conf:/usr/local/etc/redis -p 6379:6379 --name redis -d
 
 Note that Redis is configured to have no backup, everything must be in memory. The queue makes this assumption to function.
 
-## TODO design.
-
 ### Context: Pending Request Queue.
 
 Halibut turns an RPC call into a RequestMessage which is placed into the Pending Request Queue. This is done by calling: `ResponseMessage QueueAndWait(RequestMessage)`. Which is a blocking call that queues the RequestMessage and waits for the ResponseMessage before returning.
