@@ -60,8 +60,15 @@ At a high level steps the Redis Queue goes through to execute an RPC are:
  10. Client B Pulses the `ResponseMessage channel` keyed by the RequestMessage `GUID`, that a Response is available.
  11. Client A receives a pulse on the `ResponseMessage channel` and so knows a Response is available, it reads the response from Redis and returns from the `QueueAndWait()` method.    
 
+## Cancellation support.
 
-## Pub/Sub and Poll.
+The Redis PRQ supports cancellation, even for collected requests. This is done by the RequestReceiverNode (ie the node connected to the Service) subscribing to the request cancellation channel and polling for request cancellation.
+
+## Dealing with minor network interruptions to Redis.
+
+All operations to redis are retried for up to 30s, this allows connections to Redis to go down briefly with impacting RPCs even for non idempotent RPCs.
+
+###  Pub/Sub and Poll.
 
 Since Pub/Sub does not have guaranteed delivery in Redis, in any place that we do Pub/Sub we must also have a form of polling. For example:
  - When Dequeuing work not only are we subscribed but when `Dequeue()` is called we also check for work on the queue anyway. (Note that Dequeue() returns every 30s if there is no work, and thus we have polling.)
@@ -89,6 +96,14 @@ Since redis can lose data at anytime the queue is able to detect data lose and c
 
 Message serialisation is provided by re-using the serialiser halibut uses for transferring requests/responses over the wire.
 
+## Cleanup of old data in Redis.
+
+All values in redis have a TTL applied, so redis will automatically clean up old keys if Halibut does not.
+
+Request message TTL: request pickup timeout + 2 minutes.
+Response TTL: default 20 minutes.
+Pending GUID list TTL: 1 day.
+Heartbeat rates: 15s; timeouts: sender 90s, processor 60s.
 
 ### DataStream
 
