@@ -21,7 +21,10 @@ docker run -v `pwd`/redis-conf:/usr/local/etc/redis -p 6379:6379 --name redis -d
 
 Note that Redis is configured to have no backup, everything must be in memory. The queue makes this assumption to function.
 
-### Context: Pending Request Queue.
+# Design
+
+## Background
+### What is a Pending Request Queue.
 
 Halibut turns an RPC call into a RequestMessage which is placed into the Pending Request Queue. This is done by calling: `ResponseMessage QueueAndWait(RequestMessage)`. Which is a blocking call that queues the RequestMessage and waits for the ResponseMessage before returning.
 
@@ -29,7 +32,7 @@ Polling service, e.g, Tentacle, call into the `Dequeue` method of the queue to g
 
 The Redis Pending Request Queue solves the problem where we have multiple clients, that wish to execute RPC calls to a single Polling Service that is connected to exactly one client. For example Client A makes an RPC call, but the service is connected to Client B. The Redis Pending Request Queue is what moves the `RequestMessage` from Client A to Client B to be sent to the service.
 
-### Context: Redis
+### Redis specific details relevant to the queue.
 
 First we need to understand just a little about Redis and how we are using redis:
  - Redis may have data lose.
@@ -47,16 +50,16 @@ At a high level steps the Redis Queue goes through to execute an RPC are:
 
  1. Client B subscribes to the unique "RequestMessage Pulse Channel", as the client service is connected to it. The channel is keyed by the polling client id e.g. "poll://123"
  2. Client A executes an RPC and so Calls QueueAndWait with a RequestMessage. Each RequestMessage has a unique `GUID`.
- 2.1 Client A subscribes to the `ResponseMessage channel` keyed by `GUID` to be notified when a response is available.
- 3. Client A serialises the message and places the message into a hash in Redis keyed by the RequestMessage `Guid`.
- 4. Client A Adds the `GUID` to the polling clients unique Redis list (aka queue). The key is the polling client id e.g. "poll://123".
- 5. Client A pulses the polling clients unique "RequestMessage Pulse Channel", to alert to it that it has work to do.
- 6. Client B receives the Pulse message and tries to dequeue a `GUID` from the polling clients unique Redis list (aka queue).
- 7. Client B now has the `GUID` of the request and so atomically gets and deletes the RequestMessage from the Redis Hash using that guid.
- 8. Client B sends the request to the tentacle, waits for the response, and calls `ApplyResponse()` with the ResponseMessage.
- 9. Client B writes the `ResponseMessage` to redis in a hash using the `GUID` as the key.
- 10. Client B Pulses the `ResponseMessage channel` keyed by the RequestMessage `GUID`, that a Response is available.
- 11. Client A receives a pulse on the `ResponseMessage channel` and so knows a Response is available, it reads the response from Redis and returns from the `QueueAndWait()` method.    
+ 3. Client A subscribes to the `ResponseMessage channel` keyed by `GUID` to be notified when a response is available.
+ 4. Client A serialises the message and places the message into a hash in Redis keyed by the RequestMessage `Guid`.
+ 5. Client A Adds the `GUID` to the polling clients unique Redis list (aka queue). The key is the polling client id e.g. "poll://123".
+ 6. Client A pulses the polling clients unique "RequestMessage Pulse Channel", to alert to it that it has work to do.
+ 7. Client B receives the Pulse message and tries to dequeue a `GUID` from the polling clients unique Redis list (aka queue).
+ 8. Client B now has the `GUID` of the request and so atomically gets and deletes the RequestMessage from the Redis Hash using that guid.
+ 9. Client B sends the request to the tentacle, waits for the response, and calls `ApplyResponse()` with the ResponseMessage.
+ 10. Client B writes the `ResponseMessage` to redis in a hash using the `GUID` as the key.
+ 11. Client B Pulses the `ResponseMessage channel` keyed by the RequestMessage `GUID`, that a Response is available.
+ 12. Client A receives a pulse on the `ResponseMessage channel` and so knows a Response is available, it reads the response from Redis and returns from the `QueueAndWait()` method.    
 
 ## Cancellation support.
 
