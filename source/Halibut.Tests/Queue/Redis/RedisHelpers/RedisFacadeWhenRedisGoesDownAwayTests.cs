@@ -1,6 +1,7 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Queue.Redis.Utils;
@@ -74,11 +75,13 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             portForwarder.ReturnToNormalMode();
             
             // Assert
-            await redisFacade.SetInHash("test-hash", "test-field", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash("test-hash", new Dictionary<string, string>(){{"test-field", "test-value"}}, TimeSpan.FromMinutes(1), CancellationToken);
             
             // Check that the value was set.
-            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash("test-hash", "test-field", CancellationToken);
-            retrievedValue.Should().Be("test-value");
+            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash("test-hash", new []{"test-field"}, CancellationToken);
+            retrievedValue.Should().NotBeNull();
+            retrievedValue.Should().ContainKey("test-field");
+            retrievedValue!["test-field"].Should().Be("test-value");
         }
 
         [Test]
@@ -89,13 +92,15 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder);
 
             // Establish connection and set up test data
-            await redisFacade.SetInHash("test-hash", "test-field", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash("test-hash", new Dictionary<string, string>(){{"test-field", "test-value"}}, TimeSpan.FromMinutes(1), CancellationToken);
 
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
             
-            var result = await redisFacade.TryGetAndDeleteFromHash("test-hash", "test-field", CancellationToken);
-            result.Should().Be("test-value");
+            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash("test-hash", new []{"test-field"}, CancellationToken);
+            retrievedValue.Should().NotBeNull();
+            retrievedValue.Should().ContainKey("test-field");
+            retrievedValue!["test-field"].Should().Be("test-value");
         }
 
         [Test]
@@ -180,7 +185,7 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder);
 
             // Establish connection and set up test data
-            await redisFacade.SetInHash("test-hash", "test-field", "test-value", TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash("test-hash", new Dictionary<string, string>(){{"test-field", "test-value"}}, TimeSpan.FromMinutes(1), CancellationToken);
 
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             portForwarder.ReturnToNormalMode();
