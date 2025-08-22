@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.QueuedDataStreams;
+using Halibut.Transport.Streams;
 using Newtonsoft.Json;
 
 namespace Halibut.Tests.Queue.Redis.Utils
@@ -55,7 +56,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 var bytes = Convert.FromBase64String(base64Data);
                 dataStream.SetWriterAsync(async (stream, ct) =>
                 {
-                    await stream.WriteAsync(bytes, ct);
+                    await stream.WriteByteArrayAsync(bytes, ct);
                 });
             }
         }
