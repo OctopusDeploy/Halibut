@@ -10,7 +10,7 @@ namespace Halibut
 {
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
-        readonly Func<Stream, CancellationToken, Task> writerAsync;
+        protected Func<Stream, CancellationToken, Task> writerAsync;
         IDataStreamReceiver? receiver;
 
         [JsonConstructor]
@@ -179,9 +179,24 @@ namespace Halibut
             await writerAsync(stream, cancellationToken);
         }
 
+        public async Task WriteData(Stream stream, CancellationToken cancellationToken)
+        {
+            await writerAsync(stream, cancellationToken);
+        }
+
         void IDataStreamInternal.Received(IDataStreamReceiver attachedReceiver)
         {
             receiver = attachedReceiver;
+        }
+
+        /// <summary>
+        /// Used to re-hydrate deserialised data streams, which won't have a writer set. 
+        /// </summary>
+        /// <param name="writerAsync"></param>
+        public void SetWriterAsync(Func<Stream, CancellationToken, Task> writerAsync)
+        {
+            if(this.writerAsync != null) throw new InvalidOperationException("Cannot set writer more than once.");
+            this.writerAsync = writerAsync;
         }
     }
 }

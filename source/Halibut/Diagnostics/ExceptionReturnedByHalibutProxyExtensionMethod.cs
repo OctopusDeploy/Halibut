@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using Halibut.Exceptions;
+using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.Exceptions;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy.Exceptions;
@@ -13,19 +15,48 @@ namespace Halibut.Diagnostics
         public static HalibutRetryableErrorType IsRetryableError(this Exception exception)
         {
             var halibutNetworkExceptionType = IsNetworkError(exception);
-            switch (halibutNetworkExceptionType)
-            {
-                case HalibutNetworkExceptionType.IsNetworkError:
-                    return HalibutRetryableErrorType.IsRetryable;
-                case HalibutNetworkExceptionType.UnknownError:
-                    return HalibutRetryableErrorType.UnknownError;
-                case HalibutNetworkExceptionType.NotANetworkError:
-                    return HalibutRetryableErrorType.NotRetryable;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            
+            // All network errors can be retried.
+            if (halibutNetworkExceptionType == HalibutNetworkExceptionType.IsNetworkError) return HalibutRetryableErrorType.IsRetryable;
+            
+            if (IsRedisRetryableError(exception)) return HalibutRetryableErrorType.IsRetryable;
+            
+            if (halibutNetworkExceptionType == HalibutNetworkExceptionType.NotANetworkError) return HalibutRetryableErrorType.NotRetryable;
+            
+            return HalibutRetryableErrorType.UnknownError;
         }
-        
+
+        static bool IsRedisRetryableError(Exception exception)
+        {
+            if (exception is RedisDataLossHalibutClientException
+                || exception is RedisQueueShutdownClientException
+                || exception is CouldNotGetDataLossTokenInTimeHalibutClientException
+                || exception is ErrorWhilePreparingRequestForQueueHalibutClientException
+                || exception is ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueueHalibutClientException)
+            {
+                return true;
+            }
+
+            if (exception is HalibutClientException)
+            {
+                // Sometimes the error occurs NOT on the node executing the RPC, e.g. the Node talking to tentacle.
+                // In that case we need to look at error messages, since we won't have the original exception type.
+                // We will also need to check error messages any time Error Responses are raised rather than a raw exception
+                // bubbling out of the QueueAndWait method.
+                if (exception.Message.Contains("The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.")) return true;
+                if (exception.Message.Contains("The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline.")) return true;
+                if (exception.Message.Contains("Error occured when reading data from the queue")) return true;
+                if (exception.Message.Contains("error occured when preparing request for queue")) return true;
+            }
+            
+            if (exception is HalibutClientException && exception.InnerException != null)
+            {
+                return IsRedisRetryableError(exception.InnerException);
+            }
+
+            return false;
+        }
+
         /// <summary>
         ///     Classifies the exception thrown from a halibut proxy as a network error or not.
         ///     In some cases it is not possible to tell if the exception is a network error.

@@ -15,5 +15,21 @@ namespace Halibut.Tests.Support
 
             return value!.Equals("true");
         }
+
+        public static int? TryReadIntFromEnvironmentVariable(string envVar)
+        {
+            var value = Environment.GetEnvironmentVariable(envVar);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (int.TryParse(value, out var result))
+            {
+                return result;
+            }
+
+            return null;
+        }
     }
 }

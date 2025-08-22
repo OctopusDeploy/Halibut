@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
+using Halibut.Queue;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support.Logging;
 using Halibut.Transport.Observability;
@@ -24,7 +25,7 @@ namespace Halibut.Tests.Support
         IRpcObserver? clientRpcObserver;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
-        Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
+        Func<QueueMessageSerializer, ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
         Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
         ProxyDetails? proxyDetails;
         LogLevel halibutLogLevel = LogLevel.Trace;
@@ -115,7 +116,7 @@ namespace Halibut.Tests.Support
             return this;
         }
         
-        public LatestClientBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
+        public LatestClientBuilder WithPendingRequestQueueFactory(Func<QueueMessageSerializer, ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
             this.pendingRequestQueueFactory = pendingRequestQueueFactory;
             return this;
@@ -184,12 +185,11 @@ namespace Halibut.Tests.Support
         {
             var octopusLogFactory = BuildClientLogger();
 
-            var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
 
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory)
-                .WithPendingRequestQueueFactory(factory)
+                .WithPendingRequestQueueFactory(serializer => CreatePendingRequestQueueFactory(serializer, octopusLogFactory))
                 .WithTrustProvider(clientTrustProvider!)
                 .WithStreamFactoryIfNotNull(clientStreamFactory)
                 .WithControlMessageObserverIfNotNull(controlMessageObserver)
@@ -248,11 +248,11 @@ namespace Halibut.Tests.Support
             return new LatestClient(client, clientListeningUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
         }
 
-        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
+        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(QueueMessageSerializer queueMessageSerializer, ILogFactory octopusLogFactory)
         {
             if (pendingRequestQueueFactory != null)
             {
-                return pendingRequestQueueFactory(octopusLogFactory);
+                return pendingRequestQueueFactory(queueMessageSerializer, octopusLogFactory);
             }
 
             var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory, halibutTimeoutsAndLimits);

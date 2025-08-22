@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
+using Halibut.Queue;
 using Halibut.ServiceModel;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
@@ -13,7 +14,7 @@ namespace Halibut
     public class HalibutRuntimeBuilder
     {
         ILogFactory? logFactory;
-        IPendingRequestQueueFactory? queueFactory;
+        Func<QueueMessageSerializer, IPendingRequestQueueFactory>? queueFactoryFactory;
         X509Certificate2? serverCertificate;
         IServiceFactory? serviceFactory;
         ITrustProvider? trustProvider;
@@ -66,7 +67,13 @@ namespace Halibut
 
         public HalibutRuntimeBuilder WithPendingRequestQueueFactory(IPendingRequestQueueFactory queueFactory)
         {
-            this.queueFactory = queueFactory;
+            this.queueFactoryFactory = _ => queueFactory;
+            return this;
+        }
+        
+        public HalibutRuntimeBuilder WithPendingRequestQueueFactory(Func<QueueMessageSerializer, IPendingRequestQueueFactory> queueFactory)
+        {
+            this.queueFactoryFactory = queueFactory;
             return this;
         }
 
@@ -133,7 +140,7 @@ namespace Halibut
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
             var logFactory = this.logFactory ?? new LogFactory();
-            var queueFactory = this.queueFactory ?? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
+            
             var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
 
             //use either the supplied type registry, or configure the default one
@@ -153,6 +160,11 @@ namespace Halibut
             var builder = new MessageSerializerBuilder(logFactory);
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
+            
+            var queueMessageSerializer = new QueueMessageSerializer(messageSerializer.CreateStreamCapturingSerializer);
+            var queueFactory = this.queueFactoryFactory?.Invoke(queueMessageSerializer)
+                               ?? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
+            
             var streamFactory = this.streamFactory ?? new StreamFactory();
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
