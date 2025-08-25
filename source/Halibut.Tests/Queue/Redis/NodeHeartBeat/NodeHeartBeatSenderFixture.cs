@@ -258,6 +258,60 @@ namespace Halibut.Tests.Queue.Redis.NodeHeartBeat
         }
         
         [Test]
+        public async Task WhenWatchingTheNodeProcessingTheRequestIsStillAlive_AndTheWatchersConnectionToRedisGoesDownBeforeItStartsWatching_ShouldReturnProcessingNodeIsLikelyDisconnected()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            var requestActivityId = Guid.NewGuid();
+            var log = new TestContextLogCreator("NodeHeartBeat", LogLevel.Trace).CreateNewForPrefix("");
+            var guid = Guid.NewGuid();
+            
+            using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);
+            await using var unstableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(portForwarder, guid);
+            await using var stableRedisFacade = RedisFacadeBuilder.CreateRedisFacade(prefix: guid);
+            
+            var unstableRedisTransport = new HalibutRedisTransport(unstableRedisFacade);
+            var stableRedisTransport = new HalibutRedisTransport(stableRedisFacade);
+            
+            var request = new RequestMessageBuilder(endpoint.ToString())
+                .WithActivityId(requestActivityId)
+                .Build();
+            var pendingRequest = new RedisPendingRequest(request, log);
+            
+            // Start heartbeat sender
+            await using var heartBeatSender = new NodeHeartBeatSender(
+                endpoint,
+                requestActivityId,
+                stableRedisTransport,
+                log,
+                HalibutQueueNodeSendingPulses.RequestProcessorNode,
+                defaultDelayBetweenPulses: TimeSpan.FromMilliseconds(200));
+            
+            // Mark request as collected so watcher proceeds to monitoring phase
+            await pendingRequest.RequestHasBeenCollectedAndWillBeTransferred();
+            
+            // Act - Kill the connection to stop heartbeats
+            portForwarder.EnterKillNewAndExistingConnectionsMode();
+            
+            // Start the watcher
+            var watcherTask = NodeHeartBeatWatcher.WatchThatNodeProcessingTheRequestIsStillAlive(
+                endpoint, 
+                request, 
+                pendingRequest, 
+                unstableRedisTransport, 
+                timeBetweenCheckingIfRequestWasCollected: TimeSpan.FromSeconds(1),
+                log, 
+                maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline: TimeSpan.FromSeconds(5), // Short timeout for test
+                CancellationToken);
+            
+            // Assert
+            await Task.WhenAny(Task.Delay(TimeSpan.FromSeconds(20)), watcherTask);
+            watcherTask.IsCompleted.Should().BeTrue("Since it should have detected no heart beats have been sent for some time.");
+            var result = await watcherTask;
+            result.Should().Be(NodeWatcherResult.NodeMayHaveDisconnected);
+        }
+        
+        [Test]
         public async Task WhenWatchingTheNodeProcessingTheRequestIsStillAlive_AndTheConnectionIsSuperStableAndWeStopWatching_WatcherShouldReturnNodeStayedConnected()
         {
             // Arrange

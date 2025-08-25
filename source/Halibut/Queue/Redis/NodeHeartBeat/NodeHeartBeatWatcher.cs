@@ -20,7 +20,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
-            log = log.ForContext<NodeHeartBeatSender>();
+            log = log.ForContext<NodeHeartBeatWatcher>();
             // Once the pending's CT has been cancelled we no longer care to keep observing
             await using var cts = new CancelOnDisposeCancellationToken(watchCancellationToken, redisPending.PendingRequestCancellationToken);
             try
@@ -77,13 +77,10 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             
             try
             {
-                // Currently we will wait until the CT is cancelled to get a subscription,
-                // instead it would be better if we either
-                // - waited for maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline to get a subscription.
-                // - SubscribeToNodeHeartBeatChannel returned immediately even if it doesn't have a subscription, and instead it works
-                // in the background to get one unless the CT is triggered, or it is disposed.
-                // https://whimsical.com/subscribetonodeheartbeatchannel-should-timeout-while-waiting-to--NFWwmPkE7pTBdm2PRUC8Tf
-                await using var subscription = await halibutRedisTransport.SubscribeToNodeHeartBeatChannel(
+                var subscriptionCts = new CancelOnDisposeCancellationToken(watchCancellationToken);
+                
+                // Subscribe
+                var subscriptionTask =  Task.Run(async () => await halibutRedisTransport.SubscribeToNodeHeartBeatChannel(
                     endpoint,
                     requestActivityId,
                     watchingForPulsesFrom, 
@@ -92,7 +89,8 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                         await Task.CompletedTask;
                         lastHeartBeat = DateTimeOffset.Now;
                         log.Write(EventType.Diagnostic, "Received heartbeat from {0} node, request {1}", watchingForPulsesFrom, requestActivityId);
-                    }, watchCancellationToken);
+                    }, subscriptionCts.Token));
+                subscriptionCts.AwaitTasksBeforeCTSDispose(subscriptionTask);
                 
                 while (!watchCancellationToken.IsCancellationRequested)
                 {
@@ -102,7 +100,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                         log.Write(EventType.Diagnostic, "{0} node appears disconnected, request {1}, last heartbeat was {2} seconds ago", watchingForPulsesFrom, requestActivityId, timeSinceLastHeartBeat.TotalSeconds);
                         return NodeWatcherResult.NodeMayHaveDisconnected;
                     }
-
+                    
                     var timeToWait = TimeSpanHelper.Min(
                         TimeSpan.FromSeconds(30), 
                         maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline - timeSinceLastHeartBeat + TimeSpan.FromSeconds(1)); 
