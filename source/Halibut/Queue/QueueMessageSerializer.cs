@@ -24,25 +24,28 @@ namespace Halibut.Queue
             this.createStreamCapturingSerializer = createStreamCapturingSerializer;
         }
 
-        public (string, IReadOnlyList<DataStream>) WriteMessage<T>(T message)
+        public (byte[], IReadOnlyList<DataStream>) WriteMessage<T>(T message)
         {
             IReadOnlyList<DataStream> dataStreams;
             
-            var sb = new StringBuilder();
-            using var sw = new StringWriter(sb, CultureInfo.InvariantCulture);
-            using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
-            {
-                var streamCapturingSerializer = createStreamCapturingSerializer();
-                streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
-                dataStreams = streamCapturingSerializer.DataStreams;
+            using var ms = new MemoryStream();
+            using (var sw = new StreamWriter(ms, Encoding.UTF8, leaveOpen: true)){
+                using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
+                {
+                    var streamCapturingSerializer = createStreamCapturingSerializer();
+                    streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
+                    dataStreams = streamCapturingSerializer.DataStreams;
+                }
             }
 
-            return (sb.ToString(), dataStreams);
+            return (ms.ToArray(), dataStreams);
         }
 
-        public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(string json)
+        public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(byte[] json)
         {
-            using var reader = new JsonTextReader(new StringReader(json));
+            using var ms = new MemoryStream(json);
+            using var sr = new StreamReader(ms, Encoding.UTF8);
+            using var reader = new JsonTextReader(sr);
             var streamCapturingSerializer = createStreamCapturingSerializer();
             var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
             

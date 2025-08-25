@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Util;
-using Microsoft.VisualBasic.CompilerServices;
 using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis.RedisHelpers
@@ -280,25 +279,25 @@ namespace Halibut.Queue.Redis.RedisHelpers
         static readonly string DataStreamMetaDataField = "DataStreamMetaDataField";
         static string[] RedisStoredMessageHashFields => new[] { RequestMessageField, DataStreamMetaDataField };
         
-        static RedisStoredMessage? DictionaryToRedisStoredMessage(Dictionary<string, string?>? dict)
+        static RedisStoredMessage? DictionaryToRedisStoredMessage(Dictionary<string, byte[]?>? dict)
         {
             if(dict == null) return null;
             var requestMessage = dict[RequestMessageField]!;
             
             // As it turns out Redis or our client seems to treat "" as null, which is insane
             // and results in us needing to deal with that here.
-            var dataStreamMetaData = "";
+            var dataStreamMetaData = Array.Empty<byte>();
             if(dict.TryGetValue(DataStreamMetaDataField, out var dataStreamMetaDataFromRedis))
             {
-                dataStreamMetaData = dataStreamMetaDataFromRedis ?? "";
+                dataStreamMetaData = dataStreamMetaDataFromRedis ?? Array.Empty<byte>();
             }
             
             return new RedisStoredMessage(requestMessage, dataStreamMetaData);
         }
         
-        static Dictionary<string, string> RedisStoredMessageToDictionary(RedisStoredMessage requestMessage)
+        static Dictionary<string, byte[]> RedisStoredMessageToDictionary(RedisStoredMessage requestMessage)
         {
-            var dict = new Dictionary<string, string>();
+            var dict = new Dictionary<string, byte[]>();
             dict[RequestMessageField] = requestMessage.Message;
             dict[DataStreamMetaDataField] = requestMessage.DataStreamMetadata;
             return dict;

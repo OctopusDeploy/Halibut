@@ -201,7 +201,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             }, cancellationToken);
         }
         
-        public async Task SetInHash(string key, Dictionary<string, string> values, TimeSpan ttl, CancellationToken cancellationToken)
+        public async Task SetInHash(string key, Dictionary<string, byte[]> values, TimeSpan ttl, CancellationToken cancellationToken)
         {
             var hashKey = ToHashKey(key);
 
@@ -231,11 +231,11 @@ namespace Halibut.Queue.Redis.RedisHelpers
             }, cancellationToken);
         }
 
-        public async Task<Dictionary<string, string?>?> TryGetAndDeleteFromHash(string key, string[] fields, CancellationToken cancellationToken)
+        public async Task<Dictionary<string, byte[]?>?> TryGetAndDeleteFromHash(string key, string[] fields, CancellationToken cancellationToken)
         {
             var hashKey = ToHashKey(key);
 
-            Dictionary<string, string?>? dict = await RawKeyReadHashFieldsToDictionary(hashKey, fields, cancellationToken);
+            Dictionary<string, byte[]?>? dict = await RawKeyReadHashFieldsToDictionary(hashKey, fields, cancellationToken);
             
             // Retry does make this non-idempotent, what can happen is the key is deleted on redis.
             // But we do not get a response saying it is deleted. We try again and get told
@@ -256,7 +256,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             return dict;
         }
         
-        public async Task<Dictionary<string, string?>?> TryGetFromHash(string key, string[] fields, CancellationToken cancellationToken)
+        public async Task<Dictionary<string, byte[]?>?> TryGetFromHash(string key, string[] fields, CancellationToken cancellationToken)
         {
             var hashKey = ToHashKey(key);
 
@@ -275,9 +275,9 @@ namespace Halibut.Queue.Redis.RedisHelpers
             }, cancellationToken);
         }
         
-        async Task<Dictionary<string, string?>?> RawKeyReadHashFieldsToDictionary(RedisKey hashKey, string[] fields, CancellationToken cancellationToken)
+        async Task<Dictionary<string, byte[]?>?> RawKeyReadHashFieldsToDictionary(RedisKey hashKey, string[] fields, CancellationToken cancellationToken)
         {
-            var dict = new Dictionary<string, string?>();
+            var dict = new Dictionary<string, byte[]?>();
             foreach (var field in fields)
             {
                 // Retry each operation independently

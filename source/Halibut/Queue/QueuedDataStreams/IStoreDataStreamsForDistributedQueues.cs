@@ -23,7 +23,7 @@ namespace Halibut.Queue.QueuedDataStreams
         /// <param name="cancellationToken"></param>
         /// <returns>A string, DataStreamMetadata, containing a small amount of data that will be stored in redis, this will be
         /// given to ReHydrateDataStreams</returns>
-        public Task<string> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
+        public Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
 
         /// <summary>
         /// Updates the dataStreams `writerAsync` to write the previously stored data. Using
@@ -33,6 +33,6 @@ namespace Halibut.Queue.QueuedDataStreams
         /// <param name="dataStreams"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task ReHydrateDataStreams(string dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
+        public Task ReHydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
     }
 }

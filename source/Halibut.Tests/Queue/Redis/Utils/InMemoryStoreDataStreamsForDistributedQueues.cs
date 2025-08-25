@@ -10,7 +10,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
     public class InMemoryStoreDataStreamsForDistributedQueues : IStoreDataStreamsForDistributedQueues
     {
         readonly IDictionary<Guid, byte[]> dataStreamsStored = new Dictionary<Guid, byte[]>();
-        public async Task<string> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
             foreach (var dataStream in dataStreams)
             {
@@ -19,10 +19,10 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 dataStreamsStored[dataStream.Id] = memoryStream.ToArray();
             }
 
-            return "";
+            return Array.Empty<byte>();
         }
-
-        public async Task ReHydrateDataStreams(string dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        
+        public async Task ReHydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             foreach (var dataStream in dataStreams)

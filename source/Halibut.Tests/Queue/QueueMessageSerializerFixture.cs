@@ -1,6 +1,7 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -86,8 +87,9 @@ namespace Halibut.Tests.Queue
 
             dataStreams[1].Should().BeOfType<RepeatingStringDataStream>();
 
-            json.Should().Contain("TypeWithDataStreams");
-            json.Should().NotContain("RepeatingStringDataStream");
+            var jsonString = Encoding.UTF8.GetString(json);
+            jsonString.Should().Contain("TypeWithDataStreams");
+            jsonString.Should().NotContain("RepeatingStringDataStream");
             
             var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<RequestMessage>(json);
 
