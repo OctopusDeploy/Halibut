@@ -80,8 +80,8 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             // Check that the value was set.
             var retrievedValue = await redisFacade.TryGetAndDeleteFromHash("test-hash", new []{"test-field"}, CancellationToken);
             retrievedValue.Should().NotBeNull();
-            retrievedValue.Should().ContainKey("test-field");
-            retrievedValue!["test-field"].Should().Be("test-value");
+            retrievedValue.Should().ContainKey("test-field")
+                .WhoseValue.Should().Be("test-value");
         }
 
         [Test]
@@ -99,8 +99,8 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             
             var retrievedValue = await redisFacade.TryGetAndDeleteFromHash("test-hash", new []{"test-field"}, CancellationToken);
             retrievedValue.Should().NotBeNull();
-            retrievedValue.Should().ContainKey("test-field");
-            retrievedValue!["test-field"].Should().Be("test-value");
+            retrievedValue.Should().ContainKey("test-field")
+                .WhoseValue.Should().Be("test-value");
         }
 
         [Test]

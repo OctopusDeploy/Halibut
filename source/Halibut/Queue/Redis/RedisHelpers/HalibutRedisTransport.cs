@@ -118,8 +118,8 @@ namespace Halibut.Queue.Redis.RedisHelpers
         public async Task<RedisStoredMessage?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var requestKey = RequestMessageKey(endpoint, requestId);
-            var dit = await facade.TryGetAndDeleteFromHash(requestKey, RedisStoredMessageHashFields, cancellationToken);
-            return DictionaryToRedisStoredMessage(dit);
+            var dict = await facade.TryGetAndDeleteFromHash(requestKey, RedisStoredMessageHashFields, cancellationToken);
+            return DictionaryToRedisStoredMessage(dict);
         }
 
         public async Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
@@ -280,15 +280,15 @@ namespace Halibut.Queue.Redis.RedisHelpers
         static readonly string DataStreamMetaDataField = "DataStreamMetaDataField";
         static string[] RedisStoredMessageHashFields => new[] { RequestMessageField, DataStreamMetaDataField };
         
-        static RedisStoredMessage? DictionaryToRedisStoredMessage(Dictionary<string, string?>? dit)
+        static RedisStoredMessage? DictionaryToRedisStoredMessage(Dictionary<string, string?>? dict)
         {
-            if(dit == null) return null;
-            var requestMessage = dit[RequestMessageField]!;
+            if(dict == null) return null;
+            var requestMessage = dict[RequestMessageField]!;
             
             // As it turns out Redis or our client seems to treat "" as null, which is insane
             // and results in us needing to deal with that here.
             var dataStreamMetaData = "";
-            if(dit.TryGetValue(DataStreamMetaDataField, out var dataStreamMetaDataFromRedis))
+            if(dict.TryGetValue(DataStreamMetaDataField, out var dataStreamMetaDataFromRedis))
             {
                 dataStreamMetaData = dataStreamMetaDataFromRedis ?? "";
             }
