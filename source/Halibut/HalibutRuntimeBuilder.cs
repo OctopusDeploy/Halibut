@@ -29,7 +29,7 @@ namespace Halibut
         IRpcObserver? rpcObserver;
         IConnectionsObserver? connectionsObserver;
         IControlMessageObserver? controlMessageObserver;
-        MessageStreamWrappers queueMessageStreamWrappers = new MessageStreamWrappers();
+        MessageStreamWrappers queueMessageStreamWrappers = new();
 
         public HalibutRuntimeBuilder WithQueueMessageStreamWrappers(MessageStreamWrappers queueMessageStreamWrappers)
         {

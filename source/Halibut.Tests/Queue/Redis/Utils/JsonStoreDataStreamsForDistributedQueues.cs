@@ -33,7 +33,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Encoding.UTF8.GetBytes(json);
         }
 
-        public async Task ReHydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             

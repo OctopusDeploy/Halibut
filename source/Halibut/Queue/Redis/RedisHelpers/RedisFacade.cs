@@ -278,15 +278,16 @@ namespace Halibut.Queue.Redis.RedisHelpers
         async Task<Dictionary<string, byte[]?>?> RawKeyReadHashFieldsToDictionary(RedisKey hashKey, string[] fields, CancellationToken cancellationToken)
         {
             var dict = new Dictionary<string, byte[]?>();
-            foreach (var field in fields)
+            
+            var values = await ExecuteWithRetry(async () =>
             {
-                // Retry each operation independently
-                var value = await ExecuteWithRetry(async () =>
-                {
-                    var database = Connection.GetDatabase();
-                    return await database.HashGetAsync(hashKey, new RedisValue(field));
-                }, cancellationToken);
-                if(value.HasValue)  dict[field] = value;
+                var database = Connection.GetDatabase();
+                return await database.HashGetAsync(hashKey, fields.Select(f => new RedisValue(f)).ToArray());
+            }, cancellationToken);
+
+            for (int i = 0; i < fields.Length; i++)
+            {
+                if (values[i].HasValue) dict[fields[i]] = values[i];
             }
 
             if (dict.Count == 0) return null;

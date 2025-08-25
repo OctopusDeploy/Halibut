@@ -9,8 +9,8 @@ namespace Halibut.Queue.QueuedDataStreams
     /// The Redis Queue requires that something else can store data streams. The
     /// Redis Queue will call this interface for storage and retrieval of data streams.
     ///
-    /// The ReHydrateDataStreams method will be called at most once, and each data stream passed to
-    /// ReHydrateDataStreams will be read at most once. Thus, it is safe to delete the DataStream from
+    /// The RehydrateDataStreams method will be called at most once, and each data stream passed to
+    /// RehydrateDataStreams will be read at most once. Thus, it is safe to delete the DataStream from
     /// storage once the DataStream `writerAsync` Func is called and will no longer return any more
     /// data. This includes in the case the writerAsync method throws.
     /// </summary>
@@ -22,7 +22,7 @@ namespace Halibut.Queue.QueuedDataStreams
         /// <param name="dataStreams"></param>
         /// <param name="cancellationToken"></param>
         /// <returns>A string, DataStreamMetadata, containing a small amount of data that will be stored in redis, this will be
-        /// given to ReHydrateDataStreams</returns>
+        /// given to RehydrateDataStreams</returns>
         public Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
 
         /// <summary>
@@ -33,6 +33,6 @@ namespace Halibut.Queue.QueuedDataStreams
         /// <param name="dataStreams"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task ReHydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
+        public Task RehydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
     }
 }

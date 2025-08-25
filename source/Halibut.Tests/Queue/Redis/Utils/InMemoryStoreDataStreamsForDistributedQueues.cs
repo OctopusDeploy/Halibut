@@ -22,7 +22,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Array.Empty<byte>();
         }
         
-        public async Task ReHydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             foreach (var dataStream in dataStreams)
