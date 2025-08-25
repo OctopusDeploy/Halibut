@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -42,7 +43,11 @@ namespace Halibut.Queue
                 stream = streamer.WrapMessageSerialisationStream(stream);
                 disposables.Add(stream);
             }
-            using (var sw = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true)){
+            using (var sw = new StreamWriter(stream, Encoding.UTF8
+#if NET8_0_OR_GREATER
+                       , leaveOpen: true
+#endif
+                       )){
                 using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
                 {
                     var streamCapturingSerializer = createStreamCapturingSerializer();
@@ -64,7 +69,11 @@ namespace Halibut.Queue
                 stream = streamer.WrapMessageDeserialisationStream(stream);
                 disposables.Add(stream);
             }
-            using var sr = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
+            using var sr = new StreamReader(stream, Encoding.UTF8
+#if NET8_0_OR_GREATER
+                       , leaveOpen: true
+#endif
+            );
             using var reader = new JsonTextReader(sr);
             var streamCapturingSerializer = createStreamCapturingSerializer();
             var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
