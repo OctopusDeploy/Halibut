@@ -4,17 +4,22 @@ using System.IO.Compression;
 
 namespace Halibut.Queue.MessageStreamWrapping
 {
+    /// <summary>
+    /// Example implementation of IMessageStreamWrapper, which compresses
+    /// on serilisation and decompresses when deserialising Request/Response
+    /// messages.
+    /// </summary>
     public class GzipMessageStreamWrapper : IMessageStreamWrapper
     {
 
-        public Stream WrapForWriting(Stream stream)
+        public Stream WrapMessageSerialisationStream(Stream stream)
         {
-            return new GZipStream(stream, CompressionMode.Compress);
+            return new GZipStream(stream, CompressionMode.Compress, leaveOpen: true);
         }
         
-        public Stream WrapForReading(Stream stream)
+        public Stream WrapMessageDeserialisationStream(Stream stream)
         {
-            return new GZipStream(stream, CompressionMode.Decompress);
+            return new GZipStream(stream, CompressionMode.Decompress, leaveOpen: true);
         }
     }
 }

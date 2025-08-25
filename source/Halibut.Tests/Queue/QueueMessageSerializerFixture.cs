@@ -218,12 +218,12 @@ namespace Halibut.Tests.Queue
 
     public class Base64StreamWrapper : IMessageStreamWrapper
     {
-        public Stream WrapForWriting(Stream stream)
+        public Stream WrapMessageSerialisationStream(Stream stream)
         {
             return new CryptoStream(stream, new ToBase64Transform(), CryptoStreamMode.Write, leaveOpen: true);
         }
 
-        public Stream WrapForReading(Stream stream)
+        public Stream WrapMessageDeserialisationStream(Stream stream)
         {
             return new CryptoStream(stream, new FromBase64Transform(), CryptoStreamMode.Read, leaveOpen: true);
         }
@@ -299,10 +299,10 @@ namespace Halibut.Tests.Queue
             this.wrappedForReading = wrappedForReading;
         }
 
-        public Stream WrapForWriting(Stream stream) => wrappedForWriting(stream);
+        public Stream WrapMessageSerialisationStream(Stream stream) => wrappedForWriting(stream);
 
 
-        public Stream WrapForReading(Stream stream) => wrappedForReading(stream);
+        public Stream WrapMessageDeserialisationStream(Stream stream) => wrappedForReading(stream);
     }
 } 
 #endif

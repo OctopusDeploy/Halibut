@@ -39,7 +39,7 @@ namespace Halibut.Queue
             using var disposables = new DisposableCollection();
             foreach (var streamer in messageStreamWrappers.Wrappers)
             {
-                stream = streamer.WrapForWriting(stream);
+                stream = streamer.WrapMessageSerialisationStream(stream);
                 disposables.Add(stream);
             }
             using (var sw = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true)){
@@ -61,7 +61,7 @@ namespace Halibut.Queue
             using var disposables = new DisposableCollection();
             foreach (var streamer in messageStreamWrappers.Wrappers)
             {
-                stream = streamer.WrapForReading(stream);
+                stream = streamer.WrapMessageDeserialisationStream(stream);
                 disposables.Add(stream);
             }
             using var sr = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
