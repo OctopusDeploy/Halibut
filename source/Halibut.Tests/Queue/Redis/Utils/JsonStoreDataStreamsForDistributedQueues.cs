@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.QueuedDataStreams;
@@ -15,7 +16,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
     /// </summary>
     public class JsonStoreDataStreamsForDistributedQueues : IStoreDataStreamsForDistributedQueues
     {
-        public async Task<string> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
             var dataStreamData = new Dictionary<Guid, string>();
 
@@ -28,19 +29,21 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 dataStreamData[dataStream.Id] = base64Data;
             }
 
-            return JsonConvert.SerializeObject(dataStreamData);
+            var json = JsonConvert.SerializeObject(dataStreamData);
+            return Encoding.UTF8.GetBytes(json);
         }
 
-        public async Task ReHydrateDataStreams(string dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             
-            if (string.IsNullOrWhiteSpace(dataStreamMetadata))
+            if (dataStreamMetadata == null || dataStreamMetadata.Length == 0)
             {
                 throw new ArgumentException("Data stream metadata cannot be null or empty", nameof(dataStreamMetadata));
             }
 
-            var dataStreamData = JsonConvert.DeserializeObject<Dictionary<Guid, string>>(dataStreamMetadata);
+            var json = Encoding.UTF8.GetString(dataStreamMetadata);
+            var dataStreamData = JsonConvert.DeserializeObject<Dictionary<Guid, string>>(json);
             if (dataStreamData == null)
             {
                 throw new InvalidOperationException("Failed to deserialize data stream metadata");

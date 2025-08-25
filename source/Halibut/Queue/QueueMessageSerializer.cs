@@ -1,9 +1,14 @@
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
+using System.Threading.Tasks;
+using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using Newtonsoft.Json;
 
 namespace Halibut.Queue
@@ -18,31 +23,58 @@ namespace Halibut.Queue
     public class QueueMessageSerializer
     {
         readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
+        readonly MessageStreamWrappers messageStreamWrappers;
 
-        public QueueMessageSerializer(Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer)
+        public QueueMessageSerializer(Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer, MessageStreamWrappers messageStreamWrappers)
         {
             this.createStreamCapturingSerializer = createStreamCapturingSerializer;
+            this.messageStreamWrappers = messageStreamWrappers;
         }
 
-        public (string, IReadOnlyList<DataStream>) WriteMessage<T>(T message)
+        public (byte[], IReadOnlyList<DataStream>) WriteMessage<T>(T message)
         {
             IReadOnlyList<DataStream> dataStreams;
             
-            var sb = new StringBuilder();
-            using var sw = new StringWriter(sb, CultureInfo.InvariantCulture);
-            using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
+            using var ms = new MemoryStream();
+            Stream stream = ms;
+            using var disposables = new DisposableCollection();
+            foreach (var streamer in messageStreamWrappers.Wrappers)
             {
-                var streamCapturingSerializer = createStreamCapturingSerializer();
-                streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
-                dataStreams = streamCapturingSerializer.DataStreams;
+                stream = streamer.WrapMessageSerialisationStream(stream);
+                disposables.Add(stream);
+            }
+            using (var sw = new StreamWriter(stream, Encoding.UTF8
+#if NET8_0_OR_GREATER
+                       , leaveOpen: true
+#endif
+                       )){
+                using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
+                {
+                    var streamCapturingSerializer = createStreamCapturingSerializer();
+                    streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
+                    dataStreams = streamCapturingSerializer.DataStreams;
+                }
             }
 
-            return (sb.ToString(), dataStreams);
+            return (ms.ToArray(), dataStreams);
         }
 
-        public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(string json)
+        public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(byte[] json)
         {
-            using var reader = new JsonTextReader(new StringReader(json));
+            using var ms = new MemoryStream(json);
+            Stream stream = ms;
+            using var disposables = new DisposableCollection();
+            foreach (var streamer in messageStreamWrappers.Wrappers)
+            {
+                stream = streamer.WrapMessageDeserialisationStream(stream);
+                disposables.Add(stream);
+            }
+            using var sr = new StreamReader(stream, Encoding.UTF8
+#if NET8_0_OR_GREATER
+                       , leaveOpen: true
+#endif
+            );
+            using var reader = new JsonTextReader(sr);
             var streamCapturingSerializer = createStreamCapturingSerializer();
             var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
             

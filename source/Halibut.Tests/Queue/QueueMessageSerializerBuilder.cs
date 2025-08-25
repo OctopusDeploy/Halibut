@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using Halibut.Diagnostics;
 using Halibut.Queue;
+using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
 
@@ -11,9 +13,17 @@ namespace Halibut.Tests.Queue
         ITypeRegistry? typeRegistry;
         Action<JsonSerializerSettings>? configureSerializer;
 
+        MessageStreamWrappers messageStreamWrappers = new MessageStreamWrappers(new List<IMessageStreamWrapper>());
+
         public QueueMessageSerializerBuilder WithTypeRegistry(ITypeRegistry typeRegistry)
         {
             this.typeRegistry = typeRegistry;
+            return this;
+        }
+
+        public QueueMessageSerializerBuilder WithMessageStreamWrappers(MessageStreamWrappers messageStreamWrappers)
+        {
+            this.messageStreamWrappers = messageStreamWrappers;
             return this;
         }
 
@@ -36,7 +46,7 @@ namespace Halibut.Tests.Queue
                 return new StreamCapturingJsonSerializer(settings);
             }
 
-            return new QueueMessageSerializer(StreamCapturingSerializer);
+            return new QueueMessageSerializer(StreamCapturingSerializer, messageStreamWrappers);
         }
     }
 }
