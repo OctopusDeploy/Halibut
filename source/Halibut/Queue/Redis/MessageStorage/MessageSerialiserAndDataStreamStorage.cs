@@ -34,8 +34,8 @@ namespace Halibut.Queue.Redis.MessageStorage
         public async Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
         {
             var (jsonResponseMessage, dataStreams) = queueMessageSerializer.WriteMessage(response);
-            var dataStreamMetaData = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
-            return new RedisStoredMessage(jsonResponseMessage, dataStreamMetaData);
+            var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
+            return new RedisStoredMessage(jsonResponseMessage, dataStreamMetadata);
         }
         
         public async Task<ResponseMessage> ReadResponse(RedisStoredMessage storedMessage, CancellationToken cancellationToken)

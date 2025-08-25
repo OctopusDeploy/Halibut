@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -12,7 +11,6 @@ using Halibut.Diagnostics;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Tests.Support;
 using Halibut.Transport.Protocol;
-using Halibut.Transport.Streams;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Queue
@@ -92,13 +90,13 @@ namespace Halibut.Tests.Queue
 
             dataStreams[1].Should().BeOfType<RepeatingStringDataStream>();
 
+            // Assert
             var jsonString = Encoding.UTF8.GetString(json);
             jsonString.Should().Contain("TypeWithDataStreams");
             jsonString.Should().NotContain("RepeatingStringDataStream");
             
             var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<RequestMessage>(json);
-
-            // Assert
+            
             // Manually check each field of the deserializedMessage matches the request
             deserializedMessage.Id.Should().Be(request.Id);
             deserializedMessage.ActivityId.Should().Be(request.ActivityId);
@@ -235,6 +233,11 @@ namespace Halibut.Tests.Queue
         
         private readonly Stream stream;
 
+        /// <summary>
+        /// The given stream is not disposed by this stream.
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="onDispose"></param>
         public StreamWithOnDisposeFunc(Stream stream, Action onDispose)
         {
             this.stream = stream;

@@ -286,13 +286,13 @@ namespace Halibut.Queue.Redis.RedisHelpers
             
             // As it turns out Redis or our client seems to treat "" as null, which is insane
             // and results in us needing to deal with that here.
-            var dataStreamMetaData = Array.Empty<byte>();
-            if(dict.TryGetValue(DataStreamMetaDataField, out var dataStreamMetaDataFromRedis))
+            var dataStreamMetadata = Array.Empty<byte>();
+            if(dict.TryGetValue(DataStreamMetaDataField, out var dataStreamMetadataFromRedis))
             {
-                dataStreamMetaData = dataStreamMetaDataFromRedis ?? Array.Empty<byte>();
+                dataStreamMetadata = dataStreamMetadataFromRedis ?? Array.Empty<byte>();
             }
             
-            return new RedisStoredMessage(requestMessage, dataStreamMetaData);
+            return new RedisStoredMessage(requestMessage, dataStreamMetadata);
         }
         
         static Dictionary<string, byte[]> RedisStoredMessageToDictionary(RedisStoredMessage requestMessage)

@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Logging;
-using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
@@ -65,8 +64,10 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
 
             // Assert - We'll verify by trying to get and delete it
             var retrievedValues = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
-            retrievedValues.Should().NotBeNull();
-            Encoding.UTF8.GetString(retrievedValues![field]!).Should().Be(payload);
+            var bytes = retrievedValues.Should().NotBeNull()
+                .And.Subject.Should().ContainKey(field)
+                .WhoseValue!;
+            Encoding.UTF8.GetString(bytes).Should().Be(payload);
         }
 
         [Test]
@@ -85,8 +86,10 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var retrievedValues = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
 
             // Assert
-            retrievedValues.Should().NotBeNull();
-            Encoding.UTF8.GetString(retrievedValues![field]!).Should().Be(payload);
+            var bytes = retrievedValues.Should().NotBeNull()
+                .And.Subject.Should().ContainKey(field)
+                .WhoseValue!;
+            Encoding.UTF8.GetString(bytes).Should().Be(payload);
         }
 
         [Test]
