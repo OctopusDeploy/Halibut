@@ -1,10 +1,13 @@
 
 #if NET8_0_OR_GREATER
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.NodeHeartBeat;
 using Halibut.Util;
+using Microsoft.VisualBasic.CompilerServices;
 using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis.RedisHelpers
@@ -78,8 +81,6 @@ namespace Halibut.Queue.Redis.RedisHelpers
         {
             return $"{Namespace}::RequestMessage::{endpoint}::{requestId}";
         }
-
-        static readonly string RequestMessageField = "RequestMessageField";
         
         /// <summary>
         /// The amount of time on top of the requestPickupTimout, the request will stay on the queue
@@ -90,15 +91,17 @@ namespace Halibut.Queue.Redis.RedisHelpers
         /// </summary>
         static readonly TimeSpan AdditionalRequestMessageTtl = TimeSpan.FromMinutes(2);
 
-        public async Task PutRequest(Uri endpoint, Guid requestId, string requestMessage, TimeSpan requestPickupTimeout, CancellationToken cancellationToken)
+        public async Task PutRequest(Uri endpoint, Guid requestId, RedisStoredMessage requestMessage, TimeSpan requestPickupTimeout, CancellationToken cancellationToken)
         {
             var requestKey = RequestMessageKey(endpoint, requestId);
             
             var ttl = requestPickupTimeout + AdditionalRequestMessageTtl;
 
-            await facade.SetInHash(requestKey, RequestMessageField, requestMessage, ttl, cancellationToken);
+            var dict = RedisStoredMessageToDictionary(requestMessage);
+
+            await facade.SetInHash(requestKey, dict, ttl, cancellationToken);
         }
-        
+
         /// <summary>
         /// Atomically Gets and removes the request from the queue.
         /// Exactly up to one caller of this method will be given the RequestMessage, all
@@ -112,11 +115,11 @@ namespace Halibut.Queue.Redis.RedisHelpers
         /// <param name="requestId"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<string?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
+        public async Task<RedisStoredMessage?> TryGetAndRemoveRequest(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
         {
             var requestKey = RequestMessageKey(endpoint, requestId);
-            var requestMessage = await facade.TryGetAndDeleteFromHash(requestKey, RequestMessageField, cancellationToken);
-            return requestMessage;
+            var dict = await facade.TryGetAndDeleteFromHash(requestKey, RedisStoredMessageHashFields, cancellationToken);
+            return DictionaryToRedisStoredMessage(dict);
         }
 
         public async Task<bool> IsRequestStillOnQueue(Uri endpoint, Guid requestId, CancellationToken cancellationToken)
@@ -253,22 +256,52 @@ namespace Halibut.Queue.Redis.RedisHelpers
             return $"{Namespace}::Response::{endpoint}::{identifier}";
         }
         
-        public async Task SetResponseMessage(Uri endpoint, Guid identifier, string responseMessage, TimeSpan ttl, CancellationToken cancellationToken)
+        public async Task SetResponseMessage(Uri endpoint, Guid identifier, RedisStoredMessage responseMessage, TimeSpan ttl, CancellationToken cancellationToken)
         {
             var key = ResponseMessageKey(endpoint, identifier);
-            await facade.SetString(key, responseMessage, ttl, cancellationToken);
+            var dict = RedisStoredMessageToDictionary(responseMessage);
+            await facade.SetInHash(key, dict, ttl, cancellationToken);
         }
         
-        public async Task<string?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public async Task<RedisStoredMessage?> GetResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
             var key = ResponseMessageKey(endpoint, identifier);
-            return await facade.GetString(key, cancellationToken);
+            var dict = await facade.TryGetFromHash(key, RedisStoredMessageHashFields, cancellationToken);
+            return DictionaryToRedisStoredMessage(dict);
         }
         
-        public async Task<bool> DeleteResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
+        public async Task DeleteResponseMessage(Uri endpoint, Guid identifier, CancellationToken cancellationToken)
         {
             var key = ResponseMessageKey(endpoint, identifier);
-            return await facade.DeleteString(key, cancellationToken);
+            await facade.DeleteHash(key, cancellationToken);
+        }
+        
+        static readonly string RequestMessageField = "RequestMessageField";
+        static readonly string DataStreamMetaDataField = "DataStreamMetaDataField";
+        static string[] RedisStoredMessageHashFields => new[] { RequestMessageField, DataStreamMetaDataField };
+        
+        static RedisStoredMessage? DictionaryToRedisStoredMessage(Dictionary<string, string?>? dict)
+        {
+            if(dict == null) return null;
+            var requestMessage = dict[RequestMessageField]!;
+            
+            // As it turns out Redis or our client seems to treat "" as null, which is insane
+            // and results in us needing to deal with that here.
+            var dataStreamMetaData = "";
+            if(dict.TryGetValue(DataStreamMetaDataField, out var dataStreamMetaDataFromRedis))
+            {
+                dataStreamMetaData = dataStreamMetaDataFromRedis ?? "";
+            }
+            
+            return new RedisStoredMessage(requestMessage, dataStreamMetaData);
+        }
+        
+        static Dictionary<string, string> RedisStoredMessageToDictionary(RedisStoredMessage requestMessage)
+        {
+            var dict = new Dictionary<string, string>();
+            dict[RequestMessageField] = requestMessage.Message;
+            dict[DataStreamMetaDataField] = requestMessage.DataStreamMetadata;
+            return dict;
         }
     }
 }

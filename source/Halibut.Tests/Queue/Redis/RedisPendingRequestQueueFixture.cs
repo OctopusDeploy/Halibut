@@ -150,6 +150,44 @@ namespace Halibut.Tests.Queue.Redis
             (await returnObject.Payload1!.ReadAsString(CancellationToken)).Should().Be("good");
             (await returnObject.Payload2!.ReadAsString(CancellationToken)).Should().Be("bye");
         }
+        
+        [Test]
+        public async Task FullSendAndReceive_WithDataStreamsStoredAsJsonInDataStreamMetadata_ShouldWork()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
+            var dataStreamStore = new JsonStoreDataStreamsForDistributedQueues();
+            var messageSerializer = new QueueMessageSerializerBuilder().Build();
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            request.Params = new[] { new ComplexObjectMultipleDataStreams(DataStream.FromString("hello"), DataStream.FromString("world")) };
+
+            var node1Sender = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            var node2Receiver = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            await node2Receiver.WaitUntilQueueIsSubscribedToReceiveMessages();
+
+            var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+
+            var requestMessageWithCancellationToken = await node2Receiver.DequeueAsync(CancellationToken);
+
+            var objWithDataStreams = (ComplexObjectMultipleDataStreams)requestMessageWithCancellationToken!.RequestMessage.Params[0];
+            (await objWithDataStreams.Payload1!.ReadAsString(CancellationToken)).Should().Be("hello");
+            (await objWithDataStreams.Payload2!.ReadAsString(CancellationToken)).Should().Be("world");
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken.RequestMessage,
+                new ComplexObjectMultipleDataStreams(DataStream.FromString("good"), DataStream.FromString("bye")));
+
+            await node2Receiver.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+
+            var returnObject = (ComplexObjectMultipleDataStreams)responseMessage.Result!;
+            (await returnObject.Payload1!.ReadAsString(CancellationToken)).Should().Be("good");
+            (await returnObject.Payload2!.ReadAsString(CancellationToken)).Should().Be("bye");
+        }
 
         [Test]
         public async Task WhenReadingTheResponseFromTheQueueFails_TheQueueAndWaitTaskReturnsAnUnknownError()
@@ -217,7 +255,7 @@ namespace Halibut.Tests.Queue.Redis
             var redisDataLoseDetector = new CancellableDataLossWatchForRedisLosingAllItsData();
 
             var redisTransport = Substitute.ForPartsOf<HalibutRedisTransportWithVirtuals>(new HalibutRedisTransport(redisFacade));
-            redisTransport.Configure().PutRequest(Arg.Any<Uri>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
+            redisTransport.Configure().PutRequest(Arg.Any<Uri>(), Arg.Any<Guid>(), Arg.Any<RedisStoredMessage>(), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>())
                 .Returns(async callInfo =>
                 {
                     await redisDataLoseDetector.DataLossHasOccured();

@@ -1,8 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Transport.Protocol;
 
 namespace Halibut.Tests.Queue.Redis.Utils
@@ -29,22 +29,22 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.messageSerialiserAndDataStreamStorage = messageSerialiserAndDataStreamStorage;
         }
 
-        public virtual Task<string> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public virtual Task<RedisStoredMessage> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
         }
 
-        public virtual Task<RequestMessage> ReadRequest(string jsonRequest, CancellationToken cancellationToken)
+        public virtual Task<RequestMessage> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
         }
 
-        public virtual Task<string> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
+        public virtual Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
         }
 
-        public virtual Task<ResponseMessage> ReadResponse(string jsonResponse, CancellationToken cancellationToken)
+        public virtual Task<ResponseMessage> ReadResponse(RedisStoredMessage jsonResponse, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.ReadResponse(jsonResponse, cancellationToken);
         }
@@ -59,7 +59,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.exception = exception;
         }
 
-        public override Task<ResponseMessage> ReadResponse(string jsonResponse, CancellationToken cancellationToken)
+        public override Task<ResponseMessage> ReadResponse(RedisStoredMessage jsonResponse, CancellationToken cancellationToken)
         {
             throw exception();
         }
@@ -74,7 +74,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.exception = exception;
         }
 
-        public override Task<string> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public override Task<RedisStoredMessage> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             throw exception();
         }

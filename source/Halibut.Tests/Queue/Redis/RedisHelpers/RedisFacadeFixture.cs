@@ -57,13 +57,15 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
+            var values = new Dictionary<string, string> { { field, payload } };
 
             // Act
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash(key, values, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Assert - We'll verify by trying to get and delete it
-            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
-            retrievedValue.Should().Be(payload);
+            var retrievedValues = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
+            retrievedValues.Should().NotBeNull();
+            retrievedValues![field].Should().Be(payload);
         }
 
         [Test]
@@ -74,14 +76,16 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
+            var values = new Dictionary<string, string> { { field, payload } };
 
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash(key, values, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Act
-            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
+            var retrievedValues = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
 
             // Assert
-            retrievedValue.Should().Be(payload);
+            retrievedValues.Should().NotBeNull();
+            retrievedValues![field].Should().Be(payload);
         }
 
         [Test]
@@ -92,8 +96,9 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
+            var values = new Dictionary<string, string> { { field, payload } };
 
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash(key, values, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Act
             var exists = await redisFacade.HashContainsKey(key, field, CancellationToken);
@@ -140,25 +145,27 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
+            var values = new Dictionary<string, string> { { field, payload } };
 
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash(key, values, TimeSpan.FromMinutes(1), CancellationToken);
 
             // Verify the hash field exists
             var existsBefore = await redisFacade.HashContainsKey(key, field, CancellationToken);
             existsBefore.Should().BeTrue();
 
             // Act
-            var retrievedValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
+            var retrievedValues = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
 
             // Assert
-            retrievedValue.Should().Be(payload);
+            retrievedValues.Should().NotBeNull();
+            retrievedValues![field].Should().Be(payload);
             
             // Verify the entire key was deleted (not just the field)
             var existsAfter = await redisFacade.HashContainsKey(key, field, CancellationToken);
             existsAfter.Should().BeFalse();
 
             // Verify trying to get it again returns null
-            var secondRetrieval = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
+            var secondRetrieval = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
             secondRetrieval.Should().BeNull();
         }
 
@@ -333,20 +340,22 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
+            var values = new Dictionary<string, string> { { field, payload } };
 
             // Act - Set a value in hash with short TTL that we can actually test
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(3), CancellationToken);
+            await redisFacade.SetInHash(key, values, TimeSpan.FromMinutes(3), CancellationToken);
 
             // Immediately verify it exists
             var immediateExists = await redisFacade.HashContainsKey(key, field, CancellationToken);
             immediateExists.Should().BeTrue();
 
             // Also verify we can retrieve the value immediately
-            var immediateValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
-            immediateValue.Should().Be(payload);
+            var immediateValues = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
+            immediateValues.Should().NotBeNull();
+            immediateValues![field].Should().Be(payload);
 
             // Set the value again to test expiration (since TryGetAndDeleteFromHash removes it)
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMilliseconds(3), CancellationToken);
+            await redisFacade.SetInHash(key, values, TimeSpan.FromMilliseconds(3), CancellationToken);
 
             // Assert - Should eventually expire
             await ShouldEventually.Eventually(async () =>
@@ -356,8 +365,8 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             }, TimeSpan.FromSeconds(5), CancellationToken);
 
             // Verify TryGetAndDeleteFromHash also returns null for expired key
-            var expiredValue = await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
-            expiredValue.Should().BeNull();
+            var expiredValues = await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
+            expiredValues.Should().BeNull();
         }
 
         [Test]
@@ -554,22 +563,23 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var key = Guid.NewGuid().ToString();
             var field = "test-field";
             var payload = "test-payload";
+            var values = new Dictionary<string, string> { { field, payload } };
             const int concurrentCallCount = 20;
 
             // Set a value in the hash
-            await redisFacade.SetInHash(key, field, payload, TimeSpan.FromMinutes(1), CancellationToken);
+            await redisFacade.SetInHash(key, values, TimeSpan.FromMinutes(1), CancellationToken);
 
             var countDownLatch = new AsyncCountdownEvent(concurrentCallCount);
 
             // Act - Make multiple concurrent calls to TryGetAndDeleteFromHash
-            var concurrentTasks = new Task<string?>[concurrentCallCount];
+            var concurrentTasks = new Task<Dictionary<string, string?>?>[concurrentCallCount];
             for (int i = 0; i < concurrentCallCount; i++)
             {
                 concurrentTasks[i] = Task.Run(async () =>
                 {
                     countDownLatch.Signal();
                     await countDownLatch.WaitAsync();
-                    return await redisFacade.TryGetAndDeleteFromHash(key, field, CancellationToken);
+                    return await redisFacade.TryGetAndDeleteFromHash(key, new[] { field }, CancellationToken);
                 });
             }
 
@@ -580,7 +590,7 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             var nullResults = results.Where(result => result == null).ToArray();
 
             nonNullResults.Should().HaveCount(1, "exactly one concurrent call should retrieve the value");
-            nonNullResults[0].Should().Be(payload, "the successful call should return the correct payload");
+            nonNullResults[0]![field].Should().Be(payload, "the successful call should return the correct payload");
             nullResults.Should().HaveCount(concurrentCallCount - 1, "all other concurrent calls should return null");
 
             // Verify the hash key no longer exists
