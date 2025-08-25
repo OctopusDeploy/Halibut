@@ -2,8 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
+using System.Threading.Tasks;
+using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using Newtonsoft.Json;
 
 namespace Halibut.Queue
@@ -18,10 +22,12 @@ namespace Halibut.Queue
     public class QueueMessageSerializer
     {
         readonly Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer;
+        readonly MessageStreamWrappers messageStreamWrappers;
 
-        public QueueMessageSerializer(Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer)
+        public QueueMessageSerializer(Func<StreamCapturingJsonSerializer> createStreamCapturingSerializer, MessageStreamWrappers messageStreamWrappers)
         {
             this.createStreamCapturingSerializer = createStreamCapturingSerializer;
+            this.messageStreamWrappers = messageStreamWrappers;
         }
 
         public (byte[], IReadOnlyList<DataStream>) WriteMessage<T>(T message)
@@ -29,7 +35,14 @@ namespace Halibut.Queue
             IReadOnlyList<DataStream> dataStreams;
             
             using var ms = new MemoryStream();
-            using (var sw = new StreamWriter(ms, Encoding.UTF8, leaveOpen: true)){
+            Stream stream = ms;
+            using var disposables = new DisposableCollection();
+            foreach (var streamer in messageStreamWrappers.Wrappers)
+            {
+                stream = streamer.WrapForWriting(stream);
+                disposables.Add(stream);
+            }
+            using (var sw = new StreamWriter(stream, Encoding.UTF8, leaveOpen: true)){
                 using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
                 {
                     var streamCapturingSerializer = createStreamCapturingSerializer();
@@ -44,7 +57,14 @@ namespace Halibut.Queue
         public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(byte[] json)
         {
             using var ms = new MemoryStream(json);
-            using var sr = new StreamReader(ms, Encoding.UTF8);
+            Stream stream = ms;
+            using var disposables = new DisposableCollection();
+            foreach (var streamer in messageStreamWrappers.Wrappers)
+            {
+                stream = streamer.WrapForReading(stream);
+                disposables.Add(stream);
+            }
+            using var sr = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
             using var reader = new JsonTextReader(sr);
             var streamCapturingSerializer = createStreamCapturingSerializer();
             var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);

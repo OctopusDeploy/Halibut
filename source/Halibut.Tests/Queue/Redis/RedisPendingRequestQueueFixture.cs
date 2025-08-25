@@ -7,6 +7,7 @@ using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.Logging;
 using Halibut.Queue;
+using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
@@ -838,7 +839,7 @@ namespace Halibut.Tests.Queue.Redis
                     return new StreamCapturingJsonSerializer(settings);
                 }
 
-                return new QueueMessageSerializer(StreamCapturingSerializer);
+                return new QueueMessageSerializer(StreamCapturingSerializer, new MessageStreamWrappers());
             }
         }
         

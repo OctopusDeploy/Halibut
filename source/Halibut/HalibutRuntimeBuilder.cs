@@ -3,6 +3,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
 using Halibut.Queue;
+using Halibut.Queue.MessageStreamWrapping;
 using Halibut.ServiceModel;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
@@ -28,7 +29,14 @@ namespace Halibut
         IRpcObserver? rpcObserver;
         IConnectionsObserver? connectionsObserver;
         IControlMessageObserver? controlMessageObserver;
+        MessageStreamWrappers queueMessageStreamWrappers = new MessageStreamWrappers();
 
+        public HalibutRuntimeBuilder WithQueueMessageStreamWrappers(MessageStreamWrappers queueMessageStreamWrappers)
+        {
+            this.queueMessageStreamWrappers = queueMessageStreamWrappers;
+            return this;
+        }
+        
         public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
             this.connectionsObserver = connectionsObserver;
@@ -161,7 +169,7 @@ namespace Halibut
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
             
-            var queueMessageSerializer = new QueueMessageSerializer(messageSerializer.CreateStreamCapturingSerializer);
+            var queueMessageSerializer = new QueueMessageSerializer(messageSerializer.CreateStreamCapturingSerializer, queueMessageStreamWrappers);
             var queueFactory = this.queueFactoryFactory?.Invoke(queueMessageSerializer)
                                ?? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
             
