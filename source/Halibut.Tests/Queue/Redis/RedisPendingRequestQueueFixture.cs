@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Docker.DotNet.Models;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
@@ -109,6 +110,45 @@ namespace Halibut.Tests.Queue.Redis
 
             var response = ResponseMessage.FromResult(requestMessageWithCancellationToken.RequestMessage, "Yay");
             await node2Receiver.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+
+            // Assert
+            responseMessage.Result.Should().Be("Yay");
+        }
+        
+        
+        [Test]
+        public async Task TheProcessingTimeOfARequestCanExceedWatcherTimeouts()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            request.Destination.PollingRequestQueueTimeout = TimeSpan.FromSeconds(4); // Setting this low makes the test more real, long requests will exceed this timeout.
+
+            var node1Sender = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, redisTransport, CreateMessageSerialiserAndDataStreamStorage(), new HalibutTimeoutsAndLimits());
+            await node1Sender.WaitUntilQueueIsSubscribedToReceiveMessages();
+            node1Sender.RequestSenderNodeHeartBeatTimeout = TimeSpan.FromSeconds(4);
+            node1Sender.RequestReceiverNodeHeartBeatTimeout = TimeSpan.FromSeconds(4);
+            
+            node1Sender.RequestSenderNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
+            node1Sender.RequestReceiverNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
+            
+            var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+            var requestMessageWithCancellationToken = await node1Sender.DequeueAsync(CancellationToken);
+
+            requestMessageWithCancellationToken.Should().NotBeNull();
+            requestMessageWithCancellationToken!.RequestMessage.Id.Should().Be(request.Id);
+            
+            // Act
+            // Pretend the processing takes a long time, longer than the heart beat timeout.
+            await Task.Delay(TimeSpan.FromSeconds(15), CancellationToken);
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken.RequestMessage, "Yay");
+            await node1Sender.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
 
             var responseMessage = await queueAndWaitAsync;
 
