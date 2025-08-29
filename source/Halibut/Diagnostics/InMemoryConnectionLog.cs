@@ -84,7 +84,7 @@ namespace Halibut.Diagnostics
         {
             if (logger != null)
             {
-                var level = GetLogLevel(logEvent)
+                var level = GetLogLevel(logEvent);
                 logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
             }
         }
