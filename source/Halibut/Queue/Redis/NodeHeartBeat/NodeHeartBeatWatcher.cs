@@ -20,7 +20,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
-            log = log.ForContext<NodeHeartBeatSender>();
+            log = log.ForContext<NodeHeartBeatWatcher>();
             // Once the pending's CT has been cancelled we no longer care to keep observing
             await using var cts = new CancelOnDisposeCancellationToken(watchCancellationToken, redisPending.PendingRequestCancellationToken);
             try
@@ -74,49 +74,53 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             log.Write(EventType.Diagnostic, "Starting to watch for pulses from {0} node, request {1}, endpoint {2}", watchingForPulsesFrom, requestActivityId, endpoint);
 
             DateTimeOffset? lastHeartBeat = DateTimeOffset.Now;
-            
+
+            await using var subscriptionCts = new CancelOnDisposeCancellationToken(watchCancellationToken);
+            // Non-blocking subscription for heart beats. 
+            var subscriptionTask = Task.Run(async () => await halibutRedisTransport.SubscribeToNodeHeartBeatChannel(
+                endpoint,
+                requestActivityId,
+                watchingForPulsesFrom,
+                async () =>
+                {
+                    await Task.CompletedTask;
+                    lastHeartBeat = DateTimeOffset.Now;
+                    log.Write(EventType.Diagnostic, "Received heartbeat from {0} node, request {1}", watchingForPulsesFrom, requestActivityId);
+                }, subscriptionCts.Token));
             try
             {
-                // Currently we will wait until the CT is cancelled to get a subscription,
-                // instead it would be better if we either
-                // - waited for maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline to get a subscription.
-                // - SubscribeToNodeHeartBeatChannel returned immediately even if it doesn't have a subscription, and instead it works
-                // in the background to get one unless the CT is triggered, or it is disposed.
-                // https://whimsical.com/subscribetonodeheartbeatchannel-should-timeout-while-waiting-to--NFWwmPkE7pTBdm2PRUC8Tf
-                await using var subscription = await halibutRedisTransport.SubscribeToNodeHeartBeatChannel(
-                    endpoint,
-                    requestActivityId,
-                    watchingForPulsesFrom, 
-                    async () =>
-                    {
-                        await Task.CompletedTask;
-                        lastHeartBeat = DateTimeOffset.Now;
-                        log.Write(EventType.Diagnostic, "Received heartbeat from {0} node, request {1}", watchingForPulsesFrom, requestActivityId);
-                    }, watchCancellationToken);
-                
-                while (!watchCancellationToken.IsCancellationRequested)
+                try
                 {
-                    var timeSinceLastHeartBeat = DateTimeOffset.Now - lastHeartBeat.Value;
-                    if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline)
+
+                    while (!watchCancellationToken.IsCancellationRequested)
                     {
-                        log.Write(EventType.Diagnostic, "{0} node appears disconnected, request {1}, last heartbeat was {2} seconds ago", watchingForPulsesFrom, requestActivityId, timeSinceLastHeartBeat.TotalSeconds);
-                        return NodeWatcherResult.NodeMayHaveDisconnected;
+                        var timeSinceLastHeartBeat = DateTimeOffset.Now - lastHeartBeat.Value;
+                        if (timeSinceLastHeartBeat > maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline)
+                        {
+                            log.Write(EventType.Diagnostic, "{0} node appears disconnected, request {1}, last heartbeat was {2} seconds ago", watchingForPulsesFrom, requestActivityId, timeSinceLastHeartBeat.TotalSeconds);
+                            return NodeWatcherResult.NodeMayHaveDisconnected;
+                        }
+
+                        var timeToWait = TimeSpanHelper.Min(
+                            TimeSpan.FromSeconds(30),
+                            maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline - timeSinceLastHeartBeat + TimeSpan.FromSeconds(1));
+
+                        await Try.IgnoringError(async () => await Task.Delay(timeToWait, watchCancellationToken));
                     }
 
-                    var timeToWait = TimeSpanHelper.Min(
-                        TimeSpan.FromSeconds(30), 
-                        maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline - timeSinceLastHeartBeat + TimeSpan.FromSeconds(1)); 
-                    
-                    await Try.IgnoringError(async () => await Task.Delay(timeToWait, watchCancellationToken));
+                    log.Write(EventType.Diagnostic, "{0} node watcher cancelled, request {1}", watchingForPulsesFrom, requestActivityId);
+                    return NodeWatcherResult.NoDisconnectSeen;
                 }
-
-                log.Write(EventType.Diagnostic, "{0} node watcher cancelled, request {1}", watchingForPulsesFrom, requestActivityId);
-                return NodeWatcherResult.NoDisconnectSeen;
+                catch (Exception ex) when (!watchCancellationToken.IsCancellationRequested)
+                {
+                    log.WriteException(EventType.Diagnostic, "Error while watching {0} node, request {1}", ex, watchingForPulsesFrom, requestActivityId);
+                    throw;
+                }
             }
-            catch (Exception ex) when (!watchCancellationToken.IsCancellationRequested)
+            finally
             {
-                log.WriteException(EventType.Diagnostic, "Error while watching {0} node, request {1}", ex, watchingForPulsesFrom, requestActivityId);
-                throw;
+                await Try.IgnoringError(async () => await subscriptionCts.CancelAsync());
+                await Try.IgnoringError(async () => await (await subscriptionTask).DisposeAsync());
             }
         }
 
