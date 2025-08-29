@@ -9,16 +9,26 @@ namespace Halibut.Diagnostics
     internal class InMemoryConnectionLog : ILog
     {
         readonly string endpoint;
-        readonly Logging.ILog logger;
+        readonly Logging.ILog? logger;
         readonly ConcurrentQueue<LogEvent> events = new();
 
+        /// <summary>
+        /// Writes logs to an in memory queue of events as well as to the logger returned
+        /// by LogProvider.GetLogger("Halibut")
+        /// </summary>
+        /// <param name="endpoint"></param>
         public InMemoryConnectionLog(string endpoint)
         {
             this.endpoint = endpoint;
             this.logger = LogProvider.GetLogger("Halibut");
         }
 
-        public InMemoryConnectionLog(string endpoint, Logging.ILog logger)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="endpoint"></param>
+        /// <param name="logger">When null, this will not write to the Logging.ILog</param>
+        public InMemoryConnectionLog(string endpoint, Logging.ILog? logger)
         {
             this.endpoint = endpoint;
             this.logger = logger;
@@ -43,8 +53,7 @@ namespace Halibut.Diagnostics
 
         void WriteInternal(LogEvent logEvent)
         {
-            var logLevel = GetLogLevel(logEvent);
-            SendToTrace(logEvent, logLevel);
+            SendToTrace(logEvent);
 
             events.Enqueue(logEvent);
 
@@ -71,9 +80,13 @@ namespace Halibut.Diagnostics
             }
         }
 
-        void SendToTrace(LogEvent logEvent, LogLevel level)
+        void SendToTrace(LogEvent logEvent)
         {
-            logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
+            if (logger != null)
+            {
+                var level = GetLogLevel(logEvent)
+                logger.Log(level, () => "{0,-30} {1,4}  {2}", logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage);
+            }
         }
     }
 }
