@@ -59,6 +59,8 @@ namespace Halibut.Transport.Protocol
                 configureSerializer?.Invoke(settings);
                 return new StreamCapturingJsonSerializer(settings);
             }
+            
+            RegisteredSerializationBinder.AddProtocolTupesToTypeRegistry(typeRegistry);
 
             var messageSerializerObserver = this.messageSerializerObserver ?? new NoMessageSerializerObserver();
 
