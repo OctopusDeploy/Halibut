@@ -1,11 +1,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Text;
-using System.Threading.Tasks;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
@@ -37,26 +34,41 @@ namespace Halibut.Queue
             
             using var ms = new MemoryStream();
             Stream stream = ms;
-            using var disposables = new DisposableCollection();
-            foreach (var streamer in messageStreamWrappers.Wrappers)
+            using (var wrappedStreamDisposables = new DisposableCollection())
             {
-                stream = streamer.WrapMessageSerialisationStream(stream);
-                disposables.Add(stream);
-            }
-            using (var sw = new StreamWriter(stream, Encoding.UTF8
+                stream = WrapInMessageSerialisationStreams(messageStreamWrappers, stream, wrappedStreamDisposables);
+
+                using (var sw = new StreamWriter(stream, Encoding.UTF8
 #if NET8_0_OR_GREATER
-                       , leaveOpen: true
+                           , leaveOpen: true
 #endif
-                       )){
-                using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
+                       ))
                 {
-                    var streamCapturingSerializer = createStreamCapturingSerializer();
-                    streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
-                    dataStreams = streamCapturingSerializer.DataStreams;
+                    using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
+                    {
+                        var streamCapturingSerializer = createStreamCapturingSerializer();
+                        streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
+                        dataStreams = streamCapturingSerializer.DataStreams;
+                    }
                 }
             }
 
             return (ms.ToArray(), dataStreams);
+        }
+
+        public static Stream WrapInMessageSerialisationStreams(MessageStreamWrappers messageStreamWrappers, Stream stream, DisposableCollection disposables)
+        {
+            foreach (var streamer in messageStreamWrappers.Wrappers)
+            {
+                var wrappedStream = streamer.WrapMessageSerialisationStream(stream);
+                if (!ReferenceEquals(wrappedStream, stream))
+                {
+                    stream = wrappedStream;
+                    disposables.Add(stream);
+                }
+            }
+
+            return stream;
         }
 
         public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(byte[] json)
@@ -64,11 +76,7 @@ namespace Halibut.Queue
             using var ms = new MemoryStream(json);
             Stream stream = ms;
             using var disposables = new DisposableCollection();
-            foreach (var streamer in messageStreamWrappers.Wrappers)
-            {
-                stream = streamer.WrapMessageDeserialisationStream(stream);
-                disposables.Add(stream);
-            }
+            stream = WrapStreamInMessageDeserialisationStreams(messageStreamWrappers, stream, disposables);
             using var sr = new StreamReader(stream, Encoding.UTF8
 #if NET8_0_OR_GREATER
                        , leaveOpen: true
@@ -85,7 +93,22 @@ namespace Halibut.Queue
 
             return (result.Message, streamCapturingSerializer.DataStreams);
         }
-        
+
+        public static Stream WrapStreamInMessageDeserialisationStreams(MessageStreamWrappers messageStreamWrappers, Stream stream, DisposableCollection disposables)
+        {
+            foreach (var streamer in messageStreamWrappers.Wrappers)
+            {
+                var wrappedStream = streamer.WrapMessageDeserialisationStream(stream);
+                if (!ReferenceEquals(wrappedStream, stream))
+                {
+                    stream = wrappedStream;
+                    disposables.Add(stream);
+                }
+            }
+
+            return stream;
+        }
+
         // By making this a generic type, each message specifies the exact type it sends/expects
         // And it is impossible to deserialize the wrong type - any mismatched type will refuse to deserialize
         class MessageEnvelope<T>
