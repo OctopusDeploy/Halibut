@@ -35,14 +35,11 @@ namespace Halibut.Queue.QueuedDataStreams
                 if (dataStreamsToReportProgressOn.TryGetValue(keyValuePair.Key, out var dataStreamWithTransferProgress))
                 {
                     var progress = dataStreamWithTransferProgress.DataStreamTransferProgress;
+                    await progress.Progress(keyValuePair.Value, cancellationToken);
+                    
                     if (dataStreamWithTransferProgress.Length == keyValuePair.Value)
                     {
-                        await progress.UploadComplete(cancellationToken);
                         completedDataStreams.Add(keyValuePair.Key);
-                    }
-                    else
-                    {
-                        await progress.Progress(keyValuePair.Value, dataStreamWithTransferProgress.Length, cancellationToken);
                     }
                 }
             }
@@ -61,7 +58,7 @@ namespace Halibut.Queue.QueuedDataStreams
                 if (!completedDataStreams.Contains(keyValuePair.Key))
                 {
                     var progress = keyValuePair.Value.DataStreamTransferProgress;
-                    await progress.UploadComplete(CancellationToken.None);
+                    await progress.NoLongerUploading(CancellationToken.None);
                     completedDataStreams.Add(keyValuePair.Key);
                 }
             }
