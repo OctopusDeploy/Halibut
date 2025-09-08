@@ -18,7 +18,19 @@ namespace Halibut.Transport.Observability
 {
     public struct SecureConnectionInfo
     {
-        public SslProtocols SslProtocols { get; init; }
-        public ConnectionDirection ConnectionDirection { get; init; }
+        SecureConnectionInfo(
+            SslProtocols sslProtocols,
+            ConnectionDirection connectionDirection
+        )
+        {
+            SslProtocols = sslProtocols;
+            ConnectionDirection = connectionDirection;
+        }
+
+        public SslProtocols SslProtocols { get; }
+        public ConnectionDirection ConnectionDirection { get; }
+
+        public static SecureConnectionInfo CreateIncoming(SslProtocols sslProtocols) => new(sslProtocols, ConnectionDirection.Incoming);
+        public static SecureConnectionInfo CreateOutgoing(SslProtocols sslProtocols) => new(sslProtocols, ConnectionDirection.Outgoing);
     }
 }
