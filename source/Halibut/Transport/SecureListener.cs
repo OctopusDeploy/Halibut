@@ -340,13 +340,7 @@ namespace Halibut.Transport
                     {
                         connectionAuthorizedAndObserved = true;
                         connectionsObserver.ConnectionAccepted(true);
-                        secureConnectionObserver.SecureConnectionEstablished(
-                            new SecureConnectionInfo
-                            {
-                                ConnectionDirection = ConnectionDirection.Incoming,
-                                SslProtocols = ssl.SslProtocol
-                            }
-                        );
+                        secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateIncoming(ssl.SslProtocol));
                         tcpClientManager.AddActiveClient(thumbprint, client);
                         errorEventType = EventType.Error;
                         await ExchangeMessages(ssl).ConfigureAwait(false);
