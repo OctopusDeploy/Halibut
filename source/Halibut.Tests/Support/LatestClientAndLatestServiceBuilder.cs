@@ -167,6 +167,19 @@ namespace Halibut.Tests.Support
 
             return this;
         }
+        
+        public LatestClientAndLatestServiceBuilder WithPortForwarding(Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
+        {
+            // Based on ServiceConnectionType, the port forwarder will be created in either clientBuilder or serviceBuilder.
+            clientBuilder.WithPortForwarding(out clientPortForwarderReference, portForwarderFactory);
+            serviceBuilder.WithPortForwarding(out servicePortForwarderReference, portForwarderFactory);
+
+            portForwarderReference = portForwarder;
+
+            return this;
+        }
+        
+        
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {

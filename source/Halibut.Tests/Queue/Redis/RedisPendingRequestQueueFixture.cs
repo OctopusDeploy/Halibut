@@ -1,6 +1,8 @@
 #if NET8_0_OR_GREATER
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Docker.DotNet.Models;
@@ -28,9 +30,11 @@ using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
+using Nito.AsyncEx;
 using NSubstitute;
 using NSubstitute.Extensions;
 using NUnit.Framework;
+using Octopus.TestPortForwarder;
 using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Queue.Redis
@@ -895,6 +899,92 @@ namespace Halibut.Tests.Queue.Redis
                 (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
 
                 for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++) (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+            }
+        }
+        
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        public async Task WhenUsingTheRedisQueue_StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
+            var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
+
+            var dataSizeToSend = 1024 * 1024 * 64 + 15;
+                
+            Reference<PortForwarder> portForwarder = new Reference<PortForwarder>();
+            long bytesSent = 0;
+            var aboutHalfTheDataStreamHasBeenSentWaiter = new AsyncManualResetEvent(); 
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithStandardServices()
+                             .AsLatestClientAndLatestServiceBuilder()
+                             .WithPortForwarding(portForwarder, port => PortForwarderBuilder.ForwardingToLocalPort(port, Logger)
+                                 .WithDataObserver(() => new BiDirectionalDataTransferObserverBuilder()
+                                     .ObserveDataOriginToClient(new DataTransferObserverBuilder()
+                                         .WithWritingDataObserver((tcpPump, dataToWrite) =>
+                                         {
+                                             bytesSent += dataToWrite.Length;
+                                             if (bytesSent >= dataSizeToSend / 2 && !aboutHalfTheDataStreamHasBeenSentWaiter.IsSet)
+                                             {
+                                                 portForwarder.Value.PauseExistingConnections();
+                                                 aboutHalfTheDataStreamHasBeenSentWaiter.Set();
+                                                 Logger.Information("Pausing connection");
+                                             }
+                                         })
+                                         .Build())
+                                     .Build())
+                                 .Build())
+                             .WithPendingRequestQueueFactory((queueMessageSerializer, logFactory) =>
+                                 new RedisPendingRequestQueueFactory(
+                                         queueMessageSerializer,
+                                         dataStreamStore,
+                                         new RedisNeverLosesData(),
+                                         redisTransport,
+                                         new HalibutTimeoutsAndLimits(),
+                                         logFactory)
+                                     .WithWaitForReceiverToBeReady()
+                                     .WithQueueCreationCallBack(queue =>
+                                     {
+                                         queue.RequestReceiverNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
+                                         queue.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromMilliseconds(100);
+                                     }))
+                             .Build(CancellationToken))
+            {
+                var data = new byte[dataSizeToSend];
+                new Random().NextBytes(data);
+                var stream = new MemoryStream(data);
+                
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+
+                int currentProgress = 0;
+                
+                var dataStream = await Task.FromResult(DataStream.FromStream(stream,
+                    async (i, token) => {
+                        await Task.CompletedTask;
+                        currentProgress = i;
+                    })
+                );
+                var echoTask = Task.Run(async () => await echo.CountBytesAsync(dataStream));
+
+                await aboutHalfTheDataStreamHasBeenSentWaiter.WaitAsync(CancellationToken);
+
+                await ShouldEventually.Eventually(() =>
+                {
+                    Logger.Information("Current progress is {CurrentProgress}", currentProgress);
+                    currentProgress.Should().BeInRange(40, 75); // The range is super high since it is possible for
+                                                                // the client to write many MBs to the stream that
+                                                                // end up waiting on the port forwarder. Halibut
+                                                                // can't know how many MBs have actually made it to
+                                                                // the service.
+                }, TimeSpan.FromSeconds(10), CancellationToken);
+                
+                portForwarder.Value.UnPauseExistingConnections();
+                
+                var count = await echoTask;
+                ;
+                count.Should().Be(dataSizeToSend);
+
+                currentProgress.Should().Be(100);
             }
         }
 
