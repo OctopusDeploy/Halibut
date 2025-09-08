@@ -68,7 +68,7 @@ namespace Halibut.Transport
             await ssl.FlushAsync(cancellationToken);
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
-            secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateOutgoing(ssl.SslProtocol));
+            secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateOutgoing(ssl.SslProtocol, serviceEndpoint.RemoteThumbprint ?? "Unknown"));
 
             return new SecureConnection(client, ssl, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
         }
