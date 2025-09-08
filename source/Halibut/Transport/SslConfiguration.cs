@@ -7,7 +7,13 @@ namespace Halibut.Transport
     {
         static SslProtocols GetSupportedProtocols()
         {
+#if NETFRAMEWORK
+            // Net48 tests has issues establishing a common algorithm when we allow system default
+            var supportedProtocolMode = "legacy";
+#else
             var supportedProtocolMode = Environment.GetEnvironmentVariable("HALIBUT_SUPPORTED_SSL_PROTOCOLS")?.ToLowerInvariant();
+#endif
+
 
             if (supportedProtocolMode == "legacy")
             {
