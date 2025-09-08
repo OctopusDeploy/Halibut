@@ -7,7 +7,7 @@ using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.NodeHeartBeat;
 using StackExchange.Redis;
 
-namespace Halibut.Queue.Redis
+namespace Halibut.Queue.Redis.RedisHelpers
 {
     public interface IHalibutRedisTransport
     {
@@ -38,10 +38,10 @@ namespace Halibut.Queue.Redis
             Uri endpoint, 
             Guid requestId,
             HalibutQueueNodeSendingPulses nodeSendingPulsesType,
-            Func<Task> onHeartBeat,
+            Func<string, Task> onHeartBeat,
             CancellationToken cancellationToken);
 
-        Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken);
+        Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, string nodeHeartBeatMessage, CancellationToken cancellationToken);
         
         
         Task<IAsyncDisposable> SubscribeToResponseChannel(

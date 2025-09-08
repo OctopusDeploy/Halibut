@@ -1,5 +1,6 @@
 #if NET8_0_OR_GREATER
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Docker.DotNet.Models;
@@ -19,6 +20,7 @@ using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.Support.Streams;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
@@ -190,6 +192,77 @@ namespace Halibut.Tests.Queue.Redis
             var returnObject = (ComplexObjectMultipleDataStreams)responseMessage.Result!;
             (await returnObject.Payload1!.ReadAsString(CancellationToken)).Should().Be("good");
             (await returnObject.Payload2!.ReadAsString(CancellationToken)).Should().Be("bye");
+        }
+        
+        [Test]
+        public async Task DataStreamProgressShouldBeReportedThroughTheQueue()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
+            var messageReaderWriter = CreateMessageSerialiserAndDataStreamStorage();
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+            int currentProgress = 0;
+            
+            var dataStreamWithProgress = DataStream.FromStream(new MemoryStream(Some.RandomAsciiStringOfLength(4 * 1024 * 1024).GetBytesUtf8()), async (progress, ct) =>
+            {
+                await Task.CompletedTask;
+                currentProgress = progress;
+            });
+            
+            request.Params = new[] { new ComplexObjectMultipleDataStreams(dataStreamWithProgress, DataStream.FromString("world")) };
+
+            var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            queue.RequestReceiverNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
+            queue.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromMilliseconds(100);
+            
+            await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
+
+            var queueAndWaitAsync = queue.QueueAndWaitAsync(request, CancellationToken.None);
+
+            var requestMessageWithCancellationToken = await queue.DequeueAsync(CancellationToken);
+
+            var objWithDataStreams = (ComplexObjectMultipleDataStreams)requestMessageWithCancellationToken!.RequestMessage.Params[0];
+            bool wasNotifiedOf25PcDone = false;
+            bool wasNotifiedOf50PcDone = false;
+            
+            // We are calling the writer similar to how halibut will ask the writter to write directly to the network stream.
+            // By using a ActionBeforeWriteAndCountingStream we can pause the transfer of data over  the stream
+            // when the DataStream is approx 25% and 50% transferred. Doing so allows us to check that we are correctly getting
+            // progress reporting back over the queue.
+            var destinationStreamFor4MbDataStream = new ActionBeforeWriteAndCountingStream(new MemoryStream(), soFar =>
+            {
+                if (soFar >= 1024 * 1024 && !wasNotifiedOf25PcDone)
+                {
+                    // Block at ~25% transferred and check we the sender has been told that 25% of the DataStream has been transferred 
+                    ShouldEventually.Eventually(() => currentProgress.Should().BeInRange(10, 40), TimeSpan.FromSeconds(100), CancellationToken).GetAwaiter().GetResult();
+                    wasNotifiedOf25PcDone = true;
+                }
+                
+                if (soFar >= 2 * 1024 * 1024 && !wasNotifiedOf50PcDone)
+                {
+                    // Block at ~50% transferred and check we the sender has been told that 505% of the DataStream has been transferred
+                    ShouldEventually.Eventually(() => currentProgress.Should().BeInRange(35, 65), TimeSpan.FromSeconds(100), CancellationToken).GetAwaiter().GetResult();
+                    wasNotifiedOf50PcDone = true;
+                }
+            });
+            await objWithDataStreams.Payload1!.WriteData(destinationStreamFor4MbDataStream, CancellationToken);
+            
+            (await objWithDataStreams.Payload2!.ReadAsString(CancellationToken)).Should().Be("world");
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken.RequestMessage,
+                new ComplexObjectMultipleDataStreams(DataStream.FromString("good"), DataStream.FromString("bye")));
+
+            await queue.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            await queueAndWaitAsync;
+
+            wasNotifiedOf25PcDone.Should().BeTrue("We should have received a progress update at around 25%, since we ShouldEventually waited for the message");
+            wasNotifiedOf50PcDone.Should().BeTrue("We should have received a progress update at around 50%, since we ShouldEventually waited for the message");
+
+            currentProgress.Should().Be(100, "Once everything is done and dusted we should be told the upload is complete.");
         }
         
         [Test]
@@ -480,7 +553,7 @@ namespace Halibut.Tests.Queue.Redis
             // Assert
             var heartBeatSent = false;
             var cts = new CancelOnDisposeCancellationToken();
-            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.RequestSenderNode, async () =>
+            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.RequestSenderNode, async _ =>
                 {
                     await Task.CompletedTask;
                     heartBeatSent = true;
@@ -520,7 +593,7 @@ namespace Halibut.Tests.Queue.Redis
             // Assert
             var heartBeatSent = false;
             var cts = new CancelOnDisposeCancellationToken();
-            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async () =>
+            using var _ = redisTransport.SubscribeToNodeHeartBeatChannel(endpoint, request.ActivityId, HalibutQueueNodeSendingPulses.RequestProcessorNode, async _ =>
                 {
                     await Task.CompletedTask;
                     heartBeatSent = true;

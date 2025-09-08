@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.QueuedDataStreams;
-using Halibut.Transport.Streams;
+using Halibut.Queue.Redis.MessageStorage;
 using Newtonsoft.Json;
 
 namespace Halibut.Tests.Queue.Redis.Utils
@@ -33,7 +33,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Encoding.UTF8.GetBytes(json);
         }
 
-        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             
@@ -57,9 +57,11 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 }
 
                 var bytes = Convert.FromBase64String(base64Data);
-                dataStream.SetWriterAsync(async (stream, ct) =>
+                
+                dataStream.Rehydrate(() =>
                 {
-                    await stream.WriteByteArrayAsync(bytes, ct);
+                    var stream = new MemoryStream(bytes);
+                    return (stream, null);
                 });
             }
         }

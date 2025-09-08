@@ -1,10 +1,14 @@
 
 #if NET8_0_OR_GREATER
 using System;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.QueuedDataStreams;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
+using Newtonsoft.Json;
 
 namespace Halibut.Queue.Redis.NodeHeartBeat
 {
@@ -24,6 +28,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             IHalibutRedisTransport halibutRedisTransport,
             ILog log,
             HalibutQueueNodeSendingPulses nodeSendingPulsesType,
+            Func<HeartBeatMessage> heartBeatMessageProvider,
             TimeSpan defaultDelayBetweenPulses)
         {
             this.endpoint = endpoint;
@@ -33,10 +38,10 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             cts = new CancelOnDisposeCancellationToken();
             this.log = log.ForContext<NodeHeartBeatSender>();
             this.log.Write(EventType.Diagnostic, "Starting NodeHeartBeatSender for {0} node, request {1}, endpoint {2}", nodeSendingPulsesType, requestActivityId, endpoint);
-            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(defaultDelayBetweenPulses, cts.Token));
+            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(heartBeatMessageProvider, defaultDelayBetweenPulses, cts.Token));
         }
 
-        async Task SendPulsesWhileProcessingRequest(TimeSpan defaultDelayBetweenPulses, CancellationToken cancellationToken)
+        async Task SendPulsesWhileProcessingRequest(Func<HeartBeatMessage> heartBeatMessageProvider, TimeSpan defaultDelayBetweenPulses, CancellationToken cancellationToken)
         {
             log.Write(EventType.Diagnostic, "Starting heartbeat pulse loop for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
             
@@ -45,7 +50,9 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             {
                 try
                 {
-                    await halibutRedisTransport.SendNodeHeartBeat(endpoint, requestActivityId, nodeSendingPulsesType, cancellationToken);
+                    var heartBeatMessage = heartBeatMessageProvider();
+                    var nodeHeartBeatMessage = JsonConvert.SerializeObject(heartBeatMessage);
+                    await halibutRedisTransport.SendNodeHeartBeat(endpoint, requestActivityId, nodeSendingPulsesType, nodeHeartBeatMessage, cancellationToken);
                     delayBetweenPulse = defaultDelayBetweenPulses;
                     log.Write(EventType.Diagnostic, "Successfully sent heartbeat for {0} node, request {1}, next pulse in {2} seconds", nodeSendingPulsesType, requestActivityId, delayBetweenPulse.TotalSeconds);
                 }

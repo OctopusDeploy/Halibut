@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.QueuedDataStreams;
+using Halibut.Queue.Redis.MessageStorage;
 
 namespace Halibut.Tests.Queue.Redis.Utils
 {
@@ -22,16 +23,17 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Array.Empty<byte>();
         }
         
-        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             foreach (var dataStream in dataStreams)
             {
                 var bytes = dataStreamsStored[dataStream.Id];
                 dataStreamsStored.Remove(dataStream.Id);
-                dataStream.SetWriterAsync(async (stream, ct) =>
+                dataStream.Rehydrate(() =>
                 {
-                    await stream.WriteAsync(bytes, 0, bytes.Length, ct);
+                    var s = new MemoryStream(bytes);
+                    return (s, null);
                 });
             }
         }

@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis.Cancellation;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
@@ -127,15 +128,17 @@ namespace Halibut.Queue.Redis
             using var pending = new RedisPendingRequest(request, log);
 
             RedisStoredMessage messageToStore;
+            DataStreamProgressReporter dataStreamProgressReporter;
             try
             {
-                messageToStore = await messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
+                (messageToStore, dataStreamProgressReporter) = await messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
             }
             catch (Exception ex)
             {
                 throw CreateCancellationExceptionIfCancelled() 
                       ?? new ErrorWhilePreparingRequestForQueueHalibutClientException($"Request {request.ActivityId} failed since an error occured when preparing request for queue", ex);
             }
+            await using var _ = dataStreamProgressReporter;
             
             
             // Start listening for a response to the request, we don't want to miss the response.
@@ -144,7 +147,7 @@ namespace Halibut.Queue.Redis
             var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(pending));
             try
             {
-                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, RequestSenderNodeHeartBeatRate);
+                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, () => new HeartBeatMessage(), RequestSenderNodeHeartBeatRate);
                 // Make the request available before we tell people it is available.
                 try
                 {
@@ -163,7 +166,7 @@ namespace Halibut.Queue.Redis
                 {
                     // We must be careful here to ensure we will always return.
                     
-                    var watchProcessingNodeStillHasHeartBeat = WatchProcessingNodeIsStillConnectedInBackground(request, pending, cancellationToken);
+                    var watchProcessingNodeStillHasHeartBeat = WatchProcessingNodeIsStillConnectedInBackground(request, pending, dataStreamProgressReporter, cancellationToken);
                     var waitingForResponse = WaitForResponse(pollAndSubscribeToResponse, request, cancellationToken);
                     var pendingRequestWaitUntilComplete = pending.WaitUntilComplete(
                         async () => await tryClearRequestFromQueueAtMostOnce.Task,
@@ -251,18 +254,19 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<NodeWatcherResult?> WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, RedisPendingRequest redisPending, CancellationToken cancellationToken)
+        async Task<NodeWatcherResult?> WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, RedisPendingRequest redisPendingRequest, IGetNotifiedOfHeartBeats notifiedOfHeartBeats, CancellationToken cancellationToken)
         {
             await Task.Yield();
             
             return await NodeHeartBeatWatcher.WatchThatNodeProcessingTheRequestIsStillAlive(
                 endpoint,
                 request,
-                redisPending,
+                redisPendingRequest,
                 halibutRedisTransport,
                 TimeBetweenCheckingIfRequestWasCollected,
                 log,
                 RequestReceiverNodeHeartBeatTimeout,
+                notifiedOfHeartBeats,
                 cancellationToken);
         }
 
@@ -344,6 +348,9 @@ namespace Halibut.Queue.Redis
             // cause a cascade of failure from high load.
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
+
+            var pendingRequest = pending.Value.Item1;
+            var dataStreamsTransferProgress = pending.Value.Item2;
             
             var disposables = new DisposableCollection();
             try
@@ -352,15 +359,22 @@ namespace Halibut.Queue.Redis
                 // In that case we will just time out because of the lack of heart beats.
                 var dataLossCT = await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), queueToken);
                 
-                disposables.AddAsyncDisposable(new NodeHeartBeatSender(endpoint, pending.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestProcessorNode, RequestReceiverNodeHeartBeatRate));
-                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pending.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, log);
+                disposables.AddAsyncDisposable(new NodeHeartBeatSender(
+                    endpoint,
+                    pendingRequest.ActivityId,
+                    halibutRedisTransport,
+                    log,
+                    HalibutQueueNodeSendingPulses.RequestProcessorNode,
+                    () => HeartBeatMessage.Build(dataStreamsTransferProgress),
+                    RequestReceiverNodeHeartBeatRate));
+                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pendingRequest.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, log);
                 disposables.AddAsyncDisposable(watcher);
                 
                 var cts = new CancelOnDisposeCancellationToken(watcher.RequestProcessingCancellationToken, dataLossCT);
                 disposables.AddAsyncDisposable(cts);
                 
-                var response = new RequestMessageWithCancellationToken(pending, cts.Token);
-                DisposablesForInFlightRequests[pending.ActivityId] = new WatcherAndDisposables(disposables, cts.Token, watcher);
+                var response = new RequestMessageWithCancellationToken(pendingRequest, cts.Token);
+                DisposablesForInFlightRequests[pendingRequest.ActivityId] = new WatcherAndDisposables(disposables, cts.Token, watcher);
                 return response;
             }
             catch (Exception)
@@ -442,7 +456,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<RequestMessage?> DequeueNextAsync()
+        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> DequeueNextAsync()
         {
             await using var cts = new CancelOnDisposeCancellationToken(queueToken);
             try
@@ -485,7 +499,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<RequestMessage?> TryRemoveNextItemFromQueue(CancellationToken cancellationToken)
+        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> TryRemoveNextItemFromQueue(CancellationToken cancellationToken)
         {
             while (true)
             {
@@ -506,7 +520,7 @@ namespace Halibut.Queue.Redis
                 }
 
                 var request = await messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
-                log.Write(EventType.Diagnostic, "Successfully collected request {0} from queue for endpoint {1}", request.ActivityId, endpoint);
+                log.Write(EventType.Diagnostic, "Successfully collected request {0} from queue for endpoint {1}", request.Item1.ActivityId, endpoint);
 
                 return request;
             }

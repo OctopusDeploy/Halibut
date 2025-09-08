@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Queue.Redis.Cancellation;
 using Halibut.Queue.Redis.NodeHeartBeat;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
 
 namespace Halibut.Queue.Redis

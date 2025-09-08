@@ -3,6 +3,7 @@ using System;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Queue.Redis.MessageStorage;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
 
 namespace Halibut.Queue.Redis.ResponseMessageTransfer
