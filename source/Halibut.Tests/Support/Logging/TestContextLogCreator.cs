@@ -1,7 +1,6 @@
 ﻿using System;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
-using Halibut.Logging;
 using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support.Logging

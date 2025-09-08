@@ -37,30 +37,27 @@
 // LibLog providers internally to provide built in support for popular logging frameworks.
 
 #pragma warning disable 1591
-
+using System;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 [assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Halibut.Logging")]
 [assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Halibut.Logging.Logger.#Invoke(Halibut.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
 
-// If you copied this file manually, you need to change all "Halibut" so not to clash with other libraries
+namespace Halibut.Diagnostics
+{
+    // If you copied this file manually, you need to change all "Halibut" so not to clash with other libraries
 // that use LibLog
 #if LIBLOG_PROVIDERS_ONLY
 namespace Halibut.LibLog
 #else
-namespace Halibut.Logging
-#endif
-{
-    using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
-#if LIBLOG_PROVIDERS_ONLY
-    using Halibut.LibLog.LogProviders;
-#else
-    using Halibut.Logging.LogProviders;
-#endif
-    using System;
-#if !LIBLOG_PROVIDERS_ONLY
-    using System.Diagnostics;
 #if !LIBLOG_PORTABLE
     using System.Runtime.CompilerServices;
 #endif
@@ -71,7 +68,7 @@ namespace Halibut.Logging
 #else
     public
 #endif
-    delegate bool Logger(LogLevel logLevel, Func<string>? messageFunc, Exception? exception = null, params object[] formatParameters);
+        delegate bool Logger(LogLevel logLevel, Func<string>? messageFunc, Exception? exception = null, params object[] formatParameters);
 
 #if !LIBLOG_PROVIDERS_ONLY
     /// <summary>
@@ -82,7 +79,7 @@ namespace Halibut.Logging
 #else
     internal
 #endif
-    interface ILog
+        interface ILog
     {
         /// <summary>
         /// Log a message the specified log level.
@@ -110,7 +107,7 @@ namespace Halibut.Logging
 #else
     public
 #endif
-    enum LogLevel
+        enum LogLevel
     {
         Trace,
         Debug,
@@ -126,7 +123,7 @@ namespace Halibut.Logging
 #else
     internal
 #endif
-    static partial class LogExtensions
+        static partial class LogExtensions
     {
         public static bool IsDebugEnabled(this ILog logger)
         {
@@ -172,7 +169,7 @@ namespace Halibut.Logging
 
         public static void Debug(this ILog logger, string message)
         {
-            if (logger.IsDebugEnabled())
+            if (IsDebugEnabled(logger))
             {
                 logger.Log(LogLevel.Debug, message.AsFunc());
             }
@@ -180,15 +177,15 @@ namespace Halibut.Logging
 
         public static void DebugFormat(this ILog logger, string message, params object[] args)
         {
-            if (logger.IsDebugEnabled())
+            if (IsDebugEnabled(logger))
             {
-                logger.LogFormat(LogLevel.Debug, message, args);
+                LogFormat(logger, LogLevel.Debug, message, args);
             }
         }
 
         public static void DebugException(this ILog logger, string message, Exception exception)
         {
-            if (logger.IsDebugEnabled())
+            if (IsDebugEnabled(logger))
             {
                 logger.Log(LogLevel.Debug, message.AsFunc(), exception);
             }
@@ -196,7 +193,7 @@ namespace Halibut.Logging
 
         public static void DebugException(this ILog logger, string message, Exception exception, params object[] formatParams)
         {
-            if (logger.IsDebugEnabled())
+            if (IsDebugEnabled(logger))
             {
                 logger.Log(LogLevel.Debug, message.AsFunc(), exception, formatParams);
             }
@@ -210,7 +207,7 @@ namespace Halibut.Logging
 
         public static void Error(this ILog logger, string message)
         {
-            if (logger.IsErrorEnabled())
+            if (IsErrorEnabled(logger))
             {
                 logger.Log(LogLevel.Error, message.AsFunc());
             }
@@ -218,15 +215,15 @@ namespace Halibut.Logging
 
         public static void ErrorFormat(this ILog logger, string message, params object[] args)
         {
-            if (logger.IsErrorEnabled())
+            if (IsErrorEnabled(logger))
             {
-                logger.LogFormat(LogLevel.Error, message, args);
+                LogFormat(logger, LogLevel.Error, message, args);
             }
         }
 
         public static void ErrorException(this ILog logger, string message, Exception exception, params object[] formatParams)
         {
-            if (logger.IsErrorEnabled())
+            if (IsErrorEnabled(logger))
             {
                 logger.Log(LogLevel.Error, message.AsFunc(), exception, formatParams);
             }
@@ -239,7 +236,7 @@ namespace Halibut.Logging
 
         public static void Fatal(this ILog logger, string message)
         {
-            if (logger.IsFatalEnabled())
+            if (IsFatalEnabled(logger))
             {
                 logger.Log(LogLevel.Fatal, message.AsFunc());
             }
@@ -247,15 +244,15 @@ namespace Halibut.Logging
 
         public static void FatalFormat(this ILog logger, string message, params object[] args)
         {
-            if (logger.IsFatalEnabled())
+            if (IsFatalEnabled(logger))
             {
-                logger.LogFormat(LogLevel.Fatal, message, args);
+                LogFormat(logger, LogLevel.Fatal, message, args);
             }
         }
 
         public static void FatalException(this ILog logger, string message, Exception exception, params object[] formatParams)
         {
-            if (logger.IsFatalEnabled())
+            if (IsFatalEnabled(logger))
             {
                 logger.Log(LogLevel.Fatal, message.AsFunc(), exception, formatParams);
             }
@@ -269,7 +266,7 @@ namespace Halibut.Logging
 
         public static void Info(this ILog logger, string message)
         {
-            if (logger.IsInfoEnabled())
+            if (IsInfoEnabled(logger))
             {
                 logger.Log(LogLevel.Info, message.AsFunc());
             }
@@ -277,15 +274,15 @@ namespace Halibut.Logging
 
         public static void InfoFormat(this ILog logger, string message, params object[] args)
         {
-            if (logger.IsInfoEnabled())
+            if (IsInfoEnabled(logger))
             {
-                logger.LogFormat(LogLevel.Info, message, args);
+                LogFormat(logger, LogLevel.Info, message, args);
             }
         }
 
         public static void InfoException(this ILog logger, string message, Exception exception, params object[] formatParams)
         {
-            if (logger.IsInfoEnabled())
+            if (IsInfoEnabled(logger))
             {
                 logger.Log(LogLevel.Info, message.AsFunc(), exception, formatParams);
             }
@@ -299,7 +296,7 @@ namespace Halibut.Logging
 
         public static void Trace(this ILog logger, string message)
         {
-            if (logger.IsTraceEnabled())
+            if (IsTraceEnabled(logger))
             {
                 logger.Log(LogLevel.Trace, message.AsFunc());
             }
@@ -307,15 +304,15 @@ namespace Halibut.Logging
 
         public static void TraceFormat(this ILog logger, string message, params object[] args)
         {
-            if (logger.IsTraceEnabled())
+            if (IsTraceEnabled(logger))
             {
-                logger.LogFormat(LogLevel.Trace, message, args);
+                LogFormat(logger, LogLevel.Trace, message, args);
             }
         }
 
         public static void TraceException(this ILog logger, string message, Exception exception, params object[] formatParams)
         {
-            if (logger.IsTraceEnabled())
+            if (IsTraceEnabled(logger))
             {
                 logger.Log(LogLevel.Trace, message.AsFunc(), exception, formatParams);
             }
@@ -329,7 +326,7 @@ namespace Halibut.Logging
 
         public static void Warn(this ILog logger, string message)
         {
-            if (logger.IsWarnEnabled())
+            if (IsWarnEnabled(logger))
             {
                 logger.Log(LogLevel.Warn, message.AsFunc());
             }
@@ -337,15 +334,15 @@ namespace Halibut.Logging
 
         public static void WarnFormat(this ILog logger, string message, params object[] args)
         {
-            if (logger.IsWarnEnabled())
+            if (IsWarnEnabled(logger))
             {
-                logger.LogFormat(LogLevel.Warn, message, args);
+                LogFormat(logger, LogLevel.Warn, message, args);
             }
         }
 
         public static void WarnException(this ILog logger, string message, Exception exception, params object[] formatParams)
         {
-            if (logger.IsWarnEnabled())
+            if (IsWarnEnabled(logger))
             {
                 logger.Log(LogLevel.Warn, message.AsFunc(), exception, formatParams);
             }
@@ -379,14 +376,14 @@ namespace Halibut.Logging
 #endif
 
     /// <summary>
-    /// Represents a way to get a <see cref="ILog"/>
+    /// Represents a way to get a <see cref="Halibut.Diagnostics.ILog"/>
     /// </summary>
 #if LIBLOG_PROVIDERS_ONLY
     internal
 #else
     public
 #endif
-    interface ILogProvider
+        interface ILogProvider
     {
         /// <summary>
         /// Gets the specified named logger.
@@ -412,14 +409,14 @@ namespace Halibut.Logging
     }
 
     /// <summary>
-    /// Provides a mechanism to create instances of <see cref="ILog" /> objects.
+    /// Provides a mechanism to create instances of <see cref="Halibut.Diagnostics.ILog" /> objects.
     /// </summary>
 #if LIBLOG_PROVIDERS_ONLY
     internal
 #else
     public
 #endif
-    static class LogProvider
+        static class LogProvider
     {
 #if !LIBLOG_PROVIDERS_ONLY
         /// <summary>
@@ -484,13 +481,13 @@ namespace Halibut.Logging
         /// Gets a logger for the specified type.
         /// </summary>
         /// <typeparam name="T">The type whose name will be used for the logger.</typeparam>
-        /// <returns>An instance of <see cref="ILog"/></returns>
+        /// <returns>An instance of <see cref="Halibut.Diagnostics.ILog"/></returns>
 #if LIBLOG_PUBLIC
         public
 #else
         internal
 #endif
-        static ILog For<T>()
+            static ILog For<T>()
         {
             return GetLogger(typeof(T));
         }
@@ -517,13 +514,13 @@ namespace Halibut.Logging
         /// Gets a logger for the specified type.
         /// </summary>
         /// <param name="type">The type whose name will be used for the logger.</param>
-        /// <returns>An instance of <see cref="ILog"/></returns>
+        /// <returns>An instance of <see cref="Halibut.Diagnostics.ILog"/></returns>
 #if LIBLOG_PUBLIC
         public
 #else
         internal
 #endif
-        static ILog GetLogger(Type type)
+            static ILog GetLogger(Type type)
         {
             return GetLogger(type.FullName!);
         }
@@ -532,13 +529,13 @@ namespace Halibut.Logging
         /// Gets a logger with the specified name.
         /// </summary>
         /// <param name="name">The name.</param>
-        /// <returns>An instance of <see cref="ILog"/></returns>
+        /// <returns>An instance of <see cref="Halibut.Diagnostics.ILog"/></returns>
 #if LIBLOG_PUBLIC
         public
 #else
         internal
 #endif
-        static ILog GetLogger(string name)
+            static ILog GetLogger(string name)
         {
             ILogProvider? logProvider = CurrentLogProvider ?? ResolveLogProvider();
             return logProvider == null
@@ -557,7 +554,7 @@ namespace Halibut.Logging
 #else
         internal
 #endif
-        static IDisposable OpenNestedContext(string message)
+            static IDisposable OpenNestedContext(string message)
         {
             ILogProvider? logProvider = CurrentLogProvider ?? ResolveLogProvider();
 
@@ -578,7 +575,7 @@ namespace Halibut.Logging
 #else
         internal
 #endif
-        static IDisposable OpenMappedContext(string key, string value)
+            static IDisposable OpenMappedContext(string key, string value)
         {
             ILogProvider? logProvider = CurrentLogProvider ?? ResolveLogProvider();
 
@@ -593,29 +590,29 @@ namespace Halibut.Logging
 #else
         internal
 #endif
-    delegate bool IsLoggerAvailable();
+            delegate bool IsLoggerAvailable();
 
 #if LIBLOG_PROVIDERS_ONLY
     private
 #else
         internal
 #endif
-    delegate ILogProvider CreateLogProvider();
+            delegate ILogProvider CreateLogProvider();
 
 #if LIBLOG_PROVIDERS_ONLY
     private
 #else
         internal
 #endif
-    static readonly List<Tuple<IsLoggerAvailable, CreateLogProvider>> LogProviderResolvers =
+            static readonly List<Tuple<IsLoggerAvailable, CreateLogProvider>> LogProviderResolvers =
                 new List<Tuple<IsLoggerAvailable, CreateLogProvider>>
-            {
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(SerilogLogProvider.IsLoggerAvailable, () => new SerilogLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(NLogLogProvider.IsLoggerAvailable, () => new NLogLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(Log4NetLogProvider.IsLoggerAvailable, () => new Log4NetLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(EntLibLogProvider.IsLoggerAvailable, () => new EntLibLogProvider()),
-            new Tuple<IsLoggerAvailable, CreateLogProvider>(LoupeLogProvider.IsLoggerAvailable, () => new LoupeLogProvider()),
-            };
+                {
+                    new Tuple<IsLoggerAvailable, CreateLogProvider>(SerilogLogProvider.IsLoggerAvailable, () => new SerilogLogProvider()),
+                    new Tuple<IsLoggerAvailable, CreateLogProvider>(NLogLogProvider.IsLoggerAvailable, () => new NLogLogProvider()),
+                    new Tuple<IsLoggerAvailable, CreateLogProvider>(Log4NetLogProvider.IsLoggerAvailable, () => new Log4NetLogProvider()),
+                    new Tuple<IsLoggerAvailable, CreateLogProvider>(EntLibLogProvider.IsLoggerAvailable, () => new EntLibLogProvider()),
+                    new Tuple<IsLoggerAvailable, CreateLogProvider>(LoupeLogProvider.IsLoggerAvailable, () => new LoupeLogProvider()),
+                };
 
 #if !LIBLOG_PROVIDERS_ONLY
         private static void RaiseOnCurrentLogProviderSet()
@@ -723,29 +720,10 @@ namespace Halibut.Logging
         }
     }
 #endif
-}
 
 #if LIBLOG_PROVIDERS_ONLY
 namespace Halibut.LibLog.LogProviders
 #else
-namespace Halibut.Logging.LogProviders
-#endif
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
-#if !LIBLOG_PORTABLE
-    using System.Diagnostics;
-#endif
-    using System.Globalization;
-    using System.Linq;
-    using System.Linq.Expressions;
-    using System.Reflection;
-#if !LIBLOG_PORTABLE
-    using System.Text;
-#endif
-    using System.Text.RegularExpressions;
-
     internal abstract class LogProviderBase : ILogProvider
     {
         protected delegate IDisposable OpenNdc(string message);
@@ -760,7 +738,7 @@ namespace Halibut.Logging.LogProviders
             _lazyOpenNdcMethod
                 = new Lazy<OpenNdc>(GetOpenNdcMethod);
             _lazyOpenMdcMethod
-               = new Lazy<OpenMdc>(GetOpenMdcMethod);
+                = new Lazy<OpenMdc>(GetOpenMdcMethod);
         }
 
         public abstract Logger GetLogger(string name);
@@ -1056,14 +1034,14 @@ namespace Halibut.Logging.LogProviders
             MethodCallExpression callPushBody =
                 Expression.Call(
                     Expression.Property(Expression.Property(null, stacksProperty),
-                                        stacksIndexerProperty,
-                                        Expression.Constant("NDC")),
+                        stacksIndexerProperty,
+                        Expression.Constant("NDC")),
                     pushMethod,
                     messageParameter);
 
             OpenNdc result =
                 Expression.Lambda<OpenNdc>(callPushBody, messageParameter)
-                          .Compile();
+                    .Compile();
 
             return result;
         }
@@ -1290,8 +1268,8 @@ namespace Halibut.Logging.LogProviders
             LoggerType = Type.GetType(string.Format(CultureInfo.InvariantCulture, TypeTemplate, "Logger"))!;
             TraceEventTypeType = TraceEventTypeValues.Type;
             if (LogEntryType == null
-                 || TraceEventTypeType == null
-                 || LoggerType == null)
+                || TraceEventTypeType == null
+                || LoggerType == null)
             {
                 return;
             }
@@ -1322,8 +1300,8 @@ namespace Halibut.Logging.LogProviders
         internal static bool IsLoggerAvailable()
         {
             return ProviderIsAvailableOverride
-                 && TraceEventTypeType != null
-                 && LogEntryType != null;
+                   && TraceEventTypeType != null
+                   && LogEntryType != null;
         }
 
         private static Action<string, string, int> GetWriteLogEntry()
@@ -1531,10 +1509,10 @@ namespace Halibut.Logging.LogProviders
                 destructureObjectsParam
             });
             var func = Expression.Lambda<Func<string, object, bool, object>>(
-                methodCall,
-                propertyNameParam,
-                valueParam,
-                destructureObjectsParam)
+                    methodCall,
+                    propertyNameParam,
+                    valueParam,
+                    destructureObjectsParam)
                 .Compile();
             return name => func("SourceContext", name, false);
         }
@@ -1706,7 +1684,7 @@ namespace Halibut.Logging.LogProviders
             string? caption,
             string description,
             params object[] args
-            );
+        );
 
         private static bool s_providerIsAvailableOverride = true;
         private readonly WriteDelegate _logWriteDelegate;

@@ -30,7 +30,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.messageSerialiserAndDataStreamStorage = messageSerialiserAndDataStreamStorage;
         }
 
-        public virtual Task<(RedisStoredMessage, DataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public virtual Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
         }
@@ -75,7 +75,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.exception = exception;
         }
 
-        public override Task<(RedisStoredMessage, DataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public override Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             throw exception();
         }

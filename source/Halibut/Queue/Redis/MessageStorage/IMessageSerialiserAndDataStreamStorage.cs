@@ -17,7 +17,7 @@ namespace Halibut.Queue.Redis.MessageStorage
     /// </summary>
     public interface IMessageSerialiserAndDataStreamStorage
     {
-        Task<(RedisStoredMessage, DataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken);
+        Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken);
         Task<(RequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken);
         Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken);
         Task<ResponseMessage> ReadResponse(RedisStoredMessage jsonResponse, CancellationToken cancellationToken);

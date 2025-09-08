@@ -5,16 +5,20 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.DataStreams;
 
 namespace Halibut.Queue.QueuedDataStreams
 {
-    public class DataStreamProgressReporter : IAsyncDisposable, IGetNotifiedOfHeartBeats
+    /// <summary>
+    /// Updates the progress of Data
+    /// </summary>
+    public class HeartBeatDrivenDataStreamProgressReporter : IAsyncDisposable, IGetNotifiedOfHeartBeats
     {
-        readonly ImmutableDictionary<Guid, DataStream> dataStreamsToReportProgressOn;
+        readonly ImmutableDictionary<Guid, IDataStreamWithFileUploadProgress> dataStreamsToReportProgressOn;
 
         readonly ConcurrentBag<Guid> completedDataStreams = new();
 
-        DataStreamProgressReporter(ImmutableDictionary<Guid, DataStream> dataStreamsToReportProgressOn)
+        HeartBeatDrivenDataStreamProgressReporter(ImmutableDictionary<Guid, IDataStreamWithFileUploadProgress> dataStreamsToReportProgressOn)
         {
             this.dataStreamsToReportProgressOn = dataStreamsToReportProgressOn;
         }
@@ -28,27 +32,26 @@ namespace Halibut.Queue.QueuedDataStreams
             {
                 if(completedDataStreams.Contains(keyValuePair.Key)) continue;
                 
-                if (dataStreamsToReportProgressOn.TryGetValue(keyValuePair.Key, out var dataStream))
+                if (dataStreamsToReportProgressOn.TryGetValue(keyValuePair.Key, out var dataStreamWithTransferProgress))
                 {
-                    var dataStreamWithTransferProgress = (IDataStreamWithFileUploadProgress)dataStream;
                     var progress = dataStreamWithTransferProgress.DataStreamTransferProgress;
-                    if (dataStream.Length == keyValuePair.Value)
+                    if (dataStreamWithTransferProgress.Length == keyValuePair.Value)
                     {
                         await progress.UploadComplete(cancellationToken);
                         completedDataStreams.Add(keyValuePair.Key);
                     }
                     else
                     {
-                        await progress.Progress(keyValuePair.Value, dataStream.Length, cancellationToken);
+                        await progress.Progress(keyValuePair.Value, dataStreamWithTransferProgress.Length, cancellationToken);
                     }
                 }
             }
         }
 
-        public static DataStreamProgressReporter FromDataStreams(IEnumerable<DataStream> dataStreams)
+        public static HeartBeatDrivenDataStreamProgressReporter FromDataStreams(IEnumerable<DataStream> dataStreams)
         {
-            var dataStreamsToReportProgressOn = dataStreams.Where(d => d is IDataStreamWithFileUploadProgress).ToImmutableDictionary(d => d.Id);
-            return new DataStreamProgressReporter(dataStreamsToReportProgressOn);
+            var dataStreamsToReportProgressOn = dataStreams.OfType<IDataStreamWithFileUploadProgress>().ToArray().ToImmutableDictionary(d => d.Id);
+            return new HeartBeatDrivenDataStreamProgressReporter(dataStreamsToReportProgressOn);
         }
 
         public async ValueTask DisposeAsync()
@@ -57,7 +60,7 @@ namespace Halibut.Queue.QueuedDataStreams
             {
                 if (!completedDataStreams.Contains(keyValuePair.Key))
                 {
-                    var progress = ((IDataStreamWithFileUploadProgress)keyValuePair.Value).DataStreamTransferProgress;
+                    var progress = keyValuePair.Value.DataStreamTransferProgress;
                     await progress.UploadComplete(CancellationToken.None);
                     completedDataStreams.Add(keyValuePair.Key);
                 }

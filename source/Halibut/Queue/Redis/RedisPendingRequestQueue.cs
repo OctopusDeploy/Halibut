@@ -128,17 +128,17 @@ namespace Halibut.Queue.Redis
             using var pending = new RedisPendingRequest(request, log);
 
             RedisStoredMessage messageToStore;
-            DataStreamProgressReporter dataStreamProgressReporter;
+            HeartBeatDrivenDataStreamProgressReporter heartBeatDrivenDataStreamProgressReporter;
             try
             {
-                (messageToStore, dataStreamProgressReporter) = await messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
+                (messageToStore, heartBeatDrivenDataStreamProgressReporter) = await messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
             }
             catch (Exception ex)
             {
                 throw CreateCancellationExceptionIfCancelled() 
                       ?? new ErrorWhilePreparingRequestForQueueHalibutClientException($"Request {request.ActivityId} failed since an error occured when preparing request for queue", ex);
             }
-            await using var _ = dataStreamProgressReporter;
+            await using var _ = heartBeatDrivenDataStreamProgressReporter;
             
             
             // Start listening for a response to the request, we don't want to miss the response.
@@ -166,7 +166,7 @@ namespace Halibut.Queue.Redis
                 {
                     // We must be careful here to ensure we will always return.
                     
-                    var watchProcessingNodeStillHasHeartBeat = WatchProcessingNodeIsStillConnectedInBackground(request, pending, dataStreamProgressReporter, cancellationToken);
+                    var watchProcessingNodeStillHasHeartBeat = WatchProcessingNodeIsStillConnectedInBackground(request, pending, heartBeatDrivenDataStreamProgressReporter, cancellationToken);
                     var waitingForResponse = WaitForResponse(pollAndSubscribeToResponse, request, cancellationToken);
                     var pendingRequestWaitUntilComplete = pending.WaitUntilComplete(
                         async () => await tryClearRequestFromQueueAtMostOnce.Task,

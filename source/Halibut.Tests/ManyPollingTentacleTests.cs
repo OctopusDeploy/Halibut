@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Docker.DotNet.Models;
 using FluentAssertions;
 using Halibut.Diagnostics;
-using Halibut.Logging;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.RedisDataLossDetection;

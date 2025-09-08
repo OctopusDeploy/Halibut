@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CliWrap;
-using Halibut.Logging;
+using Halibut.Diagnostics;
 using Nito.AsyncEx;
 using Serilog;
 

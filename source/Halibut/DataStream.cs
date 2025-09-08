@@ -3,148 +3,12 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.DataStreams;
 using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
 
 namespace Halibut
 {
-    public interface IDataStreamWithFileUploadProgress
-    {
-        IDataStreamTransferProgress DataStreamTransferProgress { get; }
-    }
-
-    interface ICanBeSwitchedToNotReportProgress
-    {
-        void SwitchWriterToNotReportProgress();
-    } 
-    
-    public class DataStreamWithFileUploadProgress : DataStream, IDataStreamWithFileUploadProgress, ICanBeSwitchedToNotReportProgress
-    {
-        public IDataStreamTransferProgress DataStreamTransferProgress { get; }
-        internal Stream OriginalStream { get; }
-
-        public DataStreamWithFileUploadProgress(Stream stream, IDataStreamTransferProgress dataStreamTransferProgress)
-        {
-            OriginalStream = stream;
-            DataStreamTransferProgress = dataStreamTransferProgress;
-            Length = stream.Length;
-            Id = Guid.NewGuid();
-            writerAsync = new StreamCopierWithProgress(stream, this.DataStreamTransferProgress).CopyAndReportProgressAsync;
-        }
-
-        public void SwitchWriterToNotReportProgress()
-        {
-            writerAsync = new StreamCopierWithProgress(OriginalStream, new NoOpDataStreamTransferProgress()).CopyAndReportProgressAsync;
-        }
-    }
-
-    public interface IDataStreamTransferProgress
-    {
-        Task Progress(long copiedSoFar, long totalLength, CancellationToken cancellationToken);
-
-        Task UploadComplete(CancellationToken cancellationToken);
-
-        Task UploadFailed(CancellationToken cancellationToken);
-    }
-
-    public class NoOpDataStreamTransferProgress : IDataStreamTransferProgress
-    {
-        public Task Progress(long copiedSoFar, long totalLength, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task UploadComplete(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public Task UploadFailed(CancellationToken cancellationToken) => Task.CompletedTask;
-    }
-    public class OriginalDataStreamTransferProgress : IDataStreamTransferProgress
-    {
-        readonly Func<int, CancellationToken, Task> updateProgressAsync;
-        
-        int progress = 0;
-
-        public OriginalDataStreamTransferProgress(Func<int, CancellationToken, Task> updateProgressAsync)
-        {
-            this.updateProgressAsync = updateProgressAsync;
-        }
-
-        public async Task Progress(long copiedSoFar, long totalLength, CancellationToken cancellationToken)
-        {
-            var progressNow = (int)((double)copiedSoFar / totalLength * 100.00);
-            if (progressNow != progress)
-            {
-                await updateProgressAsync(progressNow, cancellationToken);
-                progress = progressNow;
-            }
-        }
-
-        public async Task UploadComplete(CancellationToken cancellationToken)
-        {
-            if (progress != 100)
-            {
-                await updateProgressAsync(100, cancellationToken);
-            }
-        }
-
-        public async Task UploadFailed(CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-        }
-    }
-    
-    
-    public class StreamCopierWithProgress
-    {
-        const int BufferSize = 84000;
-        readonly Stream source;
-        readonly IDataStreamTransferProgress dataStreamTransferProgress;
-
-        public StreamCopierWithProgress(Stream source, IDataStreamTransferProgress dataStreamTransferProgress)
-        {
-            this.source = source;
-            this.dataStreamTransferProgress = dataStreamTransferProgress;
-        }
-        
-        public async Task CopyAndReportProgressAsync(Stream destination, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var readBuffer = new byte[BufferSize];
-                var writeBuffer = new byte[BufferSize];
-
-                var totalLength = source.Length;
-                long copiedSoFar = 0;
-                source.Seek(0, SeekOrigin.Begin);
-
-                var count = await source.ReadAsync(readBuffer, 0, BufferSize, cancellationToken);
-                while (count > 0)
-                {
-                    Swap(ref readBuffer, ref writeBuffer);
-                    var writeTask = destination.WriteAsync(writeBuffer, 0, count, cancellationToken);
-                    count = await source.ReadAsync(readBuffer, 0, BufferSize, cancellationToken);
-                    await writeTask;
-
-                    copiedSoFar += count;
-
-                    await dataStreamTransferProgress.Progress(copiedSoFar, totalLength, cancellationToken);
-                }
-
-                await destination.FlushAsync(cancellationToken);
-
-                await dataStreamTransferProgress.UploadComplete(cancellationToken);
-            }
-            finally
-            {
-                await dataStreamTransferProgress.UploadFailed(cancellationToken);
-            }
-        }
-
-        static void Swap<T>(ref T x, ref T y)
-        {
-            T tmp = x;
-            x = y;
-            y = tmp;
-        }
-    }
-    
     public class DataStream : IEquatable<DataStream>, IDataStreamInternal
     {
         protected Func<Stream, CancellationToken, Task> writerAsync;
@@ -248,7 +112,7 @@ namespace Halibut
         public static DataStream FromStream(Stream source, Func<int, CancellationToken, Task> updateProgressAsync)
         {
         
-            return new DataStreamWithFileUploadProgress(source, new OriginalDataStreamTransferProgress(updateProgressAsync));
+            return new DataStreamWithFileUploadProgress(source, new PercentageCompleteDataStreamTransferProgress(updateProgressAsync, source.Length));
         }
         
         public static DataStream FromStream(Stream source)

@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Logging;
+using Halibut.Diagnostics;
 using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support

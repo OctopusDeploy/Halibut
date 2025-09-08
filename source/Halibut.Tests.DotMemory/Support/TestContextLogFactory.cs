@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Diagnostics;
-using Halibut.Logging;
 using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Support.Logging

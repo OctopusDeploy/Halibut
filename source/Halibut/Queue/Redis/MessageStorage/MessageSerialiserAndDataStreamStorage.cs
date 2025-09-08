@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.DataStreams;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Transport.Protocol;
 
@@ -19,11 +20,11 @@ namespace Halibut.Queue.Redis.MessageStorage
             this.storeDataStreamsForDistributedQueues = storeDataStreamsForDistributedQueues;
         }
 
-        public async Task<(RedisStoredMessage, DataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public async Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             var (jsonRequestMessage, dataStreams) = queueMessageSerializer.WriteMessage(request);
             SwitchDataStreamsToNotReportProgress(dataStreams);
-            var dataStreamProgressReporter = DataStreamProgressReporter.FromDataStreams(dataStreams);
+            var dataStreamProgressReporter = HeartBeatDrivenDataStreamProgressReporter.FromDataStreams(dataStreams);
             var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
             return (new RedisStoredMessage(jsonRequestMessage, dataStreamMetadata), dataStreamProgressReporter);
         }
@@ -67,13 +68,13 @@ namespace Halibut.Queue.Redis.MessageStorage
             return response;
         }
         
-        static List<IRehydrateDataStream> BuildUpRehydratableDataStreams(IReadOnlyList<DataStream> dataStreams, out List<DataStreamTransferred> dataStreamTransferProgress)
+        static List<IRehydrateDataStream> BuildUpRehydratableDataStreams(IReadOnlyList<DataStream> dataStreams, out List<RedisDataStreamTransferProgressRecorder> dataStreamTransferProgress)
         {
             var rehydratableDataStreams = new List<IRehydrateDataStream>();
-            dataStreamTransferProgress = new List<DataStreamTransferred>();
+            dataStreamTransferProgress = new List<RedisDataStreamTransferProgressRecorder>();
             foreach (var dataStream in dataStreams)
             {
-                var dtp = new DataStreamTransferred(dataStream);
+                var dtp = new RedisDataStreamTransferProgressRecorder(dataStream);
                 dataStreamTransferProgress.Add(dtp);
                 rehydratableDataStreams.Add(new RehydrateWithProgressReporting(dataStream, dtp));
             }
@@ -85,44 +86,11 @@ namespace Halibut.Queue.Redis.MessageStorage
 
     public class RequestDataStreamsTransferProgress
     {
-        public IReadOnlyList<DataStreamTransferred> TransferProgress { get; }
+        public IReadOnlyList<RedisDataStreamTransferProgressRecorder> TransferProgress { get; }
 
-        public RequestDataStreamsTransferProgress(List<DataStreamTransferred> transferProgress)
+        public RequestDataStreamsTransferProgress(List<RedisDataStreamTransferProgressRecorder> transferProgress)
         {
             this.TransferProgress = transferProgress;
-        }
-    }
-
-    public class DataStreamTransferred : IDataStreamTransferProgress
-    {
-        long copiedSoFar;
-
-        public long CopiedSoFar => copiedSoFar;
-
-        public long TotalLength { get; }
-        public Guid DataStramId { get; }
-        public DataStreamTransferred(DataStream dataStream)
-        {
-            TotalLength = dataStream.Length;
-            DataStramId = dataStream.Id;
-        }
-        
-        public async Task Progress(long copiedSoFar, long totalLength, CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-            Interlocked.Exchange(ref this.copiedSoFar, copiedSoFar);
-        }
-
-        public async Task UploadComplete(CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-            Interlocked.Exchange(ref this.copiedSoFar, TotalLength);
-        }
-
-        public async Task UploadFailed(CancellationToken cancellationToken)
-        {
-            await Task.CompletedTask;
-            Interlocked.Exchange(ref this.copiedSoFar, TotalLength);
         }
     }
 

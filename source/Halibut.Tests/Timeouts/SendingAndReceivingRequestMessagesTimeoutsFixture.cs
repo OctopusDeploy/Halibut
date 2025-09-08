@@ -13,7 +13,7 @@ using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
-using LogLevel = Halibut.Logging.LogLevel;
+using LogLevel = Halibut.Diagnostics.LogLevel;
 
 namespace Halibut.Tests.Timeouts
 {

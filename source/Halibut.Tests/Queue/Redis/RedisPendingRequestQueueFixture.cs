@@ -9,7 +9,6 @@ using Docker.DotNet.Models;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
-using Halibut.Logging;
 using Halibut.Queue;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Queue.Redis;

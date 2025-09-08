@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Logging;
+using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
