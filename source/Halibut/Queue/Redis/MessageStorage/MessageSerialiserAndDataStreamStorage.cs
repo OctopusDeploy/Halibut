@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.DataStreams;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Transport.Protocol;
 
@@ -80,62 +78,6 @@ namespace Halibut.Queue.Redis.MessageStorage
             }
 
             return rehydratableDataStreams;
-        }
-    }
-    
-
-    public class RequestDataStreamsTransferProgress
-    {
-        public IReadOnlyList<RedisDataStreamTransferProgressRecorder> TransferProgress { get; }
-
-        public RequestDataStreamsTransferProgress(List<RedisDataStreamTransferProgressRecorder> transferProgress)
-        {
-            this.TransferProgress = transferProgress;
-        }
-    }
-
-    public interface IRehydrateDataStream
-    {
-        public Guid Id { get; }
-        public long Length { get; }
-        
-        // Rehydrates the datastream with the stream returned by data.
-        // Once that stream is returned that stream will be disposed as well
-        // as the disposable if not null.
-        public void Rehydrate(Func<(Stream, IAsyncDisposable?)> data);
-    }
-
-    public class RehydrateWithProgressReporting : IRehydrateDataStream
-    {
-        DataStream dataStream;
-        IDataStreamTransferProgress dataStreamTransferProgress;
-
-        public RehydrateWithProgressReporting(DataStream dataStream, IDataStreamTransferProgress dataStreamTransferProgress)
-        {
-            this.dataStream = dataStream;
-            this.dataStreamTransferProgress = dataStreamTransferProgress;
-        }
-
-        public Guid Id => dataStream.Id;
-        public long Length => dataStream.Length;
-
-        public void Rehydrate(Func<(Stream, IAsyncDisposable?)> data)
-        {
-            
-            dataStream.SetWriterAsync(async (destination, ct) =>
-            {
-                var sourceAndDisposable = data();
-                await using var source = sourceAndDisposable.Item1;
-                try
-                {
-                    var streamCopier = new StreamCopierWithProgress(source, dataStreamTransferProgress);
-                    await streamCopier.CopyAndReportProgressAsync(destination, ct);
-                }
-                finally
-                {
-                    if(sourceAndDisposable.Item2 != null) await sourceAndDisposable.Item2.DisposeAsync();
-                }
-            });
         }
     }
 }
