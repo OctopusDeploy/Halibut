@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogWriters;
+using Halibut.Logging;
 using Serilog.Events;
 using ILog = Halibut.Diagnostics.ILog;
 using LogEvent = Halibut.Diagnostics.LogEvent;
