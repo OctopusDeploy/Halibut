@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.Queue;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
