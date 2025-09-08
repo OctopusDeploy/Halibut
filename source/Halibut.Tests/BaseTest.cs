@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using NUnit.Framework;

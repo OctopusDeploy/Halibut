@@ -1,5 +1,5 @@
 using System;
-using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Support.Logging;

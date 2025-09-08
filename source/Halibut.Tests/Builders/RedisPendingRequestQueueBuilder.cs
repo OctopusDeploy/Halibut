@@ -1,7 +1,7 @@
 
 #if NET8_0_OR_GREATER
 using System;
-using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.RedisHelpers;

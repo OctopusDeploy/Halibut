@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CliWrap;
-using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.Tests.Support.ExtensionMethods;
 using Nito.AsyncEx;
 using NUnit.Framework;

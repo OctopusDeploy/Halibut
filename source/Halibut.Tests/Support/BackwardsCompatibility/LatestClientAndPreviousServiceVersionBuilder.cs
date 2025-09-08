@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
+using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
 using Halibut.Transport.Proxy;
