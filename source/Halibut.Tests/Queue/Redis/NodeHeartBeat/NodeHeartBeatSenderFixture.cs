@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
+using Halibut.Logging;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.NodeHeartBeat;
@@ -508,22 +508,22 @@ namespace Halibut.Tests.Queue.Redis.NodeHeartBeat
                     .WhoseValue.Should().Be(2048, "Should receive updated progress for second data stream");
             }, TimeSpan.FromSeconds(10), CancellationToken);
         }
-        
-        private class TestHeartBeatNotifier : IGetNotifiedOfHeartBeats
+
+        class TestHeartBeatNotifier : IGetNotifiedOfHeartBeats
         {
-            private readonly ConcurrentQueue<HeartBeatMessage> _receivedMessages;
-            private readonly AsyncManualResetEvent _messageReceivedEvent;
+            readonly ConcurrentQueue<HeartBeatMessage> receivedMessages;
+            readonly AsyncManualResetEvent messageReceivedEvent;
             
             public TestHeartBeatNotifier(ConcurrentQueue<HeartBeatMessage> receivedMessages, AsyncManualResetEvent messageReceivedEvent)
             {
-                _receivedMessages = receivedMessages;
-                _messageReceivedEvent = messageReceivedEvent;
+                this.receivedMessages = receivedMessages;
+                this.messageReceivedEvent = messageReceivedEvent;
             }
             
             public Task HeartBeatReceived(HeartBeatMessage heartBeatMessage, CancellationToken cancellationToken)
             {
-                _receivedMessages.Enqueue(heartBeatMessage);
-                _messageReceivedEvent.Set();
+                receivedMessages.Enqueue(heartBeatMessage);
+                messageReceivedEvent.Set();
                 return Task.CompletedTask;
             }
         }

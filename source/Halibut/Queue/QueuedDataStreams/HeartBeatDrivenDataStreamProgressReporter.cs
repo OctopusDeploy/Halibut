@@ -10,7 +10,7 @@ using Halibut.DataStreams;
 namespace Halibut.Queue.QueuedDataStreams
 {
     /// <summary>
-    /// Updates the progress of Data
+    /// Update the progress of IDataStreamWithFileUploadProgress based on the HeartBeat data received.
     /// </summary>
     public class HeartBeatDrivenDataStreamProgressReporter : IAsyncDisposable, IGetNotifiedOfHeartBeats
     {
@@ -45,6 +45,7 @@ namespace Halibut.Queue.QueuedDataStreams
             }
         }
 
+        // TODO rename to CreateForDataStreams
         public static HeartBeatDrivenDataStreamProgressReporter FromDataStreams(IEnumerable<DataStream> dataStreams)
         {
             var dataStreamsToReportProgressOn = dataStreams.OfType<IDataStreamWithFileUploadProgress>().ToArray().ToImmutableDictionary(d => d.Id);

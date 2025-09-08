@@ -1,4 +1,5 @@
 using System;
+using Halibut.Logging;
 
 namespace Halibut.Diagnostics.LogCreators
 {

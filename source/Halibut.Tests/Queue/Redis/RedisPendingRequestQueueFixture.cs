@@ -1,14 +1,12 @@
 #if NET8_0_OR_GREATER
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Docker.DotNet.Models;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
+using Halibut.Logging;
 using Halibut.Queue;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Queue.Redis;
@@ -208,8 +206,9 @@ namespace Halibut.Tests.Queue.Redis
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
             int currentProgress = 0;
-            
-            var dataStreamWithProgress = DataStream.FromStream(new MemoryStream(Some.RandomAsciiStringOfLength(4 * 1024 * 1024).GetBytesUtf8()), async (progress, ct) =>
+
+            var dataStreamSize = 4 * 1024 * 1024;
+            var dataStreamWithProgress = DataStream.FromStream(new MemoryStream(Some.RandomAsciiStringOfLength(dataStreamSize).GetBytesUtf8()), async (progress, ct) =>
             {
                 await Task.CompletedTask;
                 currentProgress = progress;
@@ -237,14 +236,14 @@ namespace Halibut.Tests.Queue.Redis
             // progress reporting back over the queue.
             var destinationStreamFor4MbDataStream = new ActionBeforeWriteAndCountingStream(new MemoryStream(), soFar =>
             {
-                if (soFar >= 1024 * 1024 && !wasNotifiedOf25PcDone)
+                if (soFar >= dataStreamSize * 0.25 && !wasNotifiedOf25PcDone)
                 {
                     // Block at ~25% transferred and check we the sender has been told that 25% of the DataStream has been transferred 
                     ShouldEventually.Eventually(() => currentProgress.Should().BeInRange(10, 40), TimeSpan.FromSeconds(100), CancellationToken).GetAwaiter().GetResult();
                     wasNotifiedOf25PcDone = true;
                 }
                 
-                if (soFar >= 2 * 1024 * 1024 && !wasNotifiedOf50PcDone)
+                if (soFar >= dataStreamSize * 0.5 && !wasNotifiedOf50PcDone)
                 {
                     // Block at ~50% transferred and check we the sender has been told that 505% of the DataStream has been transferred
                     ShouldEventually.Eventually(() => currentProgress.Should().BeInRange(35, 65), TimeSpan.FromSeconds(100), CancellationToken).GetAwaiter().GetResult();
@@ -922,7 +921,11 @@ namespace Halibut.Tests.Queue.Redis
                                      .ObserveDataOriginToClient(new DataTransferObserverBuilder()
                                          .WithWritingDataObserver((tcpPump, dataToWrite) =>
                                          {
+                                             // Count all the bytes sent to the polling service
                                              bytesSent += dataToWrite.Length;
+                                             
+                                             // if we have sent around halt the data, then pause the connection.
+                                             // so we can observe the upload progress is at about ~50%
                                              if (bytesSent >= dataSizeToSend / 2 && !aboutHalfTheDataStreamHasBeenSentWaiter.IsSet)
                                              {
                                                  portForwarder.Value.PauseExistingConnections();
@@ -944,6 +947,7 @@ namespace Halibut.Tests.Queue.Redis
                                      .WithWaitForReceiverToBeReady()
                                      .WithQueueCreationCallBack(queue =>
                                      {
+                                         // Lower these timeouts to get faster feedback on the upload progress.
                                          queue.RequestReceiverNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
                                          queue.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromMilliseconds(100);
                                      }))
@@ -980,10 +984,10 @@ namespace Halibut.Tests.Queue.Redis
                 portForwarder.Value.UnPauseExistingConnections();
                 
                 var count = await echoTask;
-                ;
+                
                 count.Should().Be(dataSizeToSend);
 
-                currentProgress.Should().Be(100);
+                currentProgress.Should().Be(100, "at the end of the clal the upload progress should be 100");
             }
         }
 

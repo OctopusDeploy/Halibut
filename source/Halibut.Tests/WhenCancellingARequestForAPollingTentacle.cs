@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.Logging;
 using Halibut.ServiceModel;

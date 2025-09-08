@@ -6,7 +6,10 @@ namespace Halibut.Queue.QueuedDataStreams
 {
     public class HeartBeatMessage
     {
-        public Dictionary<Guid, long>? DataStreamProgress = new Dictionary<Guid, long>();
+        /// <summary>
+        /// Number of bytes of each DataStream has been uploaded to the service.
+        /// </summary>
+        public Dictionary<Guid, long>? DataStreamProgress = new();
 
         public static HeartBeatMessage Build(
             RequestDataStreamsTransferProgress? transferProgress)
