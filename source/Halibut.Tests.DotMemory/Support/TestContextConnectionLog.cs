@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Halibut.Diagnostics;
+using Halibut.Logging;
 using NUnit.Framework;
 using ILog = Halibut.Diagnostics.ILog;
 
