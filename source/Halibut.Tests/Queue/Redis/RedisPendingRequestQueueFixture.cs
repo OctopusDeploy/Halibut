@@ -957,13 +957,13 @@ namespace Halibut.Tests.Queue.Redis
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
 
                 int currentProgress = 0;
-                
-                var dataStream = await Task.FromResult(DataStream.FromStream(stream,
-                    async (i, token) => {
+
+                var dataStream = DataStream.FromStream(stream,
+                    async (i, token) =>
+                    {
                         await Task.CompletedTask;
                         currentProgress = i;
-                    })
-                );
+                    });
                 var echoTask = Task.Run(async () => await echo.CountBytesAsync(dataStream));
 
                 await aboutHalfTheDataStreamHasBeenSentWaiter.WaitAsync(CancellationToken);
@@ -971,7 +971,7 @@ namespace Halibut.Tests.Queue.Redis
                 await ShouldEventually.Eventually(() =>
                 {
                     Logger.Information("Current progress is {CurrentProgress}", currentProgress);
-                    currentProgress.Should().BeInRange(40, 75); // The range is super high since it is possible for
+                    currentProgress.Should().BeInRange(40, 75); // The range is super wide since it is possible for
                                                                 // the client to write many MBs to the stream that
                                                                 // end up waiting on the port forwarder. Halibut
                                                                 // can't know how many MBs have actually made it to
