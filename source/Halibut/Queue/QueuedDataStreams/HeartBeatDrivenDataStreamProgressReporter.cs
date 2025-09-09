@@ -44,9 +44,8 @@ namespace Halibut.Queue.QueuedDataStreams
                 }
             }
         }
-
-        // TODO rename to CreateForDataStreams
-        public static HeartBeatDrivenDataStreamProgressReporter FromDataStreams(IEnumerable<DataStream> dataStreams)
+        
+        public static HeartBeatDrivenDataStreamProgressReporter CreateForDataStreams(IEnumerable<DataStream> dataStreams)
         {
             var dataStreamsToReportProgressOn = dataStreams.OfType<IDataStreamWithFileUploadProgress>().ToArray().ToImmutableDictionary(d => d.Id);
             return new HeartBeatDrivenDataStreamProgressReporter(dataStreamsToReportProgressOn);
