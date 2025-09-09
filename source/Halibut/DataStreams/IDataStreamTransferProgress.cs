@@ -9,7 +9,7 @@ namespace Halibut.DataStreams
         /// <summary>
         /// Called as Halibut writes the DataStream contents to the network.
         /// On distributed calls, it is possible that this will never be called OR it may be
-        /// called few seconds. It is possible that this is never called when the dataStream
+        /// called every few seconds. It is possible that this is never called when the dataStream
         /// is completly sent.
         /// </summary>
         /// <param name="copiedSoFar"></param>
