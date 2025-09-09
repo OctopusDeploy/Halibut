@@ -61,7 +61,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 dataStream.Rehydrate(() =>
                 {
                     var stream = new MemoryStream(bytes);
-                    return (stream, null);
+                    return new DataStreamRehydrationData(stream);
                 });
             }
         }

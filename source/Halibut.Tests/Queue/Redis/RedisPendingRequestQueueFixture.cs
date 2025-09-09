@@ -261,6 +261,7 @@ namespace Halibut.Tests.Queue.Redis
 
             await queueAndWaitAsync;
 
+            // We additionally check that the assertions with the ActionBeforeWriteAndCountingStream where indeed successfully made.
             wasNotifiedOf25PcDone.Should().BeTrue("We should have received a progress update at around 25%, since we ShouldEventually waited for the message");
             wasNotifiedOf50PcDone.Should().BeTrue("We should have received a progress update at around 50%, since we ShouldEventually waited for the message");
 

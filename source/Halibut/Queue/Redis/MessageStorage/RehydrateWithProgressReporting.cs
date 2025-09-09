@@ -19,25 +19,14 @@ namespace Halibut.Queue.Redis.MessageStorage
         public Guid Id => dataStream.Id;
         public long Length => dataStream.Length;
 
-        public void Rehydrate(Func<(Stream, IAsyncDisposable?)> data)
+        public void Rehydrate(Func<DataStreamRehydrationData> data)
         {
             
-            dataStream.SetWriterAsync(async (destination, ct) =>
+            dataStream.SetWriterAsync(async (destination, ct) => 
             {
-                var sourceAndDisposable = data();
-#if NET8_0_OR_GREATER
-                await
- #endif
-                    using var source = sourceAndDisposable.Item1;
-                try
-                {
-                    var streamCopier = new StreamCopierWithProgress(source, dataStreamTransferProgress);
-                    await streamCopier.CopyAndReportProgressAsync(destination, ct);
-                }
-                finally
-                {
-                    if(sourceAndDisposable.Item2 != null) await sourceAndDisposable.Item2.DisposeAsync();
-                }
+                await using var dataStreamRehydrationData = data();
+                var streamCopier = new StreamCopierWithProgress(dataStreamRehydrationData.Data, dataStreamTransferProgress);
+                await streamCopier.CopyAndReportProgressAsync(destination, ct);
             });
         }
     }

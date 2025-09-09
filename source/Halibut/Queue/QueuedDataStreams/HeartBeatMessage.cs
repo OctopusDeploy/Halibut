@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Halibut.Queue.Redis.MessageStorage;
+using Newtonsoft.Json;
 
 namespace Halibut.Queue.QueuedDataStreams
 {
@@ -9,7 +10,7 @@ namespace Halibut.Queue.QueuedDataStreams
         /// <summary>
         /// Number of bytes of each DataStream has been uploaded to the service.
         /// </summary>
-        public Dictionary<Guid, long>? DataStreamProgress = new();
+        public Dictionary<Guid, long> DataStreamProgress = new();   
 
         public static HeartBeatMessage Build(
             RequestDataStreamsTransferProgress? transferProgress)
@@ -27,6 +28,16 @@ namespace Halibut.Queue.QueuedDataStreams
             }
             
             return new HeartBeatMessage {DataStreamProgress = dataStreamProgress};
+        }
+
+        public static string Serialize(HeartBeatMessage heartBeatMessage)
+        {
+            return JsonConvert.SerializeObject(heartBeatMessage);
+        }
+
+        public static HeartBeatMessage Deserialize(string heartBeatMessageJson)
+        {
+            return JsonConvert.DeserializeObject<HeartBeatMessage>(heartBeatMessageJson) ?? new HeartBeatMessage();
         }
     }
     

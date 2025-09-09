@@ -7,7 +7,6 @@ using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
-using Newtonsoft.Json;
 
 namespace Halibut.Queue.Redis.NodeHeartBeat
 {
@@ -101,7 +100,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                     {
                         try
                         {
-                            var heartBeatMessage = JsonConvert.DeserializeObject<HeartBeatMessage>(heartBeatMessageJson) ?? new HeartBeatMessage();
+                            var heartBeatMessage = HeartBeatMessage.Deserialize(heartBeatMessageJson);
                             await notifiedOfHeartBeats(heartBeatMessage);
                         }
                         catch (Exception ex)

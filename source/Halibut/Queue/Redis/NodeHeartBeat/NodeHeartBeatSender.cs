@@ -1,14 +1,12 @@
 
 #if NET8_0_OR_GREATER
 using System;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Util;
-using Newtonsoft.Json;
 
 namespace Halibut.Queue.Redis.NodeHeartBeat
 {
@@ -51,7 +49,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                 try
                 {
                     var heartBeatMessage = heartBeatMessageProvider();
-                    var nodeHeartBeatMessage = JsonConvert.SerializeObject(heartBeatMessage);
+                    var nodeHeartBeatMessage = HeartBeatMessage.Serialize(heartBeatMessage);
                     await halibutRedisTransport.SendNodeHeartBeat(endpoint, requestActivityId, nodeSendingPulsesType, nodeHeartBeatMessage, cancellationToken);
                     delayBetweenPulse = defaultDelayBetweenPulses;
                     log.Write(EventType.Diagnostic, "Successfully sent heartbeat for {0} node, request {1}, next pulse in {2} seconds", nodeSendingPulsesType, requestActivityId, delayBetweenPulse.TotalSeconds);

@@ -138,7 +138,7 @@ namespace Halibut.Queue.Redis
                 throw CreateCancellationExceptionIfCancelled() 
                       ?? new ErrorWhilePreparingRequestForQueueHalibutClientException($"Request {request.ActivityId} failed since an error occured when preparing request for queue", ex);
             }
-            await using var _ = heartBeatDrivenDataStreamProgressReporter;
+            await using var _ = heartBeatDrivenDataStreamProgressReporter; // Disposal of the reporter notifies all DataStream progress reportors that the upload is complete.
             
             
             // Start listening for a response to the request, we don't want to miss the response.
