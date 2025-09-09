@@ -77,5 +77,50 @@ namespace Halibut.Tests.Queue.QueuedDataStreams
             // Clean up
             await progressReporter.DisposeAsync();
         }
+        
+        [Test]
+        public async Task OnDisposeTheProgressShouldBeMarkedAs100PercentComplete()
+        {
+            // Arrange
+            const int streamSize = 100;
+            var progressUpdates = new List<int>();
+            var progressUpdateCalls = 0;
+            
+            // Create a mock stream of size 100 bytes
+            var mockStream = new MemoryStream(new byte[streamSize]);
+            
+            // Create the updateProgressAsync function that captures progress updates
+            Task UpdateProgressAsync(int percentageComplete, CancellationToken ct)
+            {
+                progressUpdates.Add(percentageComplete);
+                Interlocked.Increment(ref progressUpdateCalls);
+                return Task.CompletedTask;
+            }
+            
+            // Create a DataStream using FromStream with our progress callback
+            var dataStream = DataStream.FromStream(mockStream, UpdateProgressAsync);
+            
+            // Create the HeartBeatDrivenDataStreamProgressReporter with our single DataStream
+            var progressReporter = HeartBeatDrivenDataStreamProgressReporter.CreateForDataStreams(new[] { dataStream });
+            
+            // Create heart beat messages with different progress values
+            var heartBeatMessage25 = new HeartBeatMessage
+            {
+                DataStreamProgress = new Dictionary<Guid, long>
+                {
+                    { dataStream.Id, 25 } // 25% complete (25 out of 100 bytes)
+                }
+            };
+            
+            await progressReporter.HeartBeatReceived(heartBeatMessage25, CancellationToken.None);
+            
+            // Act
+            await progressReporter.DisposeAsync();
+            
+            
+            // Assert
+            progressUpdates.Should().ContainInOrder(25, 100); // We should still receive 100% complete, since
+                                                              // on dispose we want to let the callback know it is done 
+        }
     }
 }
