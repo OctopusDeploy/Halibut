@@ -8,6 +8,7 @@ namespace Halibut.Queue.Redis.MessageStorage
 {
     public class MessageSerialiserAndDataStreamStorage : IMessageSerialiserAndDataStreamStorage
     {
+     
         readonly QueueMessageSerializer queueMessageSerializer;
         readonly IStoreDataStreamsForDistributedQueues storeDataStreamsForDistributedQueues;
 
