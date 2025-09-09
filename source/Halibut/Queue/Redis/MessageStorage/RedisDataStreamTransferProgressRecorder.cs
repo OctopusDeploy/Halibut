@@ -15,11 +15,11 @@ namespace Halibut.Queue.Redis.MessageStorage
         public long CopiedSoFar => Interlocked.Read(ref copiedSoFar);
 
         public long TotalLength { get; }
-        public Guid DataStramId { get; }
+        public Guid DataStreamId { get; }
         public RedisDataStreamTransferProgressRecorder(DataStream dataStream)
         {
             TotalLength = dataStream.Length;
-            DataStramId = dataStream.Id;
+            DataStreamId = dataStream.Id;
         }
         
         public async Task Progress(long copiedSoFar, CancellationToken cancellationToken)
