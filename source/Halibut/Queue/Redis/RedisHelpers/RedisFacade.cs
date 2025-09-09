@@ -35,7 +35,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         }
         public RedisFacade(ConfigurationOptions redisOptions, string keyPrefix, ILog log)
         {
-            this.keyPrefix = keyPrefix;
+            this.keyPrefix = keyPrefix + ":HalibutRedis";
             this.log = log.ForContext<RedisFacade>();
             objectLifetimeCts = new CancelOnDisposeCancellationToken();
             objectLifeTimeCancellationToken = objectLifetimeCts.Token;
@@ -188,7 +188,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         string ToPrefixedChannelName(string channelName)
         {
-            return "channel:" + keyPrefix + ":" + channelName;
+            return keyPrefix + ":channel:" + channelName;
         }
         
         public async Task PublishToChannel(string channelName, string payload, CancellationToken cancellationToken)
@@ -218,7 +218,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         RedisKey ToHashKey(string key)
         {
-            return "hash:" + keyPrefix + ":" + key;
+            return keyPrefix + ":hash:" + key;
         }
         
         public async Task<bool> HashContainsKey(string key, string field, CancellationToken cancellationToken)
@@ -297,7 +297,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         RedisKey ToListKey(string key)
         {
-            return "list:" + keyPrefix + ":" + key;
+            return keyPrefix + ":list:" + key;
         }
 
         public async Task ListRightPushAsync(string key, string payload, TimeSpan ttlForAllInList, CancellationToken cancellationToken)
@@ -330,7 +330,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         RedisKey ToStringKey(string key)
         {
-            return "string:" + keyPrefix + ":" + key;
+            return keyPrefix + ":string:" + key;
         }
 
         public async Task SetString(string key, string value, TimeSpan ttl, CancellationToken cancellationToken)
