@@ -1,3 +1,4 @@
+
 using System;
 using System.IO;
 using Halibut.DataStreams;
@@ -24,7 +25,10 @@ namespace Halibut.Queue.Redis.MessageStorage
             dataStream.SetWriterAsync(async (destination, ct) =>
             {
                 var sourceAndDisposable = data();
-                await using var source = sourceAndDisposable.Item1;
+#if NET8_0_OR_GREATER
+                await
+ #endif
+                    using var source = sourceAndDisposable.Item1;
                 try
                 {
                     var streamCopier = new StreamCopierWithProgress(source, dataStreamTransferProgress);
