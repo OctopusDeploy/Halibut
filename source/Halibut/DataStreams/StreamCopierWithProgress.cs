@@ -37,7 +37,6 @@ namespace Halibut.DataStreams
                     await writeTask;
 
                     copiedSoFar += count;
-
                     await dataStreamTransferProgress.Progress(copiedSoFar, cancellationToken);
                 }
 
