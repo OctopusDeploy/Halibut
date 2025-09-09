@@ -22,7 +22,7 @@ namespace Halibut.Queue.QueuedDataStreams
                 foreach (var dataStreamTransferred in transferProgress.TransferProgress)
                 {
                     if(dataStreamTransferred.CopiedSoFar == 0) continue;
-                    dataStreamProgress[dataStreamTransferred.DataStramId] = dataStreamTransferred.CopiedSoFar;
+                    dataStreamProgress[dataStreamTransferred.DataStreamId] = dataStreamTransferred.CopiedSoFar;
                 }
             }
             
