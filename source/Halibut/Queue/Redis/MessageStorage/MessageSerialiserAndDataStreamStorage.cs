@@ -20,7 +20,7 @@ namespace Halibut.Queue.Redis.MessageStorage
 
         public async Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
-            var (jsonRequestMessage, dataStreams) = queueMessageSerializer.WriteMessage(request);
+            var (jsonRequestMessage, dataStreams) = await queueMessageSerializer.WriteMessage(request);
             SwitchDataStreamsToNotReportProgress(dataStreams);
             var dataStreamProgressReporter = HeartBeatDrivenDataStreamProgressReporter.CreateForDataStreams(dataStreams);
             var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
@@ -41,7 +41,7 @@ namespace Halibut.Queue.Redis.MessageStorage
 
         public async Task<(RequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage storedMessage, CancellationToken cancellationToken)
         {
-            var (request, dataStreams) = queueMessageSerializer.ReadMessage<RequestMessage>(storedMessage.Message);
+            var (request, dataStreams) = await queueMessageSerializer.ReadMessage<RequestMessage>(storedMessage.Message);
 
             var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, out var dataStreamTransferProgress);
 
@@ -51,14 +51,14 @@ namespace Halibut.Queue.Redis.MessageStorage
 
         public async Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
         {
-            var (jsonResponseMessage, dataStreams) = queueMessageSerializer.WriteMessage(response);
+            var (jsonResponseMessage, dataStreams) = await queueMessageSerializer.WriteMessage(response);
             var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
             return new RedisStoredMessage(jsonResponseMessage, dataStreamMetadata);
         }
         
         public async Task<ResponseMessage> ReadResponse(RedisStoredMessage storedMessage, CancellationToken cancellationToken)
         {
-            var (response, dataStreams) = queueMessageSerializer.ReadMessage<ResponseMessage>(storedMessage.Message);
+            var (response, dataStreams) = await queueMessageSerializer.ReadMessage<ResponseMessage>(storedMessage.Message);
             
             var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, out _);
             

@@ -18,7 +18,7 @@ namespace Halibut.Tests.Queue
     public class QueueMessageSerializerFixture : BaseTest
     {
         [Test]
-        public void SerializeAndDeserializeSimpleStringMessage_ShouldRoundTrip()
+        public async Task SerializeAndDeserializeSimpleStringMessage_ShouldRoundTrip()
         {
             // Arrange
             var sut = new QueueMessageSerializerBuilder().Build();
@@ -26,8 +26,8 @@ namespace Halibut.Tests.Queue
             const string testMessage = "Hello, Queue!";
 
             // Act
-            var (json, dataStreams) = sut.WriteMessage(testMessage);
-            var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<string>(json);
+            var (json, dataStreams) = await sut.WriteMessage(testMessage);
+            var (deserializedMessage, deserializedDataStreams) = await sut.ReadMessage<string>(json);
 
             // Assert
             deserializedMessage.Should().Be(testMessage);
@@ -36,7 +36,7 @@ namespace Halibut.Tests.Queue
         }
         
         [Test]
-        public void SerializeAndDeserializeRequestMessage_ShouldRoundTrip_RequestMessage()
+        public async Task SerializeAndDeserializeRequestMessage_ShouldRoundTrip_RequestMessage()
         {
             // Arrange
             var sut = new QueueMessageSerializerBuilder().Build();
@@ -52,8 +52,8 @@ namespace Halibut.Tests.Queue
             };
 
             // Act
-            var (json, dataStreams) = sut.WriteMessage(request);
-            var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<RequestMessage>(json);
+            var (json, dataStreams) = await sut.WriteMessage(request);
+            var (deserializedMessage, deserializedDataStreams) = await sut.ReadMessage<RequestMessage>(json);
 
             // Assert
             deserializedMessage.Should().BeEquivalentTo(request);
@@ -62,7 +62,7 @@ namespace Halibut.Tests.Queue
         }
         
         [Test]
-        public void SerializeAndDeserializeRequestMessageWithDataStream_ShouldRoundTrip_RequestMessage()
+        public async Task SerializeAndDeserializeRequestMessageWithDataStream_ShouldRoundTrip_RequestMessage()
         {
             var typeRegistry = new TypeRegistry();
             typeRegistry.Register(typeof(IHaveTypeWithDataStreamsService));
@@ -86,7 +86,7 @@ namespace Halibut.Tests.Queue
             };
 
             // Act
-            var (json, dataStreams) = sut.WriteMessage(request);
+            var (json, dataStreams) = await sut.WriteMessage(request);
 
             dataStreams[1].Should().BeOfType<RepeatingStringDataStream>();
 
@@ -95,7 +95,7 @@ namespace Halibut.Tests.Queue
             jsonString.Should().Contain("TypeWithDataStreams");
             jsonString.Should().NotContain("RepeatingStringDataStream");
             
-            var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<RequestMessage>(json);
+            var (deserializedMessage, deserializedDataStreams) = await sut.ReadMessage<RequestMessage>(json);
             
             // Manually check each field of the deserializedMessage matches the request
             deserializedMessage.Id.Should().Be(request.Id);
@@ -113,7 +113,7 @@ namespace Halibut.Tests.Queue
         }
         
         [Test]
-        public void SerializeAndDeserializeSimpleStringMessage_WithStreamWrappers_ShouldRoundTrip()
+        public async Task SerializeAndDeserializeSimpleStringMessage_WithStreamWrappers_ShouldRoundTrip()
         {
             // Arrange
             var sut = new QueueMessageSerializerBuilder()
@@ -126,8 +126,8 @@ namespace Halibut.Tests.Queue
             const string testMessage = "Hello, Queue!";
 
             // Act
-            var (json, dataStreams) = sut.WriteMessage(testMessage);
-            var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<string>(json);
+            var (json, dataStreams) = await sut.WriteMessage(testMessage);
+            var (deserializedMessage, deserializedDataStreams) = await sut.ReadMessage<string>(json);
 
             // Assert
             deserializedMessage.Should().Be(testMessage);
@@ -136,7 +136,7 @@ namespace Halibut.Tests.Queue
         }
         
         [Test]
-        public void SerializeAndDeserializeSimpleStringMessage_WithStreamWrappers_ShouldDisposeStreamsInCorrectOrder()
+        public async Task SerializeAndDeserializeSimpleStringMessage_WithStreamWrappers_ShouldDisposeStreamsInCorrectOrder()
         {
             // Arrange
             var disposeOrderWriter = new List<string>();
@@ -161,8 +161,8 @@ namespace Halibut.Tests.Queue
             const string testMessage = "Hello, Queue!";
 
             // Act
-            var (json, dataStreams) = sut.WriteMessage(testMessage);
-            var (deserializedMessage, deserializedDataStreams) = sut.ReadMessage<string>(json);
+            var (json, dataStreams) = await sut.WriteMessage(testMessage);
+            var (deserializedMessage, deserializedDataStreams) = await sut.ReadMessage<string>(json);
 
             // Assert
             deserializedMessage.Should().Be(testMessage);

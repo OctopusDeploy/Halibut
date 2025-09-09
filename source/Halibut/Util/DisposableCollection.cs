@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Halibut.Util
 {
-    public class DisposableCollection : IDisposable, IAsyncDisposable
+    public class DisposableCollection : IAsyncDisposable
     {
 
         //Dispose in the reverse order of when they were added so we deal with nested objects correctly.
@@ -46,11 +46,6 @@ namespace Halibut.Util
             disposables.Push(asyncDisposable);
 
             return asyncDisposable;
-        }
-
-        public void Dispose()
-        {
-            DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
         public async ValueTask DisposeAsync()
