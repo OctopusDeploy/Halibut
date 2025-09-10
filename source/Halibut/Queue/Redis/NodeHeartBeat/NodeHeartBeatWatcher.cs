@@ -22,7 +22,6 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             IGetNotifiedOfHeartBeats notifiedOfHeartBeats,
             CancellationToken watchCancellationToken)
         {
-            await WaitBeforePulses(watchCancellationToken);
             log = log.ForContext<NodeHeartBeatWatcher>();
             // Once the pending's CT has been cancelled we no longer care to keep observing
             await using var cts = new CancelOnDisposeCancellationToken(watchCancellationToken, redisPending.PendingRequestCancellationToken);
@@ -58,7 +57,6 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             TimeSpan maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
-            await WaitBeforePulses(watchCancellationToken);
             try
             {
                 return await WatchForPulsesFromNode(endpoint, requestActivityId, halibutRedisTransport, log, maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.RequestSenderNode, watchCancellationToken);
@@ -70,20 +68,6 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             catch (Exception)
             {
                 return NodeWatcherResult.NodeMayHaveDisconnected;
-            }
-        }
-        
-        public static TimeSpan delayBeforeCheckingForOrSendingPulses = TimeSpan.Zero;
-
-        public static async Task WaitBeforePulses(CancellationToken cancellationToken)
-        {
-            try
-            {
-                await Task.Delay(NodeHeartBeatWatcher.delayBeforeCheckingForOrSendingPulses, cancellationToken);
-            }
-            catch
-            {
-                
             }
         }
 
