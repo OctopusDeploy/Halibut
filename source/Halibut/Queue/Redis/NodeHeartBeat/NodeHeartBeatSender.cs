@@ -41,8 +41,6 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
 
         async Task SendPulsesWhileProcessingRequest(Func<HeartBeatMessage> heartBeatMessageProvider, TimeSpan defaultDelayBetweenPulses, CancellationToken cancellationToken)
         {
-            await NodeHeartBeatWatcher.WaitBeforePulses(cancellationToken);
-
             log.Write(EventType.Diagnostic, "Starting heartbeat pulse loop for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
             
             TimeSpan delayBetweenPulse;
