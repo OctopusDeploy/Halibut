@@ -22,6 +22,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             IGetNotifiedOfHeartBeats notifiedOfHeartBeats,
             CancellationToken watchCancellationToken)
         {
+            await WaitBeforePulses(watchCancellationToken);
             log = log.ForContext<NodeHeartBeatWatcher>();
             // Once the pending's CT has been cancelled we no longer care to keep observing
             await using var cts = new CancelOnDisposeCancellationToken(watchCancellationToken, redisPending.PendingRequestCancellationToken);
@@ -57,6 +58,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             TimeSpan maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
+            await WaitBeforePulses(watchCancellationToken);
             try
             {
                 return await WatchForPulsesFromNode(endpoint, requestActivityId, halibutRedisTransport, log, maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.RequestSenderNode, watchCancellationToken);
@@ -70,6 +72,20 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                 return NodeWatcherResult.NodeMayHaveDisconnected;
             }
         }
+        
+        public static TimeSpan delayBeforeCheckingForOrSendingPulses = TimeSpan.Zero;
+
+        public static async Task WaitBeforePulses(CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.Delay(NodeHeartBeatWatcher.delayBeforeCheckingForOrSendingPulses, cancellationToken);
+            }
+            catch
+            {
+                
+            }
+        }
 
         static async Task<NodeWatcherResult> WatchForPulsesFromNode(Uri endpoint,
             Guid requestActivityId,
@@ -80,6 +96,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             CancellationToken watchCancellationToken,
             Func<HeartBeatMessage, Task>? notifiedOfHeartBeats = null)
         {
+            
             log.ForContext<NodeHeartBeatSender>();
             log.Write(EventType.Diagnostic, "Starting to watch for pulses from {0} node, request {1}, endpoint {2}", watchingForPulsesFrom, requestActivityId, endpoint);
 

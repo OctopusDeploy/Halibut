@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
@@ -28,13 +29,13 @@ namespace Halibut.Queue
             this.messageStreamWrappers = messageStreamWrappers;
         }
 
-        public (byte[], IReadOnlyList<DataStream>) WriteMessage<T>(T message)
+        public async Task<(byte[], IReadOnlyList<DataStream>)> WriteMessage<T>(T message)
         {
             IReadOnlyList<DataStream> dataStreams;
             
             using var ms = new MemoryStream();
             Stream stream = ms;
-            using (var wrappedStreamDisposables = new DisposableCollection())
+            await using (var wrappedStreamDisposables = new DisposableCollection())
             {
                 stream = WrapInMessageSerialisationStreams(messageStreamWrappers, stream, wrappedStreamDisposables);
 
@@ -71,11 +72,11 @@ namespace Halibut.Queue
             return stream;
         }
 
-        public (T Message, IReadOnlyList<DataStream> DataStreams) ReadMessage<T>(byte[] json)
+        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadMessage<T>(byte[] json)
         {
             using var ms = new MemoryStream(json);
             Stream stream = ms;
-            using var disposables = new DisposableCollection();
+            await using var disposables = new DisposableCollection();
             stream = WrapStreamInMessageDeserialisationStreams(messageStreamWrappers, stream, disposables);
             using var sr = new StreamReader(stream, Encoding.UTF8
 #if NET8_0_OR_GREATER
