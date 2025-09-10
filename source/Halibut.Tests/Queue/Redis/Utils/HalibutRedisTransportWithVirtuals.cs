@@ -75,14 +75,14 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return halibutRedisTransport.IsRequestMarkedAsCancelled(endpoint, requestId, cancellationToken);
         }
 
-        public Task<IAsyncDisposable> SubscribeToNodeHeartBeatChannel(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, Func<Task> onHeartBeat, CancellationToken cancellationToken)
+        public Task<IAsyncDisposable> SubscribeToNodeHeartBeatChannel(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, Func<string, Task> onHeartBeat, CancellationToken cancellationToken)
         {
             return halibutRedisTransport.SubscribeToNodeHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType, onHeartBeat, cancellationToken);
         }
 
-        public Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
+        public Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, string nodeHeartBeatMessage, CancellationToken cancellationToken)
         {
-            return halibutRedisTransport.SendNodeHeartBeat(endpoint, requestId, nodeSendingPulsesType, cancellationToken);
+            return halibutRedisTransport.SendNodeHeartBeat(endpoint, requestId, nodeSendingPulsesType, nodeHeartBeatMessage, cancellationToken);
         }
 
         public Task<IAsyncDisposable> SubscribeToResponseChannel(Uri endpoint, Guid identifier, Func<string, Task> onValueReceived, CancellationToken cancellationToken)

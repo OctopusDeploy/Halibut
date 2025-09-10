@@ -3,6 +3,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.QueuedDataStreams;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 
@@ -10,14 +12,14 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
 {
     public class NodeHeartBeatWatcher
     {
-        public static async Task<NodeWatcherResult> WatchThatNodeProcessingTheRequestIsStillAlive(
-            Uri endpoint,
-            RequestMessage request, 
+        public static async Task<NodeWatcherResult> WatchThatNodeProcessingTheRequestIsStillAlive(Uri endpoint,
+            RequestMessage request,
             RedisPendingRequest redisPending,
             IHalibutRedisTransport halibutRedisTransport,
             TimeSpan timeBetweenCheckingIfRequestWasCollected,
             ILog log,
             TimeSpan maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
+            IGetNotifiedOfHeartBeats notifiedOfHeartBeats,
             CancellationToken watchCancellationToken)
         {
             log = log.ForContext<NodeHeartBeatWatcher>();
@@ -27,7 +29,15 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             {
                 await WaitForRequestToBeCollected(endpoint, request, redisPending, halibutRedisTransport, timeBetweenCheckingIfRequestWasCollected, log, cts.Token);
 
-                return await WatchForPulsesFromNode(endpoint, request.ActivityId, halibutRedisTransport, log, maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.RequestProcessorNode, cts.Token);
+                return await WatchForPulsesFromNode(
+                    endpoint, 
+                    request.ActivityId,
+                    halibutRedisTransport,
+                    log,
+                    maxTimeBetweenHeartBeetsBeforeProcessingNodeIsAssumedToBeOffline,
+                    HalibutQueueNodeSendingPulses.RequestProcessorNode,
+                    cts.Token,
+                    async heartBeatMessage => await notifiedOfHeartBeats.HeartBeatReceived(heartBeatMessage, redisPending.PendingRequestCancellationToken));
             }
             catch (Exception) when (cts.Token.IsCancellationRequested)
             {
@@ -61,14 +71,14 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             }
         }
 
-        static async Task<NodeWatcherResult> WatchForPulsesFromNode(
-            Uri endpoint,
-            Guid requestActivityId, 
+        static async Task<NodeWatcherResult> WatchForPulsesFromNode(Uri endpoint,
+            Guid requestActivityId,
             IHalibutRedisTransport halibutRedisTransport,
             ILog log,
             TimeSpan maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline,
             HalibutQueueNodeSendingPulses watchingForPulsesFrom,
-            CancellationToken watchCancellationToken)
+            CancellationToken watchCancellationToken,
+            Func<HeartBeatMessage, Task>? notifiedOfHeartBeats = null)
         {
             log.ForContext<NodeHeartBeatSender>();
             log.Write(EventType.Diagnostic, "Starting to watch for pulses from {0} node, request {1}, endpoint {2}", watchingForPulsesFrom, requestActivityId, endpoint);
@@ -81,11 +91,23 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                 endpoint,
                 requestActivityId,
                 watchingForPulsesFrom,
-                async () =>
+                async heartBeatMessageJson =>
                 {
                     await Task.CompletedTask;
                     lastHeartBeat = DateTimeOffset.Now;
                     log.Write(EventType.Diagnostic, "Received heartbeat from {0} node, request {1}", watchingForPulsesFrom, requestActivityId);
+                    if (notifiedOfHeartBeats != null)
+                    {
+                        try
+                        {
+                            var heartBeatMessage = HeartBeatMessage.Deserialize(heartBeatMessageJson);
+                            await notifiedOfHeartBeats(heartBeatMessage);
+                        }
+                        catch (Exception ex)
+                        {
+                            log.WriteException(EventType.Diagnostic, "Failed to deserialize heartbeat message from {0} node, request {1}. JSON: {2}", ex, watchingForPulsesFrom, requestActivityId, heartBeatMessageJson);
+                        }
+                    }
                 }, subscriptionCts.Token));
             try
             {

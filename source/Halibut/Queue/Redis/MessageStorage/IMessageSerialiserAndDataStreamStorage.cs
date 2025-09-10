@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Transport.Protocol;
 
@@ -16,8 +17,8 @@ namespace Halibut.Queue.Redis.MessageStorage
     /// </summary>
     public interface IMessageSerialiserAndDataStreamStorage
     {
-        Task<RedisStoredMessage> PrepareRequest(RequestMessage request, CancellationToken cancellationToken);
-        Task<RequestMessage> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken);
+        Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken);
+        Task<(RequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken);
         Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken);
         Task<ResponseMessage> ReadResponse(RedisStoredMessage jsonResponse, CancellationToken cancellationToken);
     }

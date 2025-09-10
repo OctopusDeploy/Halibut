@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.DataStreams;
 using Halibut.Transport.Protocol;
 using Newtonsoft.Json;
 
@@ -110,68 +111,13 @@ namespace Halibut
         
         public static DataStream FromStream(Stream source, Func<int, CancellationToken, Task> updateProgressAsync)
         {
-            var streamer = new StreamingDataStream(source, updateProgressAsync);
-
-            return new DataStream(source.Length, streamer.CopyAndReportProgressAsync);
+        
+            return new DataStreamWithFileUploadProgress(source, new PercentageCompleteDataStreamTransferProgress(updateProgressAsync, source.Length));
         }
         
         public static DataStream FromStream(Stream source)
         {
-            return FromStream(source, async (_, _) => { await Task.CompletedTask;});
-        }
-
-        class StreamingDataStream
-        {
-            const int BufferSize = 84000;
-            readonly Stream source;
-            readonly Func<int, CancellationToken, Task> updateProgressAsync;
-
-            public StreamingDataStream(Stream source, Func<int, CancellationToken, Task> updateProgressAsync)
-            {
-                this.source = source;
-                this.updateProgressAsync = updateProgressAsync;
-            }
-            
-            public async Task CopyAndReportProgressAsync(Stream destination, CancellationToken cancellationToken)
-            {
-                var readBuffer = new byte[BufferSize];
-                var writeBuffer = new byte[BufferSize];
-
-                var progress = 0;
-                
-                var totalLength = source.Length;
-                long copiedSoFar = 0;
-                source.Seek(0, SeekOrigin.Begin);
-
-                var count = await source.ReadAsync(readBuffer, 0, BufferSize, cancellationToken);
-                while (count > 0)
-                {
-                    Swap(ref readBuffer, ref writeBuffer);
-                    var writeTask = destination.WriteAsync(writeBuffer, 0, count, cancellationToken);
-                    count = await source.ReadAsync(readBuffer, 0, BufferSize, cancellationToken);
-                    await writeTask;
-
-                    copiedSoFar += count;
-
-                    var progressNow = (int)((double)copiedSoFar / totalLength * 100.00);
-                    if (progressNow == progress)
-                        continue;
-                    await updateProgressAsync(progressNow, cancellationToken);
-                    progress = progressNow;
-                }
-
-                if (progress != 100)
-                    await updateProgressAsync(100, cancellationToken);
-
-                await destination.FlushAsync(cancellationToken);
-            }
-
-            static void Swap<T>(ref T x, ref T y)
-            {
-                T tmp = x;
-                x = y;
-                y = tmp;
-            }
+            return new DataStream(source.Length, new StreamCopierWithProgress(source, new NoOpDataStreamTransferProgress()).CopyAndReportProgressAsync);
         }
 
         async Task IDataStreamInternal.TransmitAsync(Stream stream, CancellationToken cancellationToken)

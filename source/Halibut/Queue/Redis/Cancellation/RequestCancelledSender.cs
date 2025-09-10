@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 

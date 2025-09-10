@@ -201,21 +201,21 @@ namespace Halibut.Queue.Redis.RedisHelpers
             Uri endpoint, 
             Guid requestId,
             HalibutQueueNodeSendingPulses nodeSendingPulsesType,
-            Func<Task> onHeartBeat,
+            Func<string, Task> onHeartBeat,
             CancellationToken cancellationToken)
         {
             var channelName = NodeHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType);
             return await facade.SubscribeToChannel(channelName, async foo =>
             {
                 string? response = foo.Message;
-                if (response is not null) await onHeartBeat();
+                if (response is not null) await onHeartBeat(response);
             }, cancellationToken);
         }
 
-        public async Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, CancellationToken cancellationToken)
+        public async Task SendNodeHeartBeat(Uri endpoint, Guid requestId, HalibutQueueNodeSendingPulses nodeSendingPulsesType, string nodeHeartBeatMessage, CancellationToken cancellationToken)
         {
             var channelName = NodeHeartBeatChannel(endpoint, requestId, nodeSendingPulsesType);
-            await facade.PublishToChannel(channelName, "{}", cancellationToken);
+            await facade.PublishToChannel(channelName, nodeHeartBeatMessage, cancellationToken);
         }
         
         // Response channel.

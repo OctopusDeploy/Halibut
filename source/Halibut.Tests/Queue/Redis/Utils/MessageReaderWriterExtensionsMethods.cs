@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Transport.Protocol;
@@ -29,12 +30,12 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.messageSerialiserAndDataStreamStorage = messageSerialiserAndDataStreamStorage;
         }
 
-        public virtual Task<RedisStoredMessage> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public virtual Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
         }
 
-        public virtual Task<RequestMessage> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken)
+        public virtual Task<(RequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
         }
@@ -74,7 +75,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.exception = exception;
         }
 
-        public override Task<RedisStoredMessage> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
+        public override Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
             throw exception();
         }

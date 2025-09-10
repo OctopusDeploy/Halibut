@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Queue.Redis.MessageStorage;
 
 namespace Halibut.Queue.QueuedDataStreams
 {
@@ -33,6 +34,6 @@ namespace Halibut.Queue.QueuedDataStreams
         /// <param name="dataStreams"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task RehydrateDataStreams(byte[] dataStreamMetadata, IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken);
+        public Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken);
     }
 }
