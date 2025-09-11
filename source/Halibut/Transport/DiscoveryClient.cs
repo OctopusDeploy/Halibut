@@ -27,6 +27,8 @@ namespace Halibut.Transport
             try
             {
                 var log = logs.ForEndpoint(serviceEndpoint.BaseUri);
+                var streamClientAuthentication = new SslStreamClientAuthentication(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(), SslConfiguration.SupportedProtocols);
+                
                 using (var client = await TcpConnectionFactory.CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, streamFactory, log, cancellationToken))
                 {
 #if !NETFRAMEWORK
@@ -39,17 +41,8 @@ namespace Halibut.Transport
 #endif                        
                         using (var ssl = new SslStream(networkTimeoutStream, false, ValidateCertificate))
                         {
-#if NETFRAMEWORK
-                            // TODO: ASYNC ME UP!
-                            // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
-                            await ssl.AuthenticateAsClientAsync(
-                                serviceEndpoint.BaseUri.Host,
-                                new X509Certificate2Collection(),
-                                SslConfiguration.SupportedProtocols,
-                                false);
-#else
-                            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(), cancellationToken);
-#endif
+                            await streamClientAuthentication.AuthenticateAsClientAsync(ssl, cancellationToken);
+
                             await ssl.WriteAsync(HelloLine, 0, HelloLine.Length, cancellationToken);
                             await ssl.FlushAsync(cancellationToken);
 
