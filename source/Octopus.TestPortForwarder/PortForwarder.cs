@@ -49,7 +49,7 @@ namespace Octopus.TestPortForwarder
             this.numberOfBytesToDelaySending = numberOfBytesToDelaySending;
             var scheme = originServer.Scheme;
 
-            Start();
+            Start(listeningPort ?? 0); // 0 means find a free port
             var ipEndPoint = listeningSocket.LocalEndPoint as IPEndPoint ?? throw new InvalidOperationException("listeningSocket.LocalEndPoint was not an IPEndPoint");
             
             ListeningPort = ipEndPoint.Port;
@@ -59,7 +59,7 @@ namespace Octopus.TestPortForwarder
         }
 
         [MemberNotNull(nameof(listeningSocket))]
-        private void Start()
+        private void Start(int listeningPort)
         {
             if (active)
             {
@@ -69,7 +69,7 @@ namespace Octopus.TestPortForwarder
             listeningSocket ??= new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             listeningSocket.NoDelay = true;
 
-            listeningSocket!.Bind(new IPEndPoint(IPAddress.Loopback, ListeningPort));
+            listeningSocket!.Bind(new IPEndPoint(IPAddress.Loopback, listeningPort));
 
             try
             {
