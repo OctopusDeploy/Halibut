@@ -23,7 +23,6 @@ namespace Halibut.Transport.Protocol
         internal RegisteredSerializationBinder(ITypeRegistry typeRegistry)
         {
             this.typeRegistry = typeRegistry;
-            
         }
 
         public Type BindToType(string? assemblyName, string typeName)
