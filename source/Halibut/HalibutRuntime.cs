@@ -43,6 +43,7 @@ namespace Halibut
         readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly ISecureConnectionObserver secureConnectionObserver;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly IControlMessageObserver controlMessageObserver;
 
@@ -59,7 +60,9 @@ namespace Halibut
             IStreamFactory streamFactory,
             IRpcObserver rpcObserver,
             IConnectionsObserver connectionsObserver, 
-            IControlMessageObserver controlMessageObserver)
+            IControlMessageObserver controlMessageObserver,
+            ISecureConnectionObserver secureConnectionObserver
+        )
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -73,10 +76,11 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.connectionsObserver = connectionsObserver;
+            this.secureConnectionObserver = secureConnectionObserver;
             this.controlMessageObserver = controlMessageObserver;
 
             connectionManager = new ConnectionManagerAsync();
-            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
+            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory, secureConnectionObserver);
             activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits);
         }
 
@@ -130,7 +134,9 @@ namespace Halibut
                 HandleUnauthorizedClientConnect,
                 TimeoutsAndLimits,
                 streamFactory,
-                connectionsObserver);
+                connectionsObserver,
+                secureConnectionObserver
+            );
 
             listeners.DoWithExclusiveAccess(l =>
             {

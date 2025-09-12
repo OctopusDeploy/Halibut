@@ -48,6 +48,7 @@ namespace Halibut.Transport
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly ISecureConnectionObserver secureConnectionObserver;
         ILog log;
         TcpListener listener;
         Thread? backgroundThread;
@@ -67,7 +68,9 @@ namespace Halibut.Transport
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
-            IConnectionsObserver connectionsObserver)
+            IConnectionsObserver connectionsObserver,
+            ISecureConnectionObserver secureConnectionObserver
+        )
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -81,6 +84,7 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
+            this.secureConnectionObserver = secureConnectionObserver;
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
@@ -336,6 +340,7 @@ namespace Halibut.Transport
                     {
                         connectionAuthorizedAndObserved = true;
                         connectionsObserver.ConnectionAccepted(true);
+                        secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateIncoming(ssl.SslProtocol, thumbprint));
                         tcpClientManager.AddActiveClient(thumbprint, client);
                         errorEventType = EventType.Error;
                         await ExchangeMessages(ssl).ConfigureAwait(false);
