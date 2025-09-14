@@ -11,10 +11,10 @@ namespace Halibut.Transport.Protocol
 
         public RegisteredSerializationBinder() : this(new TypeRegistry())
         {
-            AddProtocolTupesToTypeRegistry(this.typeRegistry);
+            AddProtocolTypesToTypeRegistry(this.typeRegistry);
         }
 
-        public static void AddProtocolTupesToTypeRegistry(ITypeRegistry typeRegistry)
+        public static void AddProtocolTypesToTypeRegistry(ITypeRegistry typeRegistry)
         {
             foreach (var protocolType in protocolTypes) typeRegistry.RegisterType(protocolType, protocolType.Name, true);
         }

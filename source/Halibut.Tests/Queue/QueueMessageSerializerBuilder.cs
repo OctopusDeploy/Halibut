@@ -36,7 +36,7 @@ namespace Halibut.Tests.Queue
         public QueueMessageSerializer Build()
         {
             var typeRegistry = this.typeRegistry ?? new TypeRegistry();
-            RegisteredSerializationBinder.AddProtocolTupesToTypeRegistry(typeRegistry);
+            RegisteredSerializationBinder.AddProtocolTypesToTypeRegistry(typeRegistry);
 
             StreamCapturingJsonSerializer StreamCapturingSerializer()
             {
