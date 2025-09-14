@@ -16,7 +16,10 @@ namespace Halibut.Transport.Protocol
 
         public static void AddProtocolTypesToTypeRegistry(ITypeRegistry typeRegistry)
         {
-            foreach (var protocolType in protocolTypes) typeRegistry.RegisterType(protocolType, protocolType.Name, true);
+            foreach (var protocolType in protocolTypes)
+            {
+                typeRegistry.RegisterType(protocolType, protocolType.Name, true);
+            }
         }
         // kept for backwards compatibility.
 
