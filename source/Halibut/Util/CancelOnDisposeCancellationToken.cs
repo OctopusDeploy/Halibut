@@ -97,7 +97,8 @@ namespace Halibut.Util
         {
             if (tasks == null)
             {
-                Interlocked.CompareExchange(ref tasks, new ConcurrentBag<Task>(), null);
+                var newBag = new ConcurrentBag<Task>();
+                Interlocked.CompareExchange(ref tasks, newBag, null);
             }
             foreach (var task in tasksUsingToken)
             {
