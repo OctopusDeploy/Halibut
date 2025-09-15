@@ -234,6 +234,8 @@ namespace Halibut.Queue.Redis
         {
             transferLock?.Dispose();
         }
+
+        public bool HasResponseBeenSet() => responseWaiter.IsSet;
     }
     
 }

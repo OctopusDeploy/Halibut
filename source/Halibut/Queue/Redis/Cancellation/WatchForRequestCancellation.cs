@@ -20,17 +20,30 @@ namespace Halibut.Queue.Redis.Cancellation
 
         readonly ILog log;
 
-        public WatchForRequestCancellation(Uri endpoint, Guid requestActivityId, IHalibutRedisTransport halibutRedisTransport, ILog log)
+        public WatchForRequestCancellation(
+            Uri endpoint,
+            Guid requestActivityId,
+            IHalibutRedisTransport halibutRedisTransport,
+            DelayBeforeSubscribingToRequestCancellation delayBeforeSubscribingToRequestCancellation,
+            ILog log)
         {
             this.log = log;
             log.Write(EventType.Diagnostic, "Starting to watch for request cancellation - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);
             
             var token = watchForCancellationTokenSource.Token;
-            var _ = Task.Run(async () => await WatchForCancellation(endpoint, requestActivityId, halibutRedisTransport, token));
+            var _ = Task.Run(async () => await WatchForCancellation(endpoint, requestActivityId, halibutRedisTransport, delayBeforeSubscribingToRequestCancellation, token));
         }
 
-        async Task WatchForCancellation(Uri endpoint, Guid requestActivityId, IHalibutRedisTransport halibutRedisTransport, CancellationToken token)
+        async Task WatchForCancellation(
+            Uri endpoint,
+            Guid requestActivityId,
+            IHalibutRedisTransport halibutRedisTransport,
+            DelayBeforeSubscribingToRequestCancellation delayBeforeSubscribingToRequestCancellation,
+            CancellationToken token)
         {
+            await delayBeforeSubscribingToRequestCancellation.WaitBeforeHeartBeatSendingOrReceiving(token);
+            if(token.IsCancellationRequested) return;
+            
             try
             {
                 log.Write(EventType.Diagnostic, "Subscribing to request cancellation notifications - Endpoint: {0}, ActivityId: {1}", endpoint, requestActivityId);

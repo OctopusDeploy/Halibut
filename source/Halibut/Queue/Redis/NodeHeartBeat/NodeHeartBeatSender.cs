@@ -27,7 +27,8 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             ILog log,
             HalibutQueueNodeSendingPulses nodeSendingPulsesType,
             Func<HeartBeatMessage> heartBeatMessageProvider,
-            TimeSpan defaultDelayBetweenPulses)
+            TimeSpan defaultDelayBetweenPulses,
+            HeartBeatInitialDelay heartBeatInitialDelay)
         {
             this.endpoint = endpoint;
             this.requestActivityId = requestActivityId;
@@ -36,11 +37,18 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             cts = new CancelOnDisposeCancellationToken();
             this.log = log.ForContext<NodeHeartBeatSender>();
             this.log.Write(EventType.Diagnostic, "Starting NodeHeartBeatSender for {0} node, request {1}, endpoint {2}", nodeSendingPulsesType, requestActivityId, endpoint);
-            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(heartBeatMessageProvider, defaultDelayBetweenPulses, cts.Token));
+            TaskSendingPulses = Task.Run(() => SendPulsesWhileProcessingRequest(heartBeatMessageProvider, defaultDelayBetweenPulses, heartBeatInitialDelay, cts.Token));
         }
 
-        async Task SendPulsesWhileProcessingRequest(Func<HeartBeatMessage> heartBeatMessageProvider, TimeSpan defaultDelayBetweenPulses, CancellationToken cancellationToken)
+        async Task SendPulsesWhileProcessingRequest(
+            Func<HeartBeatMessage> heartBeatMessageProvider, 
+            TimeSpan defaultDelayBetweenPulses, 
+            HeartBeatInitialDelay heartBeatInitialDelay,
+            CancellationToken cancellationToken)
         {
+            await heartBeatInitialDelay.WaitBeforeHeartBeatSendingOrReceiving(cancellationToken);
+            if(cancellationToken.IsCancellationRequested) return;
+            
             log.Write(EventType.Diagnostic, "Starting heartbeat pulse loop for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);
             
             TimeSpan delayBetweenPulse;

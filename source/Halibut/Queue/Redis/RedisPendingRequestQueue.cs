@@ -65,7 +65,33 @@ namespace Halibut.Queue.Redis
         // How long the response message can live in redis.
         internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(20);
         
-        internal TimeSpan TimeBetweenCheckingIfRequestWasCollected { get; set; } = TimeSpan.FromSeconds(30);
+        internal TimeSpan TimeBetweenCheckingIfRequestWasCollected { get; set; } = TimeSpan.FromSeconds(15);
+        
+        /// <summary>
+        /// How long to delay before we will start sending or checking for heart beat pulses.
+        /// Note that the Node Sending the request won't send heart beats until it has detected
+        /// the request has been collected. Which won't be detected until TimeBetweenCheckingIfRequestWasCollected
+        /// has passed.
+        ///
+        /// 7s is chosen since Tentacle Clien has a 5s wait for script delay, and 7s just exceeds that. This
+        /// should be enough time that most of the time we never need to send or check for heart beat messages
+        /// reducing load on the queue.
+        /// </summary>
+        static readonly HeartBeatInitialDelay DefaultHeartBeatInitialDelay = new(TimeSpan.FromSeconds(7));
+        public HeartBeatInitialDelay HeartBeatInitialDelay { get; set; } = DefaultHeartBeatInitialDelay;
+        
+        /// <summary>
+        /// With this delay short requests (sub 5s) may not be cancelled if the cancellation occurs after the request
+        /// has been collected by the other side.
+        /// Note that Halibut's cancellation does NOT mean that the other side will stop processing the request once
+        /// cancellation is sent. instead all it can do is terminate the network stream. Which really means,
+        /// we can only stop transferring of a request or a response.
+        /// Thus setting this to a value greater than zero will have very little impact since, it is very unlikely
+        /// we could have stopped the request from being executed by the service anyway.
+        /// 7 seconds is chosen since, for our use cases most requests are done within that time range.
+        /// </summary>
+        static readonly DelayBeforeSubscribingToRequestCancellation DefaultDelayBeforeSubscribingToRequestCancellation = new(TimeSpan.FromSeconds(7));
+        public DelayBeforeSubscribingToRequestCancellation DelayBeforeSubscribingToRequestCancellation { get; set; } = DefaultDelayBeforeSubscribingToRequestCancellation;
         
         public RedisPendingRequestQueue(
             Uri endpoint, 
@@ -147,7 +173,7 @@ namespace Halibut.Queue.Redis
             var tryClearRequestFromQueueAtMostOnce = new AsyncLazy<bool>(async () => await TryClearRequestFromQueue(pending));
             try
             {
-                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, () => new HeartBeatMessage(), RequestSenderNodeHeartBeatRate);
+                await using var senderPulse = new NodeHeartBeatSender(endpoint, request.ActivityId, halibutRedisTransport, log, HalibutQueueNodeSendingPulses.RequestSenderNode, () => new HeartBeatMessage(), RequestSenderNodeHeartBeatRate, HeartBeatInitialDelay);
                 // Make the request available before we tell people it is available.
                 try
                 {
@@ -366,8 +392,9 @@ namespace Halibut.Queue.Redis
                     log,
                     HalibutQueueNodeSendingPulses.RequestProcessorNode,
                     () => HeartBeatMessage.Build(dataStreamsTransferProgress),
-                    RequestReceiverNodeHeartBeatRate));
-                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pendingRequest.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, log);
+                    RequestReceiverNodeHeartBeatRate,
+                    HeartBeatInitialDelay));
+                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pendingRequest.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, HeartBeatInitialDelay, DefaultDelayBeforeSubscribingToRequestCancellation, log);
                 disposables.AddAsyncDisposable(watcher);
                 
                 var cts = new CancelOnDisposeCancellationToken(watcher.RequestProcessingCancellationToken, dataLossCT);
