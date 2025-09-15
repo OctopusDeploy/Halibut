@@ -405,6 +405,7 @@ namespace Halibut.Tests.ServiceModel
             await using var queueHolder = queueTestCase.Builder
                 .WithEndpoint(endpoint)
                 .WithPollingQueueWaitTimeout(TimeSpan.Zero) // Remove delay, otherwise we wait the full 20 seconds for DequeueAsync at the end of the test
+                .WithDelayBeforeCheckingForCancellation(TimeSpan.Zero)
                 .Build();
             var sut = queueHolder.PendingRequestQueue;
 

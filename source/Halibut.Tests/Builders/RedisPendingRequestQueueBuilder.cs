@@ -3,6 +3,7 @@
 using System;
 using Halibut.Logging;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.Cancellation;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Queue;
@@ -19,6 +20,7 @@ namespace Halibut.Tests.Builders
         ILog? log;
         string? endpoint;
         TimeSpan? pollingQueueWaitTimeout;
+        TimeSpan? defaultDelayBeforeSubscribingToRequestCancellation;
 
         public IPendingRequestQueueBuilder WithEndpoint(string endpoint)
         {
@@ -35,6 +37,12 @@ namespace Halibut.Tests.Builders
         public IPendingRequestQueueBuilder WithPollingQueueWaitTimeout(TimeSpan? pollingQueueWaitTimeout)
         {
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
+            return this;
+        }
+
+        public IPendingRequestQueueBuilder WithDelayBeforeCheckingForCancellation(TimeSpan defaultDelayBeforeSubscribingToRequestCancellation)
+        {
+            this.defaultDelayBeforeSubscribingToRequestCancellation = defaultDelayBeforeSubscribingToRequestCancellation;
             return this;
         }
 
@@ -60,7 +68,10 @@ namespace Halibut.Tests.Builders
             var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits);
-            
+            if (defaultDelayBeforeSubscribingToRequestCancellation != null)
+            {
+                queue.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(defaultDelayBeforeSubscribingToRequestCancellation.Value);
+            }
             queue.WaitUntilQueueIsSubscribedToReceiveMessages().GetAwaiter().GetResult();
             
             return new QueueHolder(queue, disposableCollection);
