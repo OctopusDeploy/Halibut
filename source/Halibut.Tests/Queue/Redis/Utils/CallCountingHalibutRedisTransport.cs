@@ -20,9 +20,23 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.inner = inner;
         }
 
-        public int GetCallCount(string methodName) => callCounts.GetOrAdd(methodName, 0);
+        object mutex = new object();
 
-        void IncrementCallCount(string methodName) => callCounts.AddOrUpdate(methodName, 1, (_, count) => count + 1);
+        public int GetCallCount(string methodName)
+        {
+            lock (mutex)
+            {
+                return callCounts.GetOrAdd(methodName, 0);
+            }
+        }
+
+        void IncrementCallCount(string methodName)
+        {
+            lock (mutex)
+            {
+                callCounts.AddOrUpdate(methodName, 1, (_, count) => count + 1);
+            }
+        }
 
         public Task<IAsyncDisposable> SubscribeToRequestMessagePulseChannel(Uri endpoint, Action<ChannelMessage> onRequestMessagePulse, CancellationToken cancellationToken)
         {
