@@ -29,11 +29,13 @@ namespace Halibut.Queue.Redis
             Guid requestActivityId,
             IHalibutRedisTransport halibutRedisTransport,
             TimeSpan nodeOfflineTimeoutBetweenHeartBeatsFromSender,
+            HeartBeatInitialDelay heartBeatInitialDelay,
+            DelayBeforeSubscribingToRequestCancellation delayBeforeSubscribingToRequestCancellation,
             ILog log)
         {
             try
             {
-                watchForRequestCancellation = new WatchForRequestCancellation(endpoint, requestActivityId, halibutRedisTransport, log);
+                watchForRequestCancellation = new WatchForRequestCancellation(endpoint, requestActivityId, halibutRedisTransport, delayBeforeSubscribingToRequestCancellation, log);
                 disposableCollection.AddAsyncDisposable(watchForRequestCancellation);
 
                 requestCancellationTokenSource = new CancelOnDisposeCancellationToken(watchForRequestCancellation.RequestCancelledCancellationToken);
@@ -43,7 +45,7 @@ namespace Halibut.Queue.Redis
                 keepWatchingCancellationToken = new CancelOnDisposeCancellationToken();
                 disposableCollection.AddAsyncDisposable(keepWatchingCancellationToken);
 
-                Task.Run(() => WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, nodeOfflineTimeoutBetweenHeartBeatsFromSender, log));
+                Task.Run(() => WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, nodeOfflineTimeoutBetweenHeartBeatsFromSender, heartBeatInitialDelay, log));
             }
             catch (Exception)
             {
@@ -52,13 +54,19 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task WatchThatNodeWhichSentTheRequestIsStillAlive(Uri endpoint, Guid requestActivityId, IHalibutRedisTransport halibutRedisTransport, TimeSpan nodeOfflineTimeoutBetweenHeartBeatsFromSender, ILog log)
+        async Task WatchThatNodeWhichSentTheRequestIsStillAlive(
+            Uri endpoint,
+            Guid requestActivityId,
+            IHalibutRedisTransport halibutRedisTransport,
+            TimeSpan nodeOfflineTimeoutBetweenHeartBeatsFromSender,
+            HeartBeatInitialDelay heartBeatInitialDelay,
+            ILog log)
         {
             var watchCancellationToken = keepWatchingCancellationToken.Token;
             try
             {
                 var res = await NodeHeartBeatWatcher
-                    .WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, log, nodeOfflineTimeoutBetweenHeartBeatsFromSender, watchCancellationToken);
+                    .WatchThatNodeWhichSentTheRequestIsStillAlive(endpoint, requestActivityId, halibutRedisTransport, log, heartBeatInitialDelay, nodeOfflineTimeoutBetweenHeartBeatsFromSender, watchCancellationToken);
                 if (res == NodeWatcherResult.NodeMayHaveDisconnected)
                 {
                     await requestCancellationTokenSource.CancelAsync();

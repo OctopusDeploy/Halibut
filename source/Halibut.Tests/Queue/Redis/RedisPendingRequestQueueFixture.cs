@@ -10,6 +10,7 @@ using Halibut.Logging;
 using Halibut.Queue;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.Cancellation;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.NodeHeartBeat;
@@ -120,6 +121,61 @@ namespace Halibut.Tests.Queue.Redis
             responseMessage.Result.Should().Be("Yay");
         }
         
+        [Test]
+        public async Task WhenTheRequestIsQuicklyProcessedTheNumberOfRequestToRedisShouldBeLimited()
+        {
+            // Arrange
+            var endpoint = new Uri("poll://" + Guid.NewGuid());
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var baseRedisTransport = new HalibutRedisTransport(redisFacade);
+            var callCountingTransport = new CallCountingHalibutRedisTransport(baseRedisTransport);
+
+            var request = new RequestMessageBuilder("poll://test-endpoint").Build();
+
+            var node1Sender = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, callCountingTransport, CreateMessageSerialiserAndDataStreamStorage(), new HalibutTimeoutsAndLimits());
+            await node1Sender.WaitUntilQueueIsSubscribedToReceiveMessages();
+
+            // Act
+            var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
+
+            var requestMessageWithCancellationToken = await node1Sender.DequeueAsync(CancellationToken);
+
+            requestMessageWithCancellationToken.Should().NotBeNull();
+            requestMessageWithCancellationToken!.RequestMessage.Id.Should().Be(request.Id);
+            requestMessageWithCancellationToken.RequestMessage.MethodName.Should().Be(request.MethodName);
+            requestMessageWithCancellationToken.RequestMessage.ServiceName.Should().Be(request.ServiceName);
+
+            var response = ResponseMessage.FromResult(requestMessageWithCancellationToken.RequestMessage, "Yay");
+            await node1Sender.ApplyResponse(response, requestMessageWithCancellationToken.RequestMessage.ActivityId);
+
+            var responseMessage = await queueAndWaitAsync;
+
+            // Assert
+            responseMessage.Result.Should().Be("Yay");
+            
+            // Verify that Redis calls are limited for a quickly processed request
+            // These are the expected calls for a successful request/response cycle:
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.SubscribeToRequestMessagePulseChannel)).Should().Be(1, "Should subscribe to pulse channel once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.PutRequest)).Should().Be(1, "Should put request once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.PushRequestGuidOnToQueue)).Should().Be(1, "Should push request GUID once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.PulseRequestPushedToEndpoint)).Should().Be(1, "Should pulse endpoint once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.TryGetAndRemoveRequest)).Should().Be(1, "Should get and remove request once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.SubscribeToResponseChannel)).Should().Be(1, "Should subscribe to response channel once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.SetResponseMessage)).Should().Be(1, "Should set response message once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.PublishThatResponseIsAvailable)).Should().Be(1, "Should publish response availability once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.GetResponseMessage)).Should().Be(1, "Should get response message once");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.DeleteResponseMessage)).Should().Be(1, "Should delete response message once");
+            
+            // These methods should NOT be called for a quickly processed successful request:
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.IsRequestStillOnQueue)).Should().Be(0, "Should not need to check if request is still on queue for quick processing");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.SubscribeToRequestCancellation)).Should().Be(0, "Should not need cancellation subscription for successful request");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.PublishCancellation)).Should().Be(0, "Should not publish cancellation for successful request");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.MarkRequestAsCancelled)).Should().Be(0, "Should not mark request as cancelled for successful request");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.IsRequestMarkedAsCancelled)).Should().Be(0, "Should not check if request is cancelled for successful request");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.SubscribeToNodeHeartBeatChannel)).Should().Be(0, "Should not need heartbeat subscription for quickly processed request");
+            callCountingTransport.GetCallCount(nameof(callCountingTransport.SendNodeHeartBeat)).Should().Be(0, "Should not send heartbeats for quickly processed request");
+        }
+        
         
         [Test]
         public async Task TheProcessingTimeOfARequestCanExceedWatcherTimeouts()
@@ -139,6 +195,8 @@ namespace Halibut.Tests.Queue.Redis
             
             node1Sender.RequestSenderNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
             node1Sender.RequestReceiverNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
+            node1Sender.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+            node1Sender.HeartBeatInitialDelay = new HeartBeatInitialDelay(TimeSpan.Zero);
             
             var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, CancellationToken.None);
             var requestMessageWithCancellationToken = await node1Sender.DequeueAsync(CancellationToken);
@@ -219,6 +277,8 @@ namespace Halibut.Tests.Queue.Redis
             var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), HalibutLog, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
             queue.RequestReceiverNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
             queue.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromMilliseconds(100);
+            queue.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+            queue.HeartBeatInitialDelay = new HeartBeatInitialDelay(TimeSpan.Zero);
             
             await queue.WaitUntilQueueIsSubscribedToReceiveMessages();
 
@@ -750,6 +810,10 @@ namespace Halibut.Tests.Queue.Redis
             node2Receiver.RequestReceiverNodeHeartBeatRate = TimeSpan.FromSeconds(1);
             node1Sender.RequestReceiverNodeHeartBeatTimeout = TimeSpan.FromSeconds(10);
             node2Receiver.RequestReceiverNodeHeartBeatTimeout = TimeSpan.FromSeconds(10);
+            node1Sender.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+            node1Sender.HeartBeatInitialDelay = new HeartBeatInitialDelay(TimeSpan.Zero);
+            node2Receiver.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+            node2Receiver.HeartBeatInitialDelay = new HeartBeatInitialDelay(TimeSpan.Zero);
 
             // Act
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
@@ -803,6 +867,10 @@ namespace Halibut.Tests.Queue.Redis
             node2Receiver.RequestSenderNodeHeartBeatTimeout = TimeSpan.FromSeconds(10);
             node1Sender.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromSeconds(1);
             node2Receiver.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromSeconds(1);
+            node1Sender.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+            node1Sender.HeartBeatInitialDelay = new HeartBeatInitialDelay(TimeSpan.Zero);
+            node2Receiver.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+            node2Receiver.HeartBeatInitialDelay = new HeartBeatInitialDelay(TimeSpan.Zero);
 
             var request = new RequestMessageBuilder("poll://test-endpoint").Build();
 
@@ -999,7 +1067,7 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
-            var redisTransport = new HalibutRedisTransport(redisFacade);
+            var redisTransport = new CallCountingHalibutRedisTransport(new HalibutRedisTransport(redisFacade));
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
@@ -1008,6 +1076,8 @@ namespace Halibut.Tests.Queue.Redis
             request.Params = new[] { new ComplexObjectMultipleDataStreams(DataStream.FromString("hello"), DataStream.FromString("world")) };
 
             var node1Sender = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), log, redisTransport, messageReaderWriter, new HalibutTimeoutsAndLimits());
+            node1Sender.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+            node1Sender.HeartBeatInitialDelay = new HeartBeatInitialDelay(TimeSpan.Zero);
             await node1Sender.WaitUntilQueueIsSubscribedToReceiveMessages();
 
             using var cts = new CancellationTokenSource();
@@ -1015,6 +1085,12 @@ namespace Halibut.Tests.Queue.Redis
             var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, cts.Token);
 
             var requestMessageWithCancellationToken = await node1Sender.DequeueAsync(CancellationToken);
+            
+            await ShouldEventually.Eventually(async () =>
+            {
+                await Task.CompletedTask;
+                redisTransport.GetCallCount(nameof(IHalibutRedisTransport.SubscribeToRequestCancellation)).Should().Be(1);
+            }, TimeSpan.FromSeconds(10), CancellationToken);
 
             requestMessageWithCancellationToken!.CancellationToken.IsCancellationRequested.Should().BeFalse();
 

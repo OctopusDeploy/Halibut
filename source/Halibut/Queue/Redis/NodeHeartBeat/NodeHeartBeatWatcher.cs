@@ -28,6 +28,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             try
             {
                 await WaitForRequestToBeCollected(endpoint, request, redisPending, halibutRedisTransport, timeBetweenCheckingIfRequestWasCollected, log, cts.Token);
+                if (redisPending.HasResponseBeenSet()) return NodeWatcherResult.NoDisconnectSeen;
 
                 return await WatchForPulsesFromNode(
                     endpoint, 
@@ -54,9 +55,16 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
             Guid requestActivityId,
             IHalibutRedisTransport halibutRedisTransport,
             ILog log,
+            HeartBeatInitialDelay heartBeatInitialDelay,
             TimeSpan maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline,
             CancellationToken watchCancellationToken)
         {
+            await heartBeatInitialDelay.WaitBeforeHeartBeatSendingOrReceiving(watchCancellationToken);
+            if (watchCancellationToken.IsCancellationRequested)
+            {
+                return NodeWatcherResult.NoDisconnectSeen;
+            }
+            
             try
             {
                 return await WatchForPulsesFromNode(endpoint, requestActivityId, halibutRedisTransport, log, maxTimeBetweenSenderHeartBeetsBeforeSenderIsAssumedToBeOffline, HalibutQueueNodeSendingPulses.RequestSenderNode, watchCancellationToken);

@@ -32,6 +32,11 @@ namespace Halibut.Tests.Builders
             return this;
         }
 
+        public IPendingRequestQueueBuilder WithDelayBeforeCheckingForCancellation(TimeSpan defaultDelayBeforeSubscribingToRequestCancellation)
+        {
+            return this;
+        }
+
         public QueueHolder Build()
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
