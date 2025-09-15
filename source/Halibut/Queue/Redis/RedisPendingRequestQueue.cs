@@ -73,7 +73,7 @@ namespace Halibut.Queue.Redis
         /// the request has been collected. Which won't be detected until TimeBetweenCheckingIfRequestWasCollected
         /// has passed.
         ///
-        /// 7s is chosen since Tentacle Clien has a 5s wait for script delay, and 7s just exceeds that. This
+        /// 7s is chosen since Tentacle Client has a 5s wait for script delay, and 7s just exceeds that. This
         /// should be enough time that most of the time we never need to send or check for heart beat messages
         /// reducing load on the queue.
         /// </summary>
