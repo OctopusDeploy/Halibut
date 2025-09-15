@@ -90,7 +90,7 @@ namespace Halibut.Util
         /// <summary>
         /// Tasks supplied here will be awaited on in the dispose method after
         /// the Token is cancelled and before the token is disposed.
-        /// Thread safe: uses Interlocked.CompareExchange for initialization and ConcurrentBag for storage.
+        /// Must be called before dispose is called.
         /// </summary>
         /// <param name="tasksUsingToken"></param>
         public void AwaitTasksBeforeCTSDispose(params Task[] tasksUsingToken)
