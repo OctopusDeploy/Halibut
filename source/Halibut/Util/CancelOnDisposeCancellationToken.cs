@@ -97,10 +97,7 @@ namespace Halibut.Util
         {
             lock (tasks)
             {
-                foreach (var task in tasksUsingToken)
-                {
-                    tasks.Add(task);
-                }
+                tasks.AddRange(tasksUsingToken);
             }
         }
     }
