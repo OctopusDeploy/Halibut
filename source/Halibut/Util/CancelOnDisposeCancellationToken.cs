@@ -34,7 +34,7 @@ namespace Halibut.Util
         readonly CancellationTokenSource cancellationTokenSource;
         bool disposed;
 
-        ConcurrentBag<Task>? tasks = null;
+        readonly List<Task> tasks = new();
         
         public CancelOnDisposeCancellationToken(params CancellationToken[] token)
             : this(CancellationTokenSource.CreateLinkedTokenSource(token))
@@ -64,7 +64,7 @@ namespace Halibut.Util
             await Try.IgnoringError(async () => await CancelAsync());
 
             // Wait for any tasks that are using the token, before disposal
-            if (tasks != null)
+            if (tasks.Count > 0)
             {
                 await Task.WhenAll(tasks.Select(t => Try.IgnoringError(() => t)));
             }
@@ -90,19 +90,14 @@ namespace Halibut.Util
         /// <summary>
         /// Tasks supplied here will be awaited on in the dispose method after
         /// the Token is cancelled and before the token is disposed.
-        /// Thread safe: uses Interlocked.CompareExchange for initialization and ConcurrentBag for storage.
+        /// Must be called before dispose is called.
         /// </summary>
         /// <param name="tasksUsingToken"></param>
         public void AwaitTasksBeforeCTSDispose(params Task[] tasksUsingToken)
         {
-            if (tasks == null)
+            lock (tasks)
             {
-                var newBag = new ConcurrentBag<Task>();
-                Interlocked.CompareExchange(ref tasks, newBag, null);
-            }
-            foreach (var task in tasksUsingToken)
-            {
-                tasks!.Add(task);
+                tasks.AddRange(tasksUsingToken);
             }
         }
     }
