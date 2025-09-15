@@ -1067,7 +1067,7 @@ namespace Halibut.Tests.Queue.Redis
             var endpoint = new Uri("poll://" + Guid.NewGuid());
             var log = new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix("");
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
-            var redisTransport = new HalibutRedisTransport(redisFacade);
+            var redisTransport = new CallCountingHalibutRedisTransport(new HalibutRedisTransport(redisFacade));
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
             var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
@@ -1085,6 +1085,12 @@ namespace Halibut.Tests.Queue.Redis
             var queueAndWaitAsync = node1Sender.QueueAndWaitAsync(request, cts.Token);
 
             var requestMessageWithCancellationToken = await node1Sender.DequeueAsync(CancellationToken);
+            
+            await ShouldEventually.Eventually(async () =>
+            {
+                await Task.CompletedTask;
+                redisTransport.GetCallCount(nameof(IHalibutRedisTransport.SubscribeToRequestCancellation)).Should().Be(1);
+            }, TimeSpan.FromSeconds(10), CancellationToken);
 
             requestMessageWithCancellationToken!.CancellationToken.IsCancellationRequested.Should().BeFalse();
 

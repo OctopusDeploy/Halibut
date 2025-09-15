@@ -394,7 +394,7 @@ namespace Halibut.Queue.Redis
                     () => HeartBeatMessage.Build(dataStreamsTransferProgress),
                     RequestReceiverNodeHeartBeatRate,
                     HeartBeatInitialDelay));
-                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pendingRequest.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, HeartBeatInitialDelay, DefaultDelayBeforeSubscribingToRequestCancellation, log);
+                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pendingRequest.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, HeartBeatInitialDelay, DelayBeforeSubscribingToRequestCancellation, log);
                 disposables.AddAsyncDisposable(watcher);
                 
                 var cts = new CancelOnDisposeCancellationToken(watcher.RequestProcessingCancellationToken, dataLossCT);
