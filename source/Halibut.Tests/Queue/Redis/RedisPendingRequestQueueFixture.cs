@@ -965,7 +965,11 @@ namespace Halibut.Tests.Queue.Redis
                 var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
                 (await echo.SayHelloAsync("Deploy package A")).Should().Be("Deploy package A...");
 
-                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++) (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+                for (var i = 0; i < clientAndServiceTestCase.RecommendedIterations; i++)
+                {
+                    (await echo.SayHelloAsync($"Deploy package A {i}")).Should().Be($"Deploy package A {i}...");
+                    await echo.CountBytesAsync(DataStream.FromString("hello"));
+                }
             }
         }
         
