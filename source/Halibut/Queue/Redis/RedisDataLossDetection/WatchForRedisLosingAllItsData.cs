@@ -53,14 +53,15 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
         /// <returns>A cancellation token which is triggered when data lose occurs.</returns>
         public async Task<CancellationToken> GetTokenForDataLossDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
         {
-            if (taskCompletionSource.Task.IsCompleted)
+            var localCopyOfTaskCompletionSource = taskCompletionSource;
+            if (localCopyOfTaskCompletionSource.Task.IsCompleted)
             {
-                return await taskCompletionSource.Task;
+                return await localCopyOfTaskCompletionSource.Task;
             }
             
             await using var cts = new CancelOnDisposeCancellationToken(cancellationToken);
             cts.CancelAfter(timeToWait);
-            return await taskCompletionSource.Task.WaitAsync(cts.Token);
+            return await localCopyOfTaskCompletionSource.Task.WaitAsync(cts.Token);
         }
         
 
@@ -74,7 +75,7 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
             var localCopyOfTaskCompletionSource = taskCompletionSource;
             if (localCopyOfTaskCompletionSource.Task.IsCompleted && localCopyOfTaskCompletionSource.Task.Status == TaskStatus.RanToCompletion)
             {
-                return taskCompletionSource.Task.Result;
+                return localCopyOfTaskCompletionSource.Task.Result;
             }
             return null;
         }
