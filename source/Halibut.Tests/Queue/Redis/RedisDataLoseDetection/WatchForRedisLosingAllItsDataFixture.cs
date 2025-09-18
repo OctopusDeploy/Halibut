@@ -25,6 +25,18 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
         }
         
         [Test]
+        public async Task WhenTheConnectionToRedisCanBeEstablished_AndSomeoneHasAlreadyGotTheCancellationToken_TryGetCancellationTokenReturnsTheCT()
+        {
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval:TimeSpan.FromSeconds(1));
+
+
+            await watcher.GetTokenForDataLossDetection(TimeSpan.FromSeconds(5), CancellationToken);
+
+            watcher.TryGetTokenForDataLossDetection().Should().NotBeNull();
+        }
+        
+        [Test]
         public async Task WhenTheConnectionToRedisIsInitiallyDown_WhenAskingForALostDataCancellationToken_AndTheConnectionToRedisReturns_TheCancellationTokenIsReturned()
         {
             using var portForwarder = PortForwardingToRedisBuilder.ForwardingToRedis(Logger);

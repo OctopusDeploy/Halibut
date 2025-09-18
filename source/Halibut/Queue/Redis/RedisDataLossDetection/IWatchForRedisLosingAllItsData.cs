@@ -14,5 +14,12 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
         /// <param name="cancellationToken"></param>
         /// <returns>A cancellation token which is triggered when data loss occurs.</returns>
         Task<CancellationToken> GetTokenForDataLossDetection(TimeSpan timeToWait, CancellationToken cancellationToken);
+        
+        /// <summary>
+        /// Tries to get a cancellation token for data loss detection if monitoring is already active.
+        /// This method returns immediately without waiting.
+        /// </summary>
+        /// <returns>A cancellation token if monitoring is active, null if monitoring is not yet ready.</returns>
+        CancellationToken? TryGetTokenForDataLossDetection();
     }
 }

@@ -43,7 +43,7 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
             var _ = Task.Run(async () => await KeepWatchingForDataLoss(cts.Token));
         }
 
-        private TaskCompletionSource<CancellationToken> taskCompletionSource = new TaskCompletionSource<CancellationToken>();
+        TaskCompletionSource<CancellationToken> taskCompletionSource = new TaskCompletionSource<CancellationToken>();
         
         /// <summary>
         /// Will cause the caller to wait until we are connected to redis and so can detect datalose.
@@ -53,14 +53,30 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
         /// <returns>A cancellation token which is triggered when data lose occurs.</returns>
         public async Task<CancellationToken> GetTokenForDataLossDetection(TimeSpan timeToWait, CancellationToken cancellationToken)
         {
-            if (taskCompletionSource.Task.IsCompleted)
+            var localCopyOfTaskCompletionSource = taskCompletionSource;
+            if (localCopyOfTaskCompletionSource.Task.IsCompleted)
             {
-                return await taskCompletionSource.Task;
+                return await localCopyOfTaskCompletionSource.Task;
             }
             
             await using var cts = new CancelOnDisposeCancellationToken(cancellationToken);
             cts.CancelAfter(timeToWait);
-            return await taskCompletionSource.Task.WaitAsync(cts.Token);
+            return await localCopyOfTaskCompletionSource.Task.WaitAsync(cts.Token);
+        }
+
+        /// <summary>
+        /// Tries to get a cancellation token for data loss detection if monitoring is already active.
+        /// This method returns immediately without waiting.
+        /// </summary>
+        /// <returns>A cancellation token if monitoring is active, null if monitoring is not yet ready.</returns>
+        public CancellationToken? TryGetTokenForDataLossDetection()
+        {
+            var localCopyOfTaskCompletionSource = taskCompletionSource;
+            if (localCopyOfTaskCompletionSource.Task.IsCompleted && localCopyOfTaskCompletionSource.Task.Status == TaskStatus.RanToCompletion)
+            {
+                return localCopyOfTaskCompletionSource.Task.Result;
+            }
+            return null;
         }
 
         private async Task KeepWatchingForDataLoss(CancellationToken cancellationToken)
