@@ -19,6 +19,11 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Task.FromResult(CancellationToken.None);
         }
 
+        public CancellationToken? TryGetTokenForDataLossDetection()
+        {
+            return CancellationToken.None;
+        }
+
         public ValueTask DisposeAsync()
         {
             return ValueTask.CompletedTask;

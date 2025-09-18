@@ -117,6 +117,14 @@ namespace Halibut.Queue.Redis
 
         async Task<CancellationToken> DataLossCancellationToken(CancellationToken? cancellationToken)
         {
+            // Try to get the token immediately if monitoring is already active
+            var token = watchForRedisLosingAllItsData.TryGetTokenForDataLossDetection();
+            if (token.HasValue)
+            {
+                return token.Value;
+            }
+            
+            // Fall back to waiting for the token if not immediately available
             await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, cancellationToken ?? CancellationToken.None);
             return await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), cts.Token);
         }
@@ -383,7 +391,7 @@ namespace Halibut.Queue.Redis
             {
                 // There is a chance the data loss occured after we got the data but before here.
                 // In that case we will just time out because of the lack of heart beats.
-                var dataLossCT = await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), queueToken);
+                var dataLossCT = await DataLossCancellationToken(cancellationToken);
                 
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(
                     endpoint,

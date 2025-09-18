@@ -37,5 +37,14 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return await TaskCompletionSource.Task;
 #pragma warning restore VSTHRD003
         }
+
+        public CancellationToken? TryGetTokenForDataLossDetection()
+        {
+            if (TaskCompletionSource.Task.IsCompleted && TaskCompletionSource.Task.Status == TaskStatus.RanToCompletion)
+            {
+                return TaskCompletionSource.Task.Result;
+            }
+            return null;
+        }
     }
 }
