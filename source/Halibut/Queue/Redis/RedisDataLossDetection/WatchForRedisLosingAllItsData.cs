@@ -43,7 +43,7 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
             var _ = Task.Run(async () => await KeepWatchingForDataLoss(cts.Token));
         }
 
-        private TaskCompletionSource<CancellationToken> taskCompletionSource = new TaskCompletionSource<CancellationToken>();
+        TaskCompletionSource<CancellationToken> taskCompletionSource = new TaskCompletionSource<CancellationToken>();
         
         /// <summary>
         /// Will cause the caller to wait until we are connected to redis and so can detect datalose.
@@ -63,7 +63,6 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
             cts.CancelAfter(timeToWait);
             return await localCopyOfTaskCompletionSource.Task.WaitAsync(cts.Token);
         }
-        
 
         /// <summary>
         /// Tries to get a cancellation token for data loss detection if monitoring is already active.
