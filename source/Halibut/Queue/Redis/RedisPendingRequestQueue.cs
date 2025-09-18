@@ -382,9 +382,9 @@ namespace Halibut.Queue.Redis
             // cause a cascade of failure from high load.
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
+            
+            var (activityId, dataToSend, dataStreamsTransferProgress) = pending.Value;
 
-            var pendingRequest = pending.Value.Item1;
-            var dataStreamsTransferProgress = pending.Value.Item2;
             
             var disposables = new DisposableCollection();
             try
@@ -395,21 +395,21 @@ namespace Halibut.Queue.Redis
                 
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(
                     endpoint,
-                    pendingRequest.ActivityId,
+                    activityId,
                     halibutRedisTransport,
                     log,
                     HalibutQueueNodeSendingPulses.RequestProcessorNode,
                     () => HeartBeatMessage.Build(dataStreamsTransferProgress),
                     RequestReceiverNodeHeartBeatRate,
                     HeartBeatInitialDelay));
-                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pendingRequest.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, HeartBeatInitialDelay, DelayBeforeSubscribingToRequestCancellation, log);
+                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, activityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, HeartBeatInitialDelay, DelayBeforeSubscribingToRequestCancellation, log);
                 disposables.AddAsyncDisposable(watcher);
                 
                 var cts = new CancelOnDisposeCancellationToken(watcher.RequestProcessingCancellationToken, dataLossCT);
                 disposables.AddAsyncDisposable(cts);
                 
-                var response = new RequestMessageWithCancellationToken(pendingRequest, cts.Token);
-                DisposablesForInFlightRequests[pendingRequest.ActivityId] = new WatcherAndDisposables(disposables, cts.Token, watcher);
+                var response = new RequestMessageWithCancellationToken(dataToSend, cts.Token, activityId);
+                DisposablesForInFlightRequests[activityId] = new WatcherAndDisposables(disposables, cts.Token, watcher);
                 return response;
             }
             catch (Exception)
@@ -491,7 +491,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> DequeueNextAsync()
+        async Task<(Guid ActivityId, PreparedRequestMessage dataToSend, RequestDataStreamsTransferProgress)?> DequeueNextAsync()
         {
             await using var cts = new CancelOnDisposeCancellationToken(queueToken);
             try
@@ -534,7 +534,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> TryRemoveNextItemFromQueue(CancellationToken cancellationToken)
+        async Task<(Guid, PreparedRequestMessage, RequestDataStreamsTransferProgress)?> TryRemoveNextItemFromQueue(CancellationToken cancellationToken)
         {
             while (true)
             {
@@ -554,10 +554,10 @@ namespace Halibut.Queue.Redis
                     continue;
                 }
 
-                var request = await messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
-                log.Write(EventType.Diagnostic, "Successfully collected request {0} from queue for endpoint {1}", request.Item1.ActivityId, endpoint);
+                var (dataToSend, transferProgress) = await messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
+                log.Write(EventType.Diagnostic, "Successfully collected request {0} from queue for endpoint {1}", activityId, endpoint);
 
-                return request;
+                return (activityId.Value, dataToSend, transferProgress);
             }
         }
 

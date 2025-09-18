@@ -35,7 +35,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
         }
 
-        public virtual Task<(RequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken)
+        public virtual Task<(PreparedRequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
         }

@@ -191,7 +191,16 @@ namespace Halibut.Transport.Protocol
             var serializedStreams = await serializer.WriteMessageAsync(stream, message, cancellationToken);
             await WriteEachStreamAsync(serializedStreams, cancellationToken);
             
+            // This must be a mem leak!
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
+        }
+        
+        public async Task SendAsync(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
+        {
+            await stream.WriteAsync(preparedRequestMessage.RequestBytes, cancellationToken);
+            await WriteEachStreamAsync(preparedRequestMessage.DataStreams, cancellationToken);
+            
+            log.Write(EventType.Diagnostic, "Sent: {0}", "TODO pass activity ID down");
         }
 
         public async Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
