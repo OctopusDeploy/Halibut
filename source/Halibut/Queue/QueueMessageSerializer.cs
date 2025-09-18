@@ -162,5 +162,43 @@ namespace Halibut.Queue
 
             public T Message { get; private set; }
         }
+
+        public async Task<byte[]> PrepareBytesFromWire(byte[] responseBytes)
+        {
+            using var inputStream = new MemoryStream(responseBytes);
+            using var outputStream = new MemoryStream();
+            
+            Stream wrappedStream = outputStream;
+            await using var disposables = new DisposableCollection();
+            wrappedStream = WrapInMessageSerialisationStreams(messageStreamWrappers, wrappedStream, disposables);
+            
+            await inputStream.CopyToAsync(wrappedStream);
+            await wrappedStream.FlushAsync();
+            
+            return outputStream.ToArray();
+        }
+
+        public async Task<(T response, IReadOnlyList<DataStream> dataStreams)> ConvertStoredResponseToResponseMessage<T>(byte[] storedMessageMessage)
+        {
+            using var ms = new MemoryStream(storedMessageMessage);
+            Stream stream = ms;
+            await using var disposables = new DisposableCollection();
+            stream = WrapStreamInMessageDeserialisationStreams(messageStreamWrappers, stream, disposables);
+            
+            using var deflateStream = new DeflateStream(stream, CompressionMode.Decompress, true);
+            using (var bson = new BsonDataReader(deflateStream) { CloseInput = false })
+            {
+                var streamCapturingSerializer = createStreamCapturingSerializer();
+                var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(bson);
+            
+                if (result == null)
+                {
+                    throw new Exception("messageEnvelope is null");
+                }
+
+                return (result.Message, streamCapturingSerializer.DataStreams);
+            }
+            
+        }
     }
 }

@@ -71,6 +71,11 @@ namespace Halibut.ServiceModel
             return pending.Response;
         }
 
+        public Task ApplyRawResponse(ResponseBytesAndDataStreams response, Guid nextRequestActivityId)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool IsEmpty
         {
             get

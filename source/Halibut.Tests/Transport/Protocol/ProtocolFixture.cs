@@ -403,6 +403,11 @@ namespace Halibut.Tests.Transport.Protocol
                 return ReceiveAsync<ResponseMessage>();
             }
 
+            public Task<ResponseBytesAndDataStreams?> ReceiveResponseBytesAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
             async Task<T?> ReceiveAsync<T>()
             {
                 await Task.CompletedTask;

@@ -233,17 +233,18 @@ namespace Halibut.Transport.Protocol
                     var linkedCancellationToken = linkedTokenSource.Token;
 
                     
-                    ResponseMessage response;
                     if (nextRequest.RequestMessage != null)
                     {
-                        response = await SendAndReceiveRequest(nextRequest.RequestMessage, linkedCancellationToken);
+                        var response = await SendAndReceiveRequest(nextRequest.RequestMessage, linkedCancellationToken);
+                        await pendingRequests.ApplyResponse(response, nextRequest.ActivityId);
                     }
                     else
                     {
-                        response = await SendAndReceiveRequest(nextRequest.PreparedRequestMessage!, linkedCancellationToken);
+                        var response = await SendAndReceiveRequest(nextRequest.PreparedRequestMessage!, linkedCancellationToken);
+                        await pendingRequests.ApplyRawResponse(response, nextRequest.ActivityId);
                     }
                     
-                    await pendingRequests.ApplyResponse(response, nextRequest.ActivityId);
+                    
                 }
                 else
                 {
@@ -304,10 +305,10 @@ namespace Halibut.Transport.Protocol
             return (await stream.ReceiveResponseAsync(cancellationToken))!;
         }
         
-        async Task<ResponseMessage> SendAndReceiveRequest(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
+        async Task<ResponseBytesAndDataStreams> SendAndReceiveRequest(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
         {
             await stream.SendAsync(preparedRequestMessage, cancellationToken);
-            return (await stream.ReceiveResponseAsync(cancellationToken))!;
+            return (await stream.ReceiveResponseBytesAsync(cancellationToken))!;
         }
 
         static async Task<ResponseMessage> InvokeAndWrapAnyExceptionsAsync(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)

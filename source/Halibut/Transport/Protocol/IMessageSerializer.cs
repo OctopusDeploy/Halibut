@@ -10,6 +10,6 @@ namespace Halibut.Transport.Protocol
     public interface IMessageSerializer
     {
         Task<IReadOnlyList<DataStream>> WriteMessageAsync<T>(Stream stream, T message, CancellationToken cancellationToken);
-        Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken);
+        Task<(T Message, IReadOnlyList<DataStream> DataStreams, byte[]? CompressedMessageBytes)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken);
     }
 }

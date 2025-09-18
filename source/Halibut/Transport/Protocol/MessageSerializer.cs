@@ -64,14 +64,15 @@ namespace Halibut.Transport.Protocol
             return serializedStreams;
         }
 
-        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
+        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams, byte[]? CompressedMessageBytes)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
         {
             await using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {
                 Exception? exceptionFromDeserialisation = null;
                 try
                 {
-                    return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream, cancellationToken);
+                    // TODO don't always set true.
+                    return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream, true, cancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -99,11 +100,21 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadCompressedMessageAsync<T>(ErrorRecordingStream stream, IRewindableBuffer rewindableBuffer, CancellationToken cancellationToken)
+        async Task<(T Message, IReadOnlyList<DataStream> DataStreams, byte[]? messageBytes)> ReadCompressedMessageAsync<T>(ErrorRecordingStream errorRecordingStream, 
+            IRewindableBuffer rewindableBuffer,
+            bool captureData,
+            CancellationToken cancellationToken)
         {
             rewindableBuffer.StartBuffer();
             try
             {
+                Stream stream = errorRecordingStream;
+
+                CopyToMemoryBufferStream? copyToMemoryBufferStream = null;
+                if (captureData)
+                {
+                    stream = copyToMemoryBufferStream = new CopyToMemoryBufferStream(stream, OnDispose.LeaveInputStreamOpen);
+                }
                 await using var compressedByteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
                 
 #if !NETFRAMEWORK
@@ -116,13 +127,13 @@ namespace Halibut.Transport.Protocol
                 await deflatedInMemoryStream.BufferIntoMemoryFromSourceStreamUntilLimitReached(cancellationToken);
                 
                 // If the end of stream was found and we read nothing from the streams
-                if (stream.WasTheEndOfStreamEncountered && compressedByteCountingStream.BytesRead == 0 && decompressedByteCountingStream.BytesRead == 0)
+                if (errorRecordingStream.WasTheEndOfStreamEncountered && compressedByteCountingStream.BytesRead == 0 && decompressedByteCountingStream.BytesRead == 0)
                 {
                     // When this happens we would normally continue to the BsonDataReader which would
                     // do a sync read(), to find that the stream had ended. We avoid that sync call by
                     // short circuiting to what would happen which is:  
                     // The BsonReader would return a non null MessageEnvelope with a null message, which is what we do here.
-                    return (new MessageEnvelope<T>().Message, Array.Empty<DataStream>()); // And hack around we can't return null
+                    return (new MessageEnvelope<T>().Message, Array.Empty<DataStream>(), null); // And hack around we can't return null
                 }
 
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
@@ -139,8 +150,14 @@ namespace Halibut.Transport.Protocol
                         rewindableBuffer.CancelBuffer();
                     }
 
-                    observer.MessageRead(compressedByteCountingStream.BytesRead - unusedBytesCount, decompressedByteCountingStream.BytesRead, deflatedInMemoryStream.BytesReadIntoMemory);
-                    return (messageEnvelope.Message, dataStreams);
+                    var compressedMessageSize = compressedByteCountingStream.BytesRead - unusedBytesCount;
+                    observer.MessageRead(compressedMessageSize, decompressedByteCountingStream.BytesRead, deflatedInMemoryStream.BytesReadIntoMemory);
+                    if (copyToMemoryBufferStream != null)
+                    {
+                        copyToMemoryBufferStream.memoryBuffer.SetLength(compressedMessageSize);
+                        return (messageEnvelope.Message, dataStreams, copyToMemoryBufferStream.memoryBuffer.ToArray());
+                    }
+                    return (messageEnvelope.Message, dataStreams, null);
                 }
             }
             catch

@@ -39,6 +39,7 @@ namespace Halibut.Transport.Protocol
             return new ResponseMessage { Id = activityId.ToString(), Error = ServerErrorFromException(ex, connectionState) };
         }
         
+        
         public static ResponseMessage FromException(ResponseMessage response, Exception ex, ConnectionState connectionState = ConnectionState.Unknown)
         {
             return new ResponseMessage { Id = response.Id, Error = ServerErrorFromException(ex, connectionState) };

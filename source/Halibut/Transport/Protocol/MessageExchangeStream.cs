@@ -222,11 +222,20 @@ namespace Halibut.Transport.Protocol
             return await ReceiveAsync<ResponseMessage>(cancellationToken);
         }
 
+        public async Task<ResponseBytesAndDataStreams?> ReceiveResponseBytesAsync(CancellationToken cancellationToken)
+        {
+            var (result, dataStreams, compressedMessageBytes) = await serializer.ReadMessageAsync<ResponseMessage>(stream, cancellationToken);
+            await ReadStreamsAsync(dataStreams, cancellationToken);
+            log.Write(EventType.Diagnostic, "Received: {0}", result); // TODO stop sending the response to logs.
+            if (compressedMessageBytes == null) return null;
+            return new ResponseBytesAndDataStreams(compressedMessageBytes!, dataStreams.ToList());
+        }
+
         async Task<T?> ReceiveAsync<T>(CancellationToken cancellationToken)
         {
-            var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
+            var (result, dataStreams, compressedMessageBytes) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
             await ReadStreamsAsync(dataStreams, cancellationToken);
-            log.Write(EventType.Diagnostic, "Received: {0}", result);
+            log.Write(EventType.Diagnostic, "Received: {0}", result); // TODO stop sending the response to logs.
             return result;
         }
 
