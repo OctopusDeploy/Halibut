@@ -388,7 +388,7 @@ namespace Halibut.Tests.Transport.Protocol
                 output.AppendLine("--> " + typeof(T).Name);
             }
 
-            public Task SendAsync(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
+            public Task SendPrePreparedRequestAsync(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
             {
                 throw new NotImplementedException();
             }

@@ -307,7 +307,7 @@ namespace Halibut.Transport.Protocol
         
         async Task<ResponseBytesAndDataStreams> SendAndReceiveRequest(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
         {
-            await stream.SendAsync(preparedRequestMessage, cancellationToken);
+            await stream.SendPrePreparedRequestAsync(preparedRequestMessage, cancellationToken);
             return (await stream.ReceiveResponseBytesAsync(cancellationToken))!;
         }
 

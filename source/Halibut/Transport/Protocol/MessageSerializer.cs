@@ -64,15 +64,17 @@ namespace Halibut.Transport.Protocol
             return serializedStreams;
         }
 
-        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams, byte[]? CompressedMessageBytes)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
+        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams, byte[]? CompressedMessageBytes)> ReadMessageAsync<T>(
+            RewindableBufferStream stream, 
+            bool captureData,
+            CancellationToken cancellationToken)
         {
             await using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {
                 Exception? exceptionFromDeserialisation = null;
                 try
                 {
-                    // TODO don't always set true.
-                    return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream, true, cancellationToken);
+                    return await ReadCompressedMessageAsync<T>(errorRecordingStream, stream, captureData, cancellationToken);
                 }
                 catch (Exception e)
                 {

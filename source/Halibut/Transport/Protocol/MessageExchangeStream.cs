@@ -195,7 +195,7 @@ namespace Halibut.Transport.Protocol
             log.Write(EventType.Diagnostic, "Sent: {0}", message);
         }
         
-        public async Task SendAsync(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
+        public async Task SendPrePreparedRequestAsync(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
         {
             await stream.WriteAsync(preparedRequestMessage.RequestBytes, cancellationToken);
             await WriteEachStreamAsync(preparedRequestMessage.DataStreams, cancellationToken);
@@ -224,7 +224,7 @@ namespace Halibut.Transport.Protocol
 
         public async Task<ResponseBytesAndDataStreams?> ReceiveResponseBytesAsync(CancellationToken cancellationToken)
         {
-            var (result, dataStreams, compressedMessageBytes) = await serializer.ReadMessageAsync<ResponseMessage>(stream, cancellationToken);
+            var (result, dataStreams, compressedMessageBytes) = await serializer.ReadMessageAsync<ResponseMessage>(stream, true, cancellationToken);
             await ReadStreamsAsync(dataStreams, cancellationToken);
             log.Write(EventType.Diagnostic, "Received: {0}", result); // TODO stop sending the response to logs.
             if (compressedMessageBytes == null) return null;
@@ -233,7 +233,7 @@ namespace Halibut.Transport.Protocol
 
         async Task<T?> ReceiveAsync<T>(CancellationToken cancellationToken)
         {
-            var (result, dataStreams, compressedMessageBytes) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
+            var (result, dataStreams, compressedMessageBytes) = await serializer.ReadMessageAsync<T>(stream, false, cancellationToken);
             await ReadStreamsAsync(dataStreams, cancellationToken);
             log.Write(EventType.Diagnostic, "Received: {0}", result); // TODO stop sending the response to logs.
             return result;
