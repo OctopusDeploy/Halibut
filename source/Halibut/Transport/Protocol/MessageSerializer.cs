@@ -102,6 +102,7 @@ namespace Halibut.Transport.Protocol
             }
         }
 
+        public static bool DontJsonDeserialise = true;
         async Task<(T Message, IReadOnlyList<DataStream> DataStreams, byte[]? messageBytes)> ReadCompressedMessageAsync<T>(ErrorRecordingStream errorRecordingStream, 
             IRewindableBuffer rewindableBuffer,
             bool captureData,
@@ -138,6 +139,33 @@ namespace Halibut.Transport.Protocol
                     return (new MessageEnvelope<T>().Message, Array.Empty<DataStream>(), null); // And hack around we can't return null
                 }
 
+                if (copyToMemoryBufferStream != null && DontJsonDeserialise)
+                {
+                    byte[] buf = new byte[4096];
+                    while (true)
+                    {
+                        var read = await deflatedInMemoryStream.ReadAsync(buf, cancellationToken);
+                        if (read == 0) break;
+                    }
+                    // Find the unused bytes in the DeflateStream input buffer
+                    if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
+                    {
+                        rewindableBuffer.FinishAndRewind(unusedBytesCount);
+                    }
+                    else
+                    {
+                        rewindableBuffer.CancelBuffer();
+                    }
+
+                    var compressedMessageSize = compressedByteCountingStream.BytesRead - unusedBytesCount;
+                    observer.MessageRead(compressedMessageSize, decompressedByteCountingStream.BytesRead, deflatedInMemoryStream.BytesReadIntoMemory);
+                    if (copyToMemoryBufferStream != null)
+                    {
+                        copyToMemoryBufferStream.memoryBuffer.SetLength(compressedMessageSize);
+                        return (new MessageEnvelope<T>().Message, new List<DataStream>().ToArray(), copyToMemoryBufferStream.memoryBuffer.ToArray());
+                    }
+                }
+                
                 using (var bson = new BsonDataReader(deflatedInMemoryStream) { CloseInput = false })
                 {
                     var (messageEnvelope, dataStreams) = DeserializeMessageAndDataStreams<T>(bson);
