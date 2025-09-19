@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -70,8 +71,17 @@ namespace Halibut.Queue.Redis.MessageStorage
             this.storeDataStreamsForDistributedQueues = storeDataStreamsForDistributedQueues;
         }
 
+        // public static long total = 0;
         public async Task<(RedisStoredMessage, HeartBeatDrivenDataStreamProgressReporter)> PrepareRequest(RequestMessage request, CancellationToken cancellationToken)
         {
+            // var sw = Stopwatch.StartNew();
+            // for (int i = 0; i < 1000; i++)
+            // {
+            //     await queueMessageSerializer.PrepareMessageForWireTransferAndForQueue(request);
+            // }
+            // sw.Stop();
+            // Interlocked.Add(ref total, (long) sw.Elapsed.TotalMilliseconds);
+            
             var (jsonRequestMessage, dataStreams) = await queueMessageSerializer.PrepareMessageForWireTransferAndForQueue(request);
             SwitchDataStreamsToNotReportProgress(dataStreams);
             var dataStreamProgressReporter = HeartBeatDrivenDataStreamProgressReporter.CreateForDataStreams(dataStreams);
@@ -118,11 +128,6 @@ namespace Halibut.Queue.Redis.MessageStorage
         public async Task<RedisStoredMessage> PrepareResponseForStorageInRedis(Guid activityId, ResponseBytesAndDataStreams response, CancellationToken cancellationToken)
         {
             var responseBytesToStoreInRedis = await queueMessageSerializer.PrepareBytesFromWire(response.ResponseBytes);
-
-            if ("hello".Length == 0)
-            {
-                await queueMessageSerializer.ConvertStoredResponseToResponseMessage<ResponseMessage>(responseBytesToStoreInRedis);
-            }
             
             
             var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(response.DataStreams, cancellationToken);
@@ -134,9 +139,18 @@ namespace Halibut.Queue.Redis.MessageStorage
             
             return new RedisStoredMessage(responseBytesToStoreInRedis, dataStreamMetadata);
         }
-        
+
+        public static long totalDecompress = 0;
         public async Task<ResponseMessage> ReadResponseFromRedisStoredMessage(RedisStoredMessage storedMessage, CancellationToken cancellationToken)
         {
+            // var sw = Stopwatch.StartNew();
+            // for (int i = 0; i < 1000; i++)
+            // {
+            //     await queueMessageSerializer.ConvertStoredResponseToResponseMessage<ResponseMessage>(storedMessage.Message);
+            // }
+            // sw.Stop();
+            // Interlocked.Add(ref totalDecompress, (long) sw.Elapsed.TotalMilliseconds);
+            
             var (response, dataStreams) = await queueMessageSerializer.ConvertStoredResponseToResponseMessage<ResponseMessage>(storedMessage.Message);
             
             var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, out _);

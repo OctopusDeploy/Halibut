@@ -74,7 +74,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                     log.WriteException(EventType.Diagnostic, "Failed to send heartbeat for {0} node, request {1}, switching to panic mode with {2} second intervals", ex, nodeSendingPulsesType, requestActivityId, delayBetweenPulse.TotalSeconds);
                 }
                 
-                await Try.IgnoringError(async () => await Task.Delay(delayBetweenPulse, cancellationToken));
+                await DelayWithoutException.Delay(delayBetweenPulse, cancellationToken);
             }
             
             log.Write(EventType.Diagnostic, "Heartbeat pulse loop ended for {0} node, request {1}", nodeSendingPulsesType, requestActivityId);

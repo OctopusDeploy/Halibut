@@ -62,7 +62,7 @@ namespace Halibut.Queue.Redis.Cancellation
                 // Also poll to see if the request is cancelled since we can miss the publication.
                 while (!token.IsCancellationRequested)
                 {
-                    await Try.IgnoringError(async () => await Task.Delay(TimeSpan.FromSeconds(60), token));
+                    await DelayWithoutException.Delay(TimeSpan.FromSeconds(60), token);
                     
                     if(token.IsCancellationRequested) return;
                     

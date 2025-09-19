@@ -971,6 +971,8 @@ namespace Halibut.Tests.Queue.Redis
                     await echo.CountBytesAsync(DataStream.FromString("hello"));
                 }
             }
+            
+            Logger.Fatal("YYYYYY\n\n\nYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYTotal {S}\n\n\n\n", MessageSerialiserAndDataStreamStorage.totalDecompress);
         }
         
         [Test]

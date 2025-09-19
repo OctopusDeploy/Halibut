@@ -47,16 +47,9 @@ namespace Halibut.Util
             }
         }
         
-        public static async Task IgnoringError(Func<Task> tryThisAction)
+        public static Task IgnoringError(Func<Task> tryThisAction)
         {
-            try
-            {
-                await tryThisAction();
-            }
-            catch
-            {
-                // ignored
-            }
+            return tryThisAction().ContinueWith(t => { }, TaskContinuationOptions.ExecuteSynchronously);
         }
     }
     

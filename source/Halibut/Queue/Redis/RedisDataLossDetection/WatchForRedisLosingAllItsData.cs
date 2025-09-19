@@ -130,8 +130,8 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
 
                 await Try.IgnoringError(async () =>
                 {
-                    if (!hasSetKey) await Task.Delay(SetupErrorBackoffDelay, cancellationToken);
-                    else await Task.Delay(DataLossCheckInterval, cancellationToken);
+                    if (!hasSetKey) await DelayWithoutException.Delay(SetupErrorBackoffDelay, cancellationToken);
+                    else await DelayWithoutException.Delay(DataLossCheckInterval, cancellationToken);
                 });
 
             }

@@ -43,8 +43,12 @@ namespace Halibut.Queue
                 stream = WrapInMessageSerialisationStreams(messageStreamWrappers, stream, wrappedStreamDisposables);
 
                 // TODO instead store 
-                using (var zip = new DeflateStream(stream, CompressionMode.Compress, true)) {
-                    using (var jsonTextWriter = new BsonDataWriter(zip) { CloseOutput = false })
+                
+                using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+                using (var buf = new BufferedStream(zip))
+                {
+                    
+                    using (var jsonTextWriter = new BsonDataWriter(buf) { CloseOutput = false })
                     {
                         var streamCapturingSerializer = createStreamCapturingSerializer();
                         streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
@@ -188,7 +192,8 @@ namespace Halibut.Queue
             stream = WrapStreamInMessageDeserialisationStreams(messageStreamWrappers, stream, disposables);
             
             using var deflateStream = new DeflateStream(stream, CompressionMode.Decompress, true);
-            using (var bson = new BsonDataReader(deflateStream) { CloseInput = false })
+            using var buf = new BufferedStream(deflateStream);
+            using (var bson = new BsonDataReader(buf) { CloseInput = false })
             {
                 var streamCapturingSerializer = createStreamCapturingSerializer();
                 var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(bson);
