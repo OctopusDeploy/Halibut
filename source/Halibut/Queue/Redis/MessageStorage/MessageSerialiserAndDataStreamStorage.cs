@@ -111,13 +111,20 @@ namespace Halibut.Queue.Redis.MessageStorage
 
             var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, out var dataStreamTransferProgress);
 
-            await storeDataStreamsForDistributedQueues.RehydrateDataStreams(storedMessage.DataStreamMetadata, rehydratableDataStreams, cancellationToken);
+            await storeDataStreamsForDistributedQueues.RehydrateDataStreams(sumr.DataStreamMetadata, rehydratableDataStreams, cancellationToken);
             return (new PreparedRequestMessage(bytesToTransfer, dataStreams.ToList()), new RequestDataStreamsTransferProgress(dataStreamTransferProgress));
         }
 
         public async Task<RedisStoredMessage> PrepareResponseForStorageInRedis(Guid activityId, ResponseBytesAndDataStreams response, CancellationToken cancellationToken)
         {
             var responseBytesToStoreInRedis = await queueMessageSerializer.PrepareBytesFromWire(response.ResponseBytes);
+
+            if ("hello".Length == 0)
+            {
+                await queueMessageSerializer.ConvertStoredResponseToResponseMessage<ResponseMessage>(responseBytesToStoreInRedis);
+            }
+            
+            
             var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(response.DataStreams, cancellationToken);
             
             // Create data stream summary list

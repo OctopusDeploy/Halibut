@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
@@ -165,16 +166,17 @@ namespace Halibut.Queue
 
         public async Task<byte[]> PrepareBytesFromWire(byte[] responseBytes)
         {
-            using var inputStream = new MemoryStream(responseBytes);
+            
             using var outputStream = new MemoryStream();
             
             Stream wrappedStream = outputStream;
-            await using var disposables = new DisposableCollection();
-            wrappedStream = WrapInMessageSerialisationStreams(messageStreamWrappers, wrappedStream, disposables);
-            
-            await inputStream.CopyToAsync(wrappedStream);
-            await wrappedStream.FlushAsync();
-            
+            await using (var disposables = new DisposableCollection())
+            {
+                wrappedStream = WrapInMessageSerialisationStreams(messageStreamWrappers, wrappedStream, disposables);
+                await wrappedStream.WriteAsync(responseBytes, CancellationToken.None);
+                await wrappedStream.FlushAsync();
+            }
+
             return outputStream.ToArray();
         }
 
