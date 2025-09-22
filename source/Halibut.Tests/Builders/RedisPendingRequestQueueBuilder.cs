@@ -65,8 +65,7 @@ namespace Halibut.Tests.Builders
             var redisTransport = new HalibutRedisTransport(redisFacade);
             var dataStreamStore = new InMemoryStoreDataStreamsForDistributedQueues();
             var messageSerializer = new QueueMessageSerializerBuilder().Build();
-            var baseMessageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
-            var messageReaderWriter = new MessageSerialiserAndDataStreamStorageWithExceptionObserver(baseMessageReaderWriter, NoOpMessageSerialiserAndDataStreamStorageExceptionObserver.Instance);
+            var messageReaderWriter = new MessageSerialiserAndDataStreamStorage(messageSerializer, dataStreamStore);
 
             var queue = new RedisPendingRequestQueue(endpoint, new RedisNeverLosesData(), log, redisTransport, messageReaderWriter, halibutTimeoutsAndLimits);
             if (defaultDelayBeforeSubscribingToRequestCancellation != null)
