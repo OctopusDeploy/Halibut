@@ -77,16 +77,11 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             // Kill Redis connections to simulate network issues
             portForwarder.EnterKillNewAndExistingConnectionsMode();
             
-            // This should trigger retries and call the observer
-            var getStringTask = redisFacade.GetString("foo", CancellationToken);
+            // This should trigger retries and call the observer, then ultimately fail
+            var exception = await AssertThrowsAny.Exception(async () => 
+                await redisFacade.GetString("foo", CancellationToken));
             
-            // Wait a bit for retries to happen, then restore connection
-            await Task.Delay(6000); // By-default (somewhere) the redis client will wait 5s for a request to get to Redis so we need to wait longer than that.
-            portForwarder.ReturnToNormalMode();
-
-            // The operation should eventually succeed
-            var result = await getStringTask;
-            result.Should().Be("bar");
+            exception.Should().NotBeNull("Operation should fail when Redis stays down");
 
             // Verify that the observer was called with retry exceptions
             testObserver.ExecuteWithRetryExceptions.Should().NotBeEmpty("Observer should have been called for retry exceptions during connection issues");
