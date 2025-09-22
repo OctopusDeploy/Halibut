@@ -1,17 +1,11 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Generic;
-using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Diagnostics;
-using Halibut.Diagnostics.LogCreators;
-using Halibut.Logging;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support;
-using Halibut.Tests.Support.Logging;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
 using NUnit.Framework;
 using StackExchange.Redis;
@@ -40,8 +34,10 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             // This should trigger retries and call the observer
             var getStringTask = redisFacade.GetString("foo", CancellationToken);
             
-            // Wait a bit for retries to happen, then restore connection
-            await Task.Delay(6000); // By-default (somewhere) the redis client will wait 5s for a request to get to Redis so we need to wait longer than that.
+            // Wait for retries to happen, then restore connection
+            await ShouldEventually.Eventually(() => testObserver.ExecuteWithRetryExceptions.Count.Should().BeGreaterThanOrEqualTo(1), 
+                TimeSpan.FromSeconds(30),
+                CancellationToken);
             portForwarder.ReturnToNormalMode();
 
             // The operation should eventually succeed
@@ -97,29 +93,86 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
 
         class TestRedisFacadeObserver : IRedisFacadeObserver
         {
-            public List<(string? EndPoint, ConnectionFailureType FailureType, Exception? Exception)> ConnectionFailures { get; } = new();
-            public List<(string? EndPoint, string Message)> ErrorMessages { get; } = new();
-            public List<string?> ConnectionRestorations { get; } = new();
-            public List<(Exception Exception, bool WillRetry)> ExecuteWithRetryExceptions { get; } = new();
+            readonly object mutex = new object();
+            readonly List<(string? EndPoint, ConnectionFailureType FailureType, Exception? Exception)> connectionFailures = new();
+            readonly List<(string? EndPoint, string Message)> errorMessages = new();
+            readonly List<string?> connectionRestorations = new();
+            readonly List<(Exception Exception, bool WillRetry)> executeWithRetryExceptions = new();
+
+            public List<(string? EndPoint, ConnectionFailureType FailureType, Exception? Exception)> ConnectionFailures
+            {
+                get
+                {
+                    lock (mutex)
+                    {
+                        return new List<(string? EndPoint, ConnectionFailureType FailureType, Exception? Exception)>(connectionFailures);
+                    }
+                }
+            }
+
+            public List<(string? EndPoint, string Message)> ErrorMessages
+            {
+                get
+                {
+                    lock (mutex)
+                    {
+                        return new List<(string? EndPoint, string Message)>(errorMessages);
+                    }
+                }
+            }
+
+            public List<string?> ConnectionRestorations
+            {
+                get
+                {
+                    lock (mutex)
+                    {
+                        return new List<string?>(connectionRestorations);
+                    }
+                }
+            }
+
+            public List<(Exception Exception, bool WillRetry)> ExecuteWithRetryExceptions
+            {
+                get
+                {
+                    lock (mutex)
+                    {
+                        return new List<(Exception Exception, bool WillRetry)>(executeWithRetryExceptions);
+                    }
+                }
+            }
 
             public void OnRedisConnectionFailed(string? endPoint, ConnectionFailureType failureType, Exception? exception)
             {
-                ConnectionFailures.Add((endPoint, failureType, exception));
+                lock (mutex)
+                {
+                    connectionFailures.Add((endPoint, failureType, exception));
+                }
             }
 
             public void OnRedisServerRepliedWithAnErrorMessage(string? endPoint, string message)
             {
-                ErrorMessages.Add((endPoint, message));
+                lock (mutex)
+                {
+                    errorMessages.Add((endPoint, message));
+                }
             }
 
             public void OnRedisConnectionRestored(string? endPoint)
             {
-                ConnectionRestorations.Add(endPoint);
+                lock (mutex)
+                {
+                    connectionRestorations.Add(endPoint);
+                }
             }
 
             public void OnRedisOperationFailed(Exception exception, bool willRetry)
             {
-                ExecuteWithRetryExceptions.Add((exception, willRetry));
+                lock (mutex)
+                {
+                    executeWithRetryExceptions.Add((exception, willRetry));
+                }
             }
         }
     }
