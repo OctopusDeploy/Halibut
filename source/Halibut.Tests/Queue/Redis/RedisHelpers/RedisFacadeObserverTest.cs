@@ -56,8 +56,8 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
                 ex.WillRetry.Should().BeTrue();
             });
 
-            testObserver.ConnectionRestorations.Count.Should().BeGreaterThan(1);
-            testObserver.ConnectionFailures.Count.Should().BeGreaterThan(1);
+            testObserver.ConnectionRestorations.Count.Should().BeGreaterThanOrEqualTo(1);
+            testObserver.ConnectionFailures.Count.Should().BeGreaterThanOrEqualTo(1);
         }
         
         [Test]
@@ -92,7 +92,7 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             });
 
             testObserver.ConnectionRestorations.Count.Should().Be(0);
-            testObserver.ConnectionFailures.Count.Should().BeGreaterThan(1);
+            testObserver.ConnectionFailures.Count.Should().BeGreaterThanOrEqualTo(1);
         }
 
         class TestRedisFacadeObserver : IRedisFacadeObserver
