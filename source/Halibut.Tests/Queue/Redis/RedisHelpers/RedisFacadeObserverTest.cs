@@ -53,7 +53,6 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             testObserver.ExecuteWithRetryExceptions.Should().AllSatisfy(ex => 
             {
                 ex.Exception.Should().NotBeNull("Exception should not be null");
-                // We should have both retry attempts (willRetry=true) and potentially final failures (willRetry=false)
                 ex.WillRetry.Should().BeTrue();
             });
 
@@ -94,15 +93,12 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
             testObserver.ExecuteWithRetryExceptions.Should().AllSatisfy(ex => 
             {
                 ex.Exception.Should().NotBeNull("Exception should not be null");
-                // We should have both retry attempts (willRetry=true) and potentially final failures (willRetry=false)
                 ex.WillRetry.Should().BeFalse();
             });
 
             testObserver.ConnectionRestorations.Count.Should().Be(0);
             testObserver.ConnectionFailures.Count.Should().BeGreaterThan(1);
         }
-        
-
 
         class TestRedisFacadeObserver : IRedisFacadeObserver
         {
