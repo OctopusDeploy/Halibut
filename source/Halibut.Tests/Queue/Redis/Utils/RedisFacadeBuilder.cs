@@ -10,17 +10,18 @@ namespace Halibut.Tests.Queue.Redis.Utils
 {
     public class RedisFacadeBuilder
     {
-        public static RedisFacade CreateRedisFacade(string? host = null, int? port = 0, Guid? prefix = null)
+        public static RedisFacade CreateRedisFacade(string? host = null, int? port = 0, Guid? prefix = null, IRedisFacadeObserver? redisFacadeObserver = null)
         {
             port = port == 0 ? RedisTestHost.Port() : port; 
-            return new RedisFacade((host??RedisTestHost.RedisHost) + ":" + port, (prefix ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+            return new RedisFacade((host??RedisTestHost.RedisHost) + ":" + port, (prefix ?? Guid.NewGuid()).ToString(), new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""), redisFacadeObserver);
         }
 
-        public static RedisFacade CreateRedisFacade(PortForwarder portForwarder, Guid? prefix = null)
+        public static RedisFacade CreateRedisFacade(PortForwarder portForwarder, Guid? prefix = null, IRedisFacadeObserver? redisFacadeObserver = null)
         {
             return CreateRedisFacade(host: portForwarder.PublicEndpoint.Host,
                 port: portForwarder.ListeningPort,
-                prefix: prefix);
+                prefix: prefix,
+                redisFacadeObserver: redisFacadeObserver);
         }
     }
 }
