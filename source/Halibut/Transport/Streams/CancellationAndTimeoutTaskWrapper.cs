@@ -25,7 +25,7 @@ namespace Halibut.Transport.Streams
 
             var timedOut = false;
             var actionTask = action(linkedCancellationTokenSource.Token);
-            var timeoutTask = Task.Delay(timeout, linkedCancellationTokenSource.Token);
+            var timeoutTask = DelayWithoutException.Delay(timeout, linkedCancellationTokenSource.Token);
 
             try
             {

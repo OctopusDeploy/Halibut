@@ -54,7 +54,7 @@ namespace Halibut.Queue.Redis
         {
             log.Write(EventType.MessageExchange, "Request {0} was queued", request);
 
-            var pendingRequestPickupTimeout = Try.IgnoringError(async () => await Task.Delay(request.Destination.PollingRequestQueueTimeout, cancellationToken));
+            var pendingRequestPickupTimeout = DelayWithoutException.Delay(request.Destination.PollingRequestQueueTimeout, cancellationToken);
             var responseWaiterTask = responseWaiter.WaitAsync(cancellationToken);
             
             await Task.WhenAny(pendingRequestPickupTimeout, responseWaiterTask);

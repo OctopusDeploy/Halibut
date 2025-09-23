@@ -136,7 +136,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                             TimeSpan.FromSeconds(30),
                             maxTimeBetweenHeartBeetsBeforeNodeIsAssumedToBeOffline - timeSinceLastHeartBeat + TimeSpan.FromSeconds(1));
 
-                        await Try.IgnoringError(async () => await Task.Delay(timeToWait, watchCancellationToken));
+                        await DelayWithoutException.Delay(timeToWait, watchCancellationToken);
                     }
 
                     log.Write(EventType.Diagnostic, "{0} node watcher cancelled, request {1}", watchingForPulsesFrom, requestActivityId);
@@ -172,7 +172,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
                 await Try.IgnoringError(async () =>
                 {
                     await Task.WhenAny(
-                        Task.Delay(timeBetweenCheckingIfRequestWasCollected, cancellationToken),
+                        DelayWithoutException.Delay(timeBetweenCheckingIfRequestWasCollected, cancellationToken),
                         redisPending.WaitForRequestToBeMarkedAsCollected(cancellationToken));
                 });
                 

@@ -181,7 +181,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 catch (Exception ex)
                 {
                     log?.WriteException(EventType.Diagnostic, "Failed to subscribe to Redis channel {0}, retrying in 2 seconds", ex, channelName);
-                    await Try.IgnoringError(async () => await Task.Delay(2000, cancellationToken));
+                    await DelayWithoutException.Delay(TimeSpan.FromSeconds(2), cancellationToken);
                 }
             }
         }
