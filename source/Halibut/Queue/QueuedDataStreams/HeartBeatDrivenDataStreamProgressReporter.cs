@@ -60,17 +60,18 @@ namespace Halibut.Queue.QueuedDataStreams
 
         public async ValueTask DisposeAsync()
         {
+            if(dataStreamsToReportProgressOn.IsEmpty) return;
             // Since we may not get a HeartBeatMessage stating that the DataStreams have been completely transferred,
             // this object is disposable and on dispose we note that file will no longer be uploading. Which
             // for the normal percentage based file transfer progress will result in marking the DataStreams as 100% uploaded.
             // If we don't do this at the end of a successful call we may find DataStream progress is reported as less than 100%.
-            var localCopyCompletedDataStreams = new List<Guid>();
+            HashSet<Guid> localCopyCompletedDataStreams;
             
             // Because of where this is used, it is hard to be sure the completedDataStreams won't be modified while disposing,
             // so take a copy of streams to work with.
             lock (completedDataStreams)
             {
-                localCopyCompletedDataStreams.AddRange(completedDataStreams);
+                localCopyCompletedDataStreams = new HashSet<Guid>(completedDataStreams);
             }
             foreach (var keyValuePair in dataStreamsToReportProgressOn)
             {
