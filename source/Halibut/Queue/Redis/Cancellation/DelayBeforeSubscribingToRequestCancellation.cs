@@ -17,14 +17,6 @@ namespace Halibut.Queue.Redis.Cancellation
         public async Task WaitBeforeHeartBeatSendingOrReceiving(CancellationToken cancellationToken)
         {
             await DelayWithoutException.Delay(Delay, cancellationToken);
-            // try
-            // {
-            //     await DelayWithoutException.Delay(Delay, cancellationToken);
-            // }
-            // catch
-            // {
-            //     // If only Delay had an option to not throw.
-            // }
         }
     }
 }
