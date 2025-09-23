@@ -35,19 +35,19 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return messageSerialiserAndDataStreamStorage.PrepareRequest(request, cancellationToken);
         }
 
-        public virtual Task<(RequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken)
+        public virtual Task<(PreparedRequestMessage, RequestDataStreamsTransferProgress)> ReadRequest(RedisStoredMessage jsonRequest, CancellationToken cancellationToken)
         {
             return messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
         }
 
-        public virtual Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
+        public virtual Task<RedisStoredMessage> PrepareResponseForStorageInRedis(Guid activityId, ResponseBytesAndDataStreams response, CancellationToken cancellationToken)
         {
-            return messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
+            return messageSerialiserAndDataStreamStorage.PrepareResponseForStorageInRedis(activityId, response, cancellationToken);
         }
 
-        public virtual Task<ResponseMessage> ReadResponse(RedisStoredMessage jsonResponse, CancellationToken cancellationToken)
+        public virtual Task<ResponseMessage> ReadResponseFromRedisStoredMessage(RedisStoredMessage jsonResponse, CancellationToken cancellationToken)
         {
-            return messageSerialiserAndDataStreamStorage.ReadResponse(jsonResponse, cancellationToken);
+            return messageSerialiserAndDataStreamStorage.ReadResponseFromRedisStoredMessage(jsonResponse, cancellationToken);
         }
     }
 
@@ -60,7 +60,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             this.exception = exception;
         }
 
-        public override Task<ResponseMessage> ReadResponse(RedisStoredMessage jsonResponse, CancellationToken cancellationToken)
+        public override Task<ResponseMessage> ReadResponseFromRedisStoredMessage(RedisStoredMessage jsonResponse, CancellationToken cancellationToken)
         {
             throw exception();
         }

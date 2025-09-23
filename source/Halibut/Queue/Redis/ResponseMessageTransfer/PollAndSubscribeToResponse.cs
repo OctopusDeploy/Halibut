@@ -75,7 +75,7 @@ namespace Halibut.Queue.Redis.ResponseMessageTransfer
                 {
                     var delay = pollBackoffStrategy.GetSleepPeriod();
                     log.Write(EventType.Diagnostic, "Waiting {0} seconds before next poll for response - Endpoint: {1}, ActivityId: {2}", delay.TotalSeconds, endpoint, activityId);
-                    await Try.IgnoringError(async () => await Task.Delay(delay, token));
+                    await DelayWithoutException.Delay(delay, token);
                     if(token.IsCancellationRequested) break;
                     log.Write(EventType.Diagnostic, "Done waiting going to poll for response - Endpoint: {0}, ActivityId: {1}", endpoint, activityId);
                     

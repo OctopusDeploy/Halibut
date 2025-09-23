@@ -16,7 +16,7 @@ namespace Halibut.Queue.QueuedDataStreams
     {
         readonly ImmutableDictionary<Guid, IDataStreamWithFileUploadProgress> dataStreamsToReportProgressOn;
 
-        readonly ConcurrentBag<Guid> completedDataStreams = new();
+        readonly HashSet<Guid> completedDataStreams = new();
 
         HeartBeatDrivenDataStreamProgressReporter(ImmutableDictionary<Guid, IDataStreamWithFileUploadProgress> dataStreamsToReportProgressOn)
         {
@@ -30,7 +30,11 @@ namespace Halibut.Queue.QueuedDataStreams
             
             foreach (var keyValuePair in heartBeatMessage.DataStreamProgress)
             {
-                if(completedDataStreams.Contains(keyValuePair.Key)) continue;
+                lock (completedDataStreams)
+                {
+                    if(completedDataStreams.Contains(keyValuePair.Key)) continue;
+                }
+                
                 
                 if (dataStreamsToReportProgressOn.TryGetValue(keyValuePair.Key, out var dataStreamWithTransferProgress))
                 {
@@ -39,7 +43,10 @@ namespace Halibut.Queue.QueuedDataStreams
                     
                     if (dataStreamWithTransferProgress.Length == keyValuePair.Value)
                     {
-                        completedDataStreams.Add(keyValuePair.Key);
+                        lock (completedDataStreams)
+                        {
+                            completedDataStreams.Add(keyValuePair.Key);
+                        }
                     }
                 }
             }
@@ -57,13 +64,21 @@ namespace Halibut.Queue.QueuedDataStreams
             // this object is disposable and on dispose we note that file will no longer be uploading. Which
             // for the normal percentage based file transfer progress will result in marking the DataStreams as 100% uploaded.
             // If we don't do this at the end of a successful call we may find DataStream progress is reported as less than 100%.
+            var localCopyCompletedDataStreams = new List<Guid>();
+            
+            // Because of where this is used, it is hard to be sure this object won't be used while disposing,
+            // so take a copy of streams we have already completed.
+            lock (completedDataStreams)
+            {
+                localCopyCompletedDataStreams.AddRange(completedDataStreams);
+            }
             foreach (var keyValuePair in dataStreamsToReportProgressOn)
             {
-                if (!completedDataStreams.Contains(keyValuePair.Key))
+                if (!localCopyCompletedDataStreams.Contains(keyValuePair.Key))
                 {
                     var progress = keyValuePair.Value.DataStreamTransferProgress;
+                    // Thus may be called twice if HeartBeats are received while disposing.
                     await progress.NoLongerUploading(CancellationToken.None);
-                    completedDataStreams.Add(keyValuePair.Key);
                 }
             }
         }

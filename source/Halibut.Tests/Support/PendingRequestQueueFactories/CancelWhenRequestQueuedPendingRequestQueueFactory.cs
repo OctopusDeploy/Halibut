@@ -62,6 +62,11 @@ namespace Halibut.Tests.Support.PendingRequestQueueFactories
                 return result;
             }
 
+            public async Task ApplyRawResponse(ResponseBytesAndDataStreams response, Guid nextRequestActivityId)
+            {
+                await inner.ApplyRawResponse(response, nextRequestActivityId); 
+            }
+
             public ValueTask DisposeAsync()
             {
                 return this.inner.DisposeAsync();

@@ -30,27 +30,27 @@ namespace Halibut.Queue.Redis
         readonly IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage;
         readonly AsyncManualResetEvent hasItemsForEndpoint = new();
 
-        readonly CancelOnDisposeCancellationToken queueCts = new ();
+        readonly CancelOnDisposeCancellationToken queueCts = new();
         internal ConcurrentDictionary<Guid, WatcherAndDisposables> DisposablesForInFlightRequests = new();
-        
+
         readonly CancellationToken queueToken;
-        
+
         // Used for testing.
         int numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection = 0;
 
         Task<IAsyncDisposable> RequestMessageAvailablePulseChannelSubscriberDisposer { get; }
-        
+
         public bool IsEmpty => Count == 0;
         public int Count => numberOfInFlightRequestsThatHaveReachedTheStageOfBeingReadyForCollection;
 
         // The timespan is more generous for the sender going offline, since if it does go offline,
         // under some cases the request completing is advantageous. That node needs to
         // re-do the entire RPC for idempotent RPCs this might mean that the task required is already done.
-        internal TimeSpan RequestSenderNodeHeartBeatTimeout { get; set; }  = TimeSpan.FromSeconds(90);
-        
+        internal TimeSpan RequestSenderNodeHeartBeatTimeout { get; set; } = TimeSpan.FromSeconds(90);
+
         // How often the Request Sender sends a heart beat.
-        internal TimeSpan RequestSenderNodeHeartBeatRate { get; set; }  = TimeSpan.FromSeconds(15);
-        
+        internal TimeSpan RequestSenderNodeHeartBeatRate { get; set; } = TimeSpan.FromSeconds(15);
+
         /// <summary>
         /// The amount of time since the last heart beat from the node sending the request to Tentacle
         /// before the node is assumed to be offline.
@@ -58,15 +58,15 @@ namespace Halibut.Queue.Redis
         /// Setting this too high means things above the RPC might not have time to retry.
         /// </summary>
         public TimeSpan RequestReceiverNodeHeartBeatTimeout { get; set; } = TimeSpan.FromSeconds(60);
-        
+
         // How often the Request Receiver node sends a heart beat.
-        internal TimeSpan RequestReceiverNodeHeartBeatRate { get; set; }  = TimeSpan.FromSeconds(15);
-        
+        internal TimeSpan RequestReceiverNodeHeartBeatRate { get; set; } = TimeSpan.FromSeconds(15);
+
         // How long the response message can live in redis.
         internal TimeSpan TTLOfResponseMessage { get; set; } = TimeSpan.FromMinutes(20);
-        
+
         internal TimeSpan TimeBetweenCheckingIfRequestWasCollected { get; set; } = TimeSpan.FromSeconds(15);
-        
+
         /// <summary>
         /// How long to delay before we will start sending or checking for heart beat pulses.
         /// Note that the Node Sending the request won't send heart beats until it has detected
@@ -78,8 +78,9 @@ namespace Halibut.Queue.Redis
         /// reducing load on the queue.
         /// </summary>
         static readonly HeartBeatInitialDelay DefaultHeartBeatInitialDelay = new(TimeSpan.FromSeconds(7));
+
         public HeartBeatInitialDelay HeartBeatInitialDelay { get; set; } = DefaultHeartBeatInitialDelay;
-        
+
         /// <summary>
         /// With this delay short requests (sub 5s) may not be cancelled if the cancellation occurs after the request
         /// has been collected by the other side.
@@ -91,14 +92,15 @@ namespace Halibut.Queue.Redis
         /// 7 seconds is chosen since, for our use cases most requests are done within that time range.
         /// </summary>
         static readonly DelayBeforeSubscribingToRequestCancellation DefaultDelayBeforeSubscribingToRequestCancellation = new(TimeSpan.FromSeconds(7));
+
         public DelayBeforeSubscribingToRequestCancellation DelayBeforeSubscribingToRequestCancellation { get; set; } = DefaultDelayBeforeSubscribingToRequestCancellation;
-        
+
         public RedisPendingRequestQueue(
-            Uri endpoint, 
+            Uri endpoint,
             IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData,
-            ILog log, 
-            IHalibutRedisTransport halibutRedisTransport, 
-            IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage, 
+            ILog log,
+            IHalibutRedisTransport halibutRedisTransport,
+            IMessageSerialiserAndDataStreamStorage messageSerialiserAndDataStreamStorage,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits)
         {
             this.endpoint = endpoint;
@@ -108,7 +110,7 @@ namespace Halibut.Queue.Redis
             this.halibutRedisTransport = halibutRedisTransport;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.queueToken = queueCts.Token;
-            
+
             // Ideally we would only subscribe subscribers which are using this queue.
             RequestMessageAvailablePulseChannelSubscriberDisposer = Task.Run(async () => await this.halibutRedisTransport.SubscribeToRequestMessagePulseChannel(endpoint, _ => hasItemsForEndpoint.Set(), queueToken));
         }
@@ -123,7 +125,7 @@ namespace Halibut.Queue.Redis
             {
                 return token.Value;
             }
-            
+
             // Fall back to waiting for the token if not immediately available
             await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, cancellationToken ?? CancellationToken.None);
             return await watchForRedisLosingAllItsData.GetTokenForDataLossDetection(TimeSpan.FromSeconds(30), cts.Token);
@@ -154,11 +156,11 @@ namespace Halibut.Queue.Redis
                 if (requestCancellationToken.IsCancellationRequested) return RedisPendingRequest.CreateExceptionForRequestWasCancelledBeforeCollected(request, log);
                 return CancellationReason();
             }
-            
+
 
             await using var cts = new CancelOnDisposeCancellationToken(queueCts.Token, requestCancellationToken, dataLossCt);
             var cancellationToken = cts.Token;
-            
+
             using var pending = new RedisPendingRequest(request, log);
 
             RedisStoredMessage messageToStore;
@@ -169,12 +171,13 @@ namespace Halibut.Queue.Redis
             }
             catch (Exception ex)
             {
-                throw CreateCancellationExceptionIfCancelled() 
+                throw CreateCancellationExceptionIfCancelled()
                       ?? new ErrorWhilePreparingRequestForQueueHalibutClientException($"Request {request.ActivityId} failed since an error occured when preparing request for queue", ex);
             }
+
             await using var _ = heartBeatDrivenDataStreamProgressReporter; // Disposal of the reporter notifies all DataStream progress reportors that the upload is complete.
-            
-            
+
+
             // Start listening for a response to the request, we don't want to miss the response.
             await using var pollAndSubscribeToResponse = new PollAndSubscribeToResponse(endpoint, request.ActivityId, halibutRedisTransport, log);
 
@@ -191,7 +194,7 @@ namespace Halibut.Queue.Redis
                 }
                 catch (Exception ex)
                 {
-                    throw CreateCancellationExceptionIfCancelled() 
+                    throw CreateCancellationExceptionIfCancelled()
                           ?? new ErrorOccuredWhenInsertingDataIntoRedisHalibutPendingRequestQueueHalibutClientException($"Request {request.ActivityId} failed since an error occured inserting the data into the queue", ex);
                 }
 
@@ -199,16 +202,16 @@ namespace Halibut.Queue.Redis
                 try
                 {
                     // We must be careful here to ensure we will always return.
-                    
+
                     var watchProcessingNodeStillHasHeartBeat = WatchProcessingNodeIsStillConnectedInBackground(request, pending, heartBeatDrivenDataStreamProgressReporter, cancellationToken);
                     var waitingForResponse = WaitForResponse(pollAndSubscribeToResponse, request, cancellationToken);
                     var pendingRequestWaitUntilComplete = pending.WaitUntilComplete(
                         async () => await tryClearRequestFromQueueAtMostOnce.Task,
                         CancellationReason,
                         cancellationToken);
-                    
+
                     cts.AwaitTasksBeforeCTSDispose(watchProcessingNodeStillHasHeartBeat, waitingForResponse, pendingRequestWaitUntilComplete);
-                    
+
                     await Task.WhenAny(waitingForResponse, pendingRequestWaitUntilComplete, watchProcessingNodeStillHasHeartBeat);
 
                     if (pendingRequestWaitUntilComplete.IsCompleted || cancellationToken.IsCancellationRequested)
@@ -216,7 +219,7 @@ namespace Halibut.Queue.Redis
                         await pendingRequestWaitUntilComplete;
                         return pending.Response!;
                     }
-                    
+
                     if (waitingForResponse.IsCompleted)
                     {
                         var response = await waitingForResponse;
@@ -224,7 +227,7 @@ namespace Halibut.Queue.Redis
                         {
                             return await pending.SetResponse(response);
                         }
-                        else if(!cancellationToken.IsCancellationRequested)
+                        else if (!cancellationToken.IsCancellationRequested)
                         {
                             // We are no longer waiting for a response and have no response.
                             // The cancellation token has not been set so the request is not going to be cancelled.
@@ -232,7 +235,7 @@ namespace Halibut.Queue.Redis
                             return await pending.SetResponse(ResponseMessage.FromError(request, "Queue unexpectedly stopped waiting for a response"));
                         }
                     }
-                    
+
                     if (watchProcessingNodeStillHasHeartBeat.IsCompleted)
                     {
                         var watcherResult = await watchProcessingNodeStillHasHeartBeat;
@@ -247,7 +250,7 @@ namespace Halibut.Queue.Redis
                                     return await pending.SetResponse(response);
                                 }
                             }
-                            
+
                             return await pending.SetResponse(ResponseMessage.FromError(request, "The node processing the request did not send a heartbeat for long enough, and so the node is now assumed to be offline."));
                         }
                     }
@@ -274,7 +277,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        
+
         void InBackgroundSendCancellationIfRequestWasCancelled(RequestMessage request, RedisPendingRequest redisPending)
         {
             if (redisPending.PendingRequestCancellationToken.IsCancellationRequested)
@@ -291,7 +294,7 @@ namespace Halibut.Queue.Redis
         async Task<NodeWatcherResult?> WatchProcessingNodeIsStillConnectedInBackground(RequestMessage request, RedisPendingRequest redisPendingRequest, IGetNotifiedOfHeartBeats notifiedOfHeartBeats, CancellationToken cancellationToken)
         {
             await Task.Yield();
-            
+
             return await NodeHeartBeatWatcher.WatchThatNodeProcessingTheRequestIsStillAlive(
                 endpoint,
                 request,
@@ -308,7 +311,7 @@ namespace Halibut.Queue.Redis
         {
             var request = redisPending.Request;
             log.Write(EventType.Diagnostic, "Attempting to clear request {0} from queue for endpoint {1}", request.ActivityId, endpoint);
-            
+
             // The time the message is allowed to sit on the queue for has elapsed.
             // Let's try to pop if from the queue, either:
             // - We pop it, which means it was never collected so let pending deal with the timeout.
@@ -320,6 +323,7 @@ namespace Halibut.Queue.Redis
                     log.Write(EventType.Diagnostic, "Request {0} has already been marked as collected, skipping queue removal for endpoint {1}", request.ActivityId, endpoint);
                     return false;
                 }
+
                 await using var cts = new CancelOnDisposeCancellationToken();
                 cts.CancelAfter(TimeSpan.FromMinutes(2)); // Best efforts.
                 var requestMessage = await halibutRedisTransport.TryGetAndRemoveRequest(endpoint, request.ActivityId, cts.Token);
@@ -338,9 +342,10 @@ namespace Halibut.Queue.Redis
             {
                 log.WriteException(EventType.Error, "Failed to clear request {0} from queue for endpoint {1}", ex, request.ActivityId, endpoint);
             }
+
             return false;
         }
-        
+
         async Task<ResponseMessage?> WaitForResponse(
             PollAndSubscribeToResponse pollAndSubscribeToResponse,
             RequestMessage requestMessage,
@@ -363,7 +368,7 @@ namespace Halibut.Queue.Redis
 
             try
             {
-                var response = await messageSerialiserAndDataStreamStorage.ReadResponse(responseJson, cancellationToken);
+                var response = await messageSerialiserAndDataStreamStorage.ReadResponseFromRedisStoredMessage(responseJson, cancellationToken);
                 log.Write(EventType.Diagnostic, "Successfully deserialized response for request {0}", activityId);
                 return response;
             }
@@ -373,7 +378,7 @@ namespace Halibut.Queue.Redis
                 return ResponseMessage.FromException(requestMessage, new Exception("Error occured when reading data from the queue", ex));
             }
         }
-        
+
         public async Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken)
         {
             // Is it good or bad that redis exceptions will bubble out of here?
@@ -383,33 +388,33 @@ namespace Halibut.Queue.Redis
             var pending = await DequeueNextAsync();
             if (pending == null) return null;
 
-            var pendingRequest = pending.Value.Item1;
-            var dataStreamsTransferProgress = pending.Value.Item2;
-            
+            var (activityId, dataToSend, dataStreamsTransferProgress) = pending.Value;
+
+
             var disposables = new DisposableCollection();
             try
             {
                 // There is a chance the data loss occured after we got the data but before here.
                 // In that case we will just time out because of the lack of heart beats.
                 var dataLossCT = await DataLossCancellationToken(cancellationToken);
-                
+
                 disposables.AddAsyncDisposable(new NodeHeartBeatSender(
                     endpoint,
-                    pendingRequest.ActivityId,
+                    activityId,
                     halibutRedisTransport,
                     log,
                     HalibutQueueNodeSendingPulses.RequestProcessorNode,
                     () => HeartBeatMessage.Build(dataStreamsTransferProgress),
                     RequestReceiverNodeHeartBeatRate,
                     HeartBeatInitialDelay));
-                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, pendingRequest.ActivityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, HeartBeatInitialDelay, DelayBeforeSubscribingToRequestCancellation, log);
+                var watcher = new WatchForRequestCancellationOrSenderDisconnect(endpoint, activityId, halibutRedisTransport, RequestSenderNodeHeartBeatTimeout, HeartBeatInitialDelay, DelayBeforeSubscribingToRequestCancellation, log);
                 disposables.AddAsyncDisposable(watcher);
-                
+
                 var cts = new CancelOnDisposeCancellationToken(watcher.RequestProcessingCancellationToken, dataLossCT);
                 disposables.AddAsyncDisposable(cts);
-                
-                var response = new RequestMessageWithCancellationToken(pendingRequest, cts.Token);
-                DisposablesForInFlightRequests[pendingRequest.ActivityId] = new WatcherAndDisposables(disposables, cts.Token, watcher);
+
+                var response = new RequestMessageWithCancellationToken(dataToSend, cts.Token, activityId);
+                DisposablesForInFlightRequests[activityId] = new WatcherAndDisposables(disposables, cts.Token, watcher);
                 return response;
             }
             catch (Exception)
@@ -439,9 +444,14 @@ namespace Halibut.Queue.Redis
         }
 
         public const string RequestAbandonedMessage = "The request was abandoned, possibly because the node processing the request shutdown or redis lost all of its data.";
-        
+
         public async Task ApplyResponse(ResponseMessage response, Guid requestActivityId)
         {
+            await Task.CompletedTask;
+            throw new NotImplementedException("This should not be called!");
+        }
+
+        public async Task ApplyRawResponse(ResponseBytesAndDataStreams response, Guid requestActivityId) {
             log.Write(EventType.MessageExchange, "Applying response for request {0}", requestActivityId);
             WatcherAndDisposables? watcherAndDisposables = null;
             if (!DisposablesForInFlightRequests.TryRemove(requestActivityId, out watcherAndDisposables))
@@ -468,10 +478,11 @@ namespace Halibut.Queue.Redis
                     if (!watcherAndDisposables.Watcher.SenderCancelledTheRequest)
                     {
                         log.Write(EventType.Diagnostic, "Response for request {0}, has been overridden with an abandon message as the request was abandoned", requestActivityId);
-                        response = ResponseMessage.FromException(response, new HalibutClientException(RequestAbandonedMessage));
+                        //response = ResponseMessage.FromUnknownRequest(requestActivityId, new HalibutClientException(RequestAbandonedMessage));
+                        throw new Exception("TODO God help you!");
                     }
                 }
-                var responseStoredMessage = await messageSerialiserAndDataStreamStorage.PrepareResponse(response, cancellationToken);
+                var responseStoredMessage = await messageSerialiserAndDataStreamStorage.PrepareResponseForStorageInRedis(requestActivityId, response, cancellationToken);
                 log.Write(EventType.MessageExchange, "Sending response message for request {0}", requestActivityId);
                 await ResponseMessageSender.SendResponse(halibutRedisTransport, endpoint, requestActivityId, responseStoredMessage, TTLOfResponseMessage, log);
                 log.Write(EventType.MessageExchange, "Successfully applied response for request {0}", requestActivityId);
@@ -491,7 +502,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> DequeueNextAsync()
+        async Task<(Guid ActivityId, PreparedRequestMessage dataToSend, RequestDataStreamsTransferProgress)?> DequeueNextAsync()
         {
             await using var cts = new CancelOnDisposeCancellationToken(queueToken);
             try
@@ -524,7 +535,7 @@ namespace Halibut.Queue.Redis
                     log.WriteException(EventType.Error, "Error occured dequeuing from the queue", ex);
                     // It is very likely a queue error means every tentacle will return an error.
                     // Add a random delay to help avoid every client coming back at exactly the same time.
-                    await Task.Delay(TimeSpan.FromSeconds(new Random().Next(15)), cts.Token);
+                    await DelayWithoutException.Delay(TimeSpan.FromSeconds(new Random().Next(15)), cts.Token);
                 }
                 throw;
             }
@@ -534,7 +545,7 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> TryRemoveNextItemFromQueue(CancellationToken cancellationToken)
+        async Task<(Guid, PreparedRequestMessage, RequestDataStreamsTransferProgress)?> TryRemoveNextItemFromQueue(CancellationToken cancellationToken)
         {
             while (true)
             {
@@ -554,10 +565,10 @@ namespace Halibut.Queue.Redis
                     continue;
                 }
 
-                var request = await messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
-                log.Write(EventType.Diagnostic, "Successfully collected request {0} from queue for endpoint {1}", request.Item1.ActivityId, endpoint);
+                var (dataToSend, transferProgress) = await messageSerialiserAndDataStreamStorage.ReadRequest(jsonRequest, cancellationToken);
+                log.Write(EventType.Diagnostic, "Successfully collected request {0} from queue for endpoint {1}", activityId, endpoint);
 
-                return request;
+                return (activityId.Value, dataToSend, transferProgress);
             }
         }
 

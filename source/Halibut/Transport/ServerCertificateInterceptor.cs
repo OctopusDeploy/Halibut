@@ -8,7 +8,7 @@ namespace Halibut.Transport
 {
     static class ServerCertificateInterceptor
     {
-        public const string Header = "X-Octopus-RequestId";
+        public const string Header = "X-Octopus-ActivityId";
 
         static readonly Dictionary<string, X509Certificate2?> certificates = new();
         static bool initialized;

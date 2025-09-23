@@ -10,7 +10,8 @@ namespace Halibut.Transport.Streams
         public Stream CreateStream(TcpClient client)
         {
             var stream = client.GetStream();
-            return new NetworkTimeoutStream(stream);
+            //return new NetworkTimeoutStream(stream);
+            return stream;
         }
 
         public Stream CreateStream(WebSocket webSocket)

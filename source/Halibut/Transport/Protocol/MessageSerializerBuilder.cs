@@ -80,7 +80,8 @@ namespace Halibut.Transport.Protocol
             var jsonSerializerSettings = new JsonSerializerSettings
             {
                 Formatting = Formatting.None,
-                ContractResolver = HalibutContractResolver.Instance,
+                ContractResolver = HalibutContractResolver.
+                    Instance,
                 TypeNameHandling = TypeNameHandling.Auto,
                 TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
                 DateFormatHandling = DateFormatHandling.IsoDateFormat,

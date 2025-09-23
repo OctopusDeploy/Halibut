@@ -100,7 +100,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     observer.OnRedisOperationFailed(ex, willRetry);
                     if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
-                    await Task.Delay(retryDelay, combinedToken);
+                    await DelayWithoutException.Delay(retryDelay, combinedToken);
                 }
             }
         }
@@ -128,7 +128,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     observer.OnRedisOperationFailed(ex, willRetry);
                     if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
-                    await Task.Delay(retryDelay, combinedToken);
+                    await DelayWithoutException.Delay(retryDelay, combinedToken);
                 }
             }
         }
@@ -194,7 +194,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 catch (Exception ex)
                 {
                     log?.WriteException(EventType.Diagnostic, "Failed to subscribe to Redis channel {0}, retrying in 2 seconds", ex, channelName);
-                    await Try.IgnoringError(async () => await Task.Delay(2000, cancellationToken));
+                    await DelayWithoutException.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
             }
         }
@@ -388,6 +388,8 @@ namespace Halibut.Queue.Redis.RedisHelpers
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
+                // TODO: Does fire and forget reduce load?
+                // TODO: experiment without this
                 await database.KeyExpireAsync(key, ttl);
             }, cancellationToken);
         }

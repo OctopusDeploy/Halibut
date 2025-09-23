@@ -2,12 +2,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 
 namespace Halibut.Queue
 {
@@ -28,6 +31,49 @@ namespace Halibut.Queue
             this.createStreamCapturingSerializer = createStreamCapturingSerializer;
             this.messageStreamWrappers = messageStreamWrappers;
         }
+        
+        public async Task<(byte[], IReadOnlyList<DataStream>)> PrepareMessageForWireTransferAndForQueue<T>(T message)
+        {
+            IReadOnlyList<DataStream> dataStreams;
+            
+            using var ms = new MemoryStream();
+            Stream stream = ms;
+            await using (var wrappedStreamDisposables = new DisposableCollection())
+            {
+                stream = WrapInMessageSerialisationStreams(messageStreamWrappers, stream, wrappedStreamDisposables);
+
+                // TODO instead store 
+                
+                using (var zip = new DeflateStream(stream, CompressionMode.Compress, true))
+                using (var buf = new BufferedStream(zip))
+                {
+                    
+                    using (var jsonTextWriter = new BsonDataWriter(buf) { CloseOutput = false })
+                    {
+                        var streamCapturingSerializer = createStreamCapturingSerializer();
+                        streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
+                        dataStreams = streamCapturingSerializer.DataStreams;
+                    }
+                }
+            }
+
+            return (ms.ToArray(), dataStreams);
+        }
+        
+        public async Task<byte[]> ReadBytesForWireTransfer(byte[] dataStoredInRedis)
+        {
+            using var ms = new MemoryStream(dataStoredInRedis);
+            Stream stream = ms;
+            await using var disposables = new DisposableCollection();
+            stream = WrapStreamInMessageDeserialisationStreams(messageStreamWrappers, stream, disposables);
+            
+            using var output = new MemoryStream();
+            
+            stream.CopyTo(output);
+
+            return output.ToArray();
+        }
+        
 
         public async Task<(byte[], IReadOnlyList<DataStream>)> WriteMessage<T>(T message)
         {
@@ -120,6 +166,46 @@ namespace Halibut.Queue
             }
 
             public T Message { get; private set; }
+        }
+
+        public async Task<byte[]> PrepareBytesFromWire(byte[] responseBytes)
+        {
+            
+            using var outputStream = new MemoryStream();
+            
+            Stream wrappedStream = outputStream;
+            await using (var disposables = new DisposableCollection())
+            {
+                wrappedStream = WrapInMessageSerialisationStreams(messageStreamWrappers, wrappedStream, disposables);
+                await wrappedStream.WriteAsync(responseBytes, CancellationToken.None);
+                await wrappedStream.FlushAsync();
+            }
+
+            return outputStream.ToArray();
+        }
+
+        public async Task<(T response, IReadOnlyList<DataStream> dataStreams)> ConvertStoredResponseToResponseMessage<T>(byte[] storedMessageMessage)
+        {
+            using var ms = new MemoryStream(storedMessageMessage);
+            Stream stream = ms;
+            await using var disposables = new DisposableCollection();
+            stream = WrapStreamInMessageDeserialisationStreams(messageStreamWrappers, stream, disposables);
+            
+            using var deflateStream = new DeflateStream(stream, CompressionMode.Decompress, true);
+            using var buf = new BufferedStream(deflateStream);
+            using (var bson = new BsonDataReader(buf) { CloseInput = false })
+            {
+                var streamCapturingSerializer = createStreamCapturingSerializer();
+                var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(bson);
+            
+                if (result == null)
+                {
+                    throw new Exception("messageEnvelope is null");
+                }
+
+                return (result.Message, streamCapturingSerializer.DataStreams);
+            }
+            
         }
     }
 }

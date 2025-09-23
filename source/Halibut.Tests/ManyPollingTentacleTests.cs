@@ -45,7 +45,7 @@ namespace Halibut.Tests
         {
             var numberOfPollingServices = 100;
             int concurrency = 20;
-            int numberOfCallsToMake = Math.Min(numberOfPollingServices, 20);
+            int numberOfCallsToMake = Math.Min(numberOfPollingServices, 100);
             
             var logFactory = new CachingLogFactory(new TestContextLogCreator("", LogLevel.Trace));
             var services = GetDelegateServiceFactory();

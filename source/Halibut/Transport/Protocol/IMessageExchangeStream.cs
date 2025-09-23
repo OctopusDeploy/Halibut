@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,8 +35,24 @@ namespace Halibut.Transport.Protocol
         Task<RemoteIdentity> ReadRemoteIdentityAsync(CancellationToken cancellationToken);
 
         Task SendAsync<T>(T message, CancellationToken cancellationToken);
+        
+        Task SendPrePreparedRequestAsync(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken);
 
         Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken);
         Task<ResponseMessage?> ReceiveResponseAsync(CancellationToken cancellationToken);
+        
+        Task<ResponseBytesAndDataStreams?> ReceiveResponseBytesAsync(CancellationToken cancellationToken);
+    }
+
+    public class ResponseBytesAndDataStreams
+    {
+        public ResponseBytesAndDataStreams(byte[] responseBytes, List<DataStream> dataStreams)
+        {
+            ResponseBytes = responseBytes;
+            DataStreams = dataStreams;
+        }
+
+        public byte[] ResponseBytes { get; }
+        public List<DataStream> DataStreams { get; }
     }
 }

@@ -18,5 +18,6 @@ namespace Halibut.ServiceModel
         Task ApplyResponse(ResponseMessage response, Guid requestActivityId);
         Task<RequestMessageWithCancellationToken?> DequeueAsync(CancellationToken cancellationToken);
         Task<ResponseMessage> QueueAndWaitAsync(RequestMessage request, CancellationToken cancellationToken);
+        Task ApplyRawResponse(ResponseBytesAndDataStreams response, Guid nextRequestActivityId);
     }
 }

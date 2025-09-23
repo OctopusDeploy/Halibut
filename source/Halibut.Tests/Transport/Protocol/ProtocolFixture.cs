@@ -388,6 +388,11 @@ namespace Halibut.Tests.Transport.Protocol
                 output.AppendLine("--> " + typeof(T).Name);
             }
 
+            public Task SendPrePreparedRequestAsync(PreparedRequestMessage preparedRequestMessage, CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
+            }
+
             public Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
             {
                 return ReceiveAsync<RequestMessage>();
@@ -396,6 +401,11 @@ namespace Halibut.Tests.Transport.Protocol
             public Task<ResponseMessage?> ReceiveResponseAsync(CancellationToken cancellationToken)
             {
                 return ReceiveAsync<ResponseMessage>();
+            }
+
+            public Task<ResponseBytesAndDataStreams?> ReceiveResponseBytesAsync(CancellationToken cancellationToken)
+            {
+                throw new NotImplementedException();
             }
 
             async Task<T?> ReceiveAsync<T>()

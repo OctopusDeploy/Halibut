@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Util;
 
 namespace Halibut.Queue.Redis.NodeHeartBeat
 {
@@ -17,7 +18,7 @@ namespace Halibut.Queue.Redis.NodeHeartBeat
         {
             try
             {
-                await Task.Delay(InitialDelay, cancellationToken);
+                await DelayWithoutException.Delay(InitialDelay, cancellationToken);
             }
             catch
             {

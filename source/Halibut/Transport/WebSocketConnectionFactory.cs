@@ -49,7 +49,7 @@ namespace Halibut.Transport
             if (!serviceEndpoint.IsWebSocketEndpoint)
                 throw new Exception("Only wss:// endpoints are supported");
 
-            var connectionId = Guid.NewGuid().ToString();
+            var connectionId = Id.NewGuid().ToString();
 
             var client = new ClientWebSocket();
             client.Options.ClientCertificates = new X509Certificate2Collection(new X509Certificate2Collection(clientCertificate));

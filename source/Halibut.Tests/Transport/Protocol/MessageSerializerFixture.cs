@@ -305,7 +305,7 @@ namespace Halibut.Tests.Transport.Protocol
         
         async Task<T> ReadMessage<T>(MessageSerializer messageSerializer, RewindableBufferStream rewindableBufferStream)
         {
-            return (await messageSerializer.ReadMessageAsync<T>(rewindableBufferStream, CancellationToken)).Message;
+            return (await messageSerializer.ReadMessageAsync<T>(rewindableBufferStream, false, CancellationToken)).Message;
         }
 
         async Task WriteMessage(MessageSerializer messageSerializer, Stream stream, string message)
