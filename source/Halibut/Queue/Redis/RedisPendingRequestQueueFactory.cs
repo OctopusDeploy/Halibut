@@ -19,31 +19,44 @@ namespace Halibut.Queue.Redis
         readonly ILogFactory logFactory;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData;
+        readonly IMessageSerialiserAndDataStreamStorageExceptionObserver exceptionObserver;
+        readonly Func<IPendingRequestQueue, IPendingRequestQueue>? queueDecorator;
 
         public RedisPendingRequestQueueFactory(
             QueueMessageSerializer queueMessageSerializer,
             IStoreDataStreamsForDistributedQueues dataStreamStorage,
             IWatchForRedisLosingAllItsData watchForRedisLosingAllItsData,
             HalibutRedisTransport halibutRedisTransport,
-            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, 
-            ILogFactory logFactory)
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
+            ILogFactory logFactory,
+            IMessageSerialiserAndDataStreamStorageExceptionObserver? exceptionObserver = null,
+            Func<IPendingRequestQueue, IPendingRequestQueue>? queueDecorator = null)
         {
             this.queueMessageSerializer = queueMessageSerializer;
             this.dataStreamStorage = dataStreamStorage;
             this.halibutRedisTransport = halibutRedisTransport;
             this.logFactory = logFactory;
+            this.queueDecorator = queueDecorator;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.watchForRedisLosingAllItsData = watchForRedisLosingAllItsData;
+            this.exceptionObserver = exceptionObserver ?? NoOpMessageSerialiserAndDataStreamStorageExceptionObserver.Instance;
         }
 
         public IPendingRequestQueue CreateQueue(Uri endpoint)
         {
-            return new RedisPendingRequestQueue(endpoint,
+            var baseStorage = new MessageSerialiserAndDataStreamStorage(queueMessageSerializer, dataStreamStorage);
+            var storageWithObserver = new MessageSerialiserAndDataStreamStorageWithExceptionObserver(baseStorage, exceptionObserver);
+            
+            var queue =  new RedisPendingRequestQueue(endpoint,
                 watchForRedisLosingAllItsData,
                 logFactory.ForEndpoint(endpoint),
                 halibutRedisTransport,
-                new MessageSerialiserAndDataStreamStorage(queueMessageSerializer, dataStreamStorage),
+                storageWithObserver,
                 halibutTimeoutsAndLimits);
+
+            if (queueDecorator != null) return queueDecorator(queue);
+            
+            return queue;
         }
 
     }

@@ -12,6 +12,7 @@ using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.Queue.QueuedDataStreams;
 using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.RedisDataLossDetection;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.ServiceModel;

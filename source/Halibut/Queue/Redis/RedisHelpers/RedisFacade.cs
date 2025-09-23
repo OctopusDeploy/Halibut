@@ -14,6 +14,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
     {
         readonly Lazy<ConnectionMultiplexer> connection;
         readonly ILog log;
+        readonly IRedisFacadeObserver observer;
         // We can survive redis being unavailable for this amount of time.
         // Generally redis will try for 5s, we add our own retries to try for longer.
         internal TimeSpan MaxDurationToRetryFor = TimeSpan.FromSeconds(30);
@@ -29,14 +30,17 @@ namespace Halibut.Queue.Redis.RedisHelpers
         readonly CancelOnDisposeCancellationToken objectLifetimeCts;
         readonly CancellationToken objectLifeTimeCancellationToken;
 
-        public RedisFacade(string configuration, string keyPrefix, ILog log) : this(ConfigurationOptions.Parse(configuration), keyPrefix, log)
+        public RedisFacade(string configuration, string keyPrefix, ILog log, IRedisFacadeObserver? redisFacadeObserver = null) : 
+            this(ConfigurationOptions.Parse(configuration), keyPrefix, log, redisFacadeObserver)
         {
             
         }
-        public RedisFacade(ConfigurationOptions redisOptions, string keyPrefix, ILog log)
+        
+        public RedisFacade(ConfigurationOptions redisOptions, string keyPrefix, ILog log, IRedisFacadeObserver? observer = null)
         {
             this.keyPrefix = keyPrefix + ":HalibutRedis";
             this.log = log.ForContext<RedisFacade>();
+            this.observer = observer ?? NoOpRedisFacadeObserver.Instance;
             objectLifetimeCts = new CancelOnDisposeCancellationToken();
             objectLifeTimeCancellationToken = objectLifetimeCts.Token;
 
@@ -59,16 +63,19 @@ namespace Halibut.Queue.Redis.RedisHelpers
         void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
         {
             log.Write(EventType.Error, "Redis connection failed - EndPoint: {0}, Failure: {1}, Exception: {2}", e.EndPoint, e.FailureType, e.Exception?.Message);
+            observer.OnRedisConnectionFailed(e.EndPoint?.ToString(), e.FailureType, e.Exception);
         }
 
         void OnErrorMessage(object? sender, RedisErrorEventArgs e)
         {
             log.Write(EventType.Error, "Redis error - EndPoint: {0}, Message: {1}", e.EndPoint, e.Message);
+            observer.OnRedisServerRepliedWithAnErrorMessage(e.EndPoint?.ToString(), e.Message);
         }
 
         void OnConnectionRestored(object? sender, ConnectionFailedEventArgs e)
         {
             log.Write(EventType.Diagnostic, "Redis connection restored - EndPoint: {0}", e.EndPoint);
+            observer.OnRedisConnectionRestored(e.EndPoint?.ToString());
         }
 
         async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
@@ -87,8 +94,11 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 {
                     return await operation();
                 }
-                catch (Exception ex) when (stopwatch.Elapsed < MaxDurationToRetryFor && !combinedToken.IsCancellationRequested)
+                catch (Exception ex) when (!combinedToken.IsCancellationRequested)
                 {
+                    bool willRetry = stopwatch.Elapsed < MaxDurationToRetryFor;
+                    observer.OnRedisOperationFailed(ex, willRetry);
+                    if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
                     await Task.Delay(retryDelay, combinedToken);
                 }
@@ -112,8 +122,11 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     await operation();
                     return;
                 }
-                catch (Exception ex) when (stopwatch.Elapsed < MaxDurationToRetryFor && !combinedToken.IsCancellationRequested)
+                catch (Exception ex) when (!combinedToken.IsCancellationRequested)
                 {
+                    bool willRetry = stopwatch.Elapsed < MaxDurationToRetryFor;
+                    observer.OnRedisOperationFailed(ex, willRetry);
+                    if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
                     await Task.Delay(retryDelay, combinedToken);
                 }
