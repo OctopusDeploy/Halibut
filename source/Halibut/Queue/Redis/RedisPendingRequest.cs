@@ -146,7 +146,7 @@ namespace Halibut.Queue.Redis
                         SetResponseNoLock(ResponseMessage.FromException(
                                 request,
                                 new TimeoutException("A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded.")),
-                            requestWasCollected: false);
+                            requestWasCollected: true);
                         await Try.IgnoringError(async () => await pendingRequestCancellationTokenSource.CancelAsync());
                     }
                 }
