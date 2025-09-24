@@ -273,8 +273,7 @@ namespace Halibut.ServiceModel
                             log.Write(EventType.MessageExchange, "Request {0} was cancelled before a response was received", request);
                             SetResponse(ResponseMessage.FromException(
                                 request, 
-                                new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded."),
-                                ConnectionState.Connecting));
+                                new TimeoutException($"A request was sent to a polling endpoint, the polling endpoint collected it but the request was cancelled before the polling endpoint responded.")));
                         }
                         else
                         {
