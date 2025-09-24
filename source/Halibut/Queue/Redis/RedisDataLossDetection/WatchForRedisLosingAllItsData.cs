@@ -127,13 +127,9 @@ namespace Halibut.Queue.Redis.RedisDataLossDetection
                 {
                     log.Write(EventType.Diagnostic, "Error occurred during Redis data loss monitoring for key {0}: {1}. Will retry after delay.", key, ex.Message);
                 }
-
-                await Try.IgnoringError(async () =>
-                {
-                    if (!hasSetKey) await Task.Delay(SetupErrorBackoffDelay, cancellationToken);
-                    else await Task.Delay(DataLossCheckInterval, cancellationToken);
-                });
-
+                
+                if (!hasSetKey) await DelayWithoutException.Delay(SetupErrorBackoffDelay, cancellationToken);
+                else await DelayWithoutException.Delay(DataLossCheckInterval, cancellationToken);
             }
 
             log.Write(EventType.Diagnostic, "Redis data loss monitoring stopped for key {0}, cleaning up", key);

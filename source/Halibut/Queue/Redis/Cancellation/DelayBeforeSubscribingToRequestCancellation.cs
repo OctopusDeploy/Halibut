@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Util;
 
 namespace Halibut.Queue.Redis.Cancellation
 {
@@ -15,14 +16,7 @@ namespace Halibut.Queue.Redis.Cancellation
         
         public async Task WaitBeforeHeartBeatSendingOrReceiving(CancellationToken cancellationToken)
         {
-            try
-            {
-                await Task.Delay(Delay, cancellationToken);
-            }
-            catch
-            {
-                // If only Delay had an option to not throw.
-            }
+            await DelayWithoutException.Delay(Delay, cancellationToken);
         }
     }
 }

@@ -506,7 +506,7 @@ namespace Halibut.Queue.Redis
 
                 await Task.WhenAny(
                     hasItemsForEndpoint.WaitAsync(cts.Token),
-                    Task.Delay(halibutTimeoutsAndLimits.PollingQueueWaitTimeout, cts.Token));
+                    DelayWithoutException.Delay(halibutTimeoutsAndLimits.PollingQueueWaitTimeout, cts.Token));
 
                 if (!hasItemsForEndpoint.IsSet)
                 {
