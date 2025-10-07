@@ -1,5 +1,6 @@
 ﻿using System;
 using Halibut.Tests.Support.BackwardsCompatibility;
+using Halibut.Tests.Support.TestAttributes;
 
 namespace Halibut.Tests.Support.TestCases
 {
@@ -135,7 +136,7 @@ namespace Halibut.Tests.Support.TestCases
 
     public class ClientAndServiceBuilderFactory
     {
-        public static Func<ServiceConnectionType, IClientAndServiceBuilder> ForVersion(ClientAndServiceTestVersion version)
+        public static Func<ServiceConnectionType, PollingQueueTestCase?, IClientAndServiceBuilder> ForVersion(ClientAndServiceTestVersion version)
         {
             if (version.IsLatest())
             {
@@ -144,22 +145,31 @@ namespace Halibut.Tests.Support.TestCases
 
             if (version.IsPreviousClient())
             {
-                return sct => PreviousClientVersionAndLatestServiceBuilder
-                    .ForServiceConnectionType(sct)
-                    .WithClientVersion(version.ClientVersion!.ForServiceConnectionType(sct));
+                return (sct, pollingQueueTestCase) =>
+                {
+                    if(pollingQueueTestCase != null) throw new Exception("Polling queue tests are not supported for previous client versions");
+                    return PreviousClientVersionAndLatestServiceBuilder
+                        .ForServiceConnectionType(sct)
+                        .WithClientVersion(version.ClientVersion!.ForServiceConnectionType(sct));
+                };
             }
 
             if (version.IsPreviousService())
             {
-                return sct => LatestClientAndPreviousServiceVersionBuilder
-                    .ForServiceConnectionType(sct)
-                    .WithServiceVersion(version.ServiceVersion!.ForServiceConnectionType(sct));
+                return (sct, pollingQueueTestCase) =>
+                {
+                    if(pollingQueueTestCase != null) throw new Exception("Polling queue tests are not supported for previous service versions");
+                    
+                    return LatestClientAndPreviousServiceVersionBuilder
+                        .ForServiceConnectionType(sct)
+                        .WithServiceVersion(version.ServiceVersion!.ForServiceConnectionType(sct));
+                };
             }
 
             throw new Exception($"We don't know what kind of thing to build here: version={version}");
         }
 
-        public static Func<ServiceConnectionType, IClientBuilder> ForVersionClientOnly(ClientAndServiceTestVersion version)
+        public static Func<ServiceConnectionType, PollingQueueTestCase?, IClientBuilder> ForVersionClientOnly(ClientAndServiceTestVersion version)
         {
             if (version.IsLatest())
             {

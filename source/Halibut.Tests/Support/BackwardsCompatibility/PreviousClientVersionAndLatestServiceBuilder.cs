@@ -6,6 +6,7 @@ using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
@@ -22,7 +23,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     /// In this case the client is run out of process, and talks to a service running
     /// in this process.
     /// </summary>
-    public class PreviousClientVersionAndLatestServiceBuilder: IClientAndServiceBuilder
+    public class PreviousClientVersionAndLatestServiceBuilder : IClientAndServiceBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
         
@@ -107,6 +108,11 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService()
         {
             throw new Exception("Caching service is not supported, when testing on the old Client. Since the old client is on external CLR which does not have the new caching attributes which this service is used to test.");
+        }
+
+        public IClientAndServiceBuilder WithPollingQueueType(PollingQueueTestCase pollingQueueTestCase)
+        {
+            throw new NotImplementedException();
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()

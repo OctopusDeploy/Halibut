@@ -4,12 +4,10 @@ using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.ServiceModel;
-using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -21,23 +19,14 @@ namespace Halibut.Tests
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
         public async Task QueuedUpRequestsShouldBeDequeuedInOrder(ClientAndServiceTestCase clientAndServiceTestCase)
         {
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.PollingQueueWaitTimeout = TimeSpan.FromSeconds(1);
             IPendingRequestQueue ?pendingRequestQueue = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithInstantReconnectPollingRetryPolicy()
-                       .WithPendingRequestQueueFactory(logFactory =>
-                       {
-                           return new FuncPendingRequestQueueFactory(uri =>
-                           {
-                               pendingRequestQueue = new PendingRequestQueueBuilder()
-                                   .WithLog(logFactory.ForEndpoint(uri))
-                                   .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                                   .Build()
-                                   .PendingRequestQueue;
-                               return pendingRequestQueue;
-                           });
-                       })
+                       .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                        .Build(CancellationToken))
             {
                 var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();

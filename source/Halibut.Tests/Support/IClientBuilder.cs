@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Logging;
+using Halibut.Tests.Support.TestAttributes;
 using Octopus.TestPortForwarder;
 
 namespace Halibut.Tests.Support
@@ -11,5 +12,8 @@ namespace Halibut.Tests.Support
         Task<IClient> Build(CancellationToken cancellationToken);
         IClientBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory);
         IClientBuilder WithHalibutLoggingLevel(LogLevel info);
+        
+        // TODO
+        //IClientBuilder WithPollingQueueType(PollingQueueTestCase pollingQueueTestCase) 
     }
 }

@@ -941,7 +941,7 @@ namespace Halibut.Tests.Queue.Redis
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false, pollingQueuesToTest: PollingQueuesToTest.RedisOnly)]
         public async Task WhenUsingTheRedisQueue_ASimpleEchoServiceCanBeCalled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
@@ -951,7 +951,7 @@ namespace Halibut.Tests.Queue.Redis
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithStandardServices()
                              .AsLatestClientAndLatestServiceBuilder()
-                             .WithPendingRequestQueueFactory((queueMessageSerializer, logFactory) =>
+                             .WithPendingRequestQueueFactory((_, queueMessageSerializer, logFactory) =>
                                  new RedisPendingRequestQueueFactory(
                                          queueMessageSerializer,
                                          dataStreamStore,
@@ -970,7 +970,7 @@ namespace Halibut.Tests.Queue.Redis
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false, pollingQueuesToTest: PollingQueuesToTest.RedisOnly)]
         public async Task WhenUsingTheRedisQueue_StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
@@ -1005,7 +1005,7 @@ namespace Halibut.Tests.Queue.Redis
                                          .Build())
                                      .Build())
                                  .Build())
-                             .WithPendingRequestQueueFactory((queueMessageSerializer, logFactory) =>
+                             .WithPendingRequestQueueFactory((_, queueMessageSerializer, logFactory) =>
                                  new RedisPendingRequestQueueFactory(
                                          queueMessageSerializer,
                                          dataStreamStore,
