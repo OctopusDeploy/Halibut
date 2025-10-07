@@ -16,14 +16,22 @@ namespace Halibut.Tests.Queue.Redis.Utils
     /// </summary>
     public class JsonStoreDataStreamsForDistributedQueues : IStoreDataStreamsForDistributedQueues
     {
-        public async Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, bool useReceiver, CancellationToken cancellationToken)
         {
             var dataStreamData = new Dictionary<Guid, string>();
 
             foreach (var dataStream in dataStreams)
             {
                 using var memoryStream = new MemoryStream();
-                await dataStream.WriteData(memoryStream, cancellationToken);
+                if (useReceiver)
+                {
+                    await dataStream.Receiver().ReadAsync(async (s, ct) => await s.CopyToAsync(memoryStream, ct), cancellationToken);
+                }
+                else
+                {
+                    await dataStream.WriteData(memoryStream, cancellationToken);
+                }
+                
                 var bytes = memoryStream.ToArray();
                 var base64Data = Convert.ToBase64String(bytes);
                 dataStreamData[dataStream.Id] = base64Data;
@@ -33,7 +41,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Encoding.UTF8.GetBytes(json);
         }
 
-        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, bool useReceiver, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             
@@ -58,7 +66,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
 
                 var bytes = Convert.FromBase64String(base64Data);
                 
-                dataStream.Rehydrate(() =>
+                dataStream.Rehydrate(useReceiver, () =>
                 {
                     var stream = new MemoryStream(bytes);
                     return new DataStreamRehydrationData(stream);
