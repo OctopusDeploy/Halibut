@@ -40,6 +40,7 @@ namespace Halibut.Tests.Timeouts
                                  })
                                  .Build())
                              .As<LatestClientAndLatestServiceBuilder>()
+                             .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                              .WithEchoService()
                              .Build(CancellationToken))
             {
