@@ -62,7 +62,6 @@ namespace Halibut.Tests
                 var tasks = new List<Task<int>>();
                 for (int i = 0; i < 10; i++)
                 {
-                    
                     var task = Task.Run(async () => await countingService.IncrementAsync());
                     tasks.Add(task);
                     // Wait for the RPC call to get on to the queue before proceeding
