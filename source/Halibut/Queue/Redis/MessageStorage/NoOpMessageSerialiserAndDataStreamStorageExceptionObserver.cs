@@ -25,4 +25,3 @@ namespace Halibut.Queue.Redis.MessageStorage
         }
     }
 }
-
