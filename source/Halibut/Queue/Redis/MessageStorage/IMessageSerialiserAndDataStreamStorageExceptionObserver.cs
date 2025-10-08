@@ -17,4 +17,3 @@ namespace Halibut.Queue.Redis.MessageStorage
         void OnException(Exception exception, string methodName);
     }
 }
-
