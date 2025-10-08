@@ -102,7 +102,7 @@ namespace Halibut.Tests.Queue.Redis
                 throw exceptionToThrow;
             }
 
-            public Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> rehydrateDataStreams, bool useReceiver, CancellationToken cancellationToken)
+            public Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> rehydrateDataStreams, CancellationToken cancellationToken)
             {
                 throw exceptionToThrow;
             }

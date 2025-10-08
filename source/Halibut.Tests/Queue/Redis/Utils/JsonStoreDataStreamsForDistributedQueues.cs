@@ -45,7 +45,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Encoding.UTF8.GetBytes(json);
         }
 
-        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, bool useReceiver, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             
@@ -70,7 +70,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
 
                 var bytes = Convert.FromBase64String(base64Data);
                 
-                dataStream.Rehydrate(useReceiver, () =>
+                dataStream.Rehydrate(() =>
                 {
                     var stream = new MemoryStream(bytes);
                     return new DataStreamRehydrationData(stream);

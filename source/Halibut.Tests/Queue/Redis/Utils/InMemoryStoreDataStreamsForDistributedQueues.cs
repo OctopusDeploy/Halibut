@@ -37,14 +37,14 @@ namespace Halibut.Tests.Queue.Redis.Utils
             return Array.Empty<byte>();
         }
         
-        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, bool useReciever, CancellationToken cancellationToken)
+        public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
             foreach (var dataStream in dataStreams)
             {
                 var bytes = dataStreamsStored[dataStream.Id];
                 dataStreamsStored.Remove(dataStream.Id);
-                dataStream.Rehydrate(useReciever, () =>
+                dataStream.Rehydrate(() =>
                 {
                     var s = new MemoryStream(bytes);
                     return new DataStreamRehydrationData(s);

@@ -14,7 +14,7 @@ namespace Halibut.Queue.Redis.MessageStorage
         // Rehydrates the DataStream with the stream returned by data.
         // Once that stream is returned that stream will be disposed as well
         // as the disposable if not null.
-        public void Rehydrate(bool useReceiver, Func<DataStreamRehydrationData> dataStreamRehydratorFactory);
+        public void Rehydrate(Func<DataStreamRehydrationData> dataStreamRehydratorFactory);
     }
 
     public class DataStreamRehydrationData : IAsyncDisposable

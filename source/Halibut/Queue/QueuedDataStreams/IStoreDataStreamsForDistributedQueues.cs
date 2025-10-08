@@ -21,6 +21,7 @@ namespace Halibut.Queue.QueuedDataStreams
         /// Must store the data for the given dataStreams.
         /// </summary>
         /// <param name="dataStreams"></param>
+        /// <param name="useReciever">When set 'true' the data must be read from the Receiver of the DataStream. This will be true for responses.</param>
         /// <param name="cancellationToken"></param>
         /// <returns>A string, DataStreamMetadata, containing a small amount of data that will be stored in redis, this will be
         /// given to RehydrateDataStreams</returns>
@@ -34,6 +35,6 @@ namespace Halibut.Queue.QueuedDataStreams
         /// <param name="dataStreams"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, bool useReciever, CancellationToken cancellationToken);
+        public Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken);
     }
 }
