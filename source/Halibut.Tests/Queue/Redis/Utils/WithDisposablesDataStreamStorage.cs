@@ -22,12 +22,12 @@ namespace Halibut.Tests.Queue.Redis.Utils
             RehydrateDisposableFactory = rehydrateDisposableFactory;
         }
 
-        public async Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, bool useReciever, CancellationToken cancellationToken)
+        public async Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, bool useReceiver, CancellationToken cancellationToken)
         {
             foreach (var dataStream in dataStreams)
             {
                 using var memoryStream = new MemoryStream();
-                if (useReciever)
+                if (useReceiver)
                 {
                     await dataStream.Receiver().ReadAsync(async (stream, ct) =>
                     {

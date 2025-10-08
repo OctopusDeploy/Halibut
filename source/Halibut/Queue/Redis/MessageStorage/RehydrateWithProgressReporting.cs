@@ -1,6 +1,5 @@
 
 using System;
-using System.IO;
 using Halibut.DataStreams;
 
 namespace Halibut.Queue.Redis.MessageStorage

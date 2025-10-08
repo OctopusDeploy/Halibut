@@ -1062,7 +1062,7 @@ namespace Halibut.Tests.Queue.Redis
         
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false, pollingQueuesToTest: PollingQueuesToTest.RedisOnly)]
-        public async Task StreamsAreCleanedUp(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenDataStreamsAreSentAndReceived_TheDisposablesInTheDataStreamStorageAreInvoked(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
             var redisTransport = new HalibutRedisTransport(redisFacade);
