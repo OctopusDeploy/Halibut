@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.TestSetup.Redis;
 using Halibut.Tests.Util;
 
 namespace Halibut.Tests.Support.TestCases
@@ -36,7 +37,7 @@ namespace Halibut.Tests.Support.TestCases
             {
                 foreach (var serviceConnectionType in serviceConnectionTypes)
                 {
-                    bool shouldTestDifferentQueues = (serviceConnectionType == ServiceConnectionType.Polling) && clientServiceTestVersion.IsLatest();
+                    bool shouldTestDifferentQueues = (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket) && clientServiceTestVersion.IsLatest();
                     var queueTypes = shouldTestDifferentQueues ? PollingQueueTypes() : null;
                     
                     foreach (var networkConditionTestCase in networkConditionTestCases)
@@ -76,9 +77,10 @@ namespace Halibut.Tests.Support.TestCases
             if(pollingQueuesToTest is PollingQueuesToTest.InMemory or PollingQueuesToTest.All) queueTypes.Add(PollingQueueTestCase.InMemory);
             if (pollingQueuesToTest is PollingQueuesToTest.RedisOnly or PollingQueuesToTest.All)
             {
-#if NET8_0_OR_GREATER
-                queueTypes.Add(PollingQueueTestCase.Redis);
-#endif
+                if (EnsureRedisIsAvailableSetupFixture.WillRunRedisTests)
+                {
+                    queueTypes.Add(PollingQueueTestCase.Redis);
+                }
             }
             return queueTypes;
         }
