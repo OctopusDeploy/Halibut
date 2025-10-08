@@ -24,7 +24,8 @@ namespace Halibut.Queue.Redis.MessageStorage
         {
             if (useReceiver)
             {
-                // This is very sus, since if we have a receiver, then we already have the data, so there is no progress to report on.
+                // When using a receiver, the data is already available locally and no data transfer occurs.
+                // Therefore, progress reporting is not applicable in this scenario.
                 ((IDataStreamInternal) dataStream).Received(new DataStreamRehydrationDataDataStreamReceiver(dataStreamRehydrationDataSupplier));
             }
             else
