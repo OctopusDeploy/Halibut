@@ -7,7 +7,6 @@ using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
 using ILog = Halibut.Diagnostics.ILog;
@@ -122,7 +121,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
-
+        
         public IClientAndServiceBuilder WithCachingService()
         {
             availableServices.HasCachingService = true;
