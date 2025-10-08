@@ -20,7 +20,11 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 {
                     await dataStream.Receiver().ReadAsync(async (stream, ct) =>
                     {
+#if NET8_0_OR_GREATER
                         await stream.CopyToAsync(memoryStream, ct);
+#else
+                        await stream.CopyToAsync(memoryStream); 
+#endif
                     }, cancellationToken);
                 }
                 else

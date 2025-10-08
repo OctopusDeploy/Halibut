@@ -59,6 +59,7 @@ namespace Halibut.Tests.Support
 
         IPendingRequestQueueFactory CreateRedisQueueFactory(QueueMessageSerializer messageSerializer)
         {
+#if NET8_0_OR_GREATER
             var disposableCollection = new Halibut.Util.DisposableCollection();
 
             var log = logFactory.ForPrefix("RedisQueue");
@@ -79,6 +80,9 @@ namespace Halibut.Tests.Support
                 logFactory);
             
             return queueFactory;
+#else
+            throw new NotImplementedException("Redis queue is not supported in net48");
+#endif
         }
     }
 }

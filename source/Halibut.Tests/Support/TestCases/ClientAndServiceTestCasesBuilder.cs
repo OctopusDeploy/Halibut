@@ -73,9 +73,13 @@ namespace Halibut.Tests.Support.TestCases
         {
             // TODO inline these so each if creates and returns the list.
             var queueTypes = new List<PollingQueueTestCase>();
-            if(pollingQueuesToTest == PollingQueuesToTest.All) queueTypes.AddRange(new []{PollingQueueTestCase.Redis, PollingQueueTestCase.InMemory});
-            if(pollingQueuesToTest == PollingQueuesToTest.InMemory) queueTypes.Add(PollingQueueTestCase.InMemory);
-            if(pollingQueuesToTest == PollingQueuesToTest.RedisOnly) queueTypes.Add(PollingQueueTestCase.Redis);
+            if(pollingQueuesToTest is PollingQueuesToTest.InMemory or PollingQueuesToTest.All) queueTypes.Add(PollingQueueTestCase.InMemory);
+            if (pollingQueuesToTest is PollingQueuesToTest.RedisOnly or PollingQueuesToTest.All)
+            {
+#if NET8_0_OR_GREATER
+                queueTypes.Add(PollingQueueTestCase.Redis);
+#endif
+            }
             return queueTypes;
         }
     }

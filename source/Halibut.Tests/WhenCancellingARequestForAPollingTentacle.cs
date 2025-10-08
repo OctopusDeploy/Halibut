@@ -74,12 +74,14 @@ namespace Halibut.Tests
                            .WithEchoService()
                            .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) =>
                            {
-                               var queue = inner.ModifyRedisQueue(redis =>
+#if NET8_0_OR_GREATER
+                               inner = inner.ModifyRedisQueue(redis =>
                                {
                                    redis.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
                                    return redis;
                                });
-                               return new CancelWhenRequestDequeuedPendingRequestQueueFactory(queue, tokenSourceToCancel, ShouldCancelOnDequeue, OnResponseApplied);
+#endif
+                               return new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourceToCancel, ShouldCancelOnDequeue, OnResponseApplied);
                            }))
                            .Build(CancellationToken))
                 {
