@@ -6,19 +6,6 @@ using Halibut.Tests.Support.TestCases;
 
 namespace Halibut.Tests.Support.TestAttributes
 {
-    public enum PollingQueuesToTest
-    {
-        All,
-        RedisOnly,
-        InMemory
-    }
-
-    public enum PollingQueueTestCase
-    {
-        Redis,
-        InMemory
-    }
-    
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true, Inherited = false)]
     public class LatestAndPreviousClientAndServiceVersionsTestCasesAttribute : HalibutTestCaseSourceAttribute
     {

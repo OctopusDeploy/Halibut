@@ -122,10 +122,6 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         }
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithCachingService() => WithCachingService();
-        public IClientAndServiceBuilder WithPollingQueueType(PollingQueueTestCase pollingQueueTestCase)
-        {
-            throw new NotImplementedException();
-        }
 
         public IClientAndServiceBuilder WithCachingService()
         {

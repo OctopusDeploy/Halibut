@@ -52,7 +52,7 @@ namespace Halibut.Tests.Support.TestAttributes
                         },
                     serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
-                    PollingQueuesToTest.InMemory
+                    PollingQueuesToTest.InMemoryOnly
                 );
 
                 return builder.Build();

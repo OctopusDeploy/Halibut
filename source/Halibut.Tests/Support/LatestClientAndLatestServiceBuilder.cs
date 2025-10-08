@@ -37,7 +37,6 @@ namespace Halibut.Tests.Support
         Reference<PortForwarder>? clientPortForwarderReference;
         Reference<PortForwarder>? servicePortForwarderReference;
         Reference<PortForwarder>? portForwarderReference;
-        readonly PollingQueueTestCase? pollingQueueTestCase;
 
         public LatestClientAndLatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
@@ -49,7 +48,6 @@ namespace Halibut.Tests.Support
 
             clientBuilder = new LatestClientBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, pollingQueueTestCase);
             serviceBuilder = new LatestServiceBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint);
-            this.pollingQueueTestCase = pollingQueueTestCase;
         }
 
         public static LatestClientAndLatestServiceBuilder Polling(PollingQueueTestCase pollingQueueTestCase)

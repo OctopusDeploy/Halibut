@@ -38,7 +38,7 @@ namespace Halibut.Tests.Timeouts
 
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromMinutes(20));
             halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
-            halibutTimeoutsAndLimits.PollingQueueWaitTimeout = TimeSpan.FromSeconds(1); // TODO verify this makes it to the queue.
+            halibutTimeoutsAndLimits.PollingQueueWaitTimeout = TimeSpan.FromSeconds(1);
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()

@@ -142,7 +142,7 @@ namespace Halibut.Tests
         /// </summary>
         /// <param name="clientAndServiceTestCase"></param>
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, pollingQueuesToTest: PollingQueuesToTest.InMemory)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, pollingQueuesToTest: PollingQueuesToTest.InMemoryOnly)]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {

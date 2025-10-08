@@ -5,7 +5,6 @@ using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.RedisDataLossDetection;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.ServiceModel;
-using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestSetup.Redis;
@@ -18,7 +17,6 @@ namespace Halibut.Tests.Support
         readonly ILogFactory logFactory;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         Func<ILogFactory, IPendingRequestQueueFactory, IPendingRequestQueueFactory>? createDecorator;
-        TimeSpan? pollingQueueWaitTimeout;
 
         public PendingRequestQueueFactoryBuilder(PollingQueueTestCase pollingQueueTestCase, 
             ILogFactory logFactory,
@@ -32,12 +30,6 @@ namespace Halibut.Tests.Support
         public PendingRequestQueueFactoryBuilder WithDecorator(Func<ILogFactory, IPendingRequestQueueFactory, IPendingRequestQueueFactory> createDecorator)
         {
             this.createDecorator = createDecorator;
-            return this;
-        }
-
-        public PendingRequestQueueFactoryBuilder WithPollingQueueWaitTimeout(TimeSpan pollingQueueWaitTimeout)
-        {
-            this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
             return this;
         }
 

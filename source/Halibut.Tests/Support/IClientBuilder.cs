@@ -12,8 +12,5 @@ namespace Halibut.Tests.Support
         Task<IClient> Build(CancellationToken cancellationToken);
         IClientBuilder WithPortForwarding(out Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory);
         IClientBuilder WithHalibutLoggingLevel(LogLevel info);
-        
-        // TODO
-        //IClientBuilder WithPollingQueueType(PollingQueueTestCase pollingQueueTestCase) 
     }
 }

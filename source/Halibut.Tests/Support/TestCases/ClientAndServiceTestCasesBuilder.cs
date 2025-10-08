@@ -72,9 +72,8 @@ namespace Halibut.Tests.Support.TestCases
 
         List<PollingQueueTestCase> PollingQueueTypes()
         {
-            // TODO inline these so each if creates and returns the list.
             var queueTypes = new List<PollingQueueTestCase>();
-            if(pollingQueuesToTest is PollingQueuesToTest.InMemory or PollingQueuesToTest.All) queueTypes.Add(PollingQueueTestCase.InMemory);
+            if(pollingQueuesToTest is PollingQueuesToTest.InMemoryOnly or PollingQueuesToTest.All) queueTypes.Add(PollingQueueTestCase.InMemory);
             if (pollingQueuesToTest is PollingQueuesToTest.RedisOnly or PollingQueuesToTest.All)
             {
                 if (EnsureRedisIsAvailableSetupFixture.WillRunRedisTests)
