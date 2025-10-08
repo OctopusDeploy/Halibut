@@ -50,7 +50,6 @@ namespace Halibut.Tests.Support
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.pollingQueueTestCase = pollingQueueTestCase;
             clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
-            this.pollingQueueTestCase = pollingQueueTestCase;
             if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
                 if (pollingQueueTestCase == null)
