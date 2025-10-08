@@ -20,13 +20,15 @@ namespace Halibut.Util
 {
     public static class PendingRequestQueueFactoryExtensionMethods
     {
+#if NET8_0_OR_GREATER
         internal static IPendingRequestQueueFactory ModifyRedisQueue(
             this IPendingRequestQueueFactory pendingRequestQueueFactory, 
             Func<RedisPendingRequestQueue, RedisPendingRequestQueue> redisQueueModifier)
         {
             return new RedisQueueModifyingPendingRequestQueueFactory(pendingRequestQueueFactory, redisQueueModifier);
         }
-
+#endif
+        
         public static IPendingRequestQueueFactory CaptureCreatedQueues(this IPendingRequestQueueFactory pendingRequestQueueFactory, Action<IPendingRequestQueue> onCreated)
         {
             return new CaptureQueueCreatedPendingRequestQueueFactory(pendingRequestQueueFactory, onCreated);
@@ -51,6 +53,7 @@ namespace Halibut.Util
             return queue;
         }
     }
+#if NET8_0_OR_GREATER
     public class RedisQueueModifyingPendingRequestQueueFactory : IPendingRequestQueueFactory
     {
         IPendingRequestQueueFactory inner;
@@ -70,4 +73,5 @@ namespace Halibut.Util
             return queue;
         }
     }
+#endif
 }

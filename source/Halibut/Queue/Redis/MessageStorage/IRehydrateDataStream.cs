@@ -72,7 +72,11 @@ namespace Halibut.Queue.Redis.MessageStorage
 #endif
                 using (var file = new FileStream(filePath, FileMode.Create))
             {
+#if NET8_0_OR_GREATER
                 await dataStreamRehydrationData.Data.CopyToAsync(file, cancellationToken);
+#else
+                await dataStreamRehydrationData.Data.CopyToAsync(file);
+#endif
             }
         }
 
