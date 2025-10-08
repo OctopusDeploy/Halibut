@@ -236,11 +236,6 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<PollingQueueTestCase, ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
-        {
-            return WithPendingRequestQueueFactory((pollingQueueTestCase, _, logFactory) => pendingRequestQueueFactory(pollingQueueTestCase, logFactory));
-        }
-
         public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(
             Func<PollingQueueTestCase, QueueMessageSerializer, ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
