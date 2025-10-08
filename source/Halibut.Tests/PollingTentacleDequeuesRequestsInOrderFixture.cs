@@ -9,6 +9,7 @@ using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -21,12 +22,16 @@ namespace Halibut.Tests
         {
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             halibutTimeoutsAndLimits.PollingQueueWaitTimeout = TimeSpan.FromSeconds(1);
-            IPendingRequestQueue ?pendingRequestQueue = null;
+            IPendingRequestQueue? pendingRequestQueue = null;
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
                        .WithInstantReconnectPollingRetryPolicy()
                        .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                       .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => inner.CaptureCreatedQueues(queue =>
+                       {
+                           pendingRequestQueue = queue;
+                       })))
                        .Build(CancellationToken))
             {
                 var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
@@ -50,10 +55,14 @@ namespace Halibut.Tests
 
 
                 var countingService = clientAndService.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
-
+                
+                // The queues don't all work the same with the Count operator, this account for that.
+                int baseCount = pendingRequestQueue!.Count;
+                
                 var tasks = new List<Task<int>>();
                 for (int i = 0; i < 10; i++)
                 {
+                    
                     var task = Task.Run(async () => await countingService.IncrementAsync());
                     tasks.Add(task);
                     // Wait for the RPC call to get on to the queue before proceeding
@@ -62,7 +71,8 @@ namespace Halibut.Tests
 #pragma warning disable VSTHRD003 // Avoid awaiting foreign Tasks
                         await task.AwaitIfFaulted();
 #pragma warning restore VSTHRD003 // Avoid awaiting foreign Tasks
-                        return pendingRequestQueue!.Count == i + 1;
+                        
+                        return pendingRequestQueue!.Count - baseCount == i + 1;
                     }, CancellationToken);
                 }
 

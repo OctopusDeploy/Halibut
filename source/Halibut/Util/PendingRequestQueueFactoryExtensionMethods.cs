@@ -26,8 +26,31 @@ namespace Halibut.Util
         {
             return new RedisQueueModifyingPendingRequestQueueFactory(pendingRequestQueueFactory, redisQueueModifier);
         }
+
+        public static IPendingRequestQueueFactory CaptureCreatedQueues(this IPendingRequestQueueFactory pendingRequestQueueFactory, Action<IPendingRequestQueue> onCreated)
+        {
+            return new CaptureQueueCreatedPendingRequestQueueFactory(pendingRequestQueueFactory, onCreated);
+        }
     }
 
+    public class CaptureQueueCreatedPendingRequestQueueFactory : IPendingRequestQueueFactory
+    {
+        IPendingRequestQueueFactory inner;
+        Action<IPendingRequestQueue> onCreated;
+
+        public CaptureQueueCreatedPendingRequestQueueFactory(IPendingRequestQueueFactory inner, Action<IPendingRequestQueue> onCreated)
+        {
+            this.inner = inner;
+            this.onCreated = onCreated;
+        }
+
+        public IPendingRequestQueue CreateQueue(Uri endpoint)
+        {
+            var queue = inner.CreateQueue(endpoint);
+            onCreated(queue);
+            return queue;
+        }
+    }
     public class RedisQueueModifyingPendingRequestQueueFactory : IPendingRequestQueueFactory
     {
         IPendingRequestQueueFactory inner;
