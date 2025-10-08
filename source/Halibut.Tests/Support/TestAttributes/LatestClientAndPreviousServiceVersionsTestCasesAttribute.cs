@@ -52,7 +52,7 @@ namespace Halibut.Tests.Support.TestAttributes
                         },
                     serviceConnectionTypes.ToArray(),
                     testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
-                    PollingQueuesToTest.InMemoryOnly
+                    PollingQueuesToTest.InMemoryOnly // Don't test the redis queue when not testing latest service and latest client, as that feels unnecessary.
                 );
 
                 return builder.Build();
