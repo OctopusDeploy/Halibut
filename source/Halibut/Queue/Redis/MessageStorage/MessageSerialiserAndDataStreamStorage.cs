@@ -23,7 +23,7 @@ namespace Halibut.Queue.Redis.MessageStorage
             var (jsonRequestMessage, dataStreams) = await queueMessageSerializer.WriteMessage(request);
             SwitchDataStreamsToNotReportProgress(dataStreams);
             var dataStreamProgressReporter = HeartBeatDrivenDataStreamProgressReporter.CreateForDataStreams(dataStreams);
-            var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, false,cancellationToken);
+            var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, false, cancellationToken);
             return (new RedisStoredMessage(jsonRequestMessage, dataStreamMetadata), dataStreamProgressReporter);
         }
 
