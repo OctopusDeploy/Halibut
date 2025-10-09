@@ -1106,8 +1106,8 @@ namespace Halibut.Tests.Queue.Redis
                 (await response.Payload1!.ReadAsString(CancellationToken)).Should().Be("Hello");
                 (await response.Payload2!.ReadAsString(CancellationToken)).Should().Be("World");
                 
-                disposablesCreated.Should().Be(4, "Since we send 2 data streams and recieve 2 data streams.");
-                disposablesDisposed.Should().Be(4, "Since we send 2 data streams and recieve 2 data streams.");
+                disposablesCreated.Should().Be(4, "Since we send 2 data streams and receive 2 data streams.");
+                disposablesDisposed.Should().Be(4, "Since we send 2 data streams and receive 2 data streams.");
             }
         }
 
