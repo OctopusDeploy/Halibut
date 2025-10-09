@@ -34,6 +34,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
 #if NET8_0_OR_GREATER
                         await stream.CopyToAsync(memoryStream, ct);
 #else
+                        await Task.CompletedTask;
                         throw new NotImplementedException("Redis PRQ is not supported in net48");
 #endif
                     }, cancellationToken);
