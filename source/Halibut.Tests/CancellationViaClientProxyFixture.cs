@@ -35,7 +35,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .OnLatestClientAndLatestServiceBuilder(c =>
                        {
-                           waitForItemToLandOnTheQueueBeforeCancellation = true;
+                           waitForItemToLandOnTheQueueBeforeCancellation = clientAndServiceTestCase.PollingQueueTestCase != null;
                            c.WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => inner.CaptureCreatedQueues(queue =>
                            {
                                pendingRequestQueue = queue;
