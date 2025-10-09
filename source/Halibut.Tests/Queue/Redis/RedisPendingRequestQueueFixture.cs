@@ -941,7 +941,7 @@ namespace Halibut.Tests.Queue.Redis
         }
 
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false, pollingQueuesToTest: PollingQueuesToTest.RedisOnly)]
         public async Task WhenUsingTheRedisQueue_ASimpleEchoServiceCanBeCalled(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
@@ -951,7 +951,7 @@ namespace Halibut.Tests.Queue.Redis
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithStandardServices()
                              .AsLatestClientAndLatestServiceBuilder()
-                             .WithPendingRequestQueueFactory((queueMessageSerializer, logFactory) =>
+                             .WithPendingRequestQueueFactory((_, queueMessageSerializer, logFactory) =>
                                  new RedisPendingRequestQueueFactory(
                                          queueMessageSerializer,
                                          dataStreamStore,
@@ -970,7 +970,7 @@ namespace Halibut.Tests.Queue.Redis
         }
         
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false, pollingQueuesToTest: PollingQueuesToTest.RedisOnly)]
         public async Task WhenUsingTheRedisQueue_StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
@@ -1005,7 +1005,7 @@ namespace Halibut.Tests.Queue.Redis
                                          .Build())
                                      .Build())
                                  .Build())
-                             .WithPendingRequestQueueFactory((queueMessageSerializer, logFactory) =>
+                             .WithPendingRequestQueueFactory((_, queueMessageSerializer, logFactory) =>
                                  new RedisPendingRequestQueueFactory(
                                          queueMessageSerializer,
                                          dataStreamStore,
@@ -1057,6 +1057,57 @@ namespace Halibut.Tests.Queue.Redis
                 count.Should().Be(dataSizeToSend);
 
                 currentProgress.Should().Be(100, "at the end of the clal the upload progress should be 100");
+            }
+        }
+        
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false, testWebSocket: false, pollingQueuesToTest: PollingQueuesToTest.RedisOnly)]
+        public async Task WhenDataStreamsAreSentAndReceived_TheDisposablesInTheDataStreamStorageAreInvoked(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade();
+            var redisTransport = new HalibutRedisTransport(redisFacade);
+            int disposablesCreated = 0;
+            int disposablesDisposed = 0;
+            var dataStreamStore = new WithDisposablesDataStreamStorage(() =>
+            {
+                Interlocked.Increment(ref disposablesCreated);
+                return new FuncAsyncDisposable(async () =>
+                {
+                    Interlocked.Increment(ref disposablesDisposed);
+                    await Task.CompletedTask;
+                });
+            });
+                
+            Reference<PortForwarder> portForwarder = new Reference<PortForwarder>();
+            var aboutHalfTheDataStreamHasBeenSentWaiter = new AsyncManualResetEvent(); 
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithStandardServices()
+                             .AsLatestClientAndLatestServiceBuilder()
+                             .WithPendingRequestQueueFactory((_, queueMessageSerializer, logFactory) =>
+                                 new RedisPendingRequestQueueFactory(
+                                         queueMessageSerializer,
+                                         dataStreamStore,
+                                         new RedisNeverLosesData(),
+                                         redisTransport,
+                                         new HalibutTimeoutsAndLimits(),
+                                         logFactory)
+                                     .WithWaitForReceiverToBeReady()
+                                     .WithQueueCreationCallBack(queue =>
+                                     {
+                                         // Lower these timeouts to get faster feedback on the upload progress.
+                                         queue.RequestReceiverNodeHeartBeatRate = TimeSpan.FromMilliseconds(100);
+                                         queue.TimeBetweenCheckingIfRequestWasCollected = TimeSpan.FromMilliseconds(100);
+                                     }))
+                             .Build(CancellationToken))
+            {
+                
+                var complexObjectService = clientAndService.CreateAsyncClient<IComplexObjectService, IAsyncClientComplexObjectService>();
+                var response = await complexObjectService.ProcessAsync(new ComplexObjectMultipleDataStreams(DataStream.FromString("Hello"), DataStream.FromString("World")));
+                (await response.Payload1!.ReadAsString(CancellationToken)).Should().Be("Hello");
+                (await response.Payload2!.ReadAsString(CancellationToken)).Should().Be("World");
+                
+                disposablesCreated.Should().Be(4, "Since we send 2 data streams and receive 2 data streams.");
+                disposablesDisposed.Should().Be(4, "Since we send 2 data streams and receive 2 data streams.");
             }
         }
 

@@ -13,17 +13,18 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testWebSocket = true,
             bool testNetworkConditions = true,
             bool testListening = true,
-            bool testPolling = true) :
+            bool testPolling = true,
+            PollingQueuesToTest testAllQueueTypes = PollingQueuesToTest.All) :
             base(
                 typeof(LatestAndPreviousClientAndServiceVersionsTestCases),
                 nameof(LatestAndPreviousClientAndServiceVersionsTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling})
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, testAllQueueTypes})
         {
         }
         
         static class LatestAndPreviousClientAndServiceVersionsTestCases
         {
-            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling)
+            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, PollingQueuesToTest testAllQueueTypes)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -54,7 +55,8 @@ namespace Halibut.Tests.Support.TestAttributes
                             ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
                         },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect });
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
+                    testAllQueueTypes);
 
                 return builder.Build();
             }

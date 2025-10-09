@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
 using Halibut.Logging;
+using Halibut.Queue.Redis.Cancellation;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PendingRequestQueueFactories;
@@ -16,6 +17,7 @@ using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -56,6 +58,7 @@ namespace Halibut.Tests
                 await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                            .AsLatestClientAndLatestServiceBuilder()
                            .WithHalibutLoggingLevel(LogLevel.Trace)
+                           .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero, TimeSpan.Zero))
                            .WithDoSomeActionService(() =>
                            {
                                calls.Add(DateTime.UtcNow);
@@ -65,12 +68,21 @@ namespace Halibut.Tests
                                    // Wait until the request is cancelled
                                    Thread.Sleep(TimeSpan.FromMilliseconds(100));
                                }
-
+                               
                                Thread.Sleep(TimeSpan.FromSeconds(1));
                            })
                            .WithEchoService()
-                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => 
-                               new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourceToCancel, ShouldCancelOnDequeue, OnResponseApplied)))
+                           .WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) =>
+                           {
+#if NET8_0_OR_GREATER
+                               inner = inner.ModifyRedisQueue(redis =>
+                               {
+                                   redis.DelayBeforeSubscribingToRequestCancellation = new DelayBeforeSubscribingToRequestCancellation(TimeSpan.Zero);
+                                   return redis;
+                               });
+#endif
+                               return new CancelWhenRequestDequeuedPendingRequestQueueFactory(inner, tokenSourceToCancel, ShouldCancelOnDequeue, OnResponseApplied);
+                           }))
                            .Build(CancellationToken))
                 {
 

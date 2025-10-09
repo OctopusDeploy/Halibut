@@ -15,9 +15,7 @@ using Halibut.Queue.Redis.MessageStorage;
 using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Queue.Redis.Utils;
-using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
@@ -99,7 +97,7 @@ namespace Halibut.Tests.Queue.Redis
                 this.exceptionToThrow = exceptionToThrow;
             }
 
-            public Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, CancellationToken cancellationToken)
+            public Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, bool useReceiver, CancellationToken cancellationToken)
             {
                 throw exceptionToThrow;
             }

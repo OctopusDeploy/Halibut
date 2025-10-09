@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.TestSetup.Redis;
 using Halibut.Tests.Util;
 
 namespace Halibut.Tests.Support.TestCases
@@ -9,15 +11,17 @@ namespace Halibut.Tests.Support.TestCases
         readonly ClientAndServiceTestVersion[] clientServiceTestVersions;
         readonly ServiceConnectionType[] serviceConnectionTypes;
         readonly NetworkConditionTestCase[] networkConditionTestCases;
+        readonly PollingQueuesToTest pollingQueuesToTest;
 
-        public ClientAndServiceTestCasesBuilder(
-            IEnumerable<ClientAndServiceTestVersion> clientServiceTestVersions,
+        public ClientAndServiceTestCasesBuilder(IEnumerable<ClientAndServiceTestVersion> clientServiceTestVersions,
             IEnumerable<ServiceConnectionType> serviceConnectionTypes,
-            IEnumerable<NetworkConditionTestCase> networkConditionTestCases)
+            IEnumerable<NetworkConditionTestCase> networkConditionTestCases, 
+            PollingQueuesToTest pollingQueuesToTest)
         {
             this.clientServiceTestVersions = clientServiceTestVersions.Distinct().ToArray();
             this.serviceConnectionTypes = serviceConnectionTypes.Distinct().ToArray();
             this.networkConditionTestCases = networkConditionTestCases.Distinct().ToArray();
+            this.pollingQueuesToTest = pollingQueuesToTest;
         }
 
         public IEnumerable<ClientAndServiceTestCase> Build()
@@ -33,6 +37,9 @@ namespace Halibut.Tests.Support.TestCases
             {
                 foreach (var serviceConnectionType in serviceConnectionTypes)
                 {
+                    bool shouldTestDifferentQueues = (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket) && clientServiceTestVersion.IsLatest();
+                    var queueTypes = shouldTestDifferentQueues ? PollingQueueTypes() : null;
+                    
                     foreach (var networkConditionTestCase in networkConditionTestCases)
                     {
                         // Slightly bad network conditions e.g. a delay of 20ms can blow out test times especially when running for 2000 iterations.
@@ -42,8 +49,18 @@ namespace Halibut.Tests.Support.TestCases
                         {
                             recommendedIterations = StandardIterationCount.ForServiceType(serviceConnectionType, clientServiceTestVersion);
                         }
-                        
-                        cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion));
+
+                        if (queueTypes != null)
+                        {
+                            foreach (var pollingQueueTestCase in queueTypes)
+                            {
+                                cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, pollingQueueTestCase));
+                            }
+                        }
+                        else
+                        {
+                            cases.Add(new ClientAndServiceTestCase(serviceConnectionType, networkConditionTestCase, recommendedIterations, clientServiceTestVersion, null));
+                        }
                     }
                 }
             }
@@ -51,6 +68,20 @@ namespace Halibut.Tests.Support.TestCases
             var distinct = cases.Distinct().ToList();
 
             return distinct;
+        }
+
+        List<PollingQueueTestCase> PollingQueueTypes()
+        {
+            var queueTypes = new List<PollingQueueTestCase>();
+            if(pollingQueuesToTest is PollingQueuesToTest.InMemoryOnly or PollingQueuesToTest.All) queueTypes.Add(PollingQueueTestCase.InMemory);
+            if (pollingQueuesToTest is PollingQueuesToTest.RedisOnly or PollingQueuesToTest.All)
+            {
+                if (EnsureRedisIsAvailableSetupFixture.WillRunRedisTests)
+                {
+                    queueTypes.Add(PollingQueueTestCase.Redis);
+                }
+            }
+            return queueTypes;
         }
     }
 }

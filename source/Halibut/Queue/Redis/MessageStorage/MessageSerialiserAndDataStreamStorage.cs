@@ -23,7 +23,7 @@ namespace Halibut.Queue.Redis.MessageStorage
             var (jsonRequestMessage, dataStreams) = await queueMessageSerializer.WriteMessage(request);
             SwitchDataStreamsToNotReportProgress(dataStreams);
             var dataStreamProgressReporter = HeartBeatDrivenDataStreamProgressReporter.CreateForDataStreams(dataStreams);
-            var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
+            var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, false, cancellationToken);
             return (new RedisStoredMessage(jsonRequestMessage, dataStreamMetadata), dataStreamProgressReporter);
         }
 
@@ -43,7 +43,7 @@ namespace Halibut.Queue.Redis.MessageStorage
         {
             var (request, dataStreams) = await queueMessageSerializer.ReadMessage<RequestMessage>(storedMessage.Message);
 
-            var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, out var dataStreamTransferProgress);
+            var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, false, out var dataStreamTransferProgress);
 
             await storeDataStreamsForDistributedQueues.RehydrateDataStreams(storedMessage.DataStreamMetadata, rehydratableDataStreams, cancellationToken);
             return (request, new RequestDataStreamsTransferProgress(dataStreamTransferProgress));
@@ -52,7 +52,7 @@ namespace Halibut.Queue.Redis.MessageStorage
         public async Task<RedisStoredMessage> PrepareResponse(ResponseMessage response, CancellationToken cancellationToken)
         {
             var (jsonResponseMessage, dataStreams) = await queueMessageSerializer.WriteMessage(response);
-            var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, cancellationToken);
+            var dataStreamMetadata = await storeDataStreamsForDistributedQueues.StoreDataStreams(dataStreams, true, cancellationToken);
             return new RedisStoredMessage(jsonResponseMessage, dataStreamMetadata);
         }
         
@@ -60,13 +60,13 @@ namespace Halibut.Queue.Redis.MessageStorage
         {
             var (response, dataStreams) = await queueMessageSerializer.ReadMessage<ResponseMessage>(storedMessage.Message);
             
-            var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, out _);
+            var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, true, out _);
             
             await storeDataStreamsForDistributedQueues.RehydrateDataStreams(storedMessage.DataStreamMetadata, rehydratableDataStreams, cancellationToken);
             return response;
         }
         
-        static List<IRehydrateDataStream> BuildUpRehydratableDataStreams(IReadOnlyList<DataStream> dataStreams, out List<RedisDataStreamTransferProgressRecorder> dataStreamTransferProgress)
+        static List<IRehydrateDataStream> BuildUpRehydratableDataStreams(IReadOnlyList<DataStream> dataStreams, bool useReceiver, out List<RedisDataStreamTransferProgressRecorder> dataStreamTransferProgress)
         {
             var rehydratableDataStreams = new List<IRehydrateDataStream>();
             dataStreamTransferProgress = new List<RedisDataStreamTransferProgressRecorder>();
@@ -74,7 +74,7 @@ namespace Halibut.Queue.Redis.MessageStorage
             {
                 var dtp = new RedisDataStreamTransferProgressRecorder(dataStream);
                 dataStreamTransferProgress.Add(dtp);
-                rehydratableDataStreams.Add(new RehydrateWithProgressReporting(dataStream, dtp));
+                rehydratableDataStreams.Add(new RehydrateWithProgressReporting(dataStream, dtp, useReceiver));
             }
 
             return rehydratableDataStreams;

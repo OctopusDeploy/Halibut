@@ -3,13 +3,11 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 using Octopus.TestPortForwarder;
@@ -23,6 +21,8 @@ namespace Halibut.Tests.Timeouts
         public async Task WhenNoMessagesAreSentToAPollingTentacle_ThePollingRequestQueueCausesNullMessagesToBeSent_KeepingTheConnectionAlive(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var timeSpansBetweenDataFlowing = new ConcurrentBag<TimeSpan>();
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.PollingQueueWaitTimeout = TimeSpan.FromSeconds(1);
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                                  .WithDataObserver(() =>
@@ -40,10 +40,7 @@ namespace Halibut.Tests.Timeouts
                                  })
                                  .Build())
                              .As<LatestClientAndLatestServiceBuilder>()
-                             .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
-                                 .WithLog(logFactory.ForEndpoint(uri))
-                                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                                 .Build().PendingRequestQueue))
+                             .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
                              .WithEchoService()
                              .Build(CancellationToken))
             {
@@ -68,16 +65,13 @@ namespace Halibut.Tests.Timeouts
         {
             var waitForNullMessagesFromQueueTimeout = TimeSpan.FromSeconds(10);
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.PollingQueueWaitTimeout = TimeSpan.FromSeconds(1);
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithPortForwarding(port => PortForwarderUtil.ForwardingToLocalPort(port)
                                  .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
                                  .Build())
                              .As<LatestClientAndLatestServiceBuilder>()
-                             .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
-                                 .WithLog(logFactory.ForEndpoint(uri))
-                                 .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(100)) // Increase the time between sending null requests back to trigger the timeout.
-                                 .Build()
-                                 .PendingRequestQueue))
                              .WithEchoService()
                              .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder()
                                  .Build()

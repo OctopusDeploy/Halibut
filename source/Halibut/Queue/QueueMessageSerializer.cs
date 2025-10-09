@@ -8,13 +8,14 @@ using Halibut.Queue.MessageStreamWrapping;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 
 namespace Halibut.Queue
 {
     /// <summary>
-    /// Uses the same JSON serializer used by Halibut to send messages over the wire to
-    /// serialise messages for the queue. Note that the queue serialises to JSON rather
-    /// than BSON which is what is sent over the wire.
+    /// Uses the same BSON serializer used by Halibut to send messages over the wire to
+    /// serialise messages for the queue. The queue now serialises to BSON, consistent
+    /// with what is sent over the wire.
     ///
     /// Based on battle-tested MessageSerializer, any quirks may be inherited from there.
     /// </summary>
@@ -39,18 +40,11 @@ namespace Halibut.Queue
             {
                 stream = WrapInMessageSerialisationStreams(messageStreamWrappers, stream, wrappedStreamDisposables);
 
-                using (var sw = new StreamWriter(stream, Encoding.UTF8
-#if NET8_0_OR_GREATER
-                           , leaveOpen: true
-#endif
-                       ))
+                using (var bsonDataWriter = new BsonDataWriter(stream) { CloseOutput = false })
                 {
-                    using (var jsonTextWriter = new JsonTextWriter(sw) { CloseOutput = false })
-                    {
-                        var streamCapturingSerializer = createStreamCapturingSerializer();
-                        streamCapturingSerializer.Serializer.Serialize(jsonTextWriter, new MessageEnvelope<T>(message));
-                        dataStreams = streamCapturingSerializer.DataStreams;
-                    }
+                    var streamCapturingSerializer = createStreamCapturingSerializer();
+                    streamCapturingSerializer.Serializer.Serialize(bsonDataWriter, new MessageEnvelope<T>(message));
+                    dataStreams = streamCapturingSerializer.DataStreams;
                 }
             }
 
@@ -72,18 +66,13 @@ namespace Halibut.Queue
             return stream;
         }
 
-        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadMessage<T>(byte[] json)
+        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadMessage<T>(byte[] bson)
         {
-            using var ms = new MemoryStream(json);
+            using var ms = new MemoryStream(bson);
             Stream stream = ms;
             await using var disposables = new DisposableCollection();
             stream = WrapStreamInMessageDeserialisationStreams(messageStreamWrappers, stream, disposables);
-            using var sr = new StreamReader(stream, Encoding.UTF8
-#if NET8_0_OR_GREATER
-                       , leaveOpen: true
-#endif
-            );
-            using var reader = new JsonTextReader(sr);
+            using var reader = new BsonDataReader(stream) { CloseInput = false };
             var streamCapturingSerializer = createStreamCapturingSerializer();
             var result = streamCapturingSerializer.Serializer.Deserialize<MessageEnvelope<T>>(reader);
             

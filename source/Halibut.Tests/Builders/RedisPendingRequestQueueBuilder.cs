@@ -59,7 +59,7 @@ namespace Halibut.Tests.Builders
 
             var disposableCollection = new DisposableCollection();
 
-            var redisFacade = new RedisFacade("localhost:" + RedisTestHost.Port(), (Guid.NewGuid()).ToString(), log);
+            var redisFacade = RedisFacadeBuilder.CreateRedisFacade(port: RedisTestHost.Port());
             disposableCollection.AddAsyncDisposable(redisFacade);
             
             var redisTransport = new HalibutRedisTransport(redisFacade);

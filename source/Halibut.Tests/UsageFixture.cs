@@ -135,8 +135,14 @@ namespace Halibut.Tests
             }
         }
 
+        /// <summary>
+        /// We don't test with redis, since redis reporting of file progress is done with heart beat messages, which means
+        /// we don't get a nice 1-100 number report with lots of hacking with the port forwarder. Progress reporting is tested
+        /// else where for redis.
+        /// </summary>
+        /// <param name="clientAndServiceTestCase"></param>
         [Test]
-        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, pollingQueuesToTest: PollingQueuesToTest.InMemoryOnly)]
         [LatestClientAndPreviousServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task StreamsCanBeSentWithProgressReporting(ClientAndServiceTestCase clientAndServiceTestCase)
         {

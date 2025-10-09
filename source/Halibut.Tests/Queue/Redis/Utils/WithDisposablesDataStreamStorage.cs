@@ -8,9 +8,20 @@ using Halibut.Queue.Redis.MessageStorage;
 
 namespace Halibut.Tests.Queue.Redis.Utils
 {
-    public class InMemoryStoreDataStreamsForDistributedQueues : IStoreDataStreamsForDistributedQueues
+    public class WithDisposablesDataStreamStorage : IStoreDataStreamsForDistributedQueues
     {
         readonly IDictionary<Guid, byte[]> dataStreamsStored = new Dictionary<Guid, byte[]>();
+
+        /// <summary>
+        /// Called each time we rehyrate a data stream, useful to see if this is actually disposed.
+        /// </summary>
+        readonly Func<IAsyncDisposable> RehydrateDisposableFactory;
+
+        public WithDisposablesDataStreamStorage(Func<IAsyncDisposable> rehydrateDisposableFactory)
+        {
+            RehydrateDisposableFactory = rehydrateDisposableFactory;
+        }
+
         public async Task<byte[]> StoreDataStreams(IReadOnlyList<DataStream> dataStreams, bool useReceiver, CancellationToken cancellationToken)
         {
             foreach (var dataStream in dataStreams)
@@ -32,12 +43,13 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 {
                     await dataStream.WriteData(memoryStream, cancellationToken);
                 }
+
                 dataStreamsStored[dataStream.Id] = memoryStream.ToArray();
             }
 
             return Array.Empty<byte>();
         }
-        
+
         public async Task RehydrateDataStreams(byte[] dataStreamMetadata, List<IRehydrateDataStream> dataStreams, CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
@@ -48,7 +60,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 dataStream.Rehydrate(() =>
                 {
                     var s = new MemoryStream(bytes);
-                    return new DataStreamRehydrationData(s);
+                    return new DataStreamRehydrationData(s, RehydrateDisposableFactory());
                 });
             }
         }

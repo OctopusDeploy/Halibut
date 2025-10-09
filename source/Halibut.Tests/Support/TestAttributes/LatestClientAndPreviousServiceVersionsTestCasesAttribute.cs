@@ -51,7 +51,8 @@ namespace Halibut.Tests.Support.TestAttributes
                             ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
                         },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
+                    PollingQueuesToTest.InMemoryOnly // Don't test the redis queue when not testing latest service and latest client, as that feels unnecessary.
                 );
 
                 return builder.Build();

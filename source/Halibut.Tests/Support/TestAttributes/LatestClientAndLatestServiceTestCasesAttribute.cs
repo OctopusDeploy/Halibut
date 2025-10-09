@@ -17,18 +17,24 @@ namespace Halibut.Tests.Support.TestAttributes
             bool testNetworkConditions = true,
             bool testListening = true,
             bool testPolling = true,
+            PollingQueuesToTest pollingQueuesToTest = PollingQueuesToTest.All,
             params object[] additionalParameters
             ) :
             base(
                 typeof(LatestClientAndLatestServiceTestCases),
                 nameof(LatestClientAndLatestServiceTestCases.GetEnumerator),
-                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, additionalParameters })
+                new object[] { testWebSocket, testNetworkConditions, testListening, testPolling, pollingQueuesToTest, additionalParameters })
         {
         }
 
         static class LatestClientAndLatestServiceTestCases
         {
-            public static IEnumerable GetEnumerator(bool testWebSocket, bool testNetworkConditions, bool testListening, bool testPolling, object[] additionalParameters)
+            public static IEnumerable GetEnumerator(bool testWebSocket,
+                bool testNetworkConditions,
+                bool testListening,
+                bool testPolling,
+                PollingQueuesToTest pollingQueuesToTest,
+                object[] additionalParameters)
             {
                 var serviceConnectionTypes = ServiceConnectionTypes.All.ToList();
 
@@ -50,7 +56,8 @@ namespace Halibut.Tests.Support.TestAttributes
                 var builder = new ClientAndServiceTestCasesBuilder(
                     new[] { ClientAndServiceTestVersion.Latest() },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
+                    pollingQueuesToTest
                 );
                 
                 foreach (var clientAndServiceTestCase in builder.Build())

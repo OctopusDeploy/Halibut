@@ -3,13 +3,11 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
-using Halibut.Tests.Builders;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Util;
 using NUnit.Framework;
@@ -40,7 +38,7 @@ namespace Halibut.Tests.Timeouts
 
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build().WithAllTcpTimeoutsTo(TimeSpan.FromMinutes(20));
             halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
-            
+            halibutTimeoutsAndLimits.PollingQueueWaitTimeout = TimeSpan.FromSeconds(1);
             TcpConnectionsCreatedCounter? tcpConnectionsCreatedCounter = null;
             
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
@@ -53,11 +51,6 @@ namespace Halibut.Tests.Timeouts
                            })
                            .WithCountTcpConnectionsCreated(out tcpConnectionsCreatedCounter)
                            .Build())
-                       .WithPendingRequestQueueFactory(logFactory => new FuncPendingRequestQueueFactory(uri => new PendingRequestQueueBuilder()
-                           .WithLog(logFactory.ForEndpoint(uri))
-                           .WithPollingQueueWaitTimeout(TimeSpan.FromSeconds(1))
-                           .Build()
-                           .PendingRequestQueue))
                        .WithPollingReconnectRetryPolicy(() => new RetryPolicy(1, TimeSpan.Zero,  TimeSpan.Zero))
                        .WithEchoService()
                        .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)

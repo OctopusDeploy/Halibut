@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Util;
 
@@ -50,6 +51,41 @@ namespace Halibut.Queue.Redis.MessageStorage
                     if (asyncDisposable != null) await asyncDisposable.DisposeAsync();
                 }
             });
+        }
+    }
+    
+    public class DataStreamRehydrationDataDataStreamReceiver : IDataStreamReceiver
+    {
+        public Func<DataStreamRehydrationData> DataStreamRehydrationDataSupplier { get; }
+
+        public DataStreamRehydrationDataDataStreamReceiver(Func<DataStreamRehydrationData> dataStreamRehydrationDataSupplier)
+        {
+            DataStreamRehydrationDataSupplier = dataStreamRehydrationDataSupplier;
+        }
+
+        public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
+        {
+            await using var dataStreamRehydrationData = DataStreamRehydrationDataSupplier();
+            
+#if !NETFRAMEWORK
+            await
+#endif
+                using (var file = new FileStream(filePath, FileMode.Create))
+            {
+#if NET8_0_OR_GREATER
+                await dataStreamRehydrationData.Data.CopyToAsync(file, cancellationToken);
+#else
+                await dataStreamRehydrationData.Data.CopyToAsync(file);
+#endif
+            }
+        }
+
+        public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
+        {
+            await using var dataStreamRehydrationData = DataStreamRehydrationDataSupplier();
+            
+            await readerAsync(dataStreamRehydrationData.Data, cancellationToken);
+             
         }
     }
 }
