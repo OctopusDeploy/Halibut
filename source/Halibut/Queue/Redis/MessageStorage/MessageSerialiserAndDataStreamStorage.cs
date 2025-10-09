@@ -43,7 +43,7 @@ namespace Halibut.Queue.Redis.MessageStorage
         {
             var (request, dataStreams) = await queueMessageSerializer.ReadMessage<RequestMessage>(storedMessage.Message);
 
-            var rehydratableDataStreams = BuildUpRehydratableDataStreams(false, dataStreams, out var dataStreamTransferProgress);
+            var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, false, out var dataStreamTransferProgress);
 
             await storeDataStreamsForDistributedQueues.RehydrateDataStreams(storedMessage.DataStreamMetadata, rehydratableDataStreams, cancellationToken);
             return (request, new RequestDataStreamsTransferProgress(dataStreamTransferProgress));
@@ -60,13 +60,13 @@ namespace Halibut.Queue.Redis.MessageStorage
         {
             var (response, dataStreams) = await queueMessageSerializer.ReadMessage<ResponseMessage>(storedMessage.Message);
             
-            var rehydratableDataStreams = BuildUpRehydratableDataStreams(true, dataStreams, out _);
+            var rehydratableDataStreams = BuildUpRehydratableDataStreams(dataStreams, true, out _);
             
             await storeDataStreamsForDistributedQueues.RehydrateDataStreams(storedMessage.DataStreamMetadata, rehydratableDataStreams, cancellationToken);
             return response;
         }
         
-        static List<IRehydrateDataStream> BuildUpRehydratableDataStreams(bool useReceiver, IReadOnlyList<DataStream> dataStreams, out List<RedisDataStreamTransferProgressRecorder> dataStreamTransferProgress)
+        static List<IRehydrateDataStream> BuildUpRehydratableDataStreams(IReadOnlyList<DataStream> dataStreams, bool useReceiver, out List<RedisDataStreamTransferProgressRecorder> dataStreamTransferProgress)
         {
             var rehydratableDataStreams = new List<IRehydrateDataStream>();
             dataStreamTransferProgress = new List<RedisDataStreamTransferProgressRecorder>();
