@@ -1,6 +1,5 @@
 using System;
 using System.Net.Security;
-using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +12,8 @@ namespace Halibut.Transport.Streams
         internal static async Task AuthenticateAsClientEnforcingTimeout(
             this SslStream ssl, 
             ServiceEndPoint serviceEndpoint,
-            X509Certificate2Collection clientCertificates, 
+            X509Certificate2Collection clientCertificates,
+            ISslConfigurationProvider sslConfigurationProvider,
             CancellationToken cancellationToken)
         {
             using var timeoutCts = new CancellationTokenSource(ssl.ReadTimeout);
@@ -23,7 +23,7 @@ namespace Halibut.Transport.Streams
             {
                 TargetHost = serviceEndpoint.BaseUri.Host,
                 ClientCertificates = clientCertificates,
-                EnabledSslProtocols = SslConfiguration.SupportedProtocols,
+                EnabledSslProtocols = sslConfigurationProvider.SupportedProtocols,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck
             };
 

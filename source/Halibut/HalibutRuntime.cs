@@ -46,6 +46,7 @@ namespace Halibut
         readonly ISecureConnectionObserver secureConnectionObserver;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly IControlMessageObserver controlMessageObserver;
+        readonly ISslConfigurationProvider sslConfigurationProvider;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -61,7 +62,8 @@ namespace Halibut
             IRpcObserver rpcObserver,
             IConnectionsObserver connectionsObserver, 
             IControlMessageObserver controlMessageObserver,
-            ISecureConnectionObserver secureConnectionObserver
+            ISecureConnectionObserver secureConnectionObserver,
+            ISslConfigurationProvider sslConfigurationProvider
         )
         {
             this.serverCertificate = serverCertificate;
@@ -78,9 +80,10 @@ namespace Halibut
             this.connectionsObserver = connectionsObserver;
             this.secureConnectionObserver = secureConnectionObserver;
             this.controlMessageObserver = controlMessageObserver;
+            this.sslConfigurationProvider = sslConfigurationProvider;
 
             connectionManager = new ConnectionManagerAsync();
-            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory, secureConnectionObserver);
+            tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory, secureConnectionObserver, sslConfigurationProvider);
             activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits);
         }
 
@@ -135,7 +138,8 @@ namespace Halibut
                 TimeoutsAndLimits,
                 streamFactory,
                 connectionsObserver,
-                secureConnectionObserver
+                secureConnectionObserver,
+                sslConfigurationProvider
             );
 
             listeners.DoWithExclusiveAccess(l =>
@@ -202,7 +206,7 @@ namespace Halibut
 
         public async Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            var client = new DiscoveryClient(streamFactory);
+            var client = new DiscoveryClient(streamFactory, sslConfigurationProvider);
             return await client.DiscoverAsync(endpoint, TimeoutsAndLimits, cancellationToken);
         }
 
