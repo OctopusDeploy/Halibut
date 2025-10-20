@@ -1,7 +1,7 @@
+#if NET8_0_OR_GREATER
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Docker.DotNet.Models;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Logging;
@@ -107,3 +107,4 @@ namespace Halibut.Tests
         }
     }
 }
+#endif
