@@ -5,12 +5,13 @@ using Halibut.Tests.Support;
 using Halibut.Tests.TestServices;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
+using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class HalibutExamplesFixture : BaseTest
     {
-        [RedisTest]
+        [Test]
         public async Task SimplePollingExample()
         {
             var services = GetDelegateServiceFactory();

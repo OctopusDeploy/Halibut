@@ -23,6 +23,7 @@ namespace Halibut.Tests
 {
     public class LocalExecutionModeFixture : BaseTest
     {
+        [RedisTest]
         [Test]
         public async Task SimpleLocalExecutionExample()
         {
