@@ -16,10 +16,17 @@ namespace Halibut.Transport
         readonly LogFactory logs = new ();
 
         readonly IStreamFactory streamFactory;
+        readonly ISslConfigurationProvider sslConfigurationProvider;
 
         public DiscoveryClient(IStreamFactory streamFactory)
+            : this(streamFactory, SslConfiguration.Default)
+        {
+        }
+
+        public DiscoveryClient(IStreamFactory streamFactory, ISslConfigurationProvider sslConfigurationProvider)
         {
             this.streamFactory = streamFactory;
+            this.sslConfigurationProvider = sslConfigurationProvider;
         }
 
         public async Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint serviceEndpoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, CancellationToken cancellationToken)
@@ -45,10 +52,15 @@ namespace Halibut.Transport
                             await ssl.AuthenticateAsClientAsync(
                                 serviceEndpoint.BaseUri.Host,
                                 new X509Certificate2Collection(),
-                                SslConfiguration.SupportedProtocols,
+                                sslConfigurationProvider.SupportedProtocols,
                                 false);
 #else
-                            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(), cancellationToken);
+                            await ssl.AuthenticateAsClientEnforcingTimeout(
+                                serviceEndpoint,
+                                new X509Certificate2Collection(),
+                                sslConfigurationProvider,
+                                cancellationToken
+                            );
 #endif
                             await ssl.WriteAsync(HelloLine, 0, HelloLine.Length, cancellationToken);
                             await ssl.FlushAsync(cancellationToken);

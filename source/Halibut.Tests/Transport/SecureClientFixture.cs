@@ -80,7 +80,13 @@ namespace Halibut.Tests.Transport
                 Params = new object[] { "Fred" }
             };
 
-            var tcpConnectionFactory = new TcpConnectionFactory(Certificates.Octopus, halibutTimeoutsAndLimits, new StreamFactory(), NoOpSecureConnectionObserver.Instance);
+            var tcpConnectionFactory = new TcpConnectionFactory(
+                Certificates.Octopus,
+                halibutTimeoutsAndLimits,
+                new StreamFactory(),
+                NoOpSecureConnectionObserver.Instance,
+                SslConfiguration.Default
+            );
             var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
 
