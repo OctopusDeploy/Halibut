@@ -17,5 +17,10 @@ namespace Halibut.Portability
         {
             return type.IsValueType;
         }
+
+        public static bool IsNullable(this Type type)
+        {
+            return !type.IsValueType() || Nullable.GetUnderlyingType(type) != null;
+        }
     }
 }
