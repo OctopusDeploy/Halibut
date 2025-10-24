@@ -8,17 +8,17 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
-        <TargetFrameworks>net48;net6.0</TargetFrameworks>
+        <TargetFrameworks>net48;net8.0</TargetFrameworks>
     </PropertyGroup>
     <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Halibut" Version="4.4.8">
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+        <PackageReference Include="System.ValueTuple" Version="4.6.1" />
     </ItemGroup>
 
 </Project>

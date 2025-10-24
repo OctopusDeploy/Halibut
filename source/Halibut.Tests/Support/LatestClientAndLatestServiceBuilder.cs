@@ -4,8 +4,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Logging;
+using Halibut.Queue;
 using Halibut.ServiceModel;
 using Halibut.TestProxy;
+using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
@@ -39,44 +41,55 @@ namespace Halibut.Tests.Support
         public LatestClientAndLatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint)
+            CertAndThumbprint serviceCertAndThumbprint,
+            PollingQueueTestCase? pollingQueueTestCase)
         {
             ServiceConnectionType = serviceConnectionType;
 
-            clientBuilder = new LatestClientBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint);
+            clientBuilder = new LatestClientBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, pollingQueueTestCase);
             serviceBuilder = new LatestServiceBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint);
         }
 
-        public static LatestClientAndLatestServiceBuilder Polling()
+        public static LatestClientAndLatestServiceBuilder Polling(PollingQueueTestCase pollingQueueTestCase)
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
         }
 
-        public static LatestClientAndLatestServiceBuilder PollingOverWebSocket()
+        public static LatestClientAndLatestServiceBuilder PollingOverWebSocket(PollingQueueTestCase pollingQueueTestCase)
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
         }
 
         public static LatestClientAndLatestServiceBuilder Listening()
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening, null);
         }
 
-        public static LatestClientAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
+        public static LatestClientAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType, PollingQueueTestCase? pollingQueueTestCase = null)
         {
             switch (serviceConnectionType)
             {
                 case ServiceConnectionType.Polling:
-                    return Polling();
+                    return Polling(pollingQueueTestCase ?? throw new ArgumentNullException(nameof(pollingQueueTestCase)));
                 case ServiceConnectionType.Listening:
                     return Listening();
                 case ServiceConnectionType.PollingOverWebSocket:
-                    return PollingOverWebSocket();
+                    return PollingOverWebSocket(pollingQueueTestCase ?? throw new ArgumentNullException(nameof(pollingQueueTestCase)));
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
         }
 
+        public LatestClientAndLatestServiceBuilder WithCertificates(
+            CertAndThumbprint clientCertAndThumbprint,
+            CertAndThumbprint serviceCertAndThumbprint)
+        {
+            clientBuilder.WithCertificate(clientCertAndThumbprint);
+            clientBuilder.WithTrustedThumbprint(serviceCertAndThumbprint.Thumbprint);
+            serviceBuilder.WithCertificate(serviceCertAndThumbprint);
+            serviceBuilder.WithTrustedThumbprint(clientCertAndThumbprint.Thumbprint);
+            return this;
+        }
 
         public LatestClientAndLatestServiceBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
@@ -156,6 +169,19 @@ namespace Halibut.Tests.Support
 
             return this;
         }
+        
+        public LatestClientAndLatestServiceBuilder WithPortForwarding(Reference<PortForwarder> portForwarder, Func<int, PortForwarder> portForwarderFactory)
+        {
+            // Based on ServiceConnectionType, the port forwarder will be created in either clientBuilder or serviceBuilder.
+            clientBuilder.WithPortForwarding(out clientPortForwarderReference, portForwarderFactory);
+            serviceBuilder.WithPortForwarding(out servicePortForwarderReference, portForwarderFactory);
+
+            portForwarderReference = portForwarder;
+
+            return this;
+        }
+        
+        
 
         IClientAndServiceBuilder IClientAndServiceBuilder.WithStandardServices()
         {
@@ -210,7 +236,8 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
+        public LatestClientAndLatestServiceBuilder WithPendingRequestQueueFactory(
+            Func<PollingQueueTestCase, QueueMessageSerializer, ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
             clientBuilder.WithPendingRequestQueueFactory(pendingRequestQueueFactory);
             return this;

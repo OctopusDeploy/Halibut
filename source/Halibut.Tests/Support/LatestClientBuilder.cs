@@ -5,8 +5,11 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
+using Halibut.Queue;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support.Logging;
+using Halibut.Tests.Support.TestAttributes;
+using Halibut.Tests.Util;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Streams;
 using Octopus.TestPortForwarder;
@@ -18,13 +21,14 @@ namespace Halibut.Tests.Support
     {
         readonly ServiceConnectionType serviceConnectionType;
 
-        readonly CertAndThumbprint clientCertAndThumbprint;
+        CertAndThumbprint clientCertAndThumbprint;
+        readonly PollingQueueTestCase? pollingQueueTestCase;
 
         string clientTrustsThumbprint; 
         IRpcObserver? clientRpcObserver;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
-        Func<ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
+        Func<PollingQueueTestCase, QueueMessageSerializer, ILogFactory, IPendingRequestQueueFactory>? pendingRequestQueueFactory;
         Action<PendingRequestQueueFactoryBuilder>? pendingRequestQueueFactoryBuilder;
         ProxyDetails? proxyDetails;
         LogLevel halibutLogLevel = LogLevel.Trace;
@@ -39,28 +43,49 @@ namespace Halibut.Tests.Support
         public LatestClientBuilder(
             ServiceConnectionType serviceConnectionType,
             CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint)
+            CertAndThumbprint serviceCertAndThumbprint,
+            PollingQueueTestCase? pollingQueueTestCase)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
+            this.pollingQueueTestCase = pollingQueueTestCase;
             clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
+            if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
+            {
+                if (pollingQueueTestCase == null)
+                {
+                    throw new ArgumentNullException($"Param: nameof(pollingQueueTestCase) must not be null when using {nameof(ServiceConnectionType.Polling)} or {nameof(ServiceConnectionType.PollingOverWebSocket)}");   
+                }
+            }
         }
 
-        public static LatestClientBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType)
+        public static LatestClientBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType, PollingQueueTestCase? pollingQueueTestCase)
         {
             switch (serviceConnectionType)
             {
                 case ServiceConnectionType.Polling:
-                    return new LatestClientBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling);
+                    return new LatestClientBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
                 case ServiceConnectionType.Listening:
-                    return new LatestClientBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening);
+                    return new LatestClientBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening, pollingQueueTestCase);
                 case ServiceConnectionType.PollingOverWebSocket:
-                    return new LatestClientBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling);
+                    return new LatestClientBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
             }
         }
 
+        public LatestClientBuilder WithCertificate(CertAndThumbprint clientCertAndThumprint)
+        {
+            this.clientCertAndThumbprint = clientCertAndThumprint;
+            return this;
+        }
+        
+        public LatestClientBuilder WithTrustedThumbprint(string trustedThumbprint)
+        {
+            clientTrustsThumbprint = trustedThumbprint;
+            return this;
+        }
+        
         public LatestClientBuilder WithStreamFactory(IStreamFactory streamFactory)
         {
             this.clientStreamFactory = streamFactory;
@@ -103,7 +128,7 @@ namespace Halibut.Tests.Support
             return this;
         }
         
-        public LatestClientBuilder WithPendingRequestQueueFactory(Func<ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
+        public LatestClientBuilder WithPendingRequestQueueFactory(Func<PollingQueueTestCase, QueueMessageSerializer, ILogFactory, IPendingRequestQueueFactory> pendingRequestQueueFactory)
         {
             this.pendingRequestQueueFactory = pendingRequestQueueFactory;
             return this;
@@ -172,12 +197,11 @@ namespace Halibut.Tests.Support
         {
             var octopusLogFactory = BuildClientLogger();
 
-            var factory = CreatePendingRequestQueueFactory(octopusLogFactory);
 
             var clientBuilder = new HalibutRuntimeBuilder()
                 .WithServerCertificate(clientCertAndThumbprint.Certificate2)
                 .WithLogFactory(octopusLogFactory)
-                .WithPendingRequestQueueFactory(factory)
+                .WithPendingRequestQueueFactory(serializer => CreatePendingRequestQueueFactory(serializer, octopusLogFactory))
                 .WithTrustProvider(clientTrustProvider!)
                 .WithStreamFactoryIfNotNull(clientStreamFactory)
                 .WithControlMessageObserverIfNotNull(controlMessageObserver)
@@ -236,21 +260,23 @@ namespace Halibut.Tests.Support
             return new LatestClient(client, clientListeningUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
         }
 
-        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(ILogFactory octopusLogFactory)
+        IPendingRequestQueueFactory CreatePendingRequestQueueFactory(QueueMessageSerializer queueMessageSerializer, ILogFactory octopusLogFactory)
         {
             if (pendingRequestQueueFactory != null)
             {
-                return pendingRequestQueueFactory(octopusLogFactory);
+                return pendingRequestQueueFactory(pollingQueueTestCase!.Value, queueMessageSerializer, octopusLogFactory);
             }
 
-            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(octopusLogFactory, halibutTimeoutsAndLimits);
+            if (pollingQueueTestCase == null) return new TestDoesNotNeedPendingRequestQueuePendingRequestQueueFactory();
+
+            var pendingRequestQueueFactoryBuilder = new PendingRequestQueueFactoryBuilder(pollingQueueTestCase!.Value, octopusLogFactory, halibutTimeoutsAndLimits);
 
             if (this.pendingRequestQueueFactoryBuilder != null)
             {
                 this.pendingRequestQueueFactoryBuilder(pendingRequestQueueFactoryBuilder);
             }
 
-            var factory = pendingRequestQueueFactoryBuilder.Build();
+            var factory = pendingRequestQueueFactoryBuilder.Build(queueMessageSerializer);
             return factory;
         }
 

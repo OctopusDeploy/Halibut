@@ -126,7 +126,7 @@ namespace Halibut.Transport
                 SetIoControl();
 #endif
 
-                // Supported on net48 and net6.0 on Windows
+                // Supported on net48 and net8.0 on Windows
                 void SetIoControl()
                 {
                     var size = Marshal.SizeOf((uint)0);

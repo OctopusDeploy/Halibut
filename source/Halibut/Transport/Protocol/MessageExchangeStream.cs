@@ -191,7 +191,7 @@ namespace Halibut.Transport.Protocol
             var serializedStreams = await serializer.WriteMessageAsync(stream, message, cancellationToken);
             await WriteEachStreamAsync(serializedStreams, cancellationToken);
             
-            log.Write(EventType.Diagnostic, "Sent: {0}", message);
+            log.Write(EventType.Diagnostic, "Sent message");
         }
 
         public async Task<RequestMessage?> ReceiveRequestAsync(TimeSpan timeoutForReceivingTheFirstByte, CancellationToken cancellationToken)
@@ -217,7 +217,7 @@ namespace Halibut.Transport.Protocol
         {
             var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
             await ReadStreamsAsync(dataStreams, cancellationToken);
-            log.Write(EventType.Diagnostic, "Received: {0}", result);
+            log.Write(EventType.Diagnostic, "Received Message");
             return result;
         }
 

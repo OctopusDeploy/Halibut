@@ -33,8 +33,9 @@ function ExecSafe([scriptblock] $cmd) {
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
 }
 
+# Octopus modification to ensure dotnet-install is always used in TeamCity builds
 # If dotnet CLI is installed globally and it matches requested version, use for execution
-if ($null -ne (Get-Command "dotnet" -ErrorAction SilentlyContinue) -and `
+if ($null -eq $env:TEAMCITY_VERSION -and $null -ne (Get-Command "dotnet" -ErrorAction SilentlyContinue) -and `
      $(dotnet --version) -and $LASTEXITCODE -eq 0) {
     $env:DOTNET_EXE = (Get-Command "dotnet").Path
 }
@@ -56,9 +57,13 @@ else {
     # Install by channel or version
     $DotNetDirectory = "$TempDirectory\dotnet-win"
     if (!(Test-Path variable:DotNetVersion)) {
-        ExecSafe { & powershell $DotNetInstallFile -InstallDir $DotNetDirectory -Channel $DotNetChannel -NoPath }
+        # Octopus Modification to ensure TLS1.2 is enabled within the script
+        # See https://github.com/dotnet/install-scripts/issues/362
+        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & $DotNetInstallFile -InstallDir $DotNetDirectory -Channel $DotNetChannel -NoPath" }
     } else {
-        ExecSafe { & powershell $DotNetInstallFile -InstallDir $DotNetDirectory -Version $DotNetVersion -NoPath }
+        # Octopus Modification to ensure TLS1.2 is enabled within the script
+        # See https://github.com/dotnet/install-scripts/issues/362
+        ExecSafe { & powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; & $DotNetInstallFile -InstallDir $DotNetDirectory -Version $DotNetVersion -NoPath" }
     }
     $env:DOTNET_EXE = "$DotNetDirectory\dotnet.exe"
 }

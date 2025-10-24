@@ -2,7 +2,10 @@
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Diagnostics;
+using Halibut.Queue;
+using Halibut.Queue.MessageStreamWrapping;
 using Halibut.ServiceModel;
+using Halibut.Transport;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
@@ -13,7 +16,7 @@ namespace Halibut
     public class HalibutRuntimeBuilder
     {
         ILogFactory? logFactory;
-        IPendingRequestQueueFactory? queueFactory;
+        Func<QueueMessageSerializer, IPendingRequestQueueFactory>? queueFactoryFactory;
         X509Certificate2? serverCertificate;
         IServiceFactory? serviceFactory;
         ITrustProvider? trustProvider;
@@ -26,11 +29,32 @@ namespace Halibut
         IStreamFactory? streamFactory;
         IRpcObserver? rpcObserver;
         IConnectionsObserver? connectionsObserver;
+        ISecureConnectionObserver? secureConnectionObserver;
         IControlMessageObserver? controlMessageObserver;
+        MessageStreamWrappers queueMessageStreamWrappers = new();
+        ISslConfigurationProvider? sslConfigurationProvider;
 
+        public HalibutRuntimeBuilder WithQueueMessageStreamWrappers(MessageStreamWrappers queueMessageStreamWrappers)
+        {
+            this.queueMessageStreamWrappers = queueMessageStreamWrappers;
+            return this;
+        }
+        
         public HalibutRuntimeBuilder WithConnectionsObserver(IConnectionsObserver connectionsObserver)
         {
             this.connectionsObserver = connectionsObserver;
+            return this;
+        }
+
+        public HalibutRuntimeBuilder WithSecureConnectionObserver(ISecureConnectionObserver secureConnectionsObserver)
+        {
+            this.secureConnectionObserver = secureConnectionsObserver;
+            return this;
+        }
+
+        public HalibutRuntimeBuilder WithSslConfigurationProvider(ISslConfigurationProvider sslConfigurationProvider)
+        {
+            this.sslConfigurationProvider = sslConfigurationProvider;
             return this;
         }
 
@@ -66,7 +90,13 @@ namespace Halibut
 
         public HalibutRuntimeBuilder WithPendingRequestQueueFactory(IPendingRequestQueueFactory queueFactory)
         {
-            this.queueFactory = queueFactory;
+            this.queueFactoryFactory = _ => queueFactory;
+            return this;
+        }
+        
+        public HalibutRuntimeBuilder WithPendingRequestQueueFactory(Func<QueueMessageSerializer, IPendingRequestQueueFactory> queueFactory)
+        {
+            this.queueFactoryFactory = queueFactory;
             return this;
         }
 
@@ -101,7 +131,7 @@ namespace Halibut
             return this;
         }
 
-        internal HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
+        public HalibutRuntimeBuilder WithPollingReconnectRetryPolicy(Func<RetryPolicy> pollingReconnectRetryPolicy)
         {
             this.pollingReconnectRetryPolicy = pollingReconnectRetryPolicy;
             return this;
@@ -133,7 +163,7 @@ namespace Halibut
             var serviceFactory = this.serviceFactory ?? new NullServiceFactory();
             if (serverCertificate == null) throw new ArgumentException($"Set a server certificate with {nameof(WithServerCertificate)} before calling {nameof(Build)}", nameof(serverCertificate));
             var logFactory = this.logFactory ?? new LogFactory();
-            var queueFactory = this.queueFactory ?? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
+            
             var trustProvider = this.trustProvider ?? new DefaultTrustProvider();
 
             //use either the supplied type registry, or configure the default one
@@ -153,10 +183,17 @@ namespace Halibut
             var builder = new MessageSerializerBuilder(logFactory);
             configureMessageSerializerBuilder?.Invoke(builder);
             var messageSerializer = builder.WithTypeRegistry(typeRegistry).Build();
+            
+            var queueMessageSerializer = new QueueMessageSerializer(messageSerializer.CreateStreamCapturingSerializer, queueMessageStreamWrappers);
+            var queueFactory = this.queueFactoryFactory?.Invoke(queueMessageSerializer)
+                               ?? new PendingRequestQueueFactoryAsync(halibutTimeoutsAndLimits, logFactory);
+            
             var streamFactory = this.streamFactory ?? new StreamFactory();
             var connectionsObserver = this.connectionsObserver ?? NoOpConnectionsObserver.Instance;
+            var secureConnectionObserver = this.secureConnectionObserver ?? NoOpSecureConnectionObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
             var controlMessageObserver = this.controlMessageObserver ?? new NoOpControlMessageObserver();
+            var sslConfigurationProvider = this.sslConfigurationProvider ?? SslConfiguration.Default;
 
             var halibutRuntime = new HalibutRuntime(
                 serviceFactory,
@@ -171,7 +208,10 @@ namespace Halibut
                 streamFactory,
                 rpcObserver,
                 connectionsObserver,
-                controlMessageObserver);
+                controlMessageObserver,
+                secureConnectionObserver,
+                sslConfigurationProvider
+            );
 
             if (onUnauthorizedClientConnect is not null)
             {

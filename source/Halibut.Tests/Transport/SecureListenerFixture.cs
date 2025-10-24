@@ -73,7 +73,9 @@ namespace Halibut.Tests.Transport
                     (_, _) => UnauthorizedClientConnectResponse.BlockConnection,
                     timeoutsAndLimits,
                     new StreamFactory(),
-                    NoOpConnectionsObserver.Instance
+                    NoOpConnectionsObserver.Instance,
+                    NoOpSecureConnectionObserver.Instance,
+                    SslConfiguration.Default
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)
@@ -163,7 +165,11 @@ namespace Halibut.Tests.Transport
                 await Task.Delay(TimeSpan.FromMilliseconds(30));
             } // Here is the test we dispose/stop the listner. We should not hang here forever.
             
+#if NET8_0_OR_GREATER
+            await cts.CancelAsync();
+#else
             cts.Cancel();
+#endif
             foreach (var connectTask in connectTasks)
             {
                 await connectTask;

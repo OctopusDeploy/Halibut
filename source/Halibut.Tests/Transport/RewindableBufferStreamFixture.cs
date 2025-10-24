@@ -63,7 +63,11 @@ namespace Halibut.Tests.Transport
 
                 var readBuffer = new byte[inputBuffer.Length];
                 var cts = new CancellationTokenSource();
+#if NET8_0_OR_GREATER
+                await cts.CancelAsync();
+#else
                 cts.Cancel();
+#endif
                 
                 Func<Task<int>> readAsyncCall = async () => await sut.ReadAsync(readBuffer, 0, readBuffer.Length, cts.Token);
 

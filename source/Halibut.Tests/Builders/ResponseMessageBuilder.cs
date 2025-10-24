@@ -22,7 +22,7 @@ namespace Halibut.Tests.Builders
             var response = new ResponseMessage
             {
                 Id = id,
-                Result = new object()
+                Result = "Hello World"
             };
             return response;
         }

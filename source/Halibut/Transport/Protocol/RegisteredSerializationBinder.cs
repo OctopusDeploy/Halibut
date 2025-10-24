@@ -6,17 +6,26 @@ namespace Halibut.Transport.Protocol
     public class RegisteredSerializationBinder : ISerializationBinder
     {
         readonly ISerializationBinder baseBinder = new DefaultSerializationBinder();
-        readonly Type[] protocolTypes = { typeof(ResponseMessage), typeof(RequestMessage) };
+        static readonly Type[] protocolTypes = { typeof(ResponseMessage), typeof(RequestMessage) };
         readonly ITypeRegistry typeRegistry;
 
         public RegisteredSerializationBinder() : this(new TypeRegistry())
         {
-        } // kept for backwards compatibility.
+            AddProtocolTypesToTypeRegistry(this.typeRegistry);
+        }
+
+        public static void AddProtocolTypesToTypeRegistry(ITypeRegistry typeRegistry)
+        {
+            foreach (var protocolType in protocolTypes)
+            {
+                typeRegistry.RegisterType(protocolType, protocolType.Name, true);
+            }
+        }
+        // kept for backwards compatibility.
 
         internal RegisteredSerializationBinder(ITypeRegistry typeRegistry)
         {
             this.typeRegistry = typeRegistry;
-            foreach (var protocolType in protocolTypes) typeRegistry.RegisterType(protocolType, protocolType.Name, true);
         }
 
         public Type BindToType(string? assemblyName, string typeName)

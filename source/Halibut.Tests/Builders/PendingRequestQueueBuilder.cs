@@ -1,41 +1,43 @@
-﻿using System;
+﻿
+using System;
+using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using DisposableCollection = Halibut.Util.DisposableCollection;
+using ILog = Halibut.Diagnostics.ILog;
 
 namespace Halibut.Tests.Builders
 {
-    public class PendingRequestQueueBuilder
+    public class PendingRequestQueueBuilder : IPendingRequestQueueBuilder
     {
         ILog? log;
         string? endpoint;
         TimeSpan? pollingQueueWaitTimeout;
-        bool? relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
 
-        public PendingRequestQueueBuilder WithEndpoint(string endpoint)
+        public IPendingRequestQueueBuilder WithEndpoint(string endpoint)
         {
             this.endpoint = endpoint;
             return this;
         }
 
-        public PendingRequestQueueBuilder WithLog(ILog log)
+        public IPendingRequestQueueBuilder WithLog(ILog log)
         {
             this.log = log;
             return this;
         }
 
-        public PendingRequestQueueBuilder WithPollingQueueWaitTimeout(TimeSpan? pollingQueueWaitTimeout)
+        public IPendingRequestQueueBuilder WithPollingQueueWaitTimeout(TimeSpan? pollingQueueWaitTimeout)
         {
             this.pollingQueueWaitTimeout = pollingQueueWaitTimeout;
             return this;
         }
 
-        public PendingRequestQueueBuilder WithRelyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout(bool relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout)
+        public IPendingRequestQueueBuilder WithDelayBeforeCheckingForCancellation(TimeSpan defaultDelayBeforeSubscribingToRequestCancellation)
         {
-            this.relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout = relyOnConnectionTimeoutsInsteadOfPollingRequestMaximumMessageProcessingTimeout;
             return this;
         }
 
-        public IPendingRequestQueue Build()
+        public QueueHolder Build()
         {
             var endpoint = this.endpoint ?? "poll://endpoint001";
             var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
@@ -43,7 +45,25 @@ namespace Halibut.Tests.Builders
 
             var pollingQueueWaitTimeout = this.pollingQueueWaitTimeout ?? halibutTimeoutsAndLimits.PollingQueueWaitTimeout;
 
-            return new PendingRequestQueueAsync(log, pollingQueueWaitTimeout);
+            return new QueueHolder(new PendingRequestQueueAsync(log, pollingQueueWaitTimeout), new DisposableCollection());
+        }
+    }
+
+    public class QueueHolder : IAsyncDisposable
+    {
+        public IPendingRequestQueue PendingRequestQueue { get; }
+        public DisposableCollection DisposableCollection { get; }
+
+        public QueueHolder(IPendingRequestQueue pendingRequestQueue, DisposableCollection disposableCollection)
+        {
+            this.PendingRequestQueue = pendingRequestQueue;
+            this.DisposableCollection = disposableCollection;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            this.DisposableCollection.AddAsyncDisposable(PendingRequestQueue);
+            await DisposableCollection.DisposeAsync();
         }
     }
 }

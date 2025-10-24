@@ -98,9 +98,9 @@ namespace Halibut.Tests
         public static DirectoryInfo LogFileDirectory()
         {
             // The current directory is expected to have the following structure
-            // (w/ variance depending on Debug/Release and dotnet framework used (net6.0, net48 etc):
+            // (w/ variance depending on Debug/Release and dotnet framework used (net8.0, net48 etc):
             //
-            // <REPO ROOT>\source\Halibut.Tests\bin\Debug\net6.0
+            // <REPO ROOT>\source\Halibut.Tests\bin\Debug\net8.0
             //
             // Therefore we go up 5 levels to get to the <REPO ROOT> directory,
             // from which point we can navigate to the artifacts directory.
@@ -113,7 +113,11 @@ namespace Halibut.Tests
 
         public async ValueTask DisposeAsync()
         {
+#if NET8_0_OR_GREATER
+            await cancellationTokenSource.CancelAsync();
+#else
             cancellationTokenSource.Cancel();
+#endif
 #pragma warning disable VSTHRD003
             await writeDataToDiskTask;
 #pragma warning restore VSTHRD003

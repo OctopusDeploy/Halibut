@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
@@ -18,6 +19,30 @@ namespace Halibut.Tests.Diagnostics
     {
         public class WhenGivenA
         {
+            [Test]
+            public void MethodNotFoundHalibutClientException_ItIsNotARetryableError()
+            {
+                new MethodNotFoundHalibutClientException("").IsRetryableError()
+                    .Should()
+                    .Be(HalibutRetryableErrorType.NotRetryable);
+            }
+            
+            [Test]
+            public void SocketExceptionError_ItIsARetryableError()
+            {
+                new SocketException(123).IsRetryableError()
+                    .Should()
+                    .Be(HalibutRetryableErrorType.IsRetryable);
+            }
+            
+            [Test]
+            public void SomeRandomException_ItIsARetryableError()
+            {
+                new Exception("Totally random").IsRetryableError()
+                    .Should()
+                    .Be(HalibutRetryableErrorType.UnknownError);
+            }
+            
             [Test]
             public void MethodNotFoundHalibutClientException_ItIsNotANetworkError()
             {
@@ -62,6 +87,10 @@ namespace Halibut.Tests.Diagnostics
                     exception.IsNetworkError()
                         .Should()
                         .Be(HalibutNetworkExceptionType.IsNetworkError);
+
+                    exception.IsRetryableError()
+                        .Should()
+                        .Be(HalibutRetryableErrorType.IsRetryable);
                     
                         exception.Message.Should().ContainAny(new []
                             {

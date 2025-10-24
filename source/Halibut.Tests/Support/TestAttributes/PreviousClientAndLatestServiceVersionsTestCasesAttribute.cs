@@ -48,7 +48,8 @@ namespace Halibut.Tests.Support.TestAttributes
                         ClientAndServiceTestVersion.ClientOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ClientVersion)
                     },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] {NetworkConditionTestCase.NetworkConditionPerfect}
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] {NetworkConditionTestCase.NetworkConditionPerfect},
+                    PollingQueuesToTest.InMemoryOnly
                 );
 
                 return builder.Build();

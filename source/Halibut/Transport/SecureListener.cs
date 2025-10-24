@@ -48,6 +48,8 @@ namespace Halibut.Transport
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly ISecureConnectionObserver secureConnectionObserver;
+        readonly ISslConfigurationProvider sslConfigurationProvider;
         ILog log;
         TcpListener listener;
         Thread? backgroundThread;
@@ -67,7 +69,10 @@ namespace Halibut.Transport
             Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
-            IConnectionsObserver connectionsObserver)
+            IConnectionsObserver connectionsObserver,
+            ISecureConnectionObserver secureConnectionObserver,
+            ISslConfigurationProvider sslConfigurationProvider
+        )
         {
             this.endPoint = endPoint;
             this.serverCertificate = serverCertificate;
@@ -81,6 +86,8 @@ namespace Halibut.Transport
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
+            this.secureConnectionObserver = secureConnectionObserver;
+            this.sslConfigurationProvider = sslConfigurationProvider;
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
@@ -205,11 +212,11 @@ namespace Halibut.Transport
                 // This matches what we did before, in theory this will never happen.
             }
         }
+
         async Task AcceptAsync(CancellationToken cancellationToken)
         {
-
             const int errorThreshold = 3;
-            
+
             // Don't call listener.Stop until we sure we are not doing an Accept
             // See: https://github.com/OctopusDeploy/Issues/issues/6035
             // See: https://github.com/dotnet/corefx/issues/26034
@@ -222,16 +229,19 @@ namespace Halibut.Transport
                     try
                     {
 #if !NETFRAMEWORK
-            client = await listener.AcceptTcpClientAsync(this.cancellationToken);
+                        client = await listener.AcceptTcpClientAsync(this.cancellationToken);
 #else
-            // This only works because in the using we stop the listener which should work on windows
-            client = await listener.AcceptTcpClientAsync();
+                        // This only works because in the using we stop the listener which should work on windows
+                        client = await listener.AcceptTcpClientAsync();
 #endif
                         client.NoDelay = halibutTimeoutsAndLimits.TcpNoDelay;
                         var _ = Task.Run(async () => await HandleClient(client).ConfigureAwait(false)).ConfigureAwait(false);
                         numberOfFailedAttemptsInRow = 0;
                     }
                     catch (SocketException e) when (e.SocketErrorCode == SocketError.Interrupted)
+                    {
+                    }
+                    catch (OperationCanceledException)
                     {
                     }
                     catch (ObjectDisposedException)
@@ -298,7 +308,13 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
 
-                    await ssl.AuthenticateAsServerAsync(serverCertificate, true, SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false).ConfigureAwait(false);
+                    await ssl
+                        .AuthenticateAsServerAsync(
+                            serverCertificate,
+                            true,
+                            sslConfigurationProvider.SupportedProtocols,
+                            false)
+                        .ConfigureAwait(false);
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -327,6 +343,7 @@ namespace Halibut.Transport
                     {
                         connectionAuthorizedAndObserved = true;
                         connectionsObserver.ConnectionAccepted(true);
+                        secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateIncoming(ssl.SslProtocol, thumbprint));
                         tcpClientManager.AddActiveClient(thumbprint, client);
                         errorEventType = EventType.Error;
                         await ExchangeMessages(ssl).ConfigureAwait(false);
@@ -511,7 +528,7 @@ namespace Halibut.Transport
         {
             cts.Cancel();
             backgroundThread?.Join();
-            if (backgroundTask != null) await backgroundTask; 
+            if (backgroundTask != null) await backgroundTask;
             listener?.Stop();
             tcpClientManager.Dispose();
             cts.Dispose();

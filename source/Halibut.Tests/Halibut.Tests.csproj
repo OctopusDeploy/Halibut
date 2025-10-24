@@ -7,14 +7,15 @@
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <LangVersion>9.0</LangVersion>
+    <NoWarn>VSTHRD002,VSTHRD003;VSTHRD103</NoWarn>
     <Nullable>enable</Nullable>
 	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
-    <TargetFrameworks>net48;net6.0</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <None Update="Certificates/WrongCert.pfx;Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
@@ -33,29 +34,30 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CliWrap" Version="3.6.4" />
+    <PackageReference Include="CliWrap" Version="3.8.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="7.0.0" />
     <PackageReference Include="Assent" Version="1.8.2" />
-    <PackageReference Include="FluentAssertions" Version="6.8.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.7.30" />
-    <PackageReference Include="NSubstitute" Version="4.4.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
+    <PackageReference Include="FluentAssertions" Version="7.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.13.61" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageReference Include="NUnit" Version="3.13.3" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.4.2" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
     <PackageReference Include="Serilog.Sinks.NUnit" Version="1.0.3" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
     <PackageReference Include="System.Interactive.Async" Version="6.0.1" />
-    <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.36" />
-    <PackageReference Include="Serilog" Version="2.12.0" />
+    <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.41" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="3.0.1" />
+    <PackageReference Include="Testcontainers" Version="4.0.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
     <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
   </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
         <DefineConstants>$(DefineConstants);HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS</DefineConstants>
     </PropertyGroup>
 

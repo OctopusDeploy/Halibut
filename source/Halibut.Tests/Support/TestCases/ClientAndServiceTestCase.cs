@@ -1,4 +1,5 @@
 using System.Text;
+using Halibut.Tests.Support.TestAttributes;
 
 namespace Halibut.Tests.Support.TestCases
 {
@@ -10,6 +11,8 @@ namespace Halibut.Tests.Support.TestCases
 
         public ServiceConnectionType ServiceConnectionType { get; }
 
+        public PollingQueueTestCase? PollingQueueTestCase { get; }
+
         /// <summary>
         ///     If running a test which wants to make the same or similar calls multiple time, this has a "good"
         ///     number of times to do that. It takes care of generally not picking such a high number the tests
@@ -20,18 +23,20 @@ namespace Halibut.Tests.Support.TestCases
         public ClientAndServiceTestCase(ServiceConnectionType serviceConnectionType,
             NetworkConditionTestCase networkConditionTestCase,
             int recommendedIterations,
-            ClientAndServiceTestVersion clientAndServiceTestVersion)
+            ClientAndServiceTestVersion clientAndServiceTestVersion, 
+            PollingQueueTestCase? pollingQueueTestCase)
         {
             ServiceConnectionType = serviceConnectionType;
             NetworkConditionTestCase = networkConditionTestCase;
             RecommendedIterations = recommendedIterations;
             ClientAndServiceTestVersion = clientAndServiceTestVersion;
+            PollingQueueTestCase = pollingQueueTestCase;
         }
 
         public IClientAndServiceBuilder CreateTestCaseBuilder()
         {
             var logger = new SerilogLoggerBuilder().Build();
-            var builder = ClientAndServiceBuilderFactory.ForVersion(ClientAndServiceTestVersion)(ServiceConnectionType);
+            var builder = ClientAndServiceBuilderFactory.ForVersion(ClientAndServiceTestVersion)(ServiceConnectionType, PollingQueueTestCase);
             
             if (NetworkConditionTestCase.PortForwarderFactory != null)
             {
@@ -44,7 +49,7 @@ namespace Halibut.Tests.Support.TestCases
         public IClientBuilder CreateClientOnlyTestCaseBuilder()
         {
             var logger = new SerilogLoggerBuilder().Build();
-            var builder = ClientAndServiceBuilderFactory.ForVersionClientOnly(ClientAndServiceTestVersion)(ServiceConnectionType);
+            var builder = ClientAndServiceBuilderFactory.ForVersionClientOnly(ClientAndServiceTestVersion)(ServiceConnectionType, PollingQueueTestCase);
 
             if (NetworkConditionTestCase.PortForwarderFactory != null)
             {
@@ -82,6 +87,12 @@ namespace Halibut.Tests.Support.TestCases
             builder.Append(useShortString ? NetworkConditionTestCase.ToShortString() : NetworkConditionTestCase.ToString());
             builder.Append(", ");
             builder.Append(useShortString ? $"RecIters:{RecommendedIterations}" : $"RecommendedIters: {RecommendedIterations}");
+            
+            if (PollingQueueTestCase.HasValue)
+            {
+                builder.Append(", ");
+                builder.Append(useShortString ? $"Queue:{PollingQueueTestCase.Value}" : $"Queue: {PollingQueueTestCase.Value}");
+            }
             
             return builder.ToString();
         }

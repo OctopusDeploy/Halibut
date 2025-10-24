@@ -43,8 +43,10 @@ namespace Halibut
         readonly IRpcObserver rpcObserver;
         readonly TcpConnectionFactory tcpConnectionFactory;
         readonly IConnectionsObserver connectionsObserver;
+        readonly ISecureConnectionObserver secureConnectionObserver;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly IControlMessageObserver controlMessageObserver;
+        readonly ISslConfigurationProvider sslConfigurationProvider;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -59,7 +61,10 @@ namespace Halibut
             IStreamFactory streamFactory,
             IRpcObserver rpcObserver,
             IConnectionsObserver connectionsObserver, 
-            IControlMessageObserver controlMessageObserver)
+            IControlMessageObserver controlMessageObserver,
+            ISecureConnectionObserver secureConnectionObserver,
+            ISslConfigurationProvider sslConfigurationProvider
+        )
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -73,10 +78,12 @@ namespace Halibut
             invoker = new ServiceInvoker(serviceFactory);
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.connectionsObserver = connectionsObserver;
+            this.secureConnectionObserver = secureConnectionObserver;
             this.controlMessageObserver = controlMessageObserver;
+            this.sslConfigurationProvider = sslConfigurationProvider;
 
             connectionManager = new ConnectionManagerAsync();
-            this.tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory);
+            tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory, secureConnectionObserver, sslConfigurationProvider);
             activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits);
         }
 
@@ -87,7 +94,15 @@ namespace Halibut
 
         IPendingRequestQueue GetQueue(Uri target)
         {
-            return queues.GetOrAdd(target, u => queueFactory.CreateQueue(target));
+            IPendingRequestQueue? createdQueue = null;
+            var queue = queues.GetOrAdd(target, u => createdQueue = queueFactory.CreateQueue(target));
+            if (createdQueue != null && !ReferenceEquals(createdQueue, queue))
+            {
+                // We created a queue that won't be used, dispose of it in the background.
+                Task.Run(() => Try.IgnoringError(() => createdQueue.DisposeAsync()));
+            }
+
+            return queue;
         }
 
         public int Listen()
@@ -122,7 +137,10 @@ namespace Halibut
                 HandleUnauthorizedClientConnect,
                 TimeoutsAndLimits,
                 streamFactory,
-                connectionsObserver);
+                connectionsObserver,
+                secureConnectionObserver,
+                sslConfigurationProvider
+            );
 
             listeners.DoWithExclusiveAccess(l =>
             {
@@ -188,7 +206,7 @@ namespace Halibut
 
         public async Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken)
         {
-            var client = new DiscoveryClient(streamFactory);
+            var client = new DiscoveryClient(streamFactory, sslConfigurationProvider);
             return await client.DiscoverAsync(endpoint, TimeoutsAndLimits, cancellationToken);
         }
 

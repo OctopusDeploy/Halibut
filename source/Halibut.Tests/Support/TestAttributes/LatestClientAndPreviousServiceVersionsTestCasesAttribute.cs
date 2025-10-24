@@ -41,13 +41,18 @@ namespace Halibut.Tests.Support.TestAttributes
                     serviceConnectionTypes.Remove(ServiceConnectionType.Polling);
                 }
 
+                var skipBackwardsCompatibilityTests = Environment.GetEnvironmentVariable("SKIP_BACKWARDS_COMPATIBILITY_TESTS") == "true";
+
                 var builder = new ClientAndServiceTestCasesBuilder(
-                    new[] {
-                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
-                        ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
-                    },
+                    skipBackwardsCompatibilityTests
+                        ? Array.Empty<ClientAndServiceTestVersion>()
+                        : new[] {
+                            ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v5_0_236_Used_In_Tentacle_6_3_417.ServiceVersion),
+                            ClientAndServiceTestVersion.ServiceOfVersion(PreviousVersions.v4_4_8.ServiceVersion),
+                        },
                     serviceConnectionTypes.ToArray(),
-                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect }
+                    testNetworkConditions ? NetworkConditionTestCase.All : new[] { NetworkConditionTestCase.NetworkConditionPerfect },
+                    PollingQueuesToTest.InMemoryOnly // Don't test the redis queue when not testing latest service and latest client, as that feels unnecessary.
                 );
 
                 return builder.Build();

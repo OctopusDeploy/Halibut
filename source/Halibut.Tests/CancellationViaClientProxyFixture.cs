@@ -12,6 +12,7 @@ using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport.Protocol;
+using Halibut.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
@@ -26,9 +27,21 @@ namespace Halibut.Tests
             var tokenSourceToCancel = new CancellationTokenSource();
             var halibutRequestOption = new HalibutProxyRequestOptions(tokenSourceToCancel.Token);
 
+            bool waitForItemToLandOnTheQueueBeforeCancellation = false;
+            IPendingRequestQueue? pendingRequestQueue = null;
+            
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithPortForwarding(out var portForwarderRef, port => PortForwarderUtil.ForwardingToLocalPort(port).Build())
                        .WithStandardServices()
+                       .OnLatestClientAndLatestServiceBuilder(c =>
+                       {
+                           // Ideally should be done any time we are working with polling, but the other builder doesn't support that.
+                           waitForItemToLandOnTheQueueBeforeCancellation = clientAndServiceTestCase.PollingQueueTestCase != null;
+                           c.WithPendingRequestQueueFactoryBuilder(builder => builder.WithDecorator((_, inner) => inner.CaptureCreatedQueues(queue =>
+                           {
+                               pendingRequestQueue = queue;
+                           })));
+                       })
                        .Build(CancellationToken))
             {
                 portForwarderRef.Value.EnterKillNewAndExistingConnectionsMode();
@@ -38,10 +51,26 @@ namespace Halibut.Tests
                 var echo = clientAndService.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(
                     point => point.TryAndConnectForALongTime());
                 
+                var task = Task.Run(() => echo.IncrementAsync(halibutRequestOption));
+
+                if (waitForItemToLandOnTheQueueBeforeCancellation)
+                {
+                    await ShouldEventually.Eventually(() =>
+                    {
+                        pendingRequestQueue.Should().NotBeNull();
+                        pendingRequestQueue!.Count.Should().Be(1);
+                    }, TimeSpan.FromSeconds(20), CancellationToken);
+                }
+                
+                // We still wait 100ms like we used to, but this is not required when we wait for the item to land on the queue.
+                // But doing that is not yet possible with LatestClientAndPreviousServiceVersionsTestCases.
+                // And listening does not support that, since it has no queue.
                 tokenSourceToCancel.CancelAfter(TimeSpan.FromMilliseconds(100));
 
-                (await AssertionExtensions.Should(() => echo.IncrementAsync(halibutRequestOption)).ThrowAsync<Exception>())
-                    .And.Should().Match(x => x is ConnectingRequestCancelledException || (x is HalibutClientException && x.As<HalibutClientException>().Message.Contains("The Request was cancelled while Connecting")));
+                var e =(await AssertionExtensions.Should(() => task).ThrowAsync<Exception>())
+                    .And;
+                Logger.Information("Exception was: {Exception}", e);
+                    e.Should().Match(x => x is ConnectingRequestCancelledException || (x is HalibutClientException && x.As<HalibutClientException>().Message.Contains("The Request was cancelled while Connecting")));
 
                 portForwarderRef.Value.ReturnToNormalMode();
                 
@@ -90,7 +119,11 @@ namespace Halibut.Tests
                 }
                 
                 // The call is now in flight. Call cancel on the cancellation token for that in flight request.
+#if NET8_0_OR_GREATER
+                await tokenSourceToCancel.CancelAsync();
+#else
                 tokenSourceToCancel.Cancel();
+#endif
                 
                 // Give time for the cancellation to do something
                 await Task.Delay(TimeSpan.FromSeconds(2), CancellationToken);

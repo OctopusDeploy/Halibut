@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
+using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Proxy;
 using Halibut.Transport.Streams;
@@ -20,12 +21,22 @@ namespace Halibut.Transport
         readonly X509Certificate2 clientCertificate;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
+        readonly ISecureConnectionObserver secureConnectionObserver;
+        readonly ISslConfigurationProvider sslConfigurationProvider;
 
-        public TcpConnectionFactory(X509Certificate2 clientCertificate, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory)
+        public TcpConnectionFactory(
+            X509Certificate2 clientCertificate,
+            HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
+            IStreamFactory streamFactory,
+            ISecureConnectionObserver secureConnectionObserver,
+            ISslConfigurationProvider sslConfigurationProvider
+        )
         {
             this.clientCertificate = clientCertificate;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
+            this.secureConnectionObserver = secureConnectionObserver;
+            this.sslConfigurationProvider = sslConfigurationProvider;
         }
         
         public async Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
@@ -47,15 +58,20 @@ namespace Halibut.Transport
 #if NETFRAMEWORK
         // TODO: ASYNC ME UP!
         // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
-        await ssl.AuthenticateAsClientAsync(serviceEndpoint.BaseUri.Host, new X509Certificate2Collection(clientCertificate), SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12, false);
+        await ssl.AuthenticateAsClientAsync(
+            serviceEndpoint.BaseUri.Host,
+            new X509Certificate2Collection(clientCertificate),
+            sslConfigurationProvider.SupportedProtocols,
+            false);
 #else
-            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), cancellationToken);
+            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), sslConfigurationProvider, cancellationToken);
 #endif
 
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
             await ssl.FlushAsync(cancellationToken);
 
             log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
+            secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateOutgoing(ssl.SslProtocol, serviceEndpoint.RemoteThumbprint ?? "Unknown"));
 
             return new SecureConnection(client, ssl, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
         }

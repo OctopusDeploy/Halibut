@@ -67,15 +67,20 @@ namespace Halibut.Transport.Proxy.Exceptions
             CausedByNetworkError = causedByNetworkError;
         }
 
+#pragma warning disable SYSLIB0051 // https://learn.microsoft.com/en-us/dotnet/fundamentals/syslib-diagnostics/syslib0051
         /// <summary>
         /// Constructor.
         /// </summary>
         /// <param name="info">Serialization information.</param>
         /// <param name="context">Stream context information.</param>
+#if NET8_0_OR_GREATER
+        [Obsolete(DiagnosticId = "SYSLIB0051")]
+#endif
         protected ProxyException(SerializationInfo info, StreamingContext context)
             : base(info, context)
         {
         }
+#pragma warning restore SYSLIB0051
     }
 
 }

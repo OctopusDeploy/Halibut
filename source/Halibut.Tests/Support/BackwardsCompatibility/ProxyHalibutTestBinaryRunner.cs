@@ -153,27 +153,45 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
                 if (completedTask == runningTentacle)
                 {
+#if NET8_0_OR_GREATER
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
+#endif
                     // Will throw the startup exception.
                     await runningTentacle;
                 }
 
                 if (!hasTentacleStarted.IsSet)
                 {
+#if NET8_0_OR_GREATER
+                    await whenAnyCleanupCancellationTokenSource.CancelAsync();
+                    await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                     whenAnyCleanupCancellationTokenSource.Cancel();
                     runningTentacleCancellationTokenSource.Cancel();
+#endif
                     throw new Exception("Halibut test binary did not appear to start correctly");
                 }
 
+#if NET8_0_OR_GREATER
+                await whenAnyCleanupCancellationTokenSource.CancelAsync();
+#else
                 whenAnyCleanupCancellationTokenSource.Cancel();
+#endif
 
                 logger.Information("External halibut binary started.");
                 return (runningTentacle, serviceListenPort, proxyClientListenPort, runningTentacleCancellationTokenSource);
             }
             catch (Exception)
             {
+#if NET8_0_OR_GREATER
+                await runningTentacleCancellationTokenSource.CancelAsync();
+#else
                 runningTentacleCancellationTokenSource.Cancel();
+#endif
                 runningTentacleCancellationTokenSource.Dispose();
                 throw;
             }

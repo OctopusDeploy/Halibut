@@ -10,10 +10,21 @@ namespace Halibut.Tests.Support
         {
             return (LatestClientAndLatestServiceBuilder) clientAndServiceBuilder;
         }
-        
+
+        public static IClientAndServiceBuilder OnLatestClientAndLatestServiceBuilder(this IClientAndServiceBuilder clientAndServiceBuilder, Action<LatestClientAndLatestServiceBuilder> configure)
+        {
+            if (clientAndServiceBuilder is LatestClientAndLatestServiceBuilder latestClientAndLatestServiceBuilder) configure(latestClientAndLatestServiceBuilder);
+            return clientAndServiceBuilder;
+        }
+
         public static PreviousClientVersionAndLatestServiceBuilder AsPreviousClientVersionAndLatestServiceBuilder(this IClientAndServiceBuilder clientAndServiceBuilder)
         {
             return (PreviousClientVersionAndLatestServiceBuilder) clientAndServiceBuilder;
+        }
+
+        public static LatestClientAndPreviousServiceVersionBuilder AsLatestClientAndPreviousServiceVersionBuilder(this IClientAndServiceBuilder clientAndServiceBuilder)
+        {
+            return (LatestClientAndPreviousServiceVersionBuilder) clientAndServiceBuilder;
         }
 
         public static IClientAndServiceBuilder WithAsyncService<TContract, TClientContract>(this IClientAndServiceBuilder clientAndServiceBuilder, Func<TClientContract> implementation)
