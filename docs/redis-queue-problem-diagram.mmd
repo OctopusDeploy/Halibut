@@ -1,0 +1,44 @@
+graph TD
+    U[User/System]
+    LB[Load Balancer]
+    A[Client A<br/>🔴 Has Work]
+    B[Client B<br/>🟢 Service Connected]
+    C[Client C<br/>⚫ Idle]
+    S[Polling Service<br/>e.g., Tentacle]
+    
+    QA[In-Memory Queue A<br/>📋 RPC Request]
+    QB[In-Memory Queue B<br/>📭 Empty]
+    QC[In-Memory Queue C<br/>📭 Empty]
+    
+    U -->|"1. RPC Call"| A
+    A -->|"2. Queue Request"| QA
+    
+    S -->|"3. Connect via LB"| LB
+    LB -->|"4. Route to Client B"| B
+    B <-->|"5. Connected ✅"| S
+    
+    B -->|"6. Poll for work"| QB
+    QB -.->|"❌ No work found"| B
+    
+    QA -.->|"❌ Cannot access<br/>from Client B"| QB
+    QC -.->|"❌ Also isolated"| QB
+    
+    A -.->|"❌ Service not<br/>connected here"| QA
+    
+    style A fill:#ffcccc,stroke:#ff0000,stroke-width:3px
+    style B fill:#ccffcc,stroke:#00aa00,stroke-width:3px
+    style C fill:#f0f0f0,stroke:#666666,stroke-width:2px
+    style QA fill:#ffcccc,stroke:#ff0000,stroke-width:2px
+    style QB fill:#f0f0f0,stroke:#666666,stroke-width:2px
+    style QC fill:#f0f0f0,stroke:#666666,stroke-width:2px
+    style LB fill:#fff2cc,stroke:#d6b656,stroke-width:2px
+    style S fill:#ccffcc,stroke:#00aa00,stroke-width:2px
+    
+    classDef problem fill:#ffeeee,stroke:#ff0000,stroke-width:2px,stroke-dasharray: 5 5
+    classDef working fill:#eeffee,stroke:#00aa00,stroke-width:2px
+    classDef neutral fill:#f9f9f9,stroke:#666666,stroke-width:1px
+    
+    class A,QA problem
+    class B,S working
+    class C,QB,QC neutral
+

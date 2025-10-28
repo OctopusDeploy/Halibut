@@ -314,7 +314,7 @@ namespace Halibut.Tests
                        .WithStandardServices()
                        .Build(CancellationToken))
             {
-                var counting = clientAndService.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithNullableParameter>();
+                var counting = clientAndService.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
 
                 // When null is passed, it should default to incrementing by 1
                 var result1 = await counting.IncrementAsync(null);

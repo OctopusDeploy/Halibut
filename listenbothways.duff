@@ -1,0 +1,68 @@
+diff --git a/source/Halibut.Tests/BadCertificatesTests.cs b/source/Halibut.Tests/BadCertificatesTests.cs
+index 9533605..565b6aa 100644
+--- a/source/Halibut.Tests/BadCertificatesTests.cs
++++ b/source/Halibut.Tests/BadCertificatesTests.cs
+@@ -306,6 +306,7 @@ await using (var tentacleListening = new HalibutRuntimeBuilder()
+                              .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
+                              .Build())
+             {
++                var octopis = octopus.Listen();
+                 var tentaclePort = tentacleListening.Listen();
+                 tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
+ 
+@@ -345,6 +346,43 @@ await using (var tentacleListening = new HalibutRuntimeBuilder()
+             }
+         }
+         
++        [Test]
++        public async Task FailWhenListeningServerPresentsWrongCertificate22()
++        {
++            var services = GetDelegateServiceFactory();
++            await using (var octopus = new HalibutRuntimeBuilder()
++                             .WithServerCertificate(Certificates.Octopus)
++                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
++                             .WithServiceFactory(services)
++                             .Build())
++            await using (var tentacleListening = new HalibutRuntimeBuilder()
++                             .WithServerCertificate(Certificates.TentacleListening)
++                             .WithServiceFactory(services)
++                             .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
++                             .Build())
++            {
++                var octopusPort = octopus.Listen();
++                octopus.Trust(Certificates.TentaclePollingPublicThumbprint);
++                octopus.Trust(Certificates.OctopusPublicThumbprint);
++                
++                var tentaclePort = tentacleListening.Listen();
++                tentacleListening.Trust(Certificates.OctopusPublicThumbprint);
++
++                
++                var thumbPrint = Certificates.TentacleListeningPublicThumbprint;
++
++                var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://localhost:" + tentaclePort, thumbPrint, octopus.TimeoutsAndLimits));
++
++                await echo.SayHelloAsync("World");
++                
++                var thumbPrint2 = Certificates.OctopusPublicThumbprint;
++                
++                var echo2 = tentacleListening.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("https://localhost:" + octopusPort, thumbPrint2, octopus.TimeoutsAndLimits));
++                await echo2.SayHelloAsync("World");
++
++            }
++        }
++        
+         static DelegateServiceFactory GetDelegateServiceFactory()
+         {
+             var services = new DelegateServiceFactory();
+diff --git a/source/Halibut.sln.DotSettings b/source/Halibut.sln.DotSettings
+index f8c12d0..15c342a 100644
+--- a/source/Halibut.sln.DotSettings
++++ b/source/Halibut.sln.DotSettings
+@@ -246,7 +246,6 @@ II.2.12 &lt;HandlesEvent /&gt;&#xD;
+ 	<s:Boolean x:Key="/Default/CodeStyle/CodeFormatting/CSharpFormat/ALIGN_MULTILINE_PARAMETER/@EntryValue">False</s:Boolean>
+ 	<s:Boolean x:Key="/Default/CodeStyle/CodeFormatting/CSharpFormat/EXPLICIT_PRIVATE_MODIFIER/@EntryValue">False</s:Boolean>
+ 	<s:Boolean x:Key="/Default/CodeStyle/CodeFormatting/CSharpFormat/EXPLICIT_INTERNAL_MODIFIER/@EntryValue">False</s:Boolean>
+-	<s:Boolean x:Key="/Default/Environment/SettingsMigration/IsMigratorApplied/=JetBrains_002EReSharper_002EFeature_002EServices_002ECodeCleanup_002EFileHeader_002EFileHeaderSettingsMigrate/@EntryIndexedValue">True</s:Boolean>
+ 	<s:Boolean x:Key="/Default/Environment/SettingsMigration/IsMigratorApplied/=JetBrains_002EReSharper_002EPsi_002ECSharp_002ECodeStyle_002ECSharpAttributeForSingleLineMethodUpgrade/@EntryIndexedValue">True</s:Boolean>
+ 	<s:Boolean x:Key="/Default/Environment/SettingsMigration/IsMigratorApplied/=JetBrains_002EReSharper_002EPsi_002ECSharp_002ECodeStyle_002ECSharpFileLayoutPatternsUpgrade/@EntryIndexedValue">True</s:Boolean>
+ 	<s:Boolean x:Key="/Default/Environment/SettingsMigration/IsMigratorApplied/=JetBrains_002EReSharper_002EPsi_002ECSharp_002ECodeStyle_002ECSharpKeepExistingMigration/@EntryIndexedValue">True</s:Boolean>
