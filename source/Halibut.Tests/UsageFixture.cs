@@ -305,5 +305,33 @@ namespace Halibut.Tests
             response.Child2!.Description.Should().Be(childPayload2);
             response.Child2.Description.Should().Be(request.Child2.Description);
         }
+
+        [Test]
+        [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
+        public async Task CountingServiceSupportsNullableParameters(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .Build(CancellationToken))
+            {
+                var counting = clientAndService.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithNullableParameter>();
+
+                // When null is passed, it should default to incrementing by 1
+                var result1 = await counting.IncrementAsync(null);
+                result1.Should().Be(1);
+
+                // Verify the current value
+                var currentValue = await counting.GetCurrentValueAsync();
+                currentValue.Should().Be(1);
+
+                // Increment with null again
+                var result2 = await counting.IncrementAsync(null);
+                result2.Should().Be(2);
+
+                // Increment with an explicit value
+                var result3 = await counting.IncrementAsync(5);
+                result3.Should().Be(7);
+            }
+        }
     }
 }
