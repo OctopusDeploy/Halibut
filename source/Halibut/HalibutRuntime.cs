@@ -47,6 +47,7 @@ namespace Halibut
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly IControlMessageObserver controlMessageObserver;
         readonly ISslConfigurationProvider sslConfigurationProvider;
+        readonly ISubscriberObserver subscriberObserver;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -63,8 +64,8 @@ namespace Halibut
             IConnectionsObserver connectionsObserver, 
             IControlMessageObserver controlMessageObserver,
             ISecureConnectionObserver secureConnectionObserver,
-            ISslConfigurationProvider sslConfigurationProvider
-        )
+            ISslConfigurationProvider sslConfigurationProvider,
+            ISubscriberObserver subscriberObserver)
         {
             this.serverCertificate = serverCertificate;
             this.trustProvider = trustProvider;
@@ -79,6 +80,7 @@ namespace Halibut
             TimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.connectionsObserver = connectionsObserver;
             this.secureConnectionObserver = secureConnectionObserver;
+            this.subscriberObserver = subscriberObserver;
             this.controlMessageObserver = controlMessageObserver;
             this.sslConfigurationProvider = sslConfigurationProvider;
 
@@ -121,7 +123,12 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, log);
+            return (stream, log) => new MessageExchangeProtocol(
+                new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log),
+                TimeoutsAndLimits,
+                activeTcpConnectionsLimiter,
+                log,
+                subscriberObserver);
         }
 
         public int Listen(IPEndPoint endpoint)
