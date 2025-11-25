@@ -199,6 +199,55 @@ namespace Halibut
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequestAsync, log, cancellationToken, pollingReconnectRetryPolicy));
         }
 
+        public async Task PollLocalAsync(Uri localEndpoint, CancellationToken cancellationToken)
+        {
+            if (localEndpoint.Scheme.ToLowerInvariant() != "local")
+            {
+                throw new ArgumentException($"Only 'local://' endpoints are supported. Provided: {localEndpoint.Scheme}://", nameof(localEndpoint));
+            }
+
+            var queue = GetQueue(localEndpoint);
+            var log = logs.ForEndpoint(localEndpoint);
+
+            log.Write(EventType.MessageExchange, $"Starting local polling for endpoint: {localEndpoint}");
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    var request = await queue.DequeueAsync(cancellationToken).ConfigureAwait(false);
+
+                    if (request != null)
+                    {
+                        ResponseMessage response;
+                        try
+                        {
+                            response = await invoker.InvokeAsync(request.RequestMessage).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            log.WriteException(EventType.Error, $"Error executing local request for {request.RequestMessage.ServiceName}.{request.RequestMessage.MethodName}", ex);
+                            response = ResponseMessage.FromException(request.RequestMessage, ex);
+                        }
+
+                        await queue.ApplyResponse(response, request.RequestMessage.ActivityId).ConfigureAwait(false);
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    log.Write(EventType.MessageExchange, $"Local polling cancelled for endpoint: {localEndpoint}");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    log.WriteException(EventType.Error, $"Error in local polling loop for endpoint: {localEndpoint}", ex);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            log.Write(EventType.MessageExchange, $"Local polling stopped for endpoint: {localEndpoint}");
+        }
+
         public async Task<ServiceEndPoint> DiscoverAsync(Uri uri, CancellationToken cancellationToken)
         {
             return await DiscoverAsync(new ServiceEndPoint(uri, null, TimeoutsAndLimits), cancellationToken);
@@ -242,6 +291,9 @@ namespace Halibut
                         response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
                         break;
                     case "poll":
+                        response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
+                        break;
+                    case "local":
                         response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
                         break;
                     default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
