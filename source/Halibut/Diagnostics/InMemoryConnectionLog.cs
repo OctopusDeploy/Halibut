@@ -8,6 +8,8 @@ namespace Halibut.Diagnostics
 {
     internal class InMemoryConnectionLog : ILog
     {
+        public static readonly int MaxLogEvents = 100;
+
         readonly string endpoint;
         readonly Logging.ILog? logger;
         readonly ConcurrentQueue<LogEvent> events = new();
@@ -57,7 +59,7 @@ namespace Halibut.Diagnostics
 
             events.Enqueue(logEvent);
 
-            while (events.Count > 100 && events.TryDequeue(out _)) { }
+            while (events.Count > MaxLogEvents && events.TryDequeue(out _)) { }
         }
 
         static LogLevel GetLogLevel(LogEvent logEvent)
