@@ -69,17 +69,8 @@ namespace Halibut.Tests
 
             var result = await echo.SayHelloAsync("World");
             result.Should().Be("World...");
-
-            // Cleanup
-            workerCts.Cancel();
-            // try
-            // {
-            //     await pollingTask;
-            // }
-            // catch (OperationCanceledException)
-            // {
-            //     // Expected
-            // }
+            
+            await workerCts.CancelAsync();
 
             Func<QueueMessageSerializer, IPendingRequestQueueFactory> RedisFactory()
             {
