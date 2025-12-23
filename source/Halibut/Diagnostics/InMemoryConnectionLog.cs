@@ -6,7 +6,7 @@ using Halibut.Logging;
 
 namespace Halibut.Diagnostics
 {
-    internal class InMemoryConnectionLog : ILog
+    public class InMemoryConnectionLog : ILog
     {
         public static readonly int MaxLogEvents = 100;
 
