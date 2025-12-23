@@ -215,14 +215,14 @@ namespace Halibut
             {
                 try
                 {
-                    var request = await queue.DequeueAsync(cancellationToken).ConfigureAwait(false);
+                    var request = await queue.DequeueAsync(cancellationToken);
 
                     if (request != null)
                     {
                         ResponseMessage response;
                         try
                         {
-                            response = await invoker.InvokeAsync(request.RequestMessage).ConfigureAwait(false);
+                            response = await invoker.InvokeAsync(request.RequestMessage);
                         }
                         catch (Exception ex)
                         {
@@ -230,7 +230,7 @@ namespace Halibut
                             response = ResponseMessage.FromException(request.RequestMessage, ex);
                         }
 
-                        await queue.ApplyResponse(response, request.RequestMessage.ActivityId).ConfigureAwait(false);
+                        await queue.ApplyResponse(response, request.RequestMessage.ActivityId);
                     }
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -241,7 +241,7 @@ namespace Halibut
                 catch (Exception ex)
                 {
                     log.WriteException(EventType.Error, $"Error in local polling loop for endpoint: {localEndpoint}", ex);
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
             }
 
