@@ -6,10 +6,13 @@ using Halibut.Logging;
 
 namespace Halibut.Diagnostics
 {
-    public class InMemoryConnectionLog : ILog
+    public static class InMemoryConnectionLogLimits
     {
-        public static readonly int MaxLogEvents = 100;
-
+        public static readonly int MaxLogEventsStored = 100;
+    }
+    
+    internal class InMemoryConnectionLog : ILog
+    {
         readonly string endpoint;
         readonly Logging.ILog? logger;
         readonly ConcurrentQueue<LogEvent> events = new();
@@ -59,7 +62,7 @@ namespace Halibut.Diagnostics
 
             events.Enqueue(logEvent);
 
-            while (events.Count > MaxLogEvents && events.TryDequeue(out _)) { }
+            while (events.Count > InMemoryConnectionLogLimits.MaxLogEventsStored && events.TryDequeue(out _)) { }
         }
 
         static LogLevel GetLogLevel(LogEvent logEvent)
