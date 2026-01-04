@@ -29,10 +29,6 @@ namespace Halibut.Tests
         {
             var services = GetDelegateServiceFactory();
             var timeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
-            timeoutsAndLimits = new HalibutTimeoutsAndLimits();
-
-            // Use a shared queue factory so client and worker share the same queue
-            var queueFactory = new PendingRequestQueueFactoryAsync(timeoutsAndLimits, new LogFactory());
             
             var logFactory = new CachingLogFactory(new TestContextLogCreator("", LogLevel.Trace));
             
@@ -44,14 +40,14 @@ namespace Halibut.Tests
 
             await using var client = new HalibutRuntimeBuilder()
                 .WithServerCertificate(Certificates.Octopus)
-                .WithPendingRequestQueueFactory(RedisFactory())
+                .WithPendingRequestQueueFactory(RedisFactory(preSharedGuid, disposables, log, logFactory))
                 .WithHalibutTimeoutsAndLimits(timeoutsAndLimits)
                 .Build();
 
             await using var worker = new HalibutRuntimeBuilder()
                 .WithServerCertificate(Certificates.TentaclePolling)
                 .WithServiceFactory(services)
-                .WithPendingRequestQueueFactory(RedisFactory())
+                .WithPendingRequestQueueFactory(RedisFactory(preSharedGuid, disposables, log, logFactory))
                 .WithHalibutTimeoutsAndLimits(timeoutsAndLimits)
                 .Build();
 
@@ -59,7 +55,6 @@ namespace Halibut.Tests
             using var workerCts = new CancellationTokenSource();
             var pollingTask = Task.Run(async () =>
             {
-                //await Task.Delay(TimeSpan.FromSeconds(10));
                 await worker.PollLocalAsync(new Uri("local://test-worker"), workerCts.Token);
             }, workerCts.Token);
 
@@ -72,23 +67,29 @@ namespace Halibut.Tests
             
             await workerCts.CancelAsync();
 
-            Func<QueueMessageSerializer, IPendingRequestQueueFactory> RedisFactory()
+            await pollingTask;
+        }
+
+        Func<QueueMessageSerializer, IPendingRequestQueueFactory> RedisFactory(
+            Guid preSharedGuid, 
+            DisposableCollection disposables,
+            TestContextLogCreator log,
+            CachingLogFactory logFactory)
+        {
+            return msgSer =>
             {
-                return msgSer =>
-                {
-                    var redisFacade = RedisFacadeBuilder.CreateRedisFacade(prefix: preSharedGuid);
-                    disposables.AddAsyncDisposable(redisFacade);
-                    var watchForRedisLosingAllItsData = new WatchForRedisLosingAllItsData(redisFacade, log.CreateNewForPrefix("watcher"));
-                    disposables.AddAsyncDisposable(watchForRedisLosingAllItsData);
+                var redisFacade = RedisFacadeBuilder.CreateRedisFacade(prefix: preSharedGuid);
+                disposables.AddAsyncDisposable(redisFacade);
+                var watchForRedisLosingAllItsData = new WatchForRedisLosingAllItsData(redisFacade, log.CreateNewForPrefix("watcher"));
+                disposables.AddAsyncDisposable(watchForRedisLosingAllItsData);
                                      
-                    return new RedisPendingRequestQueueFactory(msgSer,
-                        new InMemoryStoreDataStreamsForDistributedQueues(),
-                        watchForRedisLosingAllItsData,
-                        new HalibutRedisTransport(redisFacade),
-                        new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
-                        logFactory);
-                };
-            }
+                return new RedisPendingRequestQueueFactory(msgSer,
+                    new InMemoryStoreDataStreamsForDistributedQueues(),
+                    watchForRedisLosingAllItsData,
+                    new HalibutRedisTransport(redisFacade),
+                    new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
+                    logFactory);
+            };
         }
 
         static DelegateServiceFactory GetDelegateServiceFactory()
