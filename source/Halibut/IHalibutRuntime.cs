@@ -17,7 +17,7 @@ namespace Halibut
         int Listen(IPEndPoint endpoint);
         void ListenWebSocket(string endpoint);
         void Poll(Uri subscription, ServiceEndPoint endPoint, CancellationToken cancellationToken);
-        Task PollLocalAsync(Uri localEndpoint, CancellationToken cancellationToken);
+        Task PollForRPCOverQueueAsync(Uri queueOnlyEndpoint, CancellationToken cancellationToken);
 
         Task<ServiceEndPoint> DiscoverAsync(Uri uri, CancellationToken cancellationToken);
         Task<ServiceEndPoint> DiscoverAsync(ServiceEndPoint endpoint, CancellationToken cancellationToken);

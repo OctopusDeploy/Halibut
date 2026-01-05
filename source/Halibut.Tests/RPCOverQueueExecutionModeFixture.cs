@@ -21,11 +21,11 @@ using DisposableCollection = Halibut.Util.DisposableCollection;
 
 namespace Halibut.Tests
 {
-    public class LocalExecutionModeFixture : BaseTest
+    public class RPCOverQueueExecutionModeFixture : BaseTest
     {
         [RedisTest]
         [Test]
-        public async Task SimpleLocalExecutionExample()
+        public async Task SimpleRPCOverQueueExecutionExample()
         {
             var services = GetDelegateServiceFactory();
             var timeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
@@ -55,7 +55,7 @@ namespace Halibut.Tests
             using var workerCts = new CancellationTokenSource();
             var pollingTask = Task.Run(async () =>
             {
-                await worker.PollLocalAsync(new Uri("local://test-worker"), workerCts.Token);
+                await worker.PollForRPCOverQueueAsync(new Uri("local://test-worker"), workerCts.Token);
             }, workerCts.Token);
 
             // Client creates proxy to local://test-worker and makes request

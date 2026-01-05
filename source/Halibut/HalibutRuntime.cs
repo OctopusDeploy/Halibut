@@ -21,6 +21,7 @@ namespace Halibut
 {
     public class HalibutRuntime : IHalibutRuntime
     {
+        public const string QueueEndpointScheme = "local";
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
         readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new();
         readonly IPendingRequestQueueFactory queueFactory;
@@ -199,17 +200,17 @@ namespace Halibut
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequestAsync, log, cancellationToken, pollingReconnectRetryPolicy));
         }
 
-        public async Task PollLocalAsync(Uri localEndpoint, CancellationToken cancellationToken)
+        public async Task PollForRPCOverQueueAsync(Uri queueOnlyEndpoint, CancellationToken cancellationToken)
         {
-            if (localEndpoint.Scheme.ToLowerInvariant() != "local")
+            if (queueOnlyEndpoint.Scheme.ToLowerInvariant() != QueueEndpointScheme)
             {
-                throw new ArgumentException($"Only 'local://' endpoints are supported. Provided: {localEndpoint.Scheme}://", nameof(localEndpoint));
+                throw new ArgumentException($"Only 'queue://' endpoints are supported. Provided: {queueOnlyEndpoint.Scheme}://", nameof(queueOnlyEndpoint));
             }
 
-            var queue = GetQueue(localEndpoint);
-            var log = logs.ForEndpoint(localEndpoint);
+            var queue = GetQueue(queueOnlyEndpoint);
+            var log = logs.ForEndpoint(queueOnlyEndpoint);
 
-            log.Write(EventType.MessageExchange, $"Starting local polling for endpoint: {localEndpoint}");
+            log.Write(EventType.MessageExchange, $"Starting queue polling for endpoint: {queueOnlyEndpoint}");
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -226,7 +227,7 @@ namespace Halibut
                         }
                         catch (Exception ex)
                         {
-                            log.WriteException(EventType.Error, $"Error executing local request for {request.RequestMessage.ServiceName}.{request.RequestMessage.MethodName}", ex);
+                            log.WriteException(EventType.Error, $"Error executing queue request for {request.RequestMessage.ServiceName}.{request.RequestMessage.MethodName}", ex);
                             response = ResponseMessage.FromException(request.RequestMessage, ex);
                         }
 
@@ -235,17 +236,17 @@ namespace Halibut
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
-                    log.Write(EventType.MessageExchange, $"Local polling cancelled for endpoint: {localEndpoint}");
+                    log.Write(EventType.MessageExchange, $"Queue polling cancelled for endpoint: {queueOnlyEndpoint}");
                     break;
                 }
                 catch (Exception ex)
                 {
-                    log.WriteException(EventType.Error, $"Error in local polling loop for endpoint: {localEndpoint}", ex);
+                    log.WriteException(EventType.Error, $"Error in queue polling loop for endpoint: {queueOnlyEndpoint}", ex);
                     await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 }
             }
 
-            log.Write(EventType.MessageExchange, $"Local polling stopped for endpoint: {localEndpoint}");
+            log.Write(EventType.MessageExchange, $"Queue polling stopped for endpoint: {queueOnlyEndpoint}");
         }
 
         public async Task<ServiceEndPoint> DiscoverAsync(Uri uri, CancellationToken cancellationToken)
@@ -291,9 +292,7 @@ namespace Halibut
                         response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
                         break;
                     case "poll":
-                        response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
-                        break;
-                    case "local":
+                    case QueueEndpointScheme:
                         response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
                         break;
                     default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
