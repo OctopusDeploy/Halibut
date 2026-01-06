@@ -17,6 +17,7 @@ using Halibut.ServiceModel;
 using Halibut.Transport.Protocol;
 using Halibut.Util;
 using Nito.AsyncEx;
+using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis
 {
@@ -521,10 +522,15 @@ namespace Halibut.Queue.Redis
             {
                 if (!queueToken.IsCancellationRequested)
                 {
-                    log.WriteException(EventType.Error, "Error occured dequeuing from the queue", ex);
+                    // If redis is down, don't log when dequeuing work since every polling service will log the issue every ~30s.
+                    if (ex is not RedisConnectionException)
+                    {
+                        log.WriteException(EventType.Error, "Error occured dequeuing from the queue", ex);
+                    }
+                    
                     // It is very likely a queue error means every tentacle will return an error.
                     // Add a random delay to help avoid every client coming back at exactly the same time.
-                    await Task.Delay(TimeSpan.FromSeconds(new Random().Next(15)), cts.Token);
+                    await Task.Delay(TimeSpan.FromSeconds(new Random().Next(halibutTimeoutsAndLimits.PollingQueueWaitTimeout.Seconds)), cts.Token);
                 }
                 throw;
             }
