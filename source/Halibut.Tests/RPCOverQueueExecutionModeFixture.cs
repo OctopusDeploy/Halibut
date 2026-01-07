@@ -51,16 +51,16 @@ namespace Halibut.Tests
                 .WithHalibutTimeoutsAndLimits(timeoutsAndLimits)
                 .Build();
 
-            // Start worker polling for local://test-worker
+            // Start worker polling
             using var workerCts = new CancellationTokenSource();
             var pollingTask = Task.Run(async () =>
             {
-                await worker.PollForRPCOverQueueAsync(new Uri("local://test-worker"), workerCts.Token);
+                await worker.PollForRPCOverQueueAsync(new Uri(HalibutRuntime.QueueEndpointScheme + "://test-worker"), workerCts.Token);
             }, workerCts.Token);
 
-            // Client creates proxy to local://test-worker and makes request
+            // Client creates proxy and makes request
             var echo = client.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(
-                new ServiceEndPoint("local://test-worker", null, client.TimeoutsAndLimits));
+                new ServiceEndPoint(HalibutRuntime.QueueEndpointScheme + "://test-worker", null, client.TimeoutsAndLimits));
 
             var result = await echo.SayHelloAsync("World");
             result.Should().Be("World...");

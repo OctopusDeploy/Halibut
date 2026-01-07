@@ -21,7 +21,7 @@ namespace Halibut
 {
     public class HalibutRuntime : IHalibutRuntime
     {
-        public const string QueueEndpointScheme = "local";
+        public const string QueueEndpointScheme = "queue";
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
         readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new();
         readonly IPendingRequestQueueFactory queueFactory;
@@ -204,7 +204,7 @@ namespace Halibut
         {
             if (queueOnlyEndpoint.Scheme.ToLowerInvariant() != QueueEndpointScheme)
             {
-                throw new ArgumentException($"Only 'queue://' endpoints are supported. Provided: {queueOnlyEndpoint.Scheme}://", nameof(queueOnlyEndpoint));
+                throw new ArgumentException($"Only '{QueueEndpointScheme}://' endpoints are supported. Provided: {queueOnlyEndpoint.Scheme}://", nameof(queueOnlyEndpoint));
             }
 
             var queue = GetQueue(queueOnlyEndpoint);
