@@ -21,6 +21,7 @@ namespace Halibut
 {
     public class HalibutRuntime : IHalibutRuntime
     {
+        public const string QueueEndpointScheme = "queue";
         public static readonly string DefaultFriendlyHtmlPageContent = "<html><body><p>Hello!</p></body></html>";
         readonly ConcurrentDictionary<Uri, IPendingRequestQueue> queues = new();
         readonly IPendingRequestQueueFactory queueFactory;
@@ -199,6 +200,55 @@ namespace Halibut
             pollingClients.Add(new PollingClient(subscription, client, HandleIncomingRequestAsync, log, cancellationToken, pollingReconnectRetryPolicy));
         }
 
+        public async Task PollForRPCOverQueueAsync(Uri queueOnlyEndpoint, CancellationToken cancellationToken)
+        {
+            if (queueOnlyEndpoint.Scheme.ToLowerInvariant() != QueueEndpointScheme)
+            {
+                throw new ArgumentException($"Only '{QueueEndpointScheme}://' endpoints are supported. Provided: {queueOnlyEndpoint.Scheme}://", nameof(queueOnlyEndpoint));
+            }
+
+            var queue = GetQueue(queueOnlyEndpoint);
+            var log = logs.ForEndpoint(queueOnlyEndpoint);
+
+            log.Write(EventType.MessageExchange, $"Starting queue polling for endpoint: {queueOnlyEndpoint}");
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    var request = await queue.DequeueAsync(cancellationToken);
+
+                    if (request != null)
+                    {
+                        ResponseMessage response;
+                        try
+                        {
+                            response = await invoker.InvokeAsync(request.RequestMessage);
+                        }
+                        catch (Exception ex)
+                        {
+                            log.WriteException(EventType.Error, $"Error executing queue request for {request.RequestMessage.ServiceName}.{request.RequestMessage.MethodName}", ex);
+                            response = ResponseMessage.FromException(request.RequestMessage, ex);
+                        }
+
+                        await queue.ApplyResponse(response, request.RequestMessage.ActivityId);
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    log.Write(EventType.MessageExchange, $"Queue polling cancelled for endpoint: {queueOnlyEndpoint}");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    log.WriteException(EventType.Error, $"Error in queue polling loop for endpoint: {queueOnlyEndpoint}", ex);
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                }
+            }
+
+            log.Write(EventType.MessageExchange, $"Queue polling stopped for endpoint: {queueOnlyEndpoint}");
+        }
+
         public async Task<ServiceEndPoint> DiscoverAsync(Uri uri, CancellationToken cancellationToken)
         {
             return await DiscoverAsync(new ServiceEndPoint(uri, null, TimeoutsAndLimits), cancellationToken);
@@ -242,6 +292,7 @@ namespace Halibut
                         response = await SendOutgoingHttpsRequestAsync(request, cancellationToken).ConfigureAwait(false);
                         break;
                     case "poll":
+                    case QueueEndpointScheme:
                         response = await SendOutgoingPollingRequestAsync(request, cancellationToken).ConfigureAwait(false);
                         break;
                     default: throw new ArgumentException("Unknown endpoint type: " + endPoint.BaseUri.Scheme);
