@@ -196,7 +196,7 @@ namespace Halibut.Tests.Support
 
         public async Task<LatestService> Build(CancellationToken cancellationToken)
         {
-            //TODO: @server-at-scale - We don't need to be async. But this is left here to see if we need to add it back some day. We can decide later if we wish to make this sync.
+            //TODO: @executions-foundations - We don't need to be async. But this is left here to see if we need to add it back some day. We can decide later if we wish to make this sync.
             await Task.CompletedTask;
 
             serviceFactory ??= serviceFactoryBuilder.Build();

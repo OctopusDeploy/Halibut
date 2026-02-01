@@ -38,7 +38,7 @@ module.exports = {
 
   platform: 'github',
   repositories: ['OctopusDeploy/Halibut'],
-  reviewers: ['OctopusDeploy/team-server-at-scale'],
+  reviewers: ['OctopusDeploy/team-executions-foundations'],
   labels: ['dependencies', 'Halibut'],
   branchPrefix: 'renovate-dotnet/',
 
