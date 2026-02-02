@@ -55,7 +55,28 @@ using (var tentaclePolling = new HalibutRuntime(services, Certificates.Alice))
 }
 ```
 
-Notice that while the configuration code changed, the request/response code didn't apart from the endpoint. Logically, the Octopus is still the request/response client, and the Tentacle is still the request/response server, even though the transport layer has Octopus as the TCP listener and Tentacle as the TCP client polling for work. 
+Notice that while the configuration code changed, the request/response code didn't apart from the endpoint. Logically, the Octopus is still the request/response client, and the Tentacle is still the request/response server, even though the transport layer has Octopus as the TCP listener and Tentacle as the TCP client polling for work.
+
+## RPC over Redis
+
+Halibut supports executing RPC commands between nodes using a shared Redis queue as the communication mechanism. In this mode, nodes do not communicate directly with each other - all communication flows through Redis. This is particularly useful for scenarios where multiple nodes can all access a shared Redis instance but cannot establish direct network connections to each other.
+
+### How it works
+
+When using RPC over Redis:
+
+- The client queues RPC requests in Redis
+- The server polls Redis for pending requests
+- The server processes requests and writes responses back to Redis
+- The client retrieves responses from Redis
+
+This decoupled communication model allows nodes behind firewalls, in different networks, or with restricted connectivity to communicate as long as they can all reach the shared Redis instance.
+
+### Usage
+
+See the [SimpleLocalExecutionExample](source/Halibut.Tests/LocalExecutionModeFixture.cs) test for a complete example of how to set up and use RPC over Redis.
+
+For more detailed information about the Redis queue implementation, refer to the [Redis Queue documentation](docs/RedisQueue.md).
 
 ## Failure modes
 
