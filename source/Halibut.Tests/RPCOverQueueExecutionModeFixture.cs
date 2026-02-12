@@ -1,0 +1,103 @@
+#if NET8_0_OR_GREATER
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Halibut.Diagnostics;
+using Halibut.Logging;
+using Halibut.Queue;
+using Halibut.Queue.Redis;
+using Halibut.Queue.Redis.RedisDataLossDetection;
+using Halibut.Queue.Redis.RedisHelpers;
+using Halibut.ServiceModel;
+using Halibut.Tests.Queue.Redis.Utils;
+using Halibut.Tests.Support;
+using Halibut.Tests.Support.Logging;
+using Halibut.Tests.TestServices;
+using Halibut.Tests.TestServices.Async;
+using Halibut.TestUtils.Contracts;
+using NUnit.Framework;
+using DisposableCollection = Halibut.Util.DisposableCollection;
+
+namespace Halibut.Tests
+{
+    public class RPCOverQueueExecutionModeFixture : BaseTest
+    {
+        [RedisTest]
+        [Test]
+        public async Task SimpleRPCOverQueueExecutionExample()
+        {
+            var services = GetDelegateServiceFactory();
+            var timeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            
+            var logFactory = new CachingLogFactory(new TestContextLogCreator("", LogLevel.Trace));
+            
+            var log = new TestContextLogCreator("Redis", LogLevel.Fatal);
+            
+            var preSharedGuid = Guid.NewGuid();
+            
+            await using var disposables = new DisposableCollection();
+
+            await using var client = new HalibutRuntimeBuilder()
+                .WithServerCertificate(Certificates.Octopus)
+                .WithPendingRequestQueueFactory(RedisFactory(preSharedGuid, disposables, log, logFactory))
+                .WithHalibutTimeoutsAndLimits(timeoutsAndLimits)
+                .Build();
+
+            await using var worker = new HalibutRuntimeBuilder()
+                .WithServerCertificate(Certificates.TentaclePolling)
+                .WithServiceFactory(services)
+                .WithPendingRequestQueueFactory(RedisFactory(preSharedGuid, disposables, log, logFactory))
+                .WithHalibutTimeoutsAndLimits(timeoutsAndLimits)
+                .Build();
+
+            // Start worker polling
+            using var workerCts = new CancellationTokenSource();
+            var pollingTask = Task.Run(async () =>
+            {
+                await worker.PollForRPCOverQueueAsync(new Uri(HalibutRuntime.QueueEndpointScheme + "://test-worker"), workerCts.Token);
+            }, workerCts.Token);
+
+            // Client creates proxy and makes request
+            var echo = client.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(
+                new ServiceEndPoint(HalibutRuntime.QueueEndpointScheme + "://test-worker", null, client.TimeoutsAndLimits));
+
+            var result = await echo.SayHelloAsync("World");
+            result.Should().Be("World...");
+            
+            await workerCts.CancelAsync();
+
+            await pollingTask;
+        }
+
+        Func<QueueMessageSerializer, IPendingRequestQueueFactory> RedisFactory(
+            Guid preSharedGuid, 
+            DisposableCollection disposables,
+            TestContextLogCreator log,
+            CachingLogFactory logFactory)
+        {
+            return msgSer =>
+            {
+                var redisFacade = RedisFacadeBuilder.CreateRedisFacade(prefix: preSharedGuid);
+                disposables.AddAsyncDisposable(redisFacade);
+                var watchForRedisLosingAllItsData = new WatchForRedisLosingAllItsData(redisFacade, log.CreateNewForPrefix("watcher"));
+                disposables.AddAsyncDisposable(watchForRedisLosingAllItsData);
+                                     
+                return new RedisPendingRequestQueueFactory(msgSer,
+                    new InMemoryStoreDataStreamsForDistributedQueues(),
+                    watchForRedisLosingAllItsData,
+                    new HalibutRedisTransport(redisFacade),
+                    new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
+                    logFactory);
+            };
+        }
+
+        static DelegateServiceFactory GetDelegateServiceFactory()
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
+            return services;
+        }
+    }
+}
+#endif

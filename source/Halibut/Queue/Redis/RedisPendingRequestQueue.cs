@@ -381,7 +381,7 @@ namespace Halibut.Queue.Redis
             // It will kill the TCP connection, which will force re-connect (in perhaps a backoff function)
             // This could result in connecting to a node that is actually connected to redis. It could also
             // cause a cascade of failure from high load.
-            var pending = await DequeueNextAsync();
+            var pending = await DequeueNextAsync(cancellationToken);
             if (pending == null) return null;
 
             var pendingRequest = pending.Value.Item1;
@@ -492,9 +492,9 @@ namespace Halibut.Queue.Redis
             }
         }
 
-        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> DequeueNextAsync()
+        async Task<(RequestMessage, RequestDataStreamsTransferProgress)?> DequeueNextAsync(CancellationToken cancellationToken)
         {
-            await using var cts = new CancelOnDisposeCancellationToken(queueToken);
+            await using var cts = new CancelOnDisposeCancellationToken(queueToken, cancellationToken);
             try
             {
                 hasItemsForEndpoint.Reset();
