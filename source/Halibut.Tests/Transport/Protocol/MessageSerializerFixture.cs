@@ -104,7 +104,7 @@ namespace Halibut.Tests.Transport.Protocol
             await using (var stream = new RewindableBufferStream(new MemoryStream(Convert.FromBase64String(base64Bson))))
             {
                 var result = await ReadMessage<ResponseMessage>(sut, stream);
-                result.Error.Should().NotBeNull();
+                result!.Error.Should().NotBeNull();
                 result.Error!.Message = "foo";
                 result.Error.HalibutErrorType = "MethodNotFoundHalibutClientException";
             }
@@ -303,7 +303,7 @@ namespace Halibut.Tests.Transport.Protocol
             }
         }
         
-        async Task<T> ReadMessage<T>(MessageSerializer messageSerializer, RewindableBufferStream rewindableBufferStream)
+        async Task<T?> ReadMessage<T>(MessageSerializer messageSerializer, RewindableBufferStream rewindableBufferStream)
         {
             return (await messageSerializer.ReadMessageAsync<T>(rewindableBufferStream, CancellationToken)).Message;
         }
