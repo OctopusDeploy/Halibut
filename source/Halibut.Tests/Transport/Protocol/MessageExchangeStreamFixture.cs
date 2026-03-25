@@ -191,9 +191,12 @@ namespace Halibut.Tests.Transport.Protocol
                 .WithMessage("*Stream with length 100 was closed after only reading 10 bytes*");
 
             var logs = inMemoryLog.GetLogs();
-            logs.Should().NotContain(log => 
+            logs.Should().Contain(log => 
                 log.Type == EventType.Error && 
-                log.FormattedMessage.Contains("Data stream size mismatch"));
+                log.FormattedMessage.Contains("Data stream reading failed") &&
+                log.FormattedMessage.Contains($"Stream ID: {dataStreamId}") &&
+                log.FormattedMessage.Contains("Expected length: 100") &&
+                log.FormattedMessage.Contains("Actual bytes read before stream closed: 10"));
         }
         
         [Test]

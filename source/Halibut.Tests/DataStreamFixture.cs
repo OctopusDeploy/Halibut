@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Diagnostics;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
@@ -49,6 +51,79 @@ namespace Halibut.Tests
             using var memoryStream = new MemoryStream();
             await ((IDataStreamInternal) ds).TransmitAsync(memoryStream, CancellationToken);
             memoryStream.ToArray().Should().BeEquivalentTo(data);
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        public async Task EndToEnd_ShouldLogErrorWhenDataStreamSendsTooManyBytes(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .RecordingClientLogs(out var clientLogs)
+                       .RecordingServiceLogs(out var serviceLogs)
+                       .Build(CancellationToken))
+            {
+                var readDataStreamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncClientReadDataStreamService>();
+
+                var actualData = new byte[100];
+                new Random().NextBytes(actualData);
+                
+                var maliciousDataStream = new DataStream(10, async (stream, ct) =>
+                {
+                    await stream.WriteAsync(actualData, 0, actualData.Length, ct);
+                });
+
+                await AssertException.Throws<HalibutClientException>(async () => 
+                    await readDataStreamService.SendDataAsync(maliciousDataStream));
+
+                var allClientLogs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
+                allClientLogs.Should().Contain(log => 
+                    log.Type == EventType.Error && 
+                    log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
+                    log.FormattedMessage.Contains("Declared length: 10") &&
+                    log.FormattedMessage.Contains("Actual bytes written: 100"));
+            }
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        public async Task EndToEnd_ShouldLogErrorWhenDataStreamSendsTooFewBytes(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .RecordingClientLogs(out var clientLogs)
+                       .RecordingServiceLogs(out var serviceLogs)
+                       .Build(CancellationToken))
+            {
+                var readDataStreamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncClientReadDataStreamService>();
+
+                var actualData = new byte[10];
+                new Random().NextBytes(actualData);
+                
+                var underSizedDataStream = new DataStream(100, async (stream, ct) =>
+                {
+                    await stream.WriteAsync(actualData, 0, actualData.Length, ct);
+                });
+
+                await AssertException.Throws<HalibutClientException>(async () => 
+                    await readDataStreamService.SendDataAsync(underSizedDataStream));
+
+                var allClientLogs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
+                allClientLogs.Should().Contain(log => 
+                    log.Type == EventType.Error && 
+                    log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
+                    log.FormattedMessage.Contains("Declared length: 100") &&
+                    log.FormattedMessage.Contains("Actual bytes written: 10"));
+
+                var allServiceLogs = serviceLogs.Values.SelectMany(log => log.GetLogs()).ToList();
+                allServiceLogs.Should().Contain(log => 
+                    log.Type == EventType.Error && 
+                    log.FormattedMessage.Contains("Data stream reading failed") &&
+                    log.FormattedMessage.Contains("Expected length: 100") &&
+                    log.FormattedMessage.Contains("Actual bytes read before stream closed: 10"));
+            }
         }
     }
 }

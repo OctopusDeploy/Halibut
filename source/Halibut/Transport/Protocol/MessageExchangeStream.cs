@@ -272,7 +272,20 @@ namespace Halibut.Transport.Protocol
             var id = new Guid(await stream.ReadBytesAsync(16, cancellationToken));
             var length = await stream.ReadInt64Async(cancellationToken);
             var dataStream = FindStreamById(deserializedStreams, id);
-            var tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
+            
+            TemporaryFileStream tempFile;
+            try
+            {
+                tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
+            }
+            catch (ProtocolException ex) when (ex.Message.Contains("was closed after only reading"))
+            {
+                var bytesReadMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"closed after only reading (\d+) bytes");
+                var bytesRead = bytesReadMatch.Success ? long.Parse(bytesReadMatch.Groups[1].Value) : -1;
+                log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read before stream closed: {2}", id, length, bytesRead);
+                throw;
+            }
+            
             var lengthAgain = await stream.ReadInt64Async(cancellationToken);
             if (lengthAgain != length)
             {
