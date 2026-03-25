@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -55,11 +56,15 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        public async Task EndToEnd_ShouldLogErrorWhenDataStreamSendsTooManyBytes(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenSendingADataStream_AndWeSendMoreDataThanWeShould_ThenADescriptiveErrorIsLogged(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
+                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits
+                       {
+                           ThrowOnDataStreamSizeMismatch = false
+                       })
                        .RecordingClientLogs(out var clientLogs)
                        .RecordingServiceLogs(out var serviceLogs)
                        .Build(CancellationToken))
@@ -83,16 +88,30 @@ namespace Halibut.Tests
                     log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
                     log.FormattedMessage.Contains("Declared length: 10") &&
                     log.FormattedMessage.Contains("Actual bytes written: 100"));
+
+                var allServiceLogs = serviceLogs.Values.SelectMany(log => log.GetLogs()).ToList();
+                allServiceLogs.Should().Contain(log => 
+                    log.Type == EventType.Error && 
+                    log.FormattedMessage.Contains("Data stream size mismatch detected") &&
+                    log.FormattedMessage.Contains("Message ID:") &&
+                    log.FormattedMessage.Contains("Stream ID:") &&
+                    log.FormattedMessage.Contains("Expected length: 10") &&
+                    log.FormattedMessage.Contains("Total length of all DataStreams"));
+                 
             }
         }
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        public async Task EndToEnd_ShouldLogErrorWhenDataStreamSendsTooFewBytes(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenSendingADataStream_AndWeSendLessDataThanWeShould_ThenADescriptiveErrorIsLogged(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
+                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits
+                       {
+                           ThrowOnDataStreamSizeMismatch = false
+                       })
                        .RecordingClientLogs(out var clientLogs)
                        .RecordingServiceLogs(out var serviceLogs)
                        .Build(CancellationToken))
@@ -121,7 +140,7 @@ namespace Halibut.Tests
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        public async Task EndToEnd_ShouldThrowWhenConfiguredAndDataStreamSendsTooManyBytes(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenSendingADataStream_AndWeSendMoreDataThanWeShould_AndThrowOnDataStreamSizeMismatchIsEnabled_ThenItThrows(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
@@ -147,19 +166,12 @@ namespace Halibut.Tests
                     await readDataStreamService.SendDataAsync(maliciousDataStream));
 
                 exception.And.Message.Should().Contain("Data stream size mismatch");
-
-                var allClientLogs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                allClientLogs.Should().Contain(log => 
-                    log.Type == EventType.Error && 
-                    log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
-                    log.FormattedMessage.Contains("Declared length: 10") &&
-                    log.FormattedMessage.Contains("Actual bytes written: 100"));
             }
         }
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        public async Task EndToEnd_ShouldThrowWhenConfiguredAndDataStreamSendsTooFewBytes(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenSendingADataStream_AndWeSendLessDataThanWeShould_AndThrowOnDataStreamSizeMismatchIsEnabled_ThenItThrows(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
@@ -185,19 +197,12 @@ namespace Halibut.Tests
                     await readDataStreamService.SendDataAsync(underSizedDataStream));
 
                 exception.And.Message.Should().Contain("Data stream size mismatch");
-
-                var allClientLogs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                allClientLogs.Should().Contain(log => 
-                    log.Type == EventType.Error && 
-                    log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
-                    log.FormattedMessage.Contains("Declared length: 100") &&
-                    log.FormattedMessage.Contains("Actual bytes written: 10"));
             }
         }
 
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
-        public async Task EndToEnd_WithThrowOnMismatch_SecondRequestSucceedsQuicklyAfterFirstFails(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task WhenSendingADataStream_AndWeSendLessDataThanWeShould_AndThrowOnDataStreamSizeMismatchIsEnabled_ThenSecondRequestSucceedsQuickly(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
@@ -219,17 +224,11 @@ namespace Halibut.Tests
                 {
                     await stream.WriteAsync(underSizedData, 0, underSizedData.Length, ct);
                 });
-
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 
                 await AssertException.Throws<HalibutClientException>(async () => 
                     await readDataStreamService.SendDataAsync(underSizedDataStream));
                 
-                var firstRequestTime = stopwatch.Elapsed;
-                firstRequestTime.Should().BeLessThan(TimeSpan.FromSeconds(10), 
-                    "first request should fail quickly due to ThrowOnDataStreamSizeMismatch");
-
-                stopwatch.Restart();
+                var stopwatch = Stopwatch.StartNew();
                 
                 var correctData = new byte[50];
                 new Random().NextBytes(correctData);
@@ -243,14 +242,10 @@ namespace Halibut.Tests
                 var secondRequestTime = stopwatch.Elapsed;
                 received.Should().Be(50);
                 secondRequestTime.Should().BeLessThan(TimeSpan.FromSeconds(10), 
-                    "second request with correct stream should complete quickly (much faster than 60s timeout)");
-
-                var allClientLogs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                allClientLogs.Should().Contain(log => 
-                    log.Type == EventType.Error && 
-                    log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
-                    log.FormattedMessage.Contains("Declared length: 100") &&
-                    log.FormattedMessage.Contains("Actual bytes written: 10"));
+                    "second request with correct stream should complete quickly, since the sender" +
+                    " detects an issue it will close the connection which will result in the receiver" +
+                    " seeing an EOF which results in it entering into a reconnect." +
+                    " Previously the sender would need to wait 60s before reconnecting.");
             }
         }
     }

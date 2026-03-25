@@ -172,10 +172,10 @@ namespace Halibut.Diagnostics
         public bool TcpNoDelay { get; set; }
 
         /// <summary>
-        /// When true, an exception will be thrown if a data stream's actual size doesn't match the declared size.
-        /// When false (default), size mismatches are only logged at Error level.
+        /// When true (default), an exception will be thrown if a data stream's actual size doesn't match the declared size.
+        /// When false, size mismatches are only logged at Error level.
         /// </summary>
-        public bool ThrowOnDataStreamSizeMismatch { get; set; } = false;
+        public bool ThrowOnDataStreamSizeMismatch { get; set; } = true;
 
         /// <summary>
         /// In the future these will become the default

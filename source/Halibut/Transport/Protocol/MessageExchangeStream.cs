@@ -189,7 +189,8 @@ namespace Halibut.Transport.Protocol
         public async Task SendAsync<T>(T message, CancellationToken cancellationToken)
         {
             var serializedStreams = await serializer.WriteMessageAsync(stream, message, cancellationToken);
-            await WriteEachStreamAsync(serializedStreams, cancellationToken);
+            var messageId = (message as IHalibutMessage)?.Id ?? "unknown";
+            await WriteEachStreamAsync(messageId, serializedStreams, cancellationToken);
             
             log.Write(EventType.Diagnostic, "Sent message");
         }
@@ -214,9 +215,10 @@ namespace Halibut.Transport.Protocol
         }
 
         async Task<T?> ReceiveAsync<T>(CancellationToken cancellationToken)
+            where T : IHalibutMessage
         {
             var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
-            await ReadStreamsAsync(dataStreams, cancellationToken);
+            await ReadStreamsAsync(result.Id, dataStreams, cancellationToken);
             log.Write(EventType.Diagnostic, "Received Message");
             return result;
         }
@@ -256,39 +258,45 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task ReadStreamsAsync(IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
+        async Task ReadStreamsAsync(string messageId, IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
         {
             var expected = deserializedStreams.Count;
 
             for (var i = 0; i < expected; i++)
             {
-                await ReadStreamAsync(deserializedStreams, cancellationToken);
+                await ReadStreamAsync(messageId, deserializedStreams, cancellationToken);
             }
         }
 
-        async Task ReadStreamAsync(IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
+        async Task ReadStreamAsync(string messageId, IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
         {
             
             var id = new Guid(await stream.ReadBytesAsync(16, cancellationToken));
             var length = await stream.ReadInt64Async(cancellationToken);
             var dataStream = FindStreamById(deserializedStreams, id);
             
-            var tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
+            var tempFile = await CopyStreamToFileAsync(messageId, id, length, stream, deserializedStreams, cancellationToken);
             
             var lengthAgain = await stream.ReadInt64Async(cancellationToken);
             if (lengthAgain != length)
             {
-                log.Write(EventType.Error, "Data stream size mismatch detected. Stream ID: {0}, Expected length: {1}, Actual length claimed at end: {2}", id, length, lengthAgain);
-                throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
+                log.Write(EventType.Error, "Data stream size mismatch detected. Message ID: {0}, Stream ID: {1}, " +
+                                           "Expected length: {2}, Actual length claimed at end: {3}. " +
+                                           "Total length of all DataStreams to be sent is {4}", 
+                                            messageId, id, length, lengthAgain, deserializedStreams.Select(d => d.Length).Sum());
+                throw new ProtocolException($"Data stream size mismatch detected. Message Id: {messageId}, Stream ID: {id}, " +
+                                            $"Expected length: {length}, Actual length claimed at end: {lengthAgain}. " +
+                                            $"Total length of all DataStreams to be sent is {deserializedStreams.Select(d => d.Length).Sum()}");
             }
 
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
         
-        async Task<TemporaryFileStream> CopyStreamToFileAsync(Guid id, long length, Stream stream, CancellationToken cancellationToken)
+        async Task<TemporaryFileStream> CopyStreamToFileAsync(string messageId, Guid id, long length, Stream stream, IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", id.ToString(), Interlocked.Increment(ref streamCount)));
             long bytesLeftToRead = length;
+            var totalDataStreamLength = deserializedStreams.Select(d => d.Length).Sum();
 #if !NETFRAMEWORK
             await
 #endif
@@ -297,22 +305,32 @@ namespace Halibut.Transport.Protocol
                 var buffer = new byte[65*1024];
                 while (bytesLeftToRead > 0)
                 {
-                    int read;
+                    int read = 0;
                     try
                     {
                         read = await stream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, bytesLeftToRead), cancellationToken);
                     }
                     catch (Exception ex)
                     {
-                        log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read: {2}, Exception: {3}", id, length, length - bytesLeftToRead, ex.Message);
+                        log.WriteException(EventType.Error, "Data stream reading failed. Message ID: {0}, Stream ID: {1}, " +
+                                                            "Expected length: {2}, Actual bytes read: {3}. " +
+                                                            "Total length of all DataStreams to be sent is {4}. Exception: {5}",
+                                                    ex,
+                                                   messageId, id, length, length - bytesLeftToRead, totalDataStreamLength, ex.Message);
                         throw;
                     }
                     
                     if (read == 0)
                     {
                         var bytesRead = length - bytesLeftToRead;
-                        log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read: {2}, Exception: {3}", id, length, bytesRead, $"Stream with length {length} was closed after only reading {bytesRead} bytes.");
-                        throw new ProtocolException($"Stream with length {length} was closed after only reading {bytesRead} bytes.");
+                        log.Write(EventType.Error, "Data stream reading failed. Message ID: {0}, Stream ID: {1}, " +
+                                                   "Expected length: {2}, Actual bytes read: {3}. " +
+                                                   "Total length of all DataStreams to be sent is {4}. Exception: Stream closed prematurely.", 
+                                                   messageId, id, length, bytesRead, totalDataStreamLength);
+                        throw new ProtocolException($"Data stream reading failed. Message Id: {messageId}, Stream ID: {id}, " +
+                                                    $"Expected length: {length}, Actual bytes read: {bytesRead}. " +
+                                                    $"Total length of all DataStreams to be sent is {totalDataStreamLength}. " +
+                                                    $"Stream with length {length} was closed after only reading {bytesRead} bytes.");
                     }
                     
                     bytesLeftToRead -= read;
@@ -334,9 +352,12 @@ namespace Halibut.Transport.Protocol
             return dataStream;
         }
 
-        async Task WriteEachStreamAsync(IEnumerable<DataStream> streams, CancellationToken cancellationToken)
+        async Task WriteEachStreamAsync(string messageId, IEnumerable<DataStream> streams, CancellationToken cancellationToken)
         {
-            foreach (var dataStream in streams)
+            var streamsList = streams.ToList();
+            var totalDataStreamLength = streamsList.Select(d => d.Length).Sum();
+            
+            foreach (var dataStream in streamsList)
             {
                 await stream.WriteByteArrayAsync(dataStream.Id.ToByteArray(), cancellationToken);
                 await stream.WriteLongAsync(dataStream.Length, cancellationToken);
@@ -348,11 +369,16 @@ namespace Halibut.Transport.Protocol
 
                 if (byteCountingStream.BytesWritten != dataStream.Length)
                 {
-                    log.Write(EventType.Error, "Data stream size mismatch detected during send. Stream ID: {0}, Declared length: {1}, Actual bytes written: {2}", dataStream.Id, dataStream.Length, byteCountingStream.BytesWritten);
+                    log.Write(EventType.Error, "Data stream size mismatch detected during send. Message ID: {0}, Stream ID: {1}, " +
+                                               "Declared length: {2}, Actual bytes written: {3}. " +
+                                               "Total length of all DataStreams to be sent is {4}",
+                                               messageId, dataStream.Id, dataStream.Length, byteCountingStream.BytesWritten, totalDataStreamLength);
                     
                     if (halibutTimeoutsAndLimits.ThrowOnDataStreamSizeMismatch)
                     {
-                        throw new ProtocolException($"Data stream size mismatch: Stream {dataStream.Id} declared length {dataStream.Length} but actually wrote {byteCountingStream.BytesWritten} bytes.");
+                        throw new ProtocolException($"Data stream size mismatch detected during send. Message Id: {messageId}, Stream ID: {dataStream.Id}, " +
+                                                    $"Declared length: {dataStream.Length}, Actual bytes written: {byteCountingStream.BytesWritten}. " +
+                                                    $"Total length of all DataStreams to be sent is {totalDataStreamLength}.");
                     }
                 }
 

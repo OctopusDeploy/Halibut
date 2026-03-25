@@ -23,12 +23,14 @@ namespace Halibut.Tests.Transport.Protocol
             var memoryStream = new MemoryStream();
             
             var serializer = new MessageSerializerBuilder(new LogFactory()).Build();
+            var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            limits.ThrowOnDataStreamSizeMismatch = false;
             
             var messageExchangeStream = new MessageExchangeStream(
                 memoryStream,
                 serializer,
                 new NoOpControlMessageObserver(),
-                new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
+                limits,
                 inMemoryLog);
 
             var actualData = new byte[100];
@@ -53,8 +55,11 @@ namespace Halibut.Tests.Transport.Protocol
             logs.Should().Contain(log => 
                 log.Type == EventType.Error && 
                 log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
+                log.FormattedMessage.Contains("Message ID:") &&
+                log.FormattedMessage.Contains("Stream ID:") &&
                 log.FormattedMessage.Contains("Declared length: 10") &&
-                log.FormattedMessage.Contains("Actual bytes written: 100"));
+                log.FormattedMessage.Contains("Actual bytes written: 100") &&
+                log.FormattedMessage.Contains("Total length of all DataStreams"));
         }
 
         [Test]
@@ -94,18 +99,20 @@ namespace Halibut.Tests.Transport.Protocol
                 var method = typeof(MessageExchangeStream).GetMethod("ReadStreamAsync", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 await (Task)method!.Invoke(messageExchangeStream, 
-                    new object[] { new[] { deserializedDataStream }, CancellationToken.None })!;
+                    new object[] { "test-message-id", new[] { deserializedDataStream }, CancellationToken.None })!;
             };
 
             await act.Should().ThrowAsync<ProtocolException>()
-                .WithMessage("*length of the file was expected to be: 10*");
+                .WithMessage("*Data stream size mismatch detected*Message Id: test-message-id*Stream ID: *Expected length: 10*Actual length claimed at end: 100*");
 
             var logs = inMemoryLog.GetLogs();
             logs.Should().Contain(log => 
                 log.Type == EventType.Error && 
                 log.FormattedMessage.Contains("Data stream size mismatch detected") &&
+                log.FormattedMessage.Contains("Stream ID:") &&
                 log.FormattedMessage.Contains("Expected length: 10") &&
-                log.FormattedMessage.Contains("Actual length claimed at end: 100"));
+                log.FormattedMessage.Contains("Actual length claimed at end: 100") &&
+                log.FormattedMessage.Contains("Total length of all DataStreams"));
         }
         
         [Test]
@@ -115,12 +122,14 @@ namespace Halibut.Tests.Transport.Protocol
             var memoryStream = new MemoryStream();
             
             var serializer = new MessageSerializerBuilder(new LogFactory()).Build();
+            var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            limits.ThrowOnDataStreamSizeMismatch = false;
             
             var messageExchangeStream = new MessageExchangeStream(
                 memoryStream,
                 serializer,
                 new NoOpControlMessageObserver(),
-                new HalibutTimeoutsAndLimitsForTestsBuilder().Build(),
+                limits,
                 inMemoryLog);
 
             var actualData = new byte[10];
@@ -145,8 +154,11 @@ namespace Halibut.Tests.Transport.Protocol
             logs.Should().Contain(log => 
                 log.Type == EventType.Error && 
                 log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
+                log.FormattedMessage.Contains("Message ID:") &&
+                log.FormattedMessage.Contains("Stream ID:") &&
                 log.FormattedMessage.Contains("Declared length: 100") &&
-                log.FormattedMessage.Contains("Actual bytes written: 10"));
+                log.FormattedMessage.Contains("Actual bytes written: 10") &&
+                log.FormattedMessage.Contains("Total length of all DataStreams"));
         }
 
         [Test]
@@ -184,7 +196,7 @@ namespace Halibut.Tests.Transport.Protocol
                 var method = typeof(MessageExchangeStream).GetMethod("ReadStreamAsync", 
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 await (Task)method!.Invoke(messageExchangeStream, 
-                    new object[] { new[] { deserializedDataStream }, CancellationToken.None })!;
+                    new object[] { "test-message-id", new[] { deserializedDataStream }, CancellationToken.None })!;
             };
 
             await act.Should().ThrowAsync<ProtocolException>()
@@ -235,12 +247,17 @@ namespace Halibut.Tests.Transport.Protocol
             Func<Task> act = async () => await messageExchangeStream.SendAsync(requestMessage, CancellationToken.None);
 
             await act.Should().ThrowAsync<ProtocolException>()
-                .WithMessage("*Data stream size mismatch: Stream * declared length 10 but actually wrote 100 bytes*");
+                .WithMessage("*Data stream size mismatch detected during send*Stream ID:*Declared length: 10*Actual bytes written: 100*");
 
             var logs = inMemoryLog.GetLogs();
             logs.Should().Contain(log => 
                 log.Type == EventType.Error && 
-                log.FormattedMessage.Contains("Data stream size mismatch detected during send"));
+                log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
+                log.FormattedMessage.Contains("Message ID:") &&
+                log.FormattedMessage.Contains("Stream ID:") &&
+                log.FormattedMessage.Contains("Declared length: 10") &&
+                log.FormattedMessage.Contains("Actual bytes written: 100") &&
+                log.FormattedMessage.Contains("Total length of all DataStreams"));
         }
 
         [Test]
