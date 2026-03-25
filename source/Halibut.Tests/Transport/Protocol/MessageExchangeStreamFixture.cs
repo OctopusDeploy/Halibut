@@ -200,6 +200,50 @@ namespace Halibut.Tests.Transport.Protocol
         }
         
         [Test]
+        public async Task ShouldThrowExceptionWhenConfiguredAndDataStreamSendsSizeMismatch()
+        {
+            var inMemoryLog = new InMemoryLogWriter();
+            var memoryStream = new MemoryStream();
+            
+            var serializer = new MessageSerializerBuilder(new LogFactory()).Build();
+            var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            limits.ThrowOnDataStreamSizeMismatch = true;
+            
+            var messageExchangeStream = new MessageExchangeStream(
+                memoryStream,
+                serializer,
+                new NoOpControlMessageObserver(),
+                limits,
+                inMemoryLog);
+
+            var actualData = new byte[100];
+            new Random().NextBytes(actualData);
+            
+            var maliciousDataStream = new DataStream(10, async (stream, ct) =>
+            {
+                await stream.WriteAsync(actualData, 0, actualData.Length, ct);
+            });
+
+            var requestMessage = new RequestMessage
+            {
+                Destination = new ServiceEndPoint(new Uri("https://example.com"), "ABC123", new HalibutTimeoutsAndLimitsForTestsBuilder().Build()),
+                MethodName = "Test",
+                ServiceName = "TestService",
+                Params = new object[] { maliciousDataStream }
+            };
+
+            Func<Task> act = async () => await messageExchangeStream.SendAsync(requestMessage, CancellationToken.None);
+
+            await act.Should().ThrowAsync<ProtocolException>()
+                .WithMessage("*Data stream size mismatch: Stream * declared length 10 but actually wrote 100 bytes*");
+
+            var logs = inMemoryLog.GetLogs();
+            logs.Should().Contain(log => 
+                log.Type == EventType.Error && 
+                log.FormattedMessage.Contains("Data stream size mismatch detected during send"));
+        }
+
+        [Test]
         public async Task ShouldNotLogErrorWhenDataStreamSendsCorrectSize()
         {
             var inMemoryLog = new InMemoryLogWriter();

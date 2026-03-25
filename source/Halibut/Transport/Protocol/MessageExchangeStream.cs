@@ -344,6 +344,11 @@ namespace Halibut.Transport.Protocol
                 if (byteCountingStream.BytesWritten != dataStream.Length)
                 {
                     log.Write(EventType.Error, "Data stream size mismatch detected during send. Stream ID: {0}, Declared length: {1}, Actual bytes written: {2}", dataStream.Id, dataStream.Length, byteCountingStream.BytesWritten);
+                    
+                    if (halibutTimeoutsAndLimits.ThrowOnDataStreamSizeMismatch)
+                    {
+                        throw new ProtocolException($"Data stream size mismatch: Stream {dataStream.Id} declared length {dataStream.Length} but actually wrote {byteCountingStream.BytesWritten} bytes.");
+                    }
                 }
 
                 await stream.WriteLongAsync(dataStream.Length, cancellationToken);
