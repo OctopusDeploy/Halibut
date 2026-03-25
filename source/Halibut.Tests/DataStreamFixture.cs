@@ -61,10 +61,9 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits
-                       {
-                           ThrowOnDataStreamSizeMismatch = false
-                       })
+                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder()
+                           .Build()
+                           .Apply(h => h.ThrowOnDataStreamSizeMismatch = false))
                        .RecordingClientLogs(out var clientLogs)
                        .RecordingServiceLogs(out var serviceLogs)
                        .Build(CancellationToken))
@@ -108,10 +107,9 @@ namespace Halibut.Tests
             await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                        .WithStandardServices()
                        .AsLatestClientAndLatestServiceBuilder()
-                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits
-                       {
-                           ThrowOnDataStreamSizeMismatch = false
-                       })
+                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder()
+                           .Build()
+                           .Apply(h => h.ThrowOnDataStreamSizeMismatch = false))
                        .RecordingClientLogs(out var clientLogs)
                        .RecordingServiceLogs(out var serviceLogs)
                        .Build(CancellationToken))

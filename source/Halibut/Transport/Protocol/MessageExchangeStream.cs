@@ -218,7 +218,10 @@ namespace Halibut.Transport.Protocol
             where T : IHalibutMessage
         {
             var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
-            await ReadStreamsAsync(result.Id, dataStreams, cancellationToken);
+            if (dataStreams.Count > 0)
+            {
+                await ReadStreamsAsync(result?.Id??"", dataStreams, cancellationToken);
+            }
             log.Write(EventType.Diagnostic, "Received Message");
             return result;
         }
