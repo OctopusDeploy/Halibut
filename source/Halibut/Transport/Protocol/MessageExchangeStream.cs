@@ -273,18 +273,7 @@ namespace Halibut.Transport.Protocol
             var length = await stream.ReadInt64Async(cancellationToken);
             var dataStream = FindStreamById(deserializedStreams, id);
             
-            TemporaryFileStream tempFile;
-            try
-            {
-                tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                var bytesReadMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"closed after only reading (\d+) bytes");
-                var bytesRead = bytesReadMatch.Success ? long.Parse(bytesReadMatch.Groups[1].Value) : -1;
-                log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read: {2}, Exception: {3}", id, length, bytesRead, ex.Message);
-                throw;
-            }
+            var tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
             
             var lengthAgain = await stream.ReadInt64Async(cancellationToken);
             if (lengthAgain != length)
@@ -308,8 +297,24 @@ namespace Halibut.Transport.Protocol
                 var buffer = new byte[65*1024];
                 while (bytesLeftToRead > 0)
                 {
-                    var read = await stream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, bytesLeftToRead), cancellationToken);
-                    if (read == 0) throw new ProtocolException($"Stream with length {length} was closed after only reading {length - bytesLeftToRead} bytes.");
+                    int read;
+                    try
+                    {
+                        read = await stream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, bytesLeftToRead), cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read: {2}, Exception: {3}", id, length, length - bytesLeftToRead, ex.Message);
+                        throw;
+                    }
+                    
+                    if (read == 0)
+                    {
+                        var bytesRead = length - bytesLeftToRead;
+                        log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read: {2}, Exception: {3}", id, length, bytesRead, $"Stream with length {length} was closed after only reading {bytesRead} bytes.");
+                        throw new ProtocolException($"Stream with length {length} was closed after only reading {bytesRead} bytes.");
+                    }
+                    
                     bytesLeftToRead -= read;
                     await fileStream.WriteAsync(buffer, 0, read, cancellationToken);
                 }
