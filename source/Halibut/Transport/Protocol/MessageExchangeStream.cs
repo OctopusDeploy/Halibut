@@ -276,6 +276,7 @@ namespace Halibut.Transport.Protocol
             var lengthAgain = await stream.ReadInt64Async(cancellationToken);
             if (lengthAgain != length)
             {
+                log.Write(EventType.Error, "Data stream size mismatch detected. Stream ID: {0}, Expected length: {1}, Actual length claimed at end: {2}", id, length, lengthAgain);
                 throw new ProtocolException("There was a problem receiving a file stream: the length of the file was expected to be: " + length + " but less data was actually sent. This can happen if the remote party is sending a stream but the stream had already been partially read, or if the stream was being reused between calls.");
             }
 
@@ -323,8 +324,14 @@ namespace Halibut.Transport.Protocol
                 await stream.WriteLongAsync(dataStream.Length, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
 
-                await ((IDataStreamInternal)dataStream).TransmitAsync(stream, cancellationToken);
+                var byteCountingStream = new ByteCountingStream(stream, OnDispose.LeaveInputStreamOpen);
+                await ((IDataStreamInternal)dataStream).TransmitAsync(byteCountingStream, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
+
+                if (byteCountingStream.BytesWritten != dataStream.Length)
+                {
+                    log.Write(EventType.Error, "Data stream size mismatch detected during send. Stream ID: {0}, Declared length: {1}, Actual bytes written: {2}", dataStream.Id, dataStream.Length, byteCountingStream.BytesWritten);
+                }
 
                 await stream.WriteLongAsync(dataStream.Length, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
