@@ -85,6 +85,7 @@ namespace Halibut.Tests
                         "No connection could be made because the target machine actively refused it",
                         "the polling endpoint did not collect the request within the allowed time",
                         "Unable to read data from the transport connection: Connection timed out.",
+                        "Unable to read data from the transport connection: Operation timed out.",
                         "A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.",
                         "A timeout while waiting for the proxy server at");
                 ;

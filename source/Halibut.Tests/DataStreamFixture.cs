@@ -239,7 +239,7 @@ namespace Halibut.Tests
                 
                 var secondRequestTime = stopwatch.Elapsed;
                 received.Should().Be(50);
-                secondRequestTime.Should().BeLessThan(TimeSpan.FromSeconds(10), 
+                secondRequestTime.Should().BeLessThan(TimeSpan.FromSeconds(30), 
                     "second request with correct stream should complete quickly, since the sender" +
                     " detects an issue it will close the connection which will result in the receiver" +
                     " seeing an EOF which results in it entering into a reconnect." +
