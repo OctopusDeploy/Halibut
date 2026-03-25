@@ -194,5 +194,64 @@ namespace Halibut.Tests
                     log.FormattedMessage.Contains("Actual bytes written: 10"));
             }
         }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false)]
+        public async Task EndToEnd_WithThrowOnMismatch_SecondRequestSucceedsQuicklyAfterFirstFails(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .WithStandardServices()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimits
+                       {
+                           ThrowOnDataStreamSizeMismatch = true,
+                           TcpClientReceiveResponseTimeout = TimeSpan.FromSeconds(60)
+                       })
+                       .RecordingClientLogs(out var clientLogs)
+                       .Build(CancellationToken))
+            {
+                var readDataStreamService = clientAndService.CreateAsyncClient<IReadDataStreamService, IAsyncClientReadDataStreamService>();
+
+                var underSizedData = new byte[10];
+                new Random().NextBytes(underSizedData);
+                
+                var underSizedDataStream = new DataStream(100, async (stream, ct) =>
+                {
+                    await stream.WriteAsync(underSizedData, 0, underSizedData.Length, ct);
+                });
+
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                
+                await AssertException.Throws<HalibutClientException>(async () => 
+                    await readDataStreamService.SendDataAsync(underSizedDataStream));
+                
+                var firstRequestTime = stopwatch.Elapsed;
+                firstRequestTime.Should().BeLessThan(TimeSpan.FromSeconds(10), 
+                    "first request should fail quickly due to ThrowOnDataStreamSizeMismatch");
+
+                stopwatch.Restart();
+                
+                var correctData = new byte[50];
+                new Random().NextBytes(correctData);
+                var correctDataStream = new DataStream(50, async (stream, ct) =>
+                {
+                    await stream.WriteAsync(correctData, 0, correctData.Length, ct);
+                });
+
+                var received = await readDataStreamService.SendDataAsync(correctDataStream);
+                
+                var secondRequestTime = stopwatch.Elapsed;
+                received.Should().Be(50);
+                secondRequestTime.Should().BeLessThan(TimeSpan.FromSeconds(10), 
+                    "second request with correct stream should complete quickly (much faster than 60s timeout)");
+
+                var allClientLogs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
+                allClientLogs.Should().Contain(log => 
+                    log.Type == EventType.Error && 
+                    log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
+                    log.FormattedMessage.Contains("Declared length: 100") &&
+                    log.FormattedMessage.Contains("Actual bytes written: 10"));
+            }
+        }
     }
 }
