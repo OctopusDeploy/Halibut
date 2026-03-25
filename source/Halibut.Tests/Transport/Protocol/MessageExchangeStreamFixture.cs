@@ -196,7 +196,7 @@ namespace Halibut.Tests.Transport.Protocol
                 log.FormattedMessage.Contains("Data stream reading failed") &&
                 log.FormattedMessage.Contains($"Stream ID: {dataStreamId}") &&
                 log.FormattedMessage.Contains("Expected length: 100") &&
-                log.FormattedMessage.Contains("Actual bytes read before stream closed: 10"));
+                log.FormattedMessage.Contains("Actual bytes read: 10"));
         }
         
         [Test]

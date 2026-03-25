@@ -278,11 +278,11 @@ namespace Halibut.Transport.Protocol
             {
                 tempFile = await CopyStreamToFileAsync(id, length, stream, cancellationToken);
             }
-            catch (ProtocolException ex) when (ex.Message.Contains("was closed after only reading"))
+            catch (Exception ex)
             {
                 var bytesReadMatch = System.Text.RegularExpressions.Regex.Match(ex.Message, @"closed after only reading (\d+) bytes");
                 var bytesRead = bytesReadMatch.Success ? long.Parse(bytesReadMatch.Groups[1].Value) : -1;
-                log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read before stream closed: {2}", id, length, bytesRead);
+                log.Write(EventType.Error, "Data stream reading failed. Stream ID: {0}, Expected length: {1}, Actual bytes read: {2}, Exception: {3}", id, length, bytesRead, ex.Message);
                 throw;
             }
             

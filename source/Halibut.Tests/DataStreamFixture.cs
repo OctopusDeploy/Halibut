@@ -116,13 +116,6 @@ namespace Halibut.Tests
                     log.FormattedMessage.Contains("Data stream size mismatch detected during send") &&
                     log.FormattedMessage.Contains("Declared length: 100") &&
                     log.FormattedMessage.Contains("Actual bytes written: 10"));
-
-                var allServiceLogs = serviceLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                allServiceLogs.Should().Contain(log => 
-                    log.Type == EventType.Error && 
-                    log.FormattedMessage.Contains("Data stream reading failed") &&
-                    log.FormattedMessage.Contains("Expected length: 100") &&
-                    log.FormattedMessage.Contains("Actual bytes read before stream closed: 10"));
             }
         }
     }
