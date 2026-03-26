@@ -191,6 +191,7 @@ namespace Halibut.Transport.Protocol
             var serializedStreams = await serializer.WriteMessageAsync(stream, message, cancellationToken);
             await WriteEachStreamAsync(serializedStreams, cancellationToken);
             
+            await stream.FlushAsync(cancellationToken);
             log.Write(EventType.Diagnostic, "Sent message");
         }
 
