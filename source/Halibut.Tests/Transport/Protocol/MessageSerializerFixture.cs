@@ -104,6 +104,7 @@ namespace Halibut.Tests.Transport.Protocol
             await using (var stream = new RewindableBufferStream(new MemoryStream(Convert.FromBase64String(base64Bson))))
             {
                 var result = await ReadMessage<ResponseMessage>(sut, stream);
+                result.Should().NotBeNull();
                 result!.Error.Should().NotBeNull();
                 result.Error!.Message = "foo";
                 result.Error.HalibutErrorType = "MethodNotFoundHalibutClientException";
