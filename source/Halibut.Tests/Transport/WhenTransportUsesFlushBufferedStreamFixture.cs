@@ -47,6 +47,6 @@ namespace Halibut.Tests.Transport
                 result.Should().Be("hello...");
             }
         }
-    }
 #endif
+    }
 }
