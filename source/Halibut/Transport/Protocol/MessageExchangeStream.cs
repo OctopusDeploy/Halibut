@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Security.Authentication;
@@ -220,7 +221,8 @@ namespace Halibut.Transport.Protocol
             var (result, dataStreams) = await serializer.ReadMessageAsync<T>(stream, cancellationToken);
             if (dataStreams.Count > 0)
             {
-                await ReadStreamsAsync(result?.Id ?? "", dataStreams, cancellationToken);
+                var messageId = result?.Id ?? "Unknown";
+                await ReadStreamsAsync(messageId, dataStreams, cancellationToken);
             }
             log.Write(EventType.Diagnostic, "Received Message");
             return result;
@@ -263,40 +265,42 @@ namespace Halibut.Transport.Protocol
 
         async Task ReadStreamsAsync(string messageId, IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
         {
+            var stopWatchForDownloadingAllStreams = Stopwatch.StartNew();
             var expected = deserializedStreams.Count;
 
             for (var i = 0; i < expected; i++)
             {
-                await ReadStreamAsync(messageId, deserializedStreams, cancellationToken);
+                await ReadStreamAsync(messageId, deserializedStreams, stopWatchForDownloadingAllStreams, cancellationToken);
             }
         }
 
-        async Task ReadStreamAsync(string messageId, IReadOnlyList<DataStream> deserializedStreams, CancellationToken cancellationToken)
+        async Task ReadStreamAsync(string messageId, IReadOnlyList<DataStream> deserializedStreams, Stopwatch stopWatchForDownloadingAllStreams, CancellationToken cancellationToken)
         {
-            
             var id = new Guid(await stream.ReadBytesAsync(16, cancellationToken));
             var length = await stream.ReadInt64Async(cancellationToken);
             var dataStream = FindStreamById(deserializedStreams, id);
             long totalSizeOfAllDataStreams = deserializedStreams.Select(d => d.Length).Sum();
             
-            var tempFile = await CopyStreamToFileAsync(id, length, stream, messageId, totalSizeOfAllDataStreams, cancellationToken);
+            var tempFile = await CopyStreamToFileAsync(id, length, stream, messageId, totalSizeOfAllDataStreams, stopWatchForDownloadingAllStreams, cancellationToken);
             
             var lengthAgain = await stream.ReadInt64Async(cancellationToken);
             if (lengthAgain != length)
             {
                 log.Write(EventType.Error, "Data stream size mismatch detected. Message ID: {0}, Stream ID: {1}, " +
                                            "Expected length: {2}, Actual length claimed at end: {3}. " +
-                                           "Total length of all DataStreams to be sent is {4}", 
-                                            messageId, id, length, lengthAgain, totalSizeOfAllDataStreams);
+                                           "Total length of all DataStreams to be sent is {4}. " +
+                                           "Time elapsed downloading all streams: {5}ms",
+                                            messageId, id, length, lengthAgain, totalSizeOfAllDataStreams, stopWatchForDownloadingAllStreams.ElapsedMilliseconds);
                 throw new ProtocolException($"Data stream size mismatch detected. Message Id: {messageId}, Stream ID: {id}, " +
                                             $"Expected length: {length}, Actual length claimed at end: {lengthAgain}. " +
-                                            $"Total length of all DataStreams to be sent is {totalSizeOfAllDataStreams}");
+                                            $"Total length of all DataStreams to be sent is {totalSizeOfAllDataStreams}. " +
+                                            $"Time elapsed downloading all streams: {stopWatchForDownloadingAllStreams.ElapsedMilliseconds}ms");
             }
 
             ((IDataStreamInternal)dataStream).Received(tempFile);
         }
         
-        async Task<TemporaryFileStream> CopyStreamToFileAsync(Guid dataStreamId, long dataSteamLength, Stream networkStream, string messageId, long totalSizeOfAllDataStreams, CancellationToken cancellationToken)
+        async Task<TemporaryFileStream> CopyStreamToFileAsync(Guid dataStreamId, long dataSteamLength, Stream networkStream, string messageId, long totalSizeOfAllDataStreams, Stopwatch stopWatchForDownloadingAllStreams, CancellationToken cancellationToken)
         {
             var path = Path.Combine(Path.GetTempPath(), string.Format("{0}_{1}", dataStreamId.ToString(), Interlocked.Increment(ref streamCount)));
             long bytesLeftToRead = dataSteamLength;
@@ -317,9 +321,10 @@ namespace Halibut.Transport.Protocol
                     {
                         log.WriteException(EventType.Error, "Data stream reading failed. Message ID: {0}, Stream ID: {1}, " +
                                                             "Expected length: {2}, Actual bytes read: {3}. " +
-                                                            "Total length of all DataStreams to be sent is {4}.",
+                                                            "Total length of all DataStreams to be sent is {4}. " +
+                                                            "Time elapsed downloading all streams: {5}ms.",
                                                     ex,
-                                                   messageId, dataStreamId, dataSteamLength, dataSteamLength - bytesLeftToRead, totalSizeOfAllDataStreams);
+                                                   messageId, dataStreamId, dataSteamLength, dataSteamLength - bytesLeftToRead, totalSizeOfAllDataStreams, stopWatchForDownloadingAllStreams.ElapsedMilliseconds);
                         throw;
                     }
                     
@@ -329,12 +334,14 @@ namespace Halibut.Transport.Protocol
                         log.Write(EventType.Error, "Data stream reading failed, we read zero bytes from the stream which implies EOF." +
                                                    "Message ID: {0}, Stream ID: {1}, " +
                                                    "Expected length: {2}, Actual bytes read: {3}. " +
-                                                   "Total length of all DataStreams to be sent is {4}.", 
-                                                   messageId, dataStreamId, dataSteamLength, bytesRead, totalSizeOfAllDataStreams);
+                                                   "Total length of all DataStreams to be sent is {4}. " +
+                                                   "Time elapsed downloading all streams: {5}ms.",
+                                                   messageId, dataStreamId, dataSteamLength, bytesRead, totalSizeOfAllDataStreams, stopWatchForDownloadingAllStreams.ElapsedMilliseconds);
                         throw new ProtocolException($"Data stream reading failed. Message Id: {messageId}, Stream ID: {dataStreamId}, " +
                                                     $"Expected length: {dataSteamLength}, Actual bytes read: {bytesRead}. " +
                                                     $"Total length of all DataStreams to be sent is {totalSizeOfAllDataStreams}. " +
-                                                    $"Stream with length {dataSteamLength} was closed after only reading {bytesRead} bytes.");
+                                                    $"Stream with length {dataSteamLength} was closed after only reading {bytesRead} bytes. " +
+                                                    $"Time elapsed downloading all streams: {stopWatchForDownloadingAllStreams.ElapsedMilliseconds}ms.");
                     }
                     
                     bytesLeftToRead -= read;
