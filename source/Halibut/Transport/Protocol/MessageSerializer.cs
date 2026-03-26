@@ -64,7 +64,7 @@ namespace Halibut.Transport.Protocol
             return serializedStreams;
         }
 
-        public async Task<(T Message, IReadOnlyList<DataStream> DataStreams)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
+        public async Task<(T? Message, IReadOnlyList<DataStream> DataStreams)> ReadMessageAsync<T>(RewindableBufferStream stream, CancellationToken cancellationToken)
         {
             await using (var errorRecordingStream = new ErrorRecordingStream(stream, closeInner: false))
             {

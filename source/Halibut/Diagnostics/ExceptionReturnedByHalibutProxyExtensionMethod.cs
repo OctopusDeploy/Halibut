@@ -113,6 +113,8 @@ namespace Halibut.Diagnostics
                 if (exception.Message.Contains("The I/O operation has been aborted because of either a thread exit or an application request")) return HalibutNetworkExceptionType.IsNetworkError;
                 if (exception.Message.Contains("A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond.")) return HalibutNetworkExceptionType.IsNetworkError;
                 if (exception.Message.Contains("The remote party closed the WebSocket connection without completing the close handshake.")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("Unable to read data from the transport connection: Operation timed out.")) return HalibutNetworkExceptionType.IsNetworkError;
+                if (exception.Message.Contains("Unable to write data to the transport connection: Operation timed out.")) return HalibutNetworkExceptionType.IsNetworkError;
                 
             }
 
