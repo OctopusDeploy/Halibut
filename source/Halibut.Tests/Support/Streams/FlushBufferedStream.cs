@@ -10,12 +10,12 @@ namespace Halibut.Tests.Support.Streams
     /// A stream that buffers all writes in memory and only forwards them to the underlying
     /// stream when Flush or FlushAsync is called.
     /// </summary>
-    public class FlushBufferedStream : DelegateStreamBase
+    public class TestOnlySendDataWhenFlushedStream : DelegateStreamBase
     {
         readonly Stream inner;
         MemoryStream writeBuffer = new MemoryStream();
 
-        public FlushBufferedStream(Stream inner)
+        public TestOnlySendDataWhenFlushedStream(Stream inner)
         {
             this.inner = inner;
         }

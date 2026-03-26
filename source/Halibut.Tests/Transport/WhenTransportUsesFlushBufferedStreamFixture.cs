@@ -18,8 +18,8 @@ namespace Halibut.Tests.Transport
         {
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .AsLatestClientAndLatestServiceBuilder()
-                .WithClientStreamFactory(new StreamWrappingStreamFactory { WrapStreamWith = s => new FlushBufferedStream(s) })
-                .WithServiceStreamFactory(new StreamWrappingStreamFactory { WrapStreamWith = s => new FlushBufferedStream(s) })
+                .WithClientStreamFactory(new StreamWrappingStreamFactory { WrapStreamWith = s => new TestOnlySendDataWhenFlushedStream(s) })
+                .WithServiceStreamFactory(new StreamWrappingStreamFactory { WrapStreamWith = s => new TestOnlySendDataWhenFlushedStream(s) })
                 .WithEchoService()
                 .Build(CancellationToken);
 
