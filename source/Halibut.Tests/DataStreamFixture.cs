@@ -223,10 +223,10 @@ namespace Halibut.Tests
                     await stream.WriteAsync(underSizedData, 0, underSizedData.Length, ct);
                 });
                 
+                var stopwatch = Stopwatch.StartNew();
+                
                 await AssertException.Throws<HalibutClientException>(async () => 
                     await readDataStreamService.SendDataAsync(underSizedDataStream));
-                
-                var stopwatch = Stopwatch.StartNew();
                 
                 var correctData = new byte[50];
                 new Random().NextBytes(correctData);
@@ -239,11 +239,11 @@ namespace Halibut.Tests
                 
                 var secondRequestTime = stopwatch.Elapsed;
                 received.Should().Be(50);
+                Logger.Information("All requests took: {Time}s", secondRequestTime);
                 secondRequestTime.Should().BeLessThan(TimeSpan.FromSeconds(30), 
-                    "second request with correct stream should complete quickly, since the sender" +
-                    " detects an issue it will close the connection which will result in the receiver" +
-                    " seeing an EOF which results in it entering into a reconnect." +
-                    " Previously the sender would need to wait 60s before reconnecting.");
+                    "We should detect the wrong size DataStream, this results in an immediate exception being raised." +
+                    " This will result in the client killing the connection, which will result in the client also receiving a EOF. " +
+                    "This will result in both sides quickly re-connecting allowing another RPC to be re-attempted quickly.");
             }
         }
     }
