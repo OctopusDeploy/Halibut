@@ -84,8 +84,7 @@ namespace Halibut.Tests.Transport
                 Certificates.Octopus,
                 halibutTimeoutsAndLimits,
                 new StreamFactory(),
-                NoOpSecureConnectionObserver.Instance,
-                SslConfiguration.Default
+                NoOpSecureConnectionObserver.Instance
             );
             var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
