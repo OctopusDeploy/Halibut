@@ -79,12 +79,11 @@ namespace Halibut.Transport
         internal static async Task<TcpClient> CreateConnectedTcpClientAsync(ServiceEndPoint endPoint, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, ILog log, CancellationToken cancellationToken)
         {
             TcpClient client;
-            var connectHost = endPoint.ForceResolveAddress?.Host ?? endPoint.BaseUri.Host;
-            var connectPort = endPoint.ForceResolveAddress?.Port ?? endPoint.BaseUri.Port;
+            var connectHost = endPoint.ForceResolveHost ?? endPoint.BaseUri.Host;
             if (endPoint.Proxy is null)
             {
                 client = CreateTcpClientAsync(halibutTimeoutsAndLimits);
-                await client.ConnectWithTimeoutAsync(connectHost, connectPort, endPoint.TcpClientConnectTimeout, cancellationToken);
+                await client.ConnectWithTimeoutAsync(connectHost, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout, cancellationToken);
             }
             else
             {
@@ -93,7 +92,7 @@ namespace Halibut.Transport
                 client = await new ProxyClientFactory(streamFactory)
                     .CreateProxyClient(log, endPoint.Proxy)
                     .WithTcpClientFactory(() => CreateTcpClientAsync(halibutTimeoutsAndLimits))
-                    .CreateConnectionAsync(connectHost, connectPort, endPoint.TcpClientConnectTimeout, cancellationToken);
+                    .CreateConnectionAsync(connectHost, endPoint.BaseUri.Port, endPoint.TcpClientConnectTimeout, cancellationToken);
             }
             return client;
         }
