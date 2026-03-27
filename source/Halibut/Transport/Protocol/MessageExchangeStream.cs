@@ -363,7 +363,7 @@ namespace Halibut.Transport.Protocol
 
             public string MessageId { get; }
             public Stopwatch Stopwatch { get; }
-            public long TotalSizeOfAllDataStreams { get; init; }
+            public long TotalSizeOfAllDataStreams { get; set; }
         }
 
         static DataStream FindStreamById(IReadOnlyList<DataStream> deserializedStreams, Guid id)
