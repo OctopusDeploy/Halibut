@@ -77,12 +77,12 @@ namespace Halibut
         public ProxyDetails? Proxy { get; }
 
         /// <summary>
-        /// When set, TCP connections will be made to this host instead of the host in <see cref="BaseUri"/>,
-        /// while the original <see cref="BaseUri"/> host is still used for TLS SNI. This is equivalent to
-        /// curl's --resolve flag and is useful when routing through a local proxy (e.g. Toxiproxy) while
-        /// preserving the correct TLS handshake.
+        /// When set, TCP connections will be made to the host and port of this URI instead of those in
+        /// <see cref="BaseUri"/>, while the original <see cref="BaseUri"/> host is still used for TLS SNI.
+        /// This is equivalent to curl's --resolve flag and is useful when routing through a local proxy
+        /// (e.g. Toxiproxy) while preserving the correct TLS handshake.
         /// </summary>
-        public string? ForceResolveHost { get; set; }
+        public Uri? ForceResolveHost { get; set; }
 
         public bool IsWebSocketEndpoint => IsWebSocketAddress(BaseUri);
 
