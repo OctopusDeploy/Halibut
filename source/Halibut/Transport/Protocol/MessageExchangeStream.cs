@@ -193,6 +193,7 @@ namespace Halibut.Transport.Protocol
             var messageId = (message as IHalibutMessage)?.Id ?? "unknown";
             await WriteEachStreamAsync(messageId, serializedStreams, cancellationToken);
             
+            await stream.FlushAsync(cancellationToken);
             log.Write(EventType.Diagnostic, "Sent message");
         }
 
