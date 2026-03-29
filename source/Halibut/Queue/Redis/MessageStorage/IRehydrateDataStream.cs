@@ -80,12 +80,12 @@ namespace Halibut.Queue.Redis.MessageStorage
             }
         }
 
-        /*public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
+        public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
         {
             await using var dataStreamRehydrationData = DataStreamRehydrationDataSupplier();
             
             await readerAsync(dataStreamRehydrationData.Data, cancellationToken);
              
-        }*/
+        }
     }
 }
