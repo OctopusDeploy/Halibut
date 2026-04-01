@@ -57,7 +57,7 @@ namespace Halibut.Tests
             var serviceUri = new Uri($"https://localhost:{runningTentacle.ServiceListenPort}");
             var serviceEndPoint = new ServiceEndPoint(serviceUri, tentacleCert.Thumbprint, octopus.TimeoutsAndLimits);
 
-            var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint);
+            var echo = octopus.CreateAsyncClient<ISayHelloService, IAsyncClientSayHelloService>(serviceEndPoint);
             var result = await echo.SayHelloAsync("world");
 
             result.Should().Be("world...");
@@ -91,7 +91,7 @@ namespace Halibut.Tests
             var serviceUri = new Uri("poll://SQ-TENTAPOLL");
             var serviceEndPoint = new ServiceEndPoint(serviceUri, tentacleCert.Thumbprint, octopus.TimeoutsAndLimits);
 
-            var echo = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(serviceEndPoint);
+            var echo = octopus.CreateAsyncClient<ISayHelloService, IAsyncClientSayHelloService>(serviceEndPoint);
             var result = await echo.SayHelloAsync("world");
 
             result.Should().Be("world...");
@@ -141,8 +141,8 @@ namespace Halibut.Tests
             var pollingServiceUri = new Uri("poll://SQ-TENTAPOLL");
             var pollingEndPoint = new ServiceEndPoint(pollingServiceUri, sharedTentacleCert.Thumbprint, octopus.TimeoutsAndLimits);
 
-            var listeningEcho = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(listeningEndPoint);
-            var pollingEcho = octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(pollingEndPoint);
+            var listeningEcho = octopus.CreateAsyncClient<ISayHelloService, IAsyncClientSayHelloService>(listeningEndPoint);
+            var pollingEcho = octopus.CreateAsyncClient<ISayHelloService, IAsyncClientSayHelloService>(pollingEndPoint);
 
             // Call both simultaneously
             var listeningTask = listeningEcho.SayHelloAsync("from-listening");

@@ -17,7 +17,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Halibut\Halibut.csproj" />
-        <ProjectReference Include="..\Halibut.TestUtils.CompatBinary.Base\Halibut.TestUtils.CompatBinary.Base.csproj" />
+        <ProjectReference Include="..\Halibut.TestUtils.Contracts\Halibut.TestUtils.Contracts.csproj" />
     </ItemGroup>
 
 </Project>
