@@ -83,6 +83,8 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public CertAndThumbprint ServiceCertAndThumbprint => serviceCertAndThumbprint;
+
         public LatestServiceBuilder WithCertificate(CertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;

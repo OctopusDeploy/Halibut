@@ -66,7 +66,9 @@ namespace Halibut.Tests.Support
         public static LatestClientAndLatestServiceBuilder PollingOverWebSocket(PollingQueueTestCase pollingQueueTestCase)
         {
             var tmpDirectory = new TmpDirectory();
-            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            // For WebSocket, the client cert must be CertAndThumbprint.Ssl because it is bound to the port
+            // via netsh http add sslcert and must match the cert registered in the Windows local machine cert store.
+            var clientCert = CertAndThumbprint.Ssl;
             var serviceCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
             var builder = new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, clientCert, serviceCert, pollingQueueTestCase);
             builder.tmpDirectory = tmpDirectory;
@@ -378,7 +380,7 @@ namespace Halibut.Tests.Support
                     portForwarderReference.Value = portForwarder;
                 }
             }
-            return new ClientAndService(client, service, httpProxy, tmpDirectory);
+            return new ClientAndService(client, service, httpProxy, tmpDirectory, serviceBuilder.ServiceCertAndThumbprint.Thumbprint);
         }
 
         public class ClientAndService : IClientAndService
@@ -392,11 +394,13 @@ namespace Halibut.Tests.Support
                 LatestClient client,
                 LatestService service,
                 HttpProxyService? proxy,
-                TmpDirectory? tmpDirectory)
+                TmpDirectory? tmpDirectory,
+                string serviceThumbprint)
             {
                 this.client = client;
                 this.service = service;
                 this.tmpDirectory = tmpDirectory;
+                ServiceThumbprint = serviceThumbprint;
 
                 httpProxy = proxy;
             }
@@ -404,6 +408,14 @@ namespace Halibut.Tests.Support
             public Uri ServiceUri => service.ServiceUri;
             public HalibutRuntime Client => client.Client;
             public HalibutRuntime Service => service.Service;
+
+            /// <summary>
+            /// The actual thumbprint of the certificate the service is presenting.
+            /// Use this instead of <see cref="GetServiceEndPoint"/>.RemoteThumbprint when verifying
+            /// the service cert, as RemoteThumbprint reflects what the client is configured to trust
+            /// (which may differ, e.g. in bad-certificate tests).
+            /// </summary>
+            public string ServiceThumbprint { get; }
 
             public ServiceEndPoint GetServiceEndPoint()
             {
