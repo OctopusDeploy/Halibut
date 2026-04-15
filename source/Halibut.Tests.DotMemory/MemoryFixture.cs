@@ -59,11 +59,26 @@ namespace Halibut.Tests.DotMemory
                 .WriteTo.NUnitOutput()
                 .CreateLogger();
 
+            // Two separate HalibutRuntime instances are used to avoid an SChannel session cache
+            // collision on Windows (.NET Framework / SslProtocols.None). SChannel's TLS session
+            // cache is per-process and keyed on certificate + host. If a single runtime acts as
+            // both a TLS server (accepting inbound connections) and a TLS client (making outbound
+            // polling connections) using the same certificate, SChannel can incorrectly reuse a
+            // server-side session for a client-side handshake, causing SSPI/TLS failures.
+            //
+            // - server:        pure TLS server — accepts inbound connections from listening tentacles.
+            //                  Uses Certificates.Octopus.
+            // - pollingServer: pure TLS client — only makes outbound polling connections to tentacles.
+            //                  Must use a DIFFERENT certificate (Certificates.TentacleListening) so
+            //                  that SChannel never sees the same cert in both server and client roles
+            //                  within this process.
             HalibutRuntime? server = null;
+            HalibutRuntime? pollingServer = null;
 
             try
             {
                 server = RunServer(Certificates.Octopus, out var port);
+                pollingServer = RunPollingServer(Certificates.TentacleListening);
 
                 var expectedTcpClientCount = 1; //server listen = 1 tcpclient
                 //valid requests
@@ -75,13 +90,15 @@ namespace Halibut.Tests.DotMemory
                 for (var i = 0; i < NumberOfClients; i++)
                 {
                     expectedTcpClientCount++; // each time the server polls, it keeps a tcpclient (as we dont have support to say StopPolling)
-                    RunPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint).GetAwaiter().GetResult();
+                    RunPollingClient(pollingServer, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint).GetAwaiter().GetResult();
                 }
 
 #if SUPPORTS_WEB_SOCKET_CLIENT
+                //setup polling websocket
+                AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8434");
                 for (var i = 0; i < NumberOfClients; i++)
                 {
-                    RunWebSocketPollingClient(server, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.OctopusPublicThumbprint).GetAwaiter().GetResult();
+                    RunWebSocketPollingClient(pollingServer, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.TentacleListeningPublicThumbprint).GetAwaiter().GetResult();
                 }
 #endif
 
@@ -106,6 +123,7 @@ namespace Halibut.Tests.DotMemory
             finally
             {
                 server?.DisposeAsync().GetAwaiter().GetResult();
+                pollingServer?.DisposeAsync().GetAwaiter().GetResult();
             }
         }
 
@@ -142,14 +160,31 @@ namespace Halibut.Tests.DotMemory
                 .WithLogFactory(new TestContextLogFactory("client", LogLevel.Info))
                 .Build();
 
-            //set up listening  
+            // Trust the listening tentacle certificate for inbound connections.
+            // This runtime only accepts connections — it never makes outbound polling connections —
+            // keeping it in a pure TLS server role (see declaration comment above).
             server.Trust(Certificates.TentacleListeningPublicThumbprint);
             port = server.Listen();
 
-            //setup polling websocket
-            AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8434");
-
             return server;
+        }
+
+        // pollingServer intentionally uses Certificates.TentacleListening rather than
+        // Certificates.Octopus (which server uses). This keeps the two certificates in distinct
+        // TLS roles within this process: Octopus is used only as a TLS server cert (by server),
+        // and TentacleListening is used only as a TLS client cert (here, and in RunListeningClient).
+        // Using the same cert in both roles would trigger an SChannel session-cache collision on
+        // Windows with SslProtocols.None (see declaration comment above).
+        static HalibutRuntime RunPollingServer(X509Certificate2 serverCertificate)
+        {
+            var services = new DelegateServiceFactory();
+            services.Register<ICalculatorService, IAsyncCalculatorService>(() => new AsyncCalculatorService());
+
+            return new HalibutRuntimeBuilder()
+                .WithServerCertificate(serverCertificate)
+                .WithServiceFactory(services)
+                .WithLogFactory(new TestContextLogFactory("polling-server", LogLevel.Info))
+                .Build();
         }
 
         static async Task RunListeningClient(X509Certificate2 clientCertificate, int port, string remoteThumbprint, bool expectSuccess = true)
@@ -169,9 +204,13 @@ namespace Halibut.Tests.DotMemory
                        .Build())
             {
                 runtime.Listen(new IPEndPoint(IPAddress.IPv6Any, 8433));
-                runtime.Trust(Certificates.OctopusPublicThumbprint);
+                // Trust the thumbprint of pollingServer's certificate (TentacleListening), which is
+                // the cert pollingServer presents when it dials in to establish the polling connection.
+                runtime.Trust(Certificates.TentacleListeningPublicThumbprint);
 
                 //setup polling
+                // The remote thumbprint here is this runtime's own certificate (TentaclePolling),
+                // which pollingServer verifies when it connects to port 8433.
                 var serverEndpoint = new ServiceEndPoint(new Uri("https://localhost:8433"), Certificates.TentaclePollingPublicThumbprint, runtime.TimeoutsAndLimits)
                 {
                     TcpClientConnectTimeout = TimeSpan.FromSeconds(5)

@@ -49,7 +49,6 @@ namespace Halibut.Transport
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
         readonly ISecureConnectionObserver secureConnectionObserver;
-        readonly ISslConfigurationProvider sslConfigurationProvider;
         ILog log;
         TcpListener listener;
         Thread? backgroundThread;
@@ -70,8 +69,7 @@ namespace Halibut.Transport
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
             IConnectionsObserver connectionsObserver,
-            ISecureConnectionObserver secureConnectionObserver,
-            ISslConfigurationProvider sslConfigurationProvider
+            ISecureConnectionObserver secureConnectionObserver
         )
         {
             this.endPoint = endPoint;
@@ -87,7 +85,6 @@ namespace Halibut.Transport
             this.streamFactory = streamFactory;
             this.connectionsObserver = connectionsObserver;
             this.secureConnectionObserver = secureConnectionObserver;
-            this.sslConfigurationProvider = sslConfigurationProvider;
             this.cts = new CancellationTokenSource();
             this.cancellationToken = cts.Token;
 
@@ -312,7 +309,7 @@ namespace Halibut.Transport
                         .AuthenticateAsServerAsync(
                             serverCertificate,
                             true,
-                            sslConfigurationProvider.SupportedProtocols,
+                            SslConfiguration.SupportedProtocols,
                             false)
                         .ConfigureAwait(false);
 
