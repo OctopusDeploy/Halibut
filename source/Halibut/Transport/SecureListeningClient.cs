@@ -47,10 +47,17 @@ namespace Halibut.Transport
 
             // retryAllowed is also used to indicate if the error occurred before or after the connection was made
             var retryAllowed = true;
-            // It is important to know if an exception happens while connecting or while transmitting a request, 
+            // It is important to know if an exception happens while connecting or while transmitting a request,
             // as it determines what we do in Tentacle (for example, if we are cancelling).
             var hasConnected = false;
             var watch = Stopwatch.StartNew();
+
+            // Arm a deadline token so individual connection attempts can't outlive ConnectionErrorRetryTimeout.
+            // Guard against TimeSpan.MaxValue and other huge values that would overflow CancelAfter's internal timer.
+            using var deadlineCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            if (ServiceEndpoint.ConnectionErrorRetryTimeout < TimeSpan.FromMilliseconds(uint.MaxValue - 1))
+                deadlineCts.CancelAfter(ServiceEndpoint.ConnectionErrorRetryTimeout);
+
             for (var i = 0; i < ServiceEndpoint.RetryCountLimit && retryAllowed && watch.Elapsed < ServiceEndpoint.ConnectionErrorRetryTimeout; i++)
             {
                 if (i > 0)
@@ -80,7 +87,7 @@ namespace Halibut.Transport
                                     tcpConnectionFactory,
                                     ServiceEndpoint,
                                     log,
-                                cancellationToken).ConfigureAwait(false);
+                                deadlineCts.Token).ConfigureAwait(false);
                         }
                         catch (Exception ex) when (cancellationToken.IsCancellationRequested)
                         {
@@ -175,9 +182,20 @@ namespace Halibut.Transport
                 }
                 catch (OperationCanceledException ex)
                 {
-                    log.WriteException(EventType.Diagnostic, "The operation was canceled", ex);
-                    lastError = ex;
-                    retryAllowed = false;
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        log.WriteException(EventType.Diagnostic, "The operation was canceled", ex);
+                        lastError = ex;
+                        retryAllowed = false;
+                    }
+                    else
+                    {
+                        // The ConnectionErrorRetryTimeout deadline fired. Exit the retry loop; HandleError will
+                        // surface this as HalibutClientException rather than propagating OperationCanceledException.
+                        log.Write(EventType.Error, $"The connection to {ServiceEndpoint.Format()} was abandoned because the ConnectionErrorRetryTimeout was reached.");
+                        lastError = new TimeoutException("The connection attempt was abandoned because the ConnectionErrorRetryTimeout was reached.", ex);
+                        break;
+                    }
                 }
                 catch (Exception ex)
                 {

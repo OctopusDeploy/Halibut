@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Diagnostics;
 using Halibut.Logging;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.PortForwarding;
@@ -121,6 +122,49 @@ namespace Halibut.Tests
             }
         }
         
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        public async Task ConnectionErrorRetryTimeout_IsAHardDeadlineEvenWhenIndividualAttemptsBlockLonger(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            // Each attempt hangs for perAttemptTimeout while the SSL handshake waits for data
+            // that the paused port forwarder will never deliver.
+            // ConnectionErrorRetryTimeout is shorter and should act as the hard deadline.
+            var perAttemptTimeout = TimeSpan.FromSeconds(8);
+            var connectionErrorRetryTimeout = TimeSpan.FromSeconds(3);
+
+            var halibutTimeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+            halibutTimeoutsAndLimits.TcpClientTimeout = new SendReceiveTimeout(
+                sendTimeout: perAttemptTimeout,
+                receiveTimeout: perAttemptTimeout);
+            halibutTimeoutsAndLimits.TcpClientConnectTimeout = TimeSpan.FromSeconds(60);
+            halibutTimeoutsAndLimits.ConnectionErrorRetryTimeout = connectionErrorRetryTimeout;
+            halibutTimeoutsAndLimits.RetryCountLimit = int.MaxValue;
+
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .As<LatestClientAndLatestServiceBuilder>()
+                .WithHalibutTimeoutsAndLimits(halibutTimeoutsAndLimits)
+                .WithPortForwarding(out var portForwarder)
+                .WithEchoService()
+                .WithHalibutLoggingLevel(LogLevel.Fatal)
+                .Build(CancellationToken);
+
+            // Pause mode: TCP connects immediately but data is frozen, so the SSL handshake
+            // stalls until the stream read timeout (perAttemptTimeout) fires.
+            portForwarder.Value.EnterPauseNewAndExistingConnectionsMode();
+
+            var echoService = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+
+            var sw = Stopwatch.StartNew();
+            await AssertException.Throws<HalibutClientException>(() => echoService.SayHelloAsync("hello"));
+            sw.Stop();
+
+            // Should bail out around connectionErrorRetryTimeout (3s), not perAttemptTimeout (8s).
+            // Currently FAILS: the retry loop only checks ConnectionErrorRetryTimeout between
+            // attempts, so the first attempt runs to completion at ~8s before the loop can exit.
+            sw.Elapsed.Should().BeLessThan(perAttemptTimeout - TimeSpan.FromSeconds(2),
+                because: $"ConnectionErrorRetryTimeout ({connectionErrorRetryTimeout}) should bound the total wait, not the per-attempt timeout ({perAttemptTimeout})");
+        }
+
         [Test]
         [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
         public async Task ListeningRetriesAttemptsCanEventuallyWork(ClientAndServiceTestCase clientAndServiceTestCase)
