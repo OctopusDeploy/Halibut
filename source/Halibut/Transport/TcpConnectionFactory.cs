@@ -56,13 +56,24 @@ namespace Halibut.Transport
             log.Write(EventType.SecurityNegotiation, "Performing TLS handshake");
 
 #if NETFRAMEWORK
-        // TODO: ASYNC ME UP!
-        // AuthenticateAsClientAsync in .NET 4.8 does not support cancellation tokens. So `cancellationToken` is not respected here.
-        await ssl.AuthenticateAsClientAsync(
-            serviceEndpoint.BaseUri.Host,
-            new X509Certificate2Collection(clientCertificate),
-            sslConfigurationProvider.SupportedProtocols,
-            false);
+        // AuthenticateAsClientAsync in .NET 4.8 does not accept a CancellationToken.
+        // Register a callback that closes the socket when the token fires; closing the
+        // underlying client unblocks the handshake so cancellation is honoured.
+        using (cancellationToken.Register(() => client.Close()))
+        {
+            try
+            {
+                await ssl.AuthenticateAsClientAsync(
+                    serviceEndpoint.BaseUri.Host,
+                    new X509Certificate2Collection(clientCertificate),
+                    sslConfigurationProvider.SupportedProtocols,
+                    false);
+            }
+            catch (Exception) when (cancellationToken.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+        }
 #else
             await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), sslConfigurationProvider, cancellationToken);
 #endif
