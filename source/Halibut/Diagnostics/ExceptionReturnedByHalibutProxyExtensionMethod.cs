@@ -115,7 +115,8 @@ namespace Halibut.Diagnostics
                 if (exception.Message.Contains("The remote party closed the WebSocket connection without completing the close handshake.")) return HalibutNetworkExceptionType.IsNetworkError;
                 if (exception.Message.Contains("Unable to read data from the transport connection: Operation timed out.")) return HalibutNetworkExceptionType.IsNetworkError;
                 if (exception.Message.Contains("Unable to write data to the transport connection: Operation timed out.")) return HalibutNetworkExceptionType.IsNetworkError;
-                
+                if (exception.Message.Contains("The client was unable to establish the initial connection within the timeout")) return HalibutNetworkExceptionType.IsNetworkError;
+
             }
 
             return HalibutNetworkExceptionType.UnknownError;
