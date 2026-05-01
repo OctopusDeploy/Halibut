@@ -18,6 +18,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    [NonParallelizable]
     public class BadCertificatesTests : BaseTest
     {
         [Test]
