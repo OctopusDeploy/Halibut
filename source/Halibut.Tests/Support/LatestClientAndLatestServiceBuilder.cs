@@ -297,6 +297,12 @@ namespace Halibut.Tests.Support
             return this;
         }
 
+        public LatestClientAndLatestServiceBuilder WithClientTrustingNoThumbprints()
+        {
+            clientBuilder.WithClientTrustingNoThumbprints();
+            return this;
+        }
+
         public LatestClientAndLatestServiceBuilder WithServiceTrustingTheWrongCertificate()
         {
             serviceBuilder.WithServiceTrustingTheWrongCertificate();
