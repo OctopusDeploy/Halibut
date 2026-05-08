@@ -125,7 +125,9 @@ namespace Halibut.Tests
             (await AssertException.Throws<HalibutClientException>(async () => await client.SayHelloAsync("Hello", new(CancellationToken))))
                 .And.Message.Should().ContainAny(
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: No connection could be made because the target machine actively refused it",
-                    $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Connection refused");
+                    $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Connection refused",
+                    // On Windows, a disposed port forwarder causes a TCP connect timeout rather than an immediate RST
+                    $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: The client was unable to establish the initial connection within the timeout");
         }
 
         [Test]

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -83,10 +82,10 @@ namespace Halibut.Tests.Transport.Observability
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithStandardServices()
                              .AsLatestClientAndLatestServiceBuilder()
+                             .WithClientTrustingNoThumbprints()
                              .WithConnectionObserverOnTcpServer(connectionsObserver)
                              .Build(CancellationToken))
             {
-                clientAndBuilder.Client.TrustOnly(new List<string>());
 
                 using var cts = new CancellationTokenSource();
                 var token = cts.Token;
