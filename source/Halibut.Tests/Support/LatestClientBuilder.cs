@@ -24,7 +24,8 @@ namespace Halibut.Tests.Support
         CertAndThumbprint clientCertAndThumbprint;
         readonly PollingQueueTestCase? pollingQueueTestCase;
 
-        string clientTrustsThumbprint; 
+        string clientTrustsThumbprint;
+        bool clientTrustsNoThumbprints;
         IRpcObserver? clientRpcObserver;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
@@ -181,6 +182,12 @@ namespace Halibut.Tests.Support
             clientTrustsThumbprint = CertAndThumbprint.Wrong.Thumbprint;
             return this;
         }
+
+        public LatestClientBuilder WithClientTrustingNoThumbprints()
+        {
+            clientTrustsNoThumbprints = true;
+            return this;
+        }
         
         public LatestClientBuilder WithClientRpcObserver(IRpcObserver? clientRpcObserver)
         {
@@ -215,7 +222,10 @@ namespace Halibut.Tests.Support
             }
 
             var client = clientBuilder.Build();
-            client.Trust(clientTrustsThumbprint);
+            if (!clientTrustsNoThumbprints)
+            {
+                client.Trust(clientTrustsThumbprint);
+            }
             
             var disposableCollection = new DisposableCollection();
             PortForwarder? portForwarder = null;
