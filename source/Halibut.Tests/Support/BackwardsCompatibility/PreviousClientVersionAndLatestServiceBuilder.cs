@@ -7,6 +7,7 @@ using Halibut.TestProxy;
 using Halibut.Tests.Builders;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices;
+using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Proxy;
 using Octopus.Tentacle.Contracts;
@@ -28,7 +29,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         
         readonly ServiceFactoryBuilder serviceFactoryBuilder = new();
         readonly CertAndThumbprint serviceCertAndThumbprint;
-        readonly CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
+        readonly CertAndThumbprint clientCertAndThumbprint;
+        TmpDirectory? tmpDirectory;
         Version? version;
         ProxyFactory? proxyFactory;
         Reference<HttpProxyService>? proxyServiceReference;
@@ -36,25 +38,32 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         Reference<PortForwarder>? portForwarderReference;
         LogLevel halibutLogLevel = LogLevel.Trace;
         
-        PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint, CertAndThumbprint clientCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+            this.clientCertAndThumbprint = clientCertAndThumbprint;
         }
 
         public static PreviousClientVersionAndLatestServiceBuilder WithPollingService()
         {
-            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            var tmpDirectory = new TmpDirectory();
+            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling, clientCert) { tmpDirectory = tmpDirectory };
         }
 
         public static PreviousClientVersionAndLatestServiceBuilder WithPollingOverWebSocketsService()
         {
-            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
+            var tmpDirectory = new TmpDirectory();
+            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling, clientCert) { tmpDirectory = tmpDirectory };
         }
 
         public static PreviousClientVersionAndLatestServiceBuilder WithListeningService()
         {
-            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            var tmpDirectory = new TmpDirectory();
+            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            return new PreviousClientVersionAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening, clientCert) { tmpDirectory = tmpDirectory };
         }
 
         public static PreviousClientVersionAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType connectionType)
@@ -312,7 +321,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new ClientAndService(proxyClient, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, service, disposableCollection, cancellationTokenSource, portForwarder, httpProxy, logger);
+            return new ClientAndService(proxyClient, runningOldHalibutBinary, serviceUri, serviceCertAndThumbprint, service, disposableCollection, cancellationTokenSource, portForwarder, httpProxy, logger, tmpDirectory);
         }
 
         public class ClientAndService : IClientAndService
@@ -326,6 +335,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
             readonly ILogger logger;
             readonly PortForwarder? portForwarder;
             readonly HttpProxyService? httpProxy;
+            readonly TmpDirectory? tmpDirectory;
 
             public ClientAndService(
                 HalibutRuntime proxyClient,
@@ -337,7 +347,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 CancellationTokenSource cancellationTokenSource,
                 PortForwarder? portForwarder,
                 HttpProxyService? httpProxy,
-                ILogger logger)
+                ILogger logger,
+                TmpDirectory? tmpDirectory)
             {
                 Client = proxyClient;
                 this.httpProxy = httpProxy;
@@ -349,6 +360,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 this.disposableCollection = disposableCollection;
                 this.cancellationTokenSource = cancellationTokenSource;
                 this.logger = logger.ForContext<ClientAndService>();;
+                this.tmpDirectory = tmpDirectory;
             }
 
             /// <summary>
@@ -386,6 +398,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 Try.CatchingError(() => portForwarder?.Dispose(), LogError);
                 Try.CatchingError(disposableCollection.Dispose, LogError); ;
                 Try.CatchingError(() => cancellationTokenSource.Dispose(), LogError);
+                Try.CatchingError(() => tmpDirectory?.Dispose(), LogError);
             }
         }
     }

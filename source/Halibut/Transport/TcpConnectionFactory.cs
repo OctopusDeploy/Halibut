@@ -22,21 +22,18 @@ namespace Halibut.Transport
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly ISecureConnectionObserver secureConnectionObserver;
-        readonly ISslConfigurationProvider sslConfigurationProvider;
 
         public TcpConnectionFactory(
             X509Certificate2 clientCertificate,
             HalibutTimeoutsAndLimits halibutTimeoutsAndLimits,
             IStreamFactory streamFactory,
-            ISecureConnectionObserver secureConnectionObserver,
-            ISslConfigurationProvider sslConfigurationProvider
+            ISecureConnectionObserver secureConnectionObserver
         )
         {
             this.clientCertificate = clientCertificate;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.streamFactory = streamFactory;
             this.secureConnectionObserver = secureConnectionObserver;
-            this.sslConfigurationProvider = sslConfigurationProvider;
         }
         
         public async Task<IConnection> EstablishNewConnectionAsync(ExchangeProtocolBuilder exchangeProtocolBuilder, ServiceEndPoint serviceEndpoint, ILog log, CancellationToken cancellationToken)
@@ -61,10 +58,10 @@ namespace Halibut.Transport
         await ssl.AuthenticateAsClientAsync(
             serviceEndpoint.BaseUri.Host,
             new X509Certificate2Collection(clientCertificate),
-            sslConfigurationProvider.SupportedProtocols,
+            SslConfiguration.SupportedProtocols,
             false);
 #else
-            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), sslConfigurationProvider, cancellationToken);
+            await ssl.AuthenticateAsClientEnforcingTimeout(serviceEndpoint, new X509Certificate2Collection(clientCertificate), cancellationToken);
 #endif
 
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);

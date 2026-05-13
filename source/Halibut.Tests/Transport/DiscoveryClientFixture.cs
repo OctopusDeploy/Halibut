@@ -51,7 +51,7 @@ namespace Halibut.Tests.Transport
             {
                 var info = await clientAndService.Client.DiscoverAsync(clientAndService.ServiceUri, CancellationToken);
                     
-                info.RemoteThumbprint.Should().Be(Certificates.TentacleListeningPublicThumbprint);
+                info.RemoteThumbprint.Should().Be(clientAndService.GetServiceEndPoint().RemoteThumbprint);
             }
         }
 

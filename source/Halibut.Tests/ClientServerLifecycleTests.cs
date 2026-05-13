@@ -19,19 +19,40 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
+using Halibut.Tests.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class ClientServerLifecycleTests : BaseTest
     {
+        TmpDirectory tmpDirectory = null!;
+        CertAndThumbprint serverCert = null!;
+        CertAndThumbprint listenerCert = null!;
+        CertAndThumbprint pollerCert = null!;
+
+        [SetUp]
+        public void SetUpCerts()
+        {
+            tmpDirectory = new TmpDirectory();
+            serverCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            listenerCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            pollerCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+        }
+
+        [TearDown]
+        public void TearDownCerts()
+        {
+            tmpDirectory?.Dispose();
+        }
+
         [Test]
         public async Task ListeningConfiguration()
         {
             await using var server = RunServer(out var serverPort);
 
             await using var runtime = CreateRuntimeForListener();
-            var client = CreateClient(runtime, serverPort);
+            var client = CreateClient(runtime, serverPort, serverCert);
             var result = await client.AddAsync(2, 2);
             result.Should().Be(4);
         }
@@ -56,7 +77,7 @@ namespace Halibut.Tests
         HalibutRuntime CreateRuntimeForListener()
         {
             var runtime = new HalibutRuntimeBuilder()
-                .WithServerCertificate(Certificates.TentacleListening)
+                .WithServerCertificate(listenerCert.Certificate2)
                 .WithLogFactory(new TestLogFactory(HalibutLog))
                 .Build();
             return runtime;
@@ -65,15 +86,15 @@ namespace Halibut.Tests
         HalibutRuntime CreateRuntimeForPoller(HalibutRuntime serverRuntime, out IAsyncClientCalculatorService client)
         {
             var runtime = new HalibutRuntimeBuilder()
-                .WithServerCertificate(Certificates.TentaclePolling)
+                .WithServerCertificate(pollerCert.Certificate2)
                 .WithLogFactory(new TestLogFactory(HalibutLog))
                 .Build();
             var port = runtime.Listen();
-            runtime.Trust(Certificates.OctopusPublicThumbprint);
+            runtime.Trust(serverCert.Thumbprint);
 
             var pollEndpoint = new ServiceEndPoint(
                 baseUri: new Uri($"https://localhost:{port}/"),
-                remoteThumbprint: Certificates.TentaclePollingPublicThumbprint,
+                remoteThumbprint: pollerCert.Thumbprint,
                 halibutTimeoutsAndLimits: runtime.TimeoutsAndLimits
             )
             {
@@ -83,7 +104,7 @@ namespace Halibut.Tests
             serverRuntime.Poll(pollingUri, pollEndpoint, CancellationToken);
             var clientEndpoint = new ServiceEndPoint(
                 baseUri: pollingUri,
-                remoteThumbprint: Certificates.OctopusPublicThumbprint,
+                remoteThumbprint: serverCert.Thumbprint,
                 halibutTimeoutsAndLimits: runtime.TimeoutsAndLimits
             );
             client = runtime.CreateAsyncClient<ICalculatorService, IAsyncClientCalculatorService>(clientEndpoint);
@@ -91,11 +112,11 @@ namespace Halibut.Tests
             return runtime;
         }
 
-        static IAsyncClientCalculatorService CreateClient(HalibutRuntime runtime, int port)
+        static IAsyncClientCalculatorService CreateClient(HalibutRuntime runtime, int port, CertAndThumbprint serverCertAndThumbprint)
         {
             var endpoint = new ServiceEndPoint(
                 baseUri: $"https://localhost:{port}",
-                remoteThumbprint: Certificates.OctopusPublicThumbprint,
+                remoteThumbprint: serverCertAndThumbprint.Thumbprint,
                 halibutTimeoutsAndLimits: runtime.TimeoutsAndLimits
             );
             var client = runtime
@@ -115,13 +136,13 @@ namespace Halibut.Tests
             var services = CreateServiceFactory();
 
             var runtime = new HalibutRuntimeBuilder()
-                .WithServerCertificate(Certificates.Octopus)
+                .WithServerCertificate(serverCert.Certificate2)
                 .WithServiceFactory(services)
                 .WithLogFactory(new TestLogFactory(HalibutLog))
                 .Build();
 
-            runtime.Trust(Certificates.TentacleListeningPublicThumbprint);
-            runtime.Trust(Certificates.TentaclePollingPublicThumbprint);
+            runtime.Trust(listenerCert.Thumbprint);
+            runtime.Trust(pollerCert.Thumbprint);
             port = runtime.Listen();
 
             return runtime;

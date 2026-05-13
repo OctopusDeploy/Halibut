@@ -32,7 +32,6 @@ namespace Halibut
         ISecureConnectionObserver? secureConnectionObserver;
         IControlMessageObserver? controlMessageObserver;
         MessageStreamWrappers queueMessageStreamWrappers = new();
-        ISslConfigurationProvider? sslConfigurationProvider;
 
         public HalibutRuntimeBuilder WithQueueMessageStreamWrappers(MessageStreamWrappers queueMessageStreamWrappers)
         {
@@ -49,12 +48,6 @@ namespace Halibut
         public HalibutRuntimeBuilder WithSecureConnectionObserver(ISecureConnectionObserver secureConnectionsObserver)
         {
             this.secureConnectionObserver = secureConnectionsObserver;
-            return this;
-        }
-
-        public HalibutRuntimeBuilder WithSslConfigurationProvider(ISslConfigurationProvider sslConfigurationProvider)
-        {
-            this.sslConfigurationProvider = sslConfigurationProvider;
             return this;
         }
 
@@ -193,7 +186,6 @@ namespace Halibut
             var secureConnectionObserver = this.secureConnectionObserver ?? NoOpSecureConnectionObserver.Instance;
             var rpcObserver = this.rpcObserver ?? new NoRpcObserver();
             var controlMessageObserver = this.controlMessageObserver ?? new NoOpControlMessageObserver();
-            var sslConfigurationProvider = this.sslConfigurationProvider ?? SslConfiguration.Default;
 
             var halibutRuntime = new HalibutRuntime(
                 serviceFactory,
@@ -209,8 +201,7 @@ namespace Halibut
                 rpcObserver,
                 connectionsObserver,
                 controlMessageObserver,
-                secureConnectionObserver,
-                sslConfigurationProvider
+                secureConnectionObserver
             );
 
             if (onUnauthorizedClientConnect is not null)
