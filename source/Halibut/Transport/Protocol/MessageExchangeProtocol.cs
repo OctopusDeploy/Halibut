@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
@@ -21,15 +22,18 @@ namespace Halibut.Transport.Protocol
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly ILog log;
+        readonly ISubscriberObserver subscriberObserver;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, ILog log,
+            ISubscriberObserver subscriberObserver)
         {
             this.stream = stream;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.activeTcpConnectionsLimiter = activeTcpConnectionsLimiter;
             this.log = log;
+            this.subscriberObserver = subscriberObserver;
         }
 
         public async Task<ResponseMessage> ExchangeAsClientAsync(RequestMessage request, CancellationToken cancellationToken)
@@ -112,6 +116,7 @@ namespace Halibut.Transport.Protocol
             //if the remote identity is a subscriber, we might need to limit their active TCP connections
             if (identity.IdentityType == RemoteIdentityType.Subscriber)
             {
+                await subscriberObserver.SubscriberConnected(identity.SubscriptionId.ToString(), cancellationToken);
                 limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
             }
 
