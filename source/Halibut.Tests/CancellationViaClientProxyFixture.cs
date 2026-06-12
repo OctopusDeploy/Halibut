@@ -17,6 +17,7 @@ using NUnit.Framework;
 
 namespace Halibut.Tests
 {
+    [NonParallelizable]
     public class CancellationViaClientProxyFixture : BaseTest
     {
         [Test]
