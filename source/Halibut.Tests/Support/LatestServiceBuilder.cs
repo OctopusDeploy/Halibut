@@ -31,7 +31,7 @@ namespace Halibut.Tests.Support
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
 
-        readonly List<(Uri ListeningUri, string Thumbprint)> listeningClients = new();
+        readonly List<(Uri ListeningUri, string? Thumbprint)> listeningClients = new();
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
@@ -69,16 +69,21 @@ namespace Halibut.Tests.Support
             }
         }
 
-        public LatestServiceBuilder WithListeningClient(Uri listeningClientUri, string clientThumbprint)
+        public LatestServiceBuilder WithListeningClient(Uri listeningClientUri)
         {
-            listeningClients.Add((listeningClientUri, clientThumbprint));
+            // No explicit thumbprint: the service dials this client using its configured
+            // serviceTrustsThumbprint (which the wrong-certificate test helpers manipulate).
+            listeningClients.Add((listeningClientUri, null));
 
             return this;
         }
 
         public LatestServiceBuilder WithListeningClients(IEnumerable<(Uri ListeningUri, string Thumbprint)> listeningClients)
         {
-            this.listeningClients.AddRange(listeningClients);
+            foreach (var listeningClient in listeningClients)
+            {
+                this.listeningClients.Add((listeningClient.ListeningUri, listeningClient.Thumbprint));
+            }
 
             return this;
         }
@@ -228,7 +233,7 @@ namespace Halibut.Tests.Support
                     {
                         service.Poll(
                             serviceUri,
-                            new ServiceEndPoint(listeningClientUri, clientThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                            new ServiceEndPoint(listeningClientUri, clientThumbprint ?? serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
                             cancellationToken);
                     }
                 }
@@ -241,7 +246,7 @@ namespace Halibut.Tests.Support
                 {
                     service.Poll(
                         serviceUri,
-                        new ServiceEndPoint(listeningClientUri, clientThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                        new ServiceEndPoint(listeningClientUri, clientThumbprint ?? serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
                         cancellationToken);
                 }
             }
