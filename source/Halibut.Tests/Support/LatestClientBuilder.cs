@@ -24,6 +24,8 @@ namespace Halibut.Tests.Support
         CertAndThumbprint clientCertAndThumbprint;
         readonly PollingQueueTestCase? pollingQueueTestCase;
 
+        TmpDirectory? tmpDirectory;
+
         string clientTrustsThumbprint;
         bool clientTrustsNoThumbprints;
         IRpcObserver? clientRpcObserver;
@@ -65,10 +67,20 @@ namespace Halibut.Tests.Support
             switch (serviceConnectionType)
             {
                 case ServiceConnectionType.Polling:
-                    return new LatestClientBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
+                {
+                    var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+                    var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
+                    return new LatestClientBuilder(ServiceConnectionType.Polling, clientCert, CertAndThumbprint.TentaclePolling, pollingQueueTestCase) { tmpDirectory = tmpDirectory };
+                }
                 case ServiceConnectionType.Listening:
-                    return new LatestClientBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening, pollingQueueTestCase);
+                {
+                    var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+                    var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
+                    return new LatestClientBuilder(ServiceConnectionType.Listening, clientCert, CertAndThumbprint.TentacleListening, pollingQueueTestCase) { tmpDirectory = tmpDirectory };
+                }
                 case ServiceConnectionType.PollingOverWebSocket:
+                    // For WebSocket, the client cert must be CertAndThumbprint.Ssl because it is bound to the port
+                    // via netsh http add sslcert and must match the cert registered in the Windows local machine cert store.
                     return new LatestClientBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
                 default:
                     throw new ArgumentOutOfRangeException(nameof(serviceConnectionType), serviceConnectionType, null);
@@ -228,6 +240,11 @@ namespace Halibut.Tests.Support
             }
             
             var disposableCollection = new DisposableCollection();
+            if (tmpDirectory is not null)
+            {
+                disposableCollection.Add(tmpDirectory);
+            }
+
             PortForwarder? portForwarder = null;
             Uri? clientListeningUri = null;
 
