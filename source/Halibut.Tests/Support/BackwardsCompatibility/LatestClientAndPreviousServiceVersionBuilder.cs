@@ -7,7 +7,6 @@ using Halibut.Diagnostics.LogCreators;
 using Halibut.Logging;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.Logging;
-using Halibut.Tests.Util;
 using Halibut.Transport.Proxy;
 using Octopus.TestPortForwarder;
 using ILog = Halibut.Diagnostics.ILog;
@@ -47,22 +46,22 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         
         public static LatestClientAndPreviousServiceVersionBuilder WithPollingService()
         {
-            var tmpDirectory = new TmpDirectory();
-            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
             return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling, clientCert) { tmpDirectory = tmpDirectory };
         }
 
         public static LatestClientAndPreviousServiceVersionBuilder WithPollingOverWebSocketService()
         {
-            var tmpDirectory = new TmpDirectory();
-            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
             return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling, clientCert) { tmpDirectory = tmpDirectory };
         }
 
         public static LatestClientAndPreviousServiceVersionBuilder WithListeningService()
         {
-            var tmpDirectory = new TmpDirectory();
-            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
             return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening, clientCert) { tmpDirectory = tmpDirectory };
         }
 

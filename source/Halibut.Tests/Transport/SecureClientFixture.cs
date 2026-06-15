@@ -10,7 +10,6 @@ using Halibut.ServiceModel;
 using Halibut.Tests.Support;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.Transport;
 using Halibut.Transport.Observability;
@@ -28,7 +27,7 @@ namespace Halibut.Tests.Transport
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
         ILog log;
-        TmpDirectory tmpDirectory;
+        TmpDirectory? tmpDirectory;
         CertAndThumbprint tentacleCert;
         CertAndThumbprint octopusCert;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
@@ -36,9 +35,9 @@ namespace Halibut.Tests.Transport
         [SetUp]
         public void SetUp()
         {
-            tmpDirectory = new TmpDirectory();
-            tentacleCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
-            octopusCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+            tentacleCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, tmpDirectory);
+            octopusCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
 
             var services = new DelegateServiceFactory();
             services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());

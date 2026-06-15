@@ -9,7 +9,6 @@ using Halibut.ServiceModel;
 using Halibut.TestProxy;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.TestServices;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using Halibut.TestUtils.Contracts.Tentacle.Services;
 using Halibut.Transport.Observability;
@@ -55,9 +54,9 @@ namespace Halibut.Tests.Support
 
         public static LatestClientAndLatestServiceBuilder Polling(PollingQueueTestCase pollingQueueTestCase)
         {
-            var tmpDirectory = new TmpDirectory();
-            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
-            var serviceCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, tmpDirectory);
             var builder = new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, clientCert, serviceCert, pollingQueueTestCase);
             builder.tmpDirectory = tmpDirectory;
             return builder;
@@ -65,11 +64,11 @@ namespace Halibut.Tests.Support
 
         public static LatestClientAndLatestServiceBuilder PollingOverWebSocket(PollingQueueTestCase pollingQueueTestCase)
         {
-            var tmpDirectory = new TmpDirectory();
+            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
             // For WebSocket, the client cert must be CertAndThumbprint.Ssl because it is bound to the port
             // via netsh http add sslcert and must match the cert registered in the Windows local machine cert store.
             var clientCert = CertAndThumbprint.Ssl;
-            var serviceCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, tmpDirectory);
             var builder = new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, clientCert, serviceCert, pollingQueueTestCase);
             builder.tmpDirectory = tmpDirectory;
             return builder;
@@ -77,9 +76,9 @@ namespace Halibut.Tests.Support
 
         public static LatestClientAndLatestServiceBuilder Listening()
         {
-            var tmpDirectory = new TmpDirectory();
-            var clientCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
-            var serviceCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, tmpDirectory);
             var builder = new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, clientCert, serviceCert, null);
             builder.tmpDirectory = tmpDirectory;
             return builder;

@@ -19,14 +19,13 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
 using Halibut.Tests.Support;
-using Halibut.Tests.Util;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class ClientServerLifecycleTests : BaseTest
     {
-        TmpDirectory tmpDirectory = null!;
+        TmpDirectory? tmpDirectory;
         CertAndThumbprint serverCert = null!;
         CertAndThumbprint listenerCert = null!;
         CertAndThumbprint pollerCert = null!;
@@ -34,10 +33,10 @@ namespace Halibut.Tests
         [SetUp]
         public void SetUpCerts()
         {
-            tmpDirectory = new TmpDirectory();
-            serverCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
-            listenerCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
-            pollerCert = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
+            serverCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
+            listenerCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, tmpDirectory);
+            pollerCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, tmpDirectory);
         }
 
         [TearDown]
