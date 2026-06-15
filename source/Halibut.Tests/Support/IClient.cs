@@ -6,6 +6,7 @@ namespace Halibut.Tests.Support
     {
         HalibutRuntime Client { get; }
         Uri? ListeningUri { get; }
+        string ClientThumbprint { get; }
         TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceEndPoint);
         TAsyncClientService CreateClientWithoutService<TService, TAsyncClientService>();
         TAsyncClientService CreateClientWithoutService<TService, TAsyncClientService>(Action<ServiceEndPoint> modifyServiceEndpoint);

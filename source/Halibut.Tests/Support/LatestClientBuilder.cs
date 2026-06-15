@@ -284,7 +284,7 @@ namespace Halibut.Tests.Support
                 portForwarderReference.Value = portForwarder;
             }
 
-            return new LatestClient(client, clientListeningUri, clientTrustsThumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
+            return new LatestClient(client, clientListeningUri, clientTrustsThumbprint, clientCertAndThumbprint.Thumbprint, portForwarder, proxyDetails, serviceConnectionType, disposableCollection);
         }
 
         IPendingRequestQueueFactory CreatePendingRequestQueueFactory(QueueMessageSerializer queueMessageSerializer, ILogFactory octopusLogFactory)

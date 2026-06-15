@@ -31,7 +31,7 @@ namespace Halibut.Tests.Support
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
 
-        readonly List<Uri> listeningClientUris = new();
+        readonly List<(Uri ListeningUri, string Thumbprint)> listeningClients = new();
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
@@ -69,16 +69,16 @@ namespace Halibut.Tests.Support
             }
         }
 
-        public LatestServiceBuilder WithListeningClient(Uri listeningClient)
+        public LatestServiceBuilder WithListeningClient(Uri listeningClientUri, string clientThumbprint)
         {
-            listeningClientUris.Add(listeningClient);
+            listeningClients.Add((listeningClientUri, clientThumbprint));
 
             return this;
         }
 
-        public LatestServiceBuilder WithListeningClients(IEnumerable<Uri> listeningClientUris)
+        public LatestServiceBuilder WithListeningClients(IEnumerable<(Uri ListeningUri, string Thumbprint)> listeningClients)
         {
-            this.listeningClientUris.AddRange(listeningClientUris);
+            this.listeningClients.AddRange(listeningClients);
 
             return this;
         }
@@ -222,13 +222,13 @@ namespace Halibut.Tests.Support
             {
                 serviceUri = PollingTentacleServiceUri;
 
-                foreach (var listeningClientUri in listeningClientUris)
+                foreach (var (listeningClientUri, clientThumbprint) in listeningClients)
                 {
                     for (var i = 0; i < pollingConnectionCount; i++)
                     {
                         service.Poll(
                             serviceUri,
-                            new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                            new ServiceEndPoint(listeningClientUri, clientThumbprint, proxyDetails, service.TimeoutsAndLimits),
                             cancellationToken);
                     }
                 }
@@ -237,11 +237,11 @@ namespace Halibut.Tests.Support
             {
                 serviceUri = PollingOverWebSocketTentacleServiceUri;
 
-                foreach (var listeningClientUri in listeningClientUris)
+                foreach (var (listeningClientUri, clientThumbprint) in listeningClients)
                 {
                     service.Poll(
                         serviceUri,
-                        new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                        new ServiceEndPoint(listeningClientUri, clientThumbprint, proxyDetails, service.TimeoutsAndLimits),
                         cancellationToken);
                 }
             }

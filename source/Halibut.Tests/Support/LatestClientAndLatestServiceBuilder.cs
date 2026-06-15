@@ -371,7 +371,7 @@ namespace Halibut.Tests.Support
             var client = await clientBuilder.Build(cancellationToken);
             if (client.ListeningUri is not null)
             {
-                serviceBuilder.WithListeningClient(client.ListeningUri);
+                serviceBuilder.WithListeningClient(client.ListeningUri, client.ClientThumbprint);
             }
 
             var service = await serviceBuilder.Build(cancellationToken);
