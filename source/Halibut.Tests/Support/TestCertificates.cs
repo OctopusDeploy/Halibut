@@ -1,7 +1,3 @@
-#if NETFRAMEWORK
-using Halibut.Tests.Util;
-#endif
-
 namespace Halibut.Tests.Support
 {
     /// <summary>
@@ -28,7 +24,7 @@ namespace Halibut.Tests.Support
         public static ICertAndThumbprint CertFor(CertAndThumbprint staticCert,  DisposableCollection disposedBy)
         {
 #if NETFRAMEWORK
-            return TempCertAndThumbprint.GenerateSelfSignedCertificate(disposedBy);
+            return TempDisposableCertAndThumbprint.CreateSelfSigned(disposedBy);
 #else
             return staticCert;
 #endif
