@@ -21,10 +21,10 @@ namespace Halibut.Tests.Support
     {
         readonly ServiceConnectionType serviceConnectionType;
 
-        CertAndThumbprint clientCertAndThumbprint;
+        ICertAndThumbprint clientCertAndThumbprint;
         readonly PollingQueueTestCase? pollingQueueTestCase;
 
-        TmpDirectory? tmpDirectory;
+        DisposableCollection disposables;
 
         string clientTrustsThumbprint;
         bool clientTrustsNoThumbprints;
@@ -45,13 +45,29 @@ namespace Halibut.Tests.Support
 
         public LatestClientBuilder(
             ServiceConnectionType serviceConnectionType,
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint,
-            PollingQueueTestCase? pollingQueueTestCase)
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
+            PollingQueueTestCase? pollingQueueTestCase
+        ) : this(
+            serviceConnectionType,
+            clientCertAndThumbprint,
+            serviceCertAndThumbprint,
+            pollingQueueTestCase,
+            new DisposableCollection())
+        {
+        }
+
+        LatestClientBuilder(
+            ServiceConnectionType serviceConnectionType,
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
+            PollingQueueTestCase? pollingQueueTestCase,
+            DisposableCollection disposables)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
             this.pollingQueueTestCase = pollingQueueTestCase;
+            this.disposables = disposables;
             clientTrustsThumbprint = serviceCertAndThumbprint.Thumbprint;
             if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
@@ -68,15 +84,15 @@ namespace Halibut.Tests.Support
             {
                 case ServiceConnectionType.Polling:
                 {
-                    var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
-                    var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
-                    return new LatestClientBuilder(ServiceConnectionType.Polling, clientCert, CertAndThumbprint.TentaclePolling, pollingQueueTestCase) { tmpDirectory = tmpDirectory };
+                    var disposables = new DisposableCollection();
+                    var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+                    return new LatestClientBuilder(ServiceConnectionType.Polling, clientCert, CertAndThumbprint.TentaclePolling, pollingQueueTestCase, disposables);
                 }
                 case ServiceConnectionType.Listening:
                 {
-                    var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
-                    var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
-                    return new LatestClientBuilder(ServiceConnectionType.Listening, clientCert, CertAndThumbprint.TentacleListening, pollingQueueTestCase) { tmpDirectory = tmpDirectory };
+                    var disposables = new DisposableCollection();
+                    var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+                    return new LatestClientBuilder(ServiceConnectionType.Listening, clientCert, CertAndThumbprint.TentacleListening, pollingQueueTestCase);
                 }
                 case ServiceConnectionType.PollingOverWebSocket:
                     // For WebSocket, the client cert must be CertAndThumbprint.Ssl because it is bound to the port
@@ -87,9 +103,9 @@ namespace Halibut.Tests.Support
             }
         }
 
-        public LatestClientBuilder WithCertificate(CertAndThumbprint clientCertAndThumprint)
+        public LatestClientBuilder WithCertificate(ICertAndThumbprint clientCertAndThumbprint)
         {
-            this.clientCertAndThumbprint = clientCertAndThumprint;
+            this.clientCertAndThumbprint = clientCertAndThumbprint;
             return this;
         }
         
@@ -240,10 +256,6 @@ namespace Halibut.Tests.Support
             }
             
             var disposableCollection = new DisposableCollection();
-            if (tmpDirectory is not null)
-            {
-                disposableCollection.Add(tmpDirectory);
-            }
 
             PortForwarder? portForwarder = null;
             Uri? clientListeningUri = null;

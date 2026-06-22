@@ -21,28 +21,14 @@ namespace Halibut.Tests.Support
     public static class TestCertificates
     {
         /// <summary>
-        /// Returns a new <see cref="TmpDirectory"/> to hold generated certificates on .NET Framework, or
-        /// <c>null</c> on other frameworks (where no certificates are generated). The returned directory, when
-        /// non-null, must be disposed by the caller.
-        /// </summary>
-        public static TmpDirectory? NewTmpDirectoryIfNeeded()
-        {
-#if NETFRAMEWORK
-            return new TmpDirectory();
-#else
-            return null;
-#endif
-        }
-
-        /// <summary>
         /// On .NET Framework, generates a fresh unique self-signed certificate into <paramref name="tmpDirectory"/>.
         /// On other frameworks, returns the supplied <paramref name="staticCert"/> so static certificates are
         /// shared (enabling TLS session resumption).
         /// </summary>
-        public static CertAndThumbprint CertFor(CertAndThumbprint staticCert, TmpDirectory? tmpDirectory)
+        public static ICertAndThumbprint CertFor(CertAndThumbprint staticCert,  DisposableCollection disposedBy)
         {
 #if NETFRAMEWORK
-            return CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory!.FullPath);
+            return TempCertAndThumbprint.GenerateSelfSignedCertificate(disposedBy);
 #else
             return staticCert;
 #endif

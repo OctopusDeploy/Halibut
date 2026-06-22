@@ -6,14 +6,14 @@ namespace Halibut.Tests.Support
     class WebSocketSslCertificateBuilder
     {
         readonly string bindingAddress;
-        CertAndThumbprint certAndThumbprint = CertAndThumbprint.Ssl;
+        ICertAndThumbprint certAndThumbprint = CertAndThumbprint.Ssl;
 
         public WebSocketSslCertificateBuilder(string bindingAddress)
         {
             this.bindingAddress = bindingAddress;
         }
 
-        public WebSocketSslCertificateBuilder WithCertificate(CertAndThumbprint certAndThumbprint)
+        public WebSocketSslCertificateBuilder WithCertificate(ICertAndThumbprint certAndThumbprint)
         {
             this.certAndThumbprint = certAndThumbprint;
             return this;

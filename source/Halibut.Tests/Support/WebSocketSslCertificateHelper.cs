@@ -16,7 +16,7 @@ namespace Halibut.Tests.Support
             store.Close();
         }
 
-        internal static void AddSslCertBindingFor(string address, CertAndThumbprint certAndThumbprint)
+        internal static void AddSslCertBindingFor(string address, ICertAndThumbprint certAndThumbprint)
         {
             if (certAndThumbprint.Thumbprint != CertAndThumbprint.Ssl.Thumbprint)
             {

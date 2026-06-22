@@ -17,8 +17,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         // The port the binary should poll.
         readonly ServiceConnectionType serviceConnectionType;
         readonly int? clientServicePort;
-        readonly CertAndThumbprint clientCertAndThumbprint;
-        readonly CertAndThumbprint serviceCertAndThumbprint;
+        readonly ICertAndThumbprint clientCertAndThumbprint;
+        readonly ICertAndThumbprint serviceCertAndThumbprint;
         readonly string? version;
         readonly ProxyDetails? proxyDetails;
         readonly LogLevel halibutLogLevel;
@@ -28,8 +28,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
         public HalibutTestBinaryRunner(
             ServiceConnectionType serviceConnectionType, 
-            CertAndThumbprint clientCertAndThumbprint, 
-            CertAndThumbprint serviceCertAndThumbprint, 
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
             string? version, 
             ProxyDetails? proxyDetails, 
             LogLevel halibutLogLevel, 
@@ -48,8 +48,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         public HalibutTestBinaryRunner(
             ServiceConnectionType serviceConnectionType, 
             int? clientServicePort, 
-            CertAndThumbprint clientCertAndThumbprint, 
-            CertAndThumbprint serviceCertAndThumbprint, 
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
             string? version, 
             ProxyDetails proxyDetails, 
             LogLevel halibutLoggingLevel, 
@@ -63,8 +63,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         public HalibutTestBinaryRunner(
             ServiceConnectionType serviceConnectionType,
             Uri webSocketServiceEndpointUri, 
-            CertAndThumbprint clientCertAndThumbprint, 
-            CertAndThumbprint serviceCertAndThumbprint, 
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
             string? version, 
             ProxyDetails? proxyDetails,
             LogLevel halibutLoggingLevel, 

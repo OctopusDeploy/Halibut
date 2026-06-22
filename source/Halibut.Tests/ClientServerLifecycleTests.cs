@@ -25,24 +25,24 @@ namespace Halibut.Tests
 {
     public class ClientServerLifecycleTests : BaseTest
     {
-        TmpDirectory? tmpDirectory;
-        CertAndThumbprint serverCert = null!;
-        CertAndThumbprint listenerCert = null!;
-        CertAndThumbprint pollerCert = null!;
+        DisposableCollection disposables = null!;
+        ICertAndThumbprint serverCert = null!;
+        ICertAndThumbprint listenerCert = null!;
+        ICertAndThumbprint pollerCert = null!;
 
         [SetUp]
         public void SetUpCerts()
         {
-            tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
-            serverCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
-            listenerCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, tmpDirectory);
-            pollerCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, tmpDirectory);
+            disposables = new DisposableCollection();
+            serverCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            listenerCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, disposedBy: disposables);
+            pollerCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, disposedBy: disposables);
         }
 
         [TearDown]
         public void TearDownCerts()
         {
-            tmpDirectory?.Dispose();
+            disposables?.Dispose();
         }
 
         [Test]
@@ -111,7 +111,7 @@ namespace Halibut.Tests
             return runtime;
         }
 
-        static IAsyncClientCalculatorService CreateClient(HalibutRuntime runtime, int port, CertAndThumbprint serverCertAndThumbprint)
+        static IAsyncClientCalculatorService CreateClient(HalibutRuntime runtime, int port, ICertAndThumbprint serverCertAndThumbprint)
         {
             var endpoint = new ServiceEndPoint(
                 baseUri: $"https://localhost:{port}",

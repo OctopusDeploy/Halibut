@@ -30,8 +30,7 @@ namespace Halibut.Tests.Support
 
         readonly LatestClientBuilder clientBuilder;
         readonly LatestServiceBuilder serviceBuilder;
-
-        TmpDirectory? tmpDirectory;
+        DisposableCollection disposables;
 
         ProxyFactory? proxyFactory;
         Reference<HttpProxyService>? proxyServiceReference;
@@ -40,48 +39,44 @@ namespace Halibut.Tests.Support
         Reference<PortForwarder>? servicePortForwarderReference;
         Reference<PortForwarder>? portForwarderReference;
 
-        public LatestClientAndLatestServiceBuilder(
+        LatestClientAndLatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint,
-            PollingQueueTestCase? pollingQueueTestCase)
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
+            PollingQueueTestCase? pollingQueueTestCase,
+            DisposableCollection disposables)
         {
             ServiceConnectionType = serviceConnectionType;
 
+            this.disposables = disposables;
             clientBuilder = new LatestClientBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, pollingQueueTestCase);
             serviceBuilder = new LatestServiceBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint);
         }
 
         public static LatestClientAndLatestServiceBuilder Polling(PollingQueueTestCase pollingQueueTestCase)
         {
-            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
-            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
-            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, tmpDirectory);
-            var builder = new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, clientCert, serviceCert, pollingQueueTestCase);
-            builder.tmpDirectory = tmpDirectory;
-            return builder;
+            var disposables = new DisposableCollection();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, disposedBy: disposables);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, clientCert, serviceCert, pollingQueueTestCase, disposables);
         }
 
         public static LatestClientAndLatestServiceBuilder PollingOverWebSocket(PollingQueueTestCase pollingQueueTestCase)
         {
-            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
             // For WebSocket, the client cert must be CertAndThumbprint.Ssl because it is bound to the port
             // via netsh http add sslcert and must match the cert registered in the Windows local machine cert store.
+            var disposables = new DisposableCollection();
             var clientCert = CertAndThumbprint.Ssl;
-            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, tmpDirectory);
-            var builder = new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, clientCert, serviceCert, pollingQueueTestCase);
-            builder.tmpDirectory = tmpDirectory;
-            return builder;
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, disposedBy: disposables);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, clientCert, serviceCert, pollingQueueTestCase, disposables);
         }
 
         public static LatestClientAndLatestServiceBuilder Listening()
         {
-            var tmpDirectory = TestCertificates.NewTmpDirectoryIfNeeded();
-            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, tmpDirectory);
-            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, tmpDirectory);
-            var builder = new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, clientCert, serviceCert, null);
-            builder.tmpDirectory = tmpDirectory;
-            return builder;
+            var disposables = new DisposableCollection();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, disposedBy: disposables);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, clientCert, serviceCert, null, disposables);
         }
 
         public static LatestClientAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType, PollingQueueTestCase? pollingQueueTestCase = null)
@@ -100,8 +95,8 @@ namespace Halibut.Tests.Support
         }
 
         public LatestClientAndLatestServiceBuilder WithCertificates(
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint)
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint)
         {
             clientBuilder.WithCertificate(clientCertAndThumbprint);
             clientBuilder.WithTrustedThumbprint(serviceCertAndThumbprint.Thumbprint);
@@ -385,7 +380,7 @@ namespace Halibut.Tests.Support
                     portForwarderReference.Value = portForwarder;
                 }
             }
-            return new ClientAndService(client, service, httpProxy, tmpDirectory, serviceBuilder.ServiceCertAndThumbprint.Thumbprint);
+            return new ClientAndService(client, service, httpProxy, disposables, serviceBuilder.ServiceCertAndThumbprint.Thumbprint);
         }
 
         public class ClientAndService : IClientAndService
@@ -393,18 +388,18 @@ namespace Halibut.Tests.Support
             readonly LatestClient client;
             readonly LatestService service;
             readonly HttpProxyService? httpProxy;
-            readonly TmpDirectory? tmpDirectory;
+            readonly DisposableCollection disposables;
 
             public ClientAndService(
                 LatestClient client,
                 LatestService service,
                 HttpProxyService? proxy,
-                TmpDirectory? tmpDirectory,
+                DisposableCollection disposables,
                 string serviceThumbprint)
             {
                 this.client = client;
                 this.service = service;
-                this.tmpDirectory = tmpDirectory;
+                this.disposables = disposables;
                 ServiceThumbprint = serviceThumbprint;
 
                 httpProxy = proxy;
@@ -451,7 +446,7 @@ namespace Halibut.Tests.Support
 
                 void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
                 Try.CatchingError(() => httpProxy?.Dispose(), LogError);
-                Try.CatchingError(() => tmpDirectory?.Dispose(), LogError);
+                Try.CatchingError(() => disposables.Dispose(), LogError);
             }
         }
     }

@@ -26,7 +26,7 @@ namespace Halibut.Tests.Support
         readonly ServiceConnectionType serviceConnectionType;
         readonly ServiceFactoryBuilder serviceFactoryBuilder = new();
 
-        CertAndThumbprint serviceCertAndThumbprint;
+        ICertAndThumbprint serviceCertAndThumbprint;
 
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
@@ -46,8 +46,8 @@ namespace Halibut.Tests.Support
 
         public LatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint)
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
@@ -88,9 +88,9 @@ namespace Halibut.Tests.Support
             return this;
         }
 
-        public CertAndThumbprint ServiceCertAndThumbprint => serviceCertAndThumbprint;
+        public ICertAndThumbprint ServiceCertAndThumbprint => serviceCertAndThumbprint;
 
-        public LatestServiceBuilder WithCertificate(CertAndThumbprint serviceCertAndThumbprint)
+        public LatestServiceBuilder WithCertificate(ICertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             return this;
