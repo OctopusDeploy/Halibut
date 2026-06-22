@@ -160,21 +160,12 @@ namespace Halibut.Tests.DotMemory
                 .WithLogFactory(new TestContextLogFactory("client", LogLevel.Info))
                 .Build();
 
-            // Trust the listening tentacle certificate for inbound connections.
-            // This runtime only accepts connections — it never makes outbound polling connections —
-            // keeping it in a pure TLS server role (see declaration comment above).
             server.Trust(Certificates.TentacleListeningPublicThumbprint);
             port = server.Listen();
 
             return server;
         }
 
-        // pollingServer intentionally uses Certificates.TentacleListening rather than
-        // Certificates.Octopus (which server uses). This keeps the two certificates in distinct
-        // TLS roles within this process: Octopus is used only as a TLS server cert (by server),
-        // and TentacleListening is used only as a TLS client cert (here, and in RunListeningClient).
-        // Using the same cert in both roles would trigger an SChannel session-cache collision on
-        // Windows with SslProtocols.None (see declaration comment above).
         static HalibutRuntime RunPollingServer(X509Certificate2 serverCertificate)
         {
             var services = new DelegateServiceFactory();
