@@ -74,8 +74,7 @@ namespace Halibut.Tests.Transport
                     timeoutsAndLimits,
                     new StreamFactory(),
                     NoOpConnectionsObserver.Instance,
-                    NoOpSecureConnectionObserver.Instance,
-                    SslConfiguration.Default
+                    NoOpSecureConnectionObserver.Instance
                 );
 
                 var idleAverage = CollectCounterValues(opsPerSec)

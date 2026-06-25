@@ -15,8 +15,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     {
         readonly ServiceConnectionType serviceConnectionType;
         readonly int? proxyClientListeningPort;
-        readonly CertAndThumbprint clientCertAndThumbprint;
-        readonly CertAndThumbprint serviceCertAndThumbprint;
+        readonly ICertAndThumbprint clientCertAndThumbprint;
+        readonly ICertAndThumbprint serviceCertAndThumbprint;
         readonly string? version;
         readonly ProxyDetails? proxyDetails;
         readonly string? webSocketPath;
@@ -27,8 +27,8 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         public ProxyHalibutTestBinaryRunner(
             ServiceConnectionType serviceConnectionType,
             int? proxyClientListeningPort,
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint,
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
             Uri? realServiceListenAddress,
             string? version,
             ProxyDetails? proxyDetails,

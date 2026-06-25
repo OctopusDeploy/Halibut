@@ -13,15 +13,10 @@
 // limitations under the License.
 
 using System;
-using System.Security.Authentication;
 
-namespace Halibut.Transport
+namespace Halibut.Tests.Support
 {
-    /// <summary>
-    /// Provides a default implementation of ISslConfigurationProvider that uses the system defaults.
-    /// </summary>
-    public class DefaultSslConfigurationProvider : ISslConfigurationProvider
+    public interface IDisposableCertAndThumbprint : ICertAndThumbprint, IDisposable
     {
-        public SslProtocols SupportedProtocols => SslProtocols.None;
     }
 }

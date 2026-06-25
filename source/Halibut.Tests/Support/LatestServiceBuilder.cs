@@ -26,12 +26,12 @@ namespace Halibut.Tests.Support
         readonly ServiceConnectionType serviceConnectionType;
         readonly ServiceFactoryBuilder serviceFactoryBuilder = new();
 
-        CertAndThumbprint serviceCertAndThumbprint;
+        ICertAndThumbprint serviceCertAndThumbprint;
 
         IServiceFactory? serviceFactory;
         string serviceTrustsThumbprint;
 
-        readonly List<Uri> listeningClientUris = new();
+        readonly List<(Uri ListeningUri, string? Thumbprint)> listeningClients = new();
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
         Func<RetryPolicy>? pollingReconnectRetryPolicy;
@@ -46,8 +46,8 @@ namespace Halibut.Tests.Support
 
         public LatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint)
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
@@ -69,21 +69,28 @@ namespace Halibut.Tests.Support
             }
         }
 
-        public LatestServiceBuilder WithListeningClient(Uri listeningClient)
+        public LatestServiceBuilder WithListeningClient(Uri listeningClientUri)
         {
-            listeningClientUris.Add(listeningClient);
+            // No explicit thumbprint: the service dials this client using its configured
+            // serviceTrustsThumbprint (which the wrong-certificate test helpers manipulate).
+            listeningClients.Add((listeningClientUri, null));
 
             return this;
         }
 
-        public LatestServiceBuilder WithListeningClients(IEnumerable<Uri> listeningClientUris)
+        public LatestServiceBuilder WithListeningClients(IEnumerable<(Uri ListeningUri, string Thumbprint)> listeningClients)
         {
-            this.listeningClientUris.AddRange(listeningClientUris);
+            foreach (var listeningClient in listeningClients)
+            {
+                this.listeningClients.Add((listeningClient.ListeningUri, listeningClient.Thumbprint));
+            }
 
             return this;
         }
 
-        public LatestServiceBuilder WithCertificate(CertAndThumbprint serviceCertAndThumbprint)
+        public ICertAndThumbprint ServiceCertAndThumbprint => serviceCertAndThumbprint;
+
+        public LatestServiceBuilder WithCertificate(ICertAndThumbprint serviceCertAndThumbprint)
         {
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             return this;
@@ -220,13 +227,13 @@ namespace Halibut.Tests.Support
             {
                 serviceUri = PollingTentacleServiceUri;
 
-                foreach (var listeningClientUri in listeningClientUris)
+                foreach (var (listeningClientUri, clientThumbprint) in listeningClients)
                 {
                     for (var i = 0; i < pollingConnectionCount; i++)
                     {
                         service.Poll(
                             serviceUri,
-                            new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                            new ServiceEndPoint(listeningClientUri, clientThumbprint ?? serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
                             cancellationToken);
                     }
                 }
@@ -235,11 +242,11 @@ namespace Halibut.Tests.Support
             {
                 serviceUri = PollingOverWebSocketTentacleServiceUri;
 
-                foreach (var listeningClientUri in listeningClientUris)
+                foreach (var (listeningClientUri, clientThumbprint) in listeningClients)
                 {
                     service.Poll(
                         serviceUri,
-                        new ServiceEndPoint(listeningClientUri, serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
+                        new ServiceEndPoint(listeningClientUri, clientThumbprint ?? serviceTrustsThumbprint, proxyDetails, service.TimeoutsAndLimits),
                         cancellationToken);
                 }
             }

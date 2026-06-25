@@ -16,8 +16,9 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
     public class LatestClientAndPreviousServiceVersionBuilder : IClientAndServiceBuilder
     {
         readonly ServiceConnectionType serviceConnectionType;
-        CertAndThumbprint serviceCertAndThumbprint;
-        CertAndThumbprint clientCertAndThumbprint = CertAndThumbprint.Octopus;
+        ICertAndThumbprint serviceCertAndThumbprint;
+        ICertAndThumbprint clientCertAndThumbprint;
+        DisposableCollection disposables;
         Version? version;
         Func<int, PortForwarder>? portForwarderFactory;
         Reference<PortForwarder>? portForwarderReference;
@@ -27,15 +28,21 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         ConcurrentDictionary<string, ILog>? clientInMemoryLoggers;
         readonly OldServiceAvailableServices availableServices = new(false, false);
         
-        LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType serviceConnectionType, CertAndThumbprint serviceCertAndThumbprint)
+        LatestClientAndPreviousServiceVersionBuilder(
+            ServiceConnectionType serviceConnectionType,
+            ICertAndThumbprint serviceCertAndThumbprint,
+            ICertAndThumbprint clientCertAndThumbprint,
+            DisposableCollection disposables)
         {
             this.serviceConnectionType = serviceConnectionType;
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
+            this.clientCertAndThumbprint = clientCertAndThumbprint;
+            this.disposables = disposables;
         }
 
         public LatestClientAndPreviousServiceVersionBuilder WithCertificates(
-            CertAndThumbprint serviceCertAndThumbprint,
-            CertAndThumbprint clientCertAndThumbprint)
+            ICertAndThumbprint serviceCertAndThumbprint,
+            ICertAndThumbprint clientCertAndThumbprint)
         {
             this.serviceCertAndThumbprint = serviceCertAndThumbprint;
             this.clientCertAndThumbprint = clientCertAndThumbprint;
@@ -44,17 +51,23 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         
         public static LatestClientAndPreviousServiceVersionBuilder WithPollingService()
         {
-            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling);
+            var disposables = new DisposableCollection();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Polling, CertAndThumbprint.TentaclePolling, clientCert, disposables);
         }
 
         public static LatestClientAndPreviousServiceVersionBuilder WithPollingOverWebSocketService()
         {
-            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling);
+            var disposables = new DisposableCollection();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.TentaclePolling, clientCert, disposables);
         }
 
         public static LatestClientAndPreviousServiceVersionBuilder WithListeningService()
         {
-            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening);
+            var disposables = new DisposableCollection();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            return new LatestClientAndPreviousServiceVersionBuilder(ServiceConnectionType.Listening, CertAndThumbprint.TentacleListening, clientCert, disposables);
         }
 
         public static LatestClientAndPreviousServiceVersionBuilder ForServiceConnectionType(ServiceConnectionType connectionType)
@@ -186,6 +199,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
 
             HalibutTestBinaryRunner.RunningOldHalibutBinary? runningOldHalibutBinary = null;
             var disposableCollection = new DisposableCollection();
+            disposableCollection.Add(disposables);
             PortForwarder? portForwarder = null;
 
             var proxy = proxyFactory?.Build();
@@ -294,7 +308,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
         {
             readonly HalibutTestBinaryRunner.RunningOldHalibutBinary? runningOldHalibutBinary;
             readonly Uri serviceUri;
-            readonly CertAndThumbprint serviceCertAndThumbprint; // for creating a client
+            readonly ICertAndThumbprint serviceCertAndThumbprint; // for creating a client
             readonly DisposableCollection disposableCollection;
             readonly ProxyDetails? proxyDetails;
             readonly CancellationTokenSource cancellationTokenSource;
@@ -305,7 +319,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                 HalibutRuntime client,
                 HalibutTestBinaryRunner.RunningOldHalibutBinary? runningOldHalibutBinary,
                 Uri serviceUri,
-                CertAndThumbprint serviceCertAndThumbprint,
+                ICertAndThumbprint serviceCertAndThumbprint,
                 PortForwarder? portForwarder,
                 DisposableCollection disposableCollection,
                 HttpProxyService? httpProxy,

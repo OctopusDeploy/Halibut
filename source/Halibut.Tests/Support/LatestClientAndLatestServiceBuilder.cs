@@ -30,6 +30,7 @@ namespace Halibut.Tests.Support
 
         readonly LatestClientBuilder clientBuilder;
         readonly LatestServiceBuilder serviceBuilder;
+        DisposableCollection disposables;
 
         ProxyFactory? proxyFactory;
         Reference<HttpProxyService>? proxyServiceReference;
@@ -38,31 +39,44 @@ namespace Halibut.Tests.Support
         Reference<PortForwarder>? servicePortForwarderReference;
         Reference<PortForwarder>? portForwarderReference;
 
-        public LatestClientAndLatestServiceBuilder(
+        LatestClientAndLatestServiceBuilder(
             ServiceConnectionType serviceConnectionType,
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint,
-            PollingQueueTestCase? pollingQueueTestCase)
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint,
+            PollingQueueTestCase? pollingQueueTestCase,
+            DisposableCollection disposables)
         {
             ServiceConnectionType = serviceConnectionType;
 
+            this.disposables = disposables;
             clientBuilder = new LatestClientBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint, pollingQueueTestCase);
             serviceBuilder = new LatestServiceBuilder(serviceConnectionType, clientCertAndThumbprint, serviceCertAndThumbprint);
         }
 
         public static LatestClientAndLatestServiceBuilder Polling(PollingQueueTestCase pollingQueueTestCase)
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, CertAndThumbprint.Octopus, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
+            var disposables = new DisposableCollection();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, disposedBy: disposables);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Polling, clientCert, serviceCert, pollingQueueTestCase, disposables);
         }
 
         public static LatestClientAndLatestServiceBuilder PollingOverWebSocket(PollingQueueTestCase pollingQueueTestCase)
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, CertAndThumbprint.Ssl, CertAndThumbprint.TentaclePolling, pollingQueueTestCase);
+            // For WebSocket, the client cert must be CertAndThumbprint.Ssl because it is bound to the port
+            // via netsh http add sslcert and must match the cert registered in the Windows local machine cert store.
+            var disposables = new DisposableCollection();
+            var clientCert = CertAndThumbprint.Ssl;
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentaclePolling, disposedBy: disposables);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.PollingOverWebSocket, clientCert, serviceCert, pollingQueueTestCase, disposables);
         }
 
         public static LatestClientAndLatestServiceBuilder Listening()
         {
-            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, CertAndThumbprint.Octopus, CertAndThumbprint.TentacleListening, null);
+            var disposables = new DisposableCollection();
+            var clientCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+            var serviceCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, disposedBy: disposables);
+            return new LatestClientAndLatestServiceBuilder(ServiceConnectionType.Listening, clientCert, serviceCert, null, disposables);
         }
 
         public static LatestClientAndLatestServiceBuilder ForServiceConnectionType(ServiceConnectionType serviceConnectionType, PollingQueueTestCase? pollingQueueTestCase = null)
@@ -81,8 +95,8 @@ namespace Halibut.Tests.Support
         }
 
         public LatestClientAndLatestServiceBuilder WithCertificates(
-            CertAndThumbprint clientCertAndThumbprint,
-            CertAndThumbprint serviceCertAndThumbprint)
+            ICertAndThumbprint clientCertAndThumbprint,
+            ICertAndThumbprint serviceCertAndThumbprint)
         {
             clientBuilder.WithCertificate(clientCertAndThumbprint);
             clientBuilder.WithTrustedThumbprint(serviceCertAndThumbprint.Thumbprint);
@@ -366,7 +380,7 @@ namespace Halibut.Tests.Support
                     portForwarderReference.Value = portForwarder;
                 }
             }
-            return new ClientAndService(client, service, httpProxy);
+            return new ClientAndService(client, service, httpProxy, disposables, serviceBuilder.ServiceCertAndThumbprint.Thumbprint);
         }
 
         public class ClientAndService : IClientAndService
@@ -374,14 +388,19 @@ namespace Halibut.Tests.Support
             readonly LatestClient client;
             readonly LatestService service;
             readonly HttpProxyService? httpProxy;
+            readonly DisposableCollection disposables;
 
             public ClientAndService(
                 LatestClient client,
                 LatestService service,
-                HttpProxyService? proxy)
+                HttpProxyService? proxy,
+                DisposableCollection disposables,
+                string serviceThumbprint)
             {
                 this.client = client;
                 this.service = service;
+                this.disposables = disposables;
+                ServiceThumbprint = serviceThumbprint;
 
                 httpProxy = proxy;
             }
@@ -389,6 +408,14 @@ namespace Halibut.Tests.Support
             public Uri ServiceUri => service.ServiceUri;
             public HalibutRuntime Client => client.Client;
             public HalibutRuntime Service => service.Service;
+
+            /// <summary>
+            /// The actual thumbprint of the certificate the service is presenting.
+            /// Use this instead of <see cref="GetServiceEndPoint"/>.RemoteThumbprint when verifying
+            /// the service cert, as RemoteThumbprint reflects what the client is configured to trust
+            /// (which may differ, e.g. in bad-certificate tests).
+            /// </summary>
+            public string ServiceThumbprint { get; }
 
             public ServiceEndPoint GetServiceEndPoint()
             {
@@ -419,6 +446,7 @@ namespace Halibut.Tests.Support
 
                 void LogError(Exception e) => logger.Warning(e, "Ignoring error in dispose");
                 Try.CatchingError(() => httpProxy?.Dispose(), LogError);
+                Try.CatchingError(() => disposables.Dispose(), LogError);
             }
         }
     }

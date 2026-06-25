@@ -3,7 +3,8 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace Halibut.Tests.Support
 {
-    public class CertAndThumbprint
+    public sealed class CertAndThumbprint
+        : ICertAndThumbprint
     {
         /// <summary>
         /// CN=Halibut Alice
@@ -36,7 +37,7 @@ namespace Halibut.Tests.Support
         /// </summary>
         public static CertAndThumbprint Ssl = new(Certificates.sslPfxPath, Certificates.Ssl);
 
-        public CertAndThumbprint(string certificatePfxPath, X509Certificate2 certificate2)
+        CertAndThumbprint(string certificatePfxPath, X509Certificate2 certificate2)
         {
             Certificate2 = certificate2;
             CertificatePfxPath = certificatePfxPath;

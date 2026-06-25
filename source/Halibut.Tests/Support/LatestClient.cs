@@ -20,6 +20,7 @@ namespace Halibut.Tests.Support
             HalibutRuntime client,
             Uri? listeningUri,
             string thumbprint,
+            string clientThumbprint,
             PortForwarder? portForwarder,
             ProxyDetails? proxyDetails,
             ServiceConnectionType serviceConnectionType,
@@ -28,6 +29,7 @@ namespace Halibut.Tests.Support
             Client = client;
             ListeningUri = listeningUri;
             this.thumbprint = thumbprint;
+            ClientThumbprint = clientThumbprint;
             this.portForwarder = portForwarder;
             this.proxyDetails = proxyDetails;
             this.serviceConnectionType = serviceConnectionType;
@@ -36,6 +38,9 @@ namespace Halibut.Tests.Support
 
         public HalibutRuntime Client { get; }
         public Uri? ListeningUri { get; }
+
+        /// <summary>The thumbprint of this client's own certificate (what a polling service must trust).</summary>
+        public string ClientThumbprint { get; }
 
         public TAsyncClientService CreateClient<TService, TAsyncClientService>(Uri serviceUri)
         {

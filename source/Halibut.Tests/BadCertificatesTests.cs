@@ -30,6 +30,7 @@ namespace Halibut.Tests
             var clientTrustProvider = new DefaultTrustProvider();
             var unauthorizedThumbprint = "";
             var firstCall = true;
+            var serviceThumbprint = "";
             
             var unauthorizedClientHasConnected = new TaskCompletionSource<bool>();
             CancellationToken.Register(() => unauthorizedClientHasConnected.TrySetCanceled()); // backup to fail the test in case it never connects
@@ -43,7 +44,7 @@ namespace Halibut.Tests
                        {
                            if (firstCall)
                            {
-                               clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeFalse();
+                               clientTrustProvider.IsTrusted(serviceThumbprint).Should().BeFalse();
                                firstCall = false;
                            }
 
@@ -53,6 +54,8 @@ namespace Halibut.Tests
                        })
                        .Build(CancellationToken))
             {
+                serviceThumbprint = clientAndBuilder.ServiceThumbprint;
+
                 // Act
                 var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 await clientCountingService.IncrementAsync();
@@ -62,8 +65,8 @@ namespace Halibut.Tests
                 // Assert
                 countingService.CurrentValue().Should().Be(1);
 
-                clientTrustProvider.IsTrusted(CertAndThumbprint.TentaclePolling.Thumbprint).Should().BeTrue();
-                unauthorizedThumbprint.Should().Be(CertAndThumbprint.TentaclePolling.Thumbprint);
+                clientTrustProvider.IsTrusted(serviceThumbprint).Should().BeTrue();
+                unauthorizedThumbprint.Should().Be(serviceThumbprint);
             }
         }
 
@@ -93,6 +96,8 @@ namespace Halibut.Tests
                        })
                        .Build(CancellationToken))
             {
+                var serviceThumbprint = clientAndBuilder.ServiceThumbprint;
+
                 using var cts = new CancellationTokenSource();
                 var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(point =>
                 {
@@ -105,7 +110,7 @@ namespace Halibut.Tests
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => {
                         AllLogs(serviceLoggers).Select(l => l.FormattedMessage).ToArray()
-                            .Should().Contain(s => s.Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint '4098EC3A2FC2B92B97339D3831BA230CC1DD590F' which is not in the list of thumbprints that we trust"));
+                            .Should().Contain(s => s.Contains($"and attempted a message exchange, but it presented a client certificate with the thumbprint '{serviceThumbprint}' which is not in the list of thumbprints that we trust"));
                     },
                     TimeSpan.FromSeconds(10),
                     Logger,
@@ -124,7 +129,7 @@ namespace Halibut.Tests
                 // Assert
                 countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
 
-                unauthorizedThumbprint.Should().Be(CertAndThumbprint.TentaclePolling.Thumbprint);
+                unauthorizedThumbprint.Should().Be(serviceThumbprint);
             }
         }
 
@@ -195,8 +200,8 @@ namespace Halibut.Tests
 
                 serviceLoggers[serviceLoggers.Keys.First(x => x != nameof(MessageSerializer))].GetLogs().Should()
                     .Contain(log => log.FormattedMessage
-                        .Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint " +
-                                  "'76225C0717A16C1D0BA4A7FFA76519D286D8A248' which is not in the list of thumbprints that we trust"));
+                        .Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint") 
+                        && log.FormattedMessage.Contains("which is not in the list of thumbprints that we trust"));
             }
         }
         
@@ -254,11 +259,13 @@ namespace Halibut.Tests
                        .WithCountingService(countingService)
                        .Build(CancellationToken))
             {
+                var serviceThumbprint = clientAndBuilder.ServiceThumbprint;
+
                 var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 (await AssertionExtensions.Should(() => clientCountingService.IncrementAsync()).ThrowAsync<HalibutClientException>())
                     .And.Message.Should().Contain("" +
                                                   "We expected the server to present a certificate with the thumbprint 'EC32122053C6BFF582F8246F5697633D06F0F97F'. " +
-                                                  "Instead, it presented a certificate with a thumbprint of '36F35047CE8B000CF4C671819A2DD1AFCDE3403D'");
+                                                  $"Instead, it presented a certificate with a thumbprint of '{serviceThumbprint}'");
                 countingService.CurrentValue().Should().Be(0, "With a bad certificate the request never should have been made");
             }
         }
@@ -275,6 +282,8 @@ namespace Halibut.Tests
                        .RecordingClientLogs(out var serviceLoggers)
                        .Build(CancellationToken))
             {
+                var serviceThumbprint = clientAndBuilder.ServiceThumbprint;
+
                 using var cts = new CancellationTokenSource();
                 var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingServiceWithOptions>(point =>
                 {
@@ -285,7 +294,7 @@ namespace Halibut.Tests
 
                 // Interestingly the message exchange error is logged to a non polling looking URL, perhaps because it has not been identified?
                 Wait.UntilActionSucceeds(() => { AllLogs(serviceLoggers).Select(l => l.FormattedMessage).ToArray()
-                        .Should().Contain(s => s.Contains("and attempted a message exchange, but it presented a client certificate with the thumbprint '4098EC3A2FC2B92B97339D3831BA230CC1DD590F' which is not in the list of thumbprints that we trust")); },
+                        .Should().Contain(s => s.Contains($"and attempted a message exchange, but it presented a client certificate with the thumbprint '{serviceThumbprint}' which is not in the list of thumbprints that we trust")); },
                     TimeSpan.FromSeconds(10),
                     Logger,
                     CancellationToken);

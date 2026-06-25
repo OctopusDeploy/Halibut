@@ -1,4 +1,3 @@
-using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Tests.Support;
@@ -23,8 +22,8 @@ namespace Halibut.Tests
                 {
                     var clients = new[]
                     {
-                        clientOnly1.ListeningUri!,
-                        clientOnly2.ListeningUri!
+                        (clientOnly1.ListeningUri!, clientOnly1.ClientThumbprint),
+                        (clientOnly2.ListeningUri!, clientOnly2.ClientThumbprint)
                     };
 
                     await using (var service = await clientAndServiceTestCase.CreateServiceOnlyTestCaseBuilder()

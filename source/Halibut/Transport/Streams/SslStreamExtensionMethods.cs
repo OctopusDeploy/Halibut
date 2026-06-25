@@ -13,7 +13,6 @@ namespace Halibut.Transport.Streams
             this SslStream ssl, 
             ServiceEndPoint serviceEndpoint,
             X509Certificate2Collection clientCertificates,
-            ISslConfigurationProvider sslConfigurationProvider,
             CancellationToken cancellationToken)
         {
             using var timeoutCts = new CancellationTokenSource(ssl.ReadTimeout);
@@ -23,7 +22,7 @@ namespace Halibut.Transport.Streams
             {
                 TargetHost = serviceEndpoint.BaseUri.Host,
                 ClientCertificates = clientCertificates,
-                EnabledSslProtocols = sslConfigurationProvider.SupportedProtocols,
+                EnabledSslProtocols = SslConfiguration.SupportedProtocols,
                 CertificateRevocationCheckMode = X509RevocationMode.NoCheck
             };
 

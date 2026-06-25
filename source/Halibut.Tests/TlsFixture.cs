@@ -8,7 +8,6 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -22,9 +21,9 @@ namespace Halibut.Tests
         {
             // We need to avoid the use of cached SSL sessions to ensure that correct SSL protocol is chosen, so we use
             // unique certificates for each test.
-            using var tmpDirectory = new TmpDirectory();
-            var clientCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
-            var serviceCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            using var disposables = new DisposableCollection();
+            var clientCertAndThumbprint = TempDisposableCertAndThumbprint.CreateSelfSigned(disposedBy: disposables);
+            var serviceCertAndThumbprint = TempDisposableCertAndThumbprint.CreateSelfSigned(disposedBy: disposables);
             
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                 .WithStandardServices()
@@ -57,9 +56,9 @@ namespace Halibut.Tests
         {
             // We need to avoid the use of cached SSL sessions to ensure that correct SSL protocol is chosen, so we use
             // unique certificates for each test.
-            using var tmpDirectory = new TmpDirectory();
-            var clientCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
-            var serviceCertAndThumbprint = CertificateGenerator.GenerateSelfSignedCertificate(tmpDirectory.FullPath);
+            using var disposables = new DisposableCollection();
+            var clientCertAndThumbprint = TempDisposableCertAndThumbprint.CreateSelfSigned(disposedBy: disposables);
+            var serviceCertAndThumbprint = TempDisposableCertAndThumbprint.CreateSelfSigned(disposedBy: disposables);
 
             await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
                              .WithStandardServices()

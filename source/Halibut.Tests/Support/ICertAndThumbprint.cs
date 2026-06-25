@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-using System.Security.Authentication;
+using System;
+using System.Security.Cryptography.X509Certificates;
 
-namespace Halibut.Transport
+namespace Halibut.Tests.Support
 {
-    public interface ISslConfigurationProvider
+    public interface ICertAndThumbprint
     {
-        public SslProtocols SupportedProtocols { get; }
+        X509Certificate2 Certificate2 { get; }
+        string CertificatePfxPath { get; }
+        string Thumbprint { get; }
     }
 }

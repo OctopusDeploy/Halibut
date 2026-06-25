@@ -27,21 +27,28 @@ namespace Halibut.Tests.Transport
         ServiceEndPoint endpoint;
         HalibutRuntime tentacle;
         ILog log;
+        DisposableCollection disposables;
+        ICertAndThumbprint tentacleCert;
+        ICertAndThumbprint octopusCert;
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         [SetUp]
         public void SetUp()
         {
+            disposables = new DisposableCollection();
+            tentacleCert = TestCertificates.CertFor(CertAndThumbprint.TentacleListening, disposedBy: disposables);
+            octopusCert = TestCertificates.CertFor(CertAndThumbprint.Octopus, disposedBy: disposables);
+
             var services = new DelegateServiceFactory();
             services.Register<IEchoService, IAsyncEchoService>(() => new AsyncEchoService());
             tentacle = new HalibutRuntimeBuilder()
-                .WithServerCertificate(Certificates.TentacleListening)
+                .WithServerCertificate(tentacleCert.Certificate2)
                 .WithServiceFactory(services)
                 .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
                 .Build();
             var tentaclePort = tentacle.Listen();
-            tentacle.Trust(Certificates.OctopusPublicThumbprint);
-            endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, Certificates.TentacleListeningPublicThumbprint, tentacle.TimeoutsAndLimits)
+            tentacle.Trust(octopusCert.Thumbprint);
+            endpoint = new ServiceEndPoint("https://localhost:" + tentaclePort, tentacleCert.Thumbprint, tentacle.TimeoutsAndLimits)
             {
                 ConnectionErrorRetryTimeout = TimeSpan.MaxValue
             };
@@ -51,6 +58,7 @@ namespace Halibut.Tests.Transport
         public async ValueTask DisposeAsync()
         {
             await tentacle.DisposeAsync();
+            disposables?.Dispose();
         }
 
         [Test]
@@ -81,13 +89,12 @@ namespace Halibut.Tests.Transport
             };
 
             var tcpConnectionFactory = new TcpConnectionFactory(
-                Certificates.Octopus,
+                octopusCert.Certificate2,
                 halibutTimeoutsAndLimits,
                 new StreamFactory(),
-                NoOpSecureConnectionObserver.Instance,
-                SslConfiguration.Default
+                NoOpSecureConnectionObserver.Instance
             );
-            var secureClient = new SecureListeningClient(GetProtocol, endpoint, Certificates.Octopus, log, connectionManager, tcpConnectionFactory);
+            var secureClient = new SecureListeningClient(GetProtocol, endpoint, octopusCert.Certificate2, log, connectionManager, tcpConnectionFactory);
             ResponseMessage response = null!;
 
             await secureClient.ExecuteTransactionAsync(async (mep, ct) => response = await mep.ExchangeAsClientAsync(request, ct), CancellationToken.None);
