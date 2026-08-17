@@ -127,8 +127,8 @@ namespace Halibut.Transport.Protocol
                     }
                     finally
                     {
-                        connectionsObserver.ConnectionClosedFor(identity.SubscriptionId);
                         limitedConnectionLease.Dispose();
+                        connectionsObserver.ConnectionClosedFor(identity.SubscriptionId);
                     }
                 default:
                     log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
