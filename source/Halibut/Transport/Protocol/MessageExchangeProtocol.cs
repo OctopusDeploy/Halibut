@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
+using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
@@ -20,15 +21,17 @@ namespace Halibut.Transport.Protocol
         readonly IMessageExchangeStream stream;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
+        readonly IConnectionsObserver connectionsObserver;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, IConnectionsObserver connectionsObserver, ILog log)
         {
             this.stream = stream;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.activeTcpConnectionsLimiter = activeTcpConnectionsLimiter;
+            this.connectionsObserver = connectionsObserver;
             this.log = log;
         }
 
@@ -106,32 +109,30 @@ namespace Halibut.Transport.Protocol
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
 
-            //We might need to limit the connection, so by default, we create an unlimited connection lease
-            var limitedConnectionLease = activeTcpConnectionsLimiter.CreateUnlimitedLease();
-            
-            //if the remote identity is a subscriber, we might need to limit their active TCP connections
-            if (identity.IdentityType == RemoteIdentityType.Subscriber)
+            switch (identity.IdentityType)
             {
-                limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
-            }
-
-            using (limitedConnectionLease)
-            {
-                await IdentifyAsServerAsync(identity, cancellationToken);
-
-                switch (identity.IdentityType)
-                {
-                    case RemoteIdentityType.Client:
-                        await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
-                        break;
-                    case RemoteIdentityType.Subscriber:
+                case RemoteIdentityType.Client:
+                    await IdentifyAsServerAsync(identity, cancellationToken);
+                    await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
+                    break;
+                case RemoteIdentityType.Subscriber:
+                    var limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
+                    try
+                    {
+                        connectionsObserver.ConnectionAcceptedFor(identity.SubscriptionId);
+                        await IdentifyAsServerAsync(identity, cancellationToken);
                         var pendingRequestQueue = pendingRequests(identity);
                         await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
                         break;
-                    default:
-                        log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
-                        throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
-                }
+                    }
+                    finally
+                    {
+                        connectionsObserver.ConnectionClosedFor(identity.SubscriptionId);
+                        limitedConnectionLease.Dispose();
+                    }
+                default:
+                    log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
+                    throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
             }
         }
 

@@ -75,7 +75,7 @@ namespace Halibut.Tests.Transport
                 var connection = Substitute.For<IConnection>();
                 var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
                 var activeConnectionLimiter = new ActiveTcpConnectionsLimiter(limits);
-                connection.Protocol.Returns(new MessageExchangeProtocol(stream, limits, activeConnectionLimiter, log));
+                connection.Protocol.Returns(new MessageExchangeProtocol(stream, limits, activeConnectionLimiter, NoOpConnectionsObserver.Instance, log));
 
                 await connectionManager.ReleaseConnectionAsync(endpoint, connection, CancellationToken.None);
             }
@@ -109,7 +109,7 @@ namespace Halibut.Tests.Transport
         {
             var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
             var activeConnectionLimiter = new ActiveTcpConnectionsLimiter(limits);
-            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new NoOpControlMessageObserver(), limits, logger), limits, activeConnectionLimiter, logger);
+            return new MessageExchangeProtocol(new MessageExchangeStream(stream, new MessageSerializerBuilder(new LogFactory()).Build(), new NoOpControlMessageObserver(), limits, logger), limits, activeConnectionLimiter, NoOpConnectionsObserver.Instance, logger);
         }
     }
 }

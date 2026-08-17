@@ -1,3 +1,5 @@
+using System;
+
 namespace Halibut.Transport.Observability
 {
     public class NoOpConnectionsObserver : IConnectionsObserver
@@ -11,6 +13,14 @@ namespace Halibut.Transport.Observability
         }
 
         public void ConnectionClosed(bool authorized)
+        {
+        }
+
+        public void ConnectionAcceptedFor(Uri subscriptionId)
+        {
+        }
+
+        public void ConnectionClosedFor(Uri subscriptionId)
         {
         }
     }

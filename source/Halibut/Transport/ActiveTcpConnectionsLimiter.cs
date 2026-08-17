@@ -10,7 +10,6 @@ namespace Halibut.Transport
     {
         IDisposable LeaseActiveTcpConnection(Uri subscriptionId);
 
-        IDisposable CreateUnlimitedLease();
     }
 
     public class ActiveTcpConnectionsLimiter : IActiveTcpConnectionsLimiter
@@ -35,7 +34,7 @@ namespace Halibut.Transport
             return new LimitingAuthorizedTcpConnectionLease(subscriptionId, activeConnectionCountPerSubscriptionId, timeoutsAndLimits.MaximumActiveTcpConnectionsPerPollingSubscription.Value);
         }
 
-        public IDisposable CreateUnlimitedLease()
+        IDisposable CreateUnlimitedLease()
         {
             return new UnlimitedAuthorizedTcpConnectionLease();
         }
