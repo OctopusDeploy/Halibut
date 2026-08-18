@@ -82,7 +82,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManagerAsync();
             tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory, secureConnectionObserver);
-            activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits);
+            activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits, connectionsObserver);
         }
 
         public ILogFactory Logs => logs;
@@ -119,7 +119,7 @@ namespace Halibut
 
         ExchangeProtocolBuilder ExchangeProtocolBuilder()
         {
-            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, connectionsObserver, log);
+            return (stream, log) => new MessageExchangeProtocol(new MessageExchangeStream(stream, messageSerializer, controlMessageObserver, TimeoutsAndLimits, log), TimeoutsAndLimits, activeTcpConnectionsLimiter, log);
         }
 
         public int Listen(IPEndPoint endpoint)

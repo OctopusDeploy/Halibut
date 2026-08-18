@@ -23,15 +23,15 @@ namespace Halibut.Transport.Observability
         public void ConnectionClosed(bool authorized);
 
         /// <summary>
-        /// The number of active TCP connections for this subscriptionId immediately after this connection
-        /// was accepted (i.e. including this one).
+        /// A polling subscriber's connections' count has changed
         /// </summary>
-        public void ConnectionAcceptedFor(Uri subscriptionId, int currentCount);
-
-        /// <summary>
-        /// The number of active TCP connections for this subscriptionId immediately after this connection
-        /// was closed (i.e. excluding this one).
-        /// </summary>
-        public void ConnectionClosedFor(Uri subscriptionId, int currentCount);
+        /// <param name="subscriptionId">The polling subscriber's subscription id.</param>
+        /// <param name="previousCount">
+        /// The number of active TCP connections for this subscriptionId immediately before the change
+        /// </param>
+        /// <param name="currentCount">
+        /// The number of active TCP connections for this subscriptionId immediately after the change
+        /// </param>
+        public void ConnectionsCountChangedFor(Uri subscriptionId, int previousCount, int currentCount);
     }
 }

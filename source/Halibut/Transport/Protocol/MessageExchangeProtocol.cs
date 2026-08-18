@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.ServiceModel;
-using Halibut.Transport.Observability;
 
 namespace Halibut.Transport.Protocol
 {
@@ -21,17 +20,15 @@ namespace Halibut.Transport.Protocol
         readonly IMessageExchangeStream stream;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
-        readonly IConnectionsObserver connectionsObserver;
         readonly ILog log;
         bool identified;
         volatile bool acceptClientRequests = true;
 
-        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, IConnectionsObserver connectionsObserver, ILog log)
+        public MessageExchangeProtocol(IMessageExchangeStream stream, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter, ILog log)
         {
             this.stream = stream;
             this.halibutTimeoutsAndLimits = halibutTimeoutsAndLimits;
             this.activeTcpConnectionsLimiter = activeTcpConnectionsLimiter;
-            this.connectionsObserver = connectionsObserver;
             this.log = log;
         }
 
@@ -116,19 +113,12 @@ namespace Halibut.Transport.Protocol
                     await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
                     break;
                 case RemoteIdentityType.Subscriber:
-                    var limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
-                    try
+                    using (activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId))
                     {
-                        connectionsObserver.ConnectionAcceptedFor(identity.SubscriptionId, limitedConnectionLease.CurrentCount);
                         await IdentifyAsServerAsync(identity, cancellationToken);
                         var pendingRequestQueue = pendingRequests(identity);
                         await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
                         break;
-                    }
-                    finally
-                    {
-                        limitedConnectionLease.Dispose();
-                        connectionsObserver.ConnectionClosedFor(identity.SubscriptionId, limitedConnectionLease.CurrentCount);
                     }
                 default:
                     log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");

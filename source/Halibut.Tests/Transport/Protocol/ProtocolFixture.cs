@@ -26,8 +26,8 @@ namespace Halibut.Tests.Transport.Protocol
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
             var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
-            var activeConnectionsLimiter = new ActiveTcpConnectionsLimiter(limits);
-            protocol = new MessageExchangeProtocol(stream, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), activeConnectionsLimiter, NoOpConnectionsObserver.Instance, Substitute.For<ILog>());
+            var activeConnectionsLimiter = new ActiveTcpConnectionsLimiter(limits, NoOpConnectionsObserver.Instance);
+            protocol = new MessageExchangeProtocol(stream, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), activeConnectionsLimiter, Substitute.For<ILog>());
         }
 
         // TODO - ASYNC ME UP! ExchangeAsClientAsync cancellation

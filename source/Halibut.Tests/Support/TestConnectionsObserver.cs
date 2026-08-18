@@ -10,16 +10,13 @@ namespace Halibut.Tests.Support
     {
         readonly ConcurrentBag<bool> connectionAcceptedAuthorized = new();
         readonly ConcurrentBag<bool> connectionClosedAuthorized = new();
-        readonly ConcurrentBag<(Uri SubscriptionId, int CurrentCount)> connectionAcceptedForSubscriptions = new();
-        readonly ConcurrentBag<(Uri SubscriptionId, int CurrentCount)> connectionClosedForSubscriptions = new();
+        readonly ConcurrentBag<(Uri SubscriptionId, int PreviousCount, int CurrentCount)> connectionsCountChangedForSubscription = new();
 
         public long ConnectionAcceptedCount => connectionAcceptedAuthorized.Count;
         public long ConnectionClosedCount => connectionClosedAuthorized.Count;
 
         public IReadOnlyList<bool> ConnectionAcceptedAuthorized => connectionAcceptedAuthorized.ToList();
         public IReadOnlyList<bool> ConnectionClosedAuthorized => connectionClosedAuthorized.ToList();
-        public IReadOnlyList<(Uri SubscriptionId, int CurrentCount)> ConnectionAcceptedForSubscriptions => connectionAcceptedForSubscriptions.ToList();
-        public IReadOnlyList<(Uri SubscriptionId, int CurrentCount)> ConnectionClosedForSubscriptions => connectionClosedForSubscriptions.ToList();
 
         public void ConnectionAccepted(bool authorized)
         {
@@ -31,14 +28,9 @@ namespace Halibut.Tests.Support
             connectionClosedAuthorized.Add(authorized);
         }
 
-        public void ConnectionAcceptedFor(Uri subscriptionId, int currentCount)
+        public void ConnectionsCountChangedFor(Uri subscriptionId, int previousCount, int currentCount)
         {
-            connectionAcceptedForSubscriptions.Add((subscriptionId, currentCount));
-        }
-
-        public void ConnectionClosedFor(Uri subscriptionId, int currentCount)
-        {
-            connectionClosedForSubscriptions.Add((subscriptionId, currentCount));
+            connectionsCountChangedForSubscription.Add((subscriptionId, previousCount, currentCount));
         }
     }
 }

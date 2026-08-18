@@ -16,11 +16,7 @@ namespace Halibut.Transport.Observability
         {
         }
 
-        public void ConnectionAcceptedFor(Uri subscriptionId, int currentCount)
-        {
-        }
-
-        public void ConnectionClosedFor(Uri subscriptionId, int currentCount)
+        public void ConnectionsCountChangedFor(Uri subscriptionId, int previousCount, int currentCount)
         {
         }
     }
