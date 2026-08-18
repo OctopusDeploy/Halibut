@@ -119,7 +119,7 @@ namespace Halibut.Transport.Protocol
                     var limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
                     try
                     {
-                        connectionsObserver.ConnectionAcceptedFor(identity.SubscriptionId);
+                        connectionsObserver.ConnectionAcceptedFor(identity.SubscriptionId, limitedConnectionLease.CurrentCount);
                         await IdentifyAsServerAsync(identity, cancellationToken);
                         var pendingRequestQueue = pendingRequests(identity);
                         await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
@@ -128,7 +128,7 @@ namespace Halibut.Transport.Protocol
                     finally
                     {
                         limitedConnectionLease.Dispose();
-                        connectionsObserver.ConnectionClosedFor(identity.SubscriptionId);
+                        connectionsObserver.ConnectionClosedFor(identity.SubscriptionId, limitedConnectionLease.CurrentCount);
                     }
                 default:
                     log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");

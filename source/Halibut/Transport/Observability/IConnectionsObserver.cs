@@ -23,18 +23,15 @@ namespace Halibut.Transport.Observability
         public void ConnectionClosed(bool authorized);
 
         /// <summary>
-        /// Called once the connection is known to be for a
-        /// polling subscriber (i.e. after the subscription id has been read off the wire), and only
-        /// for connections that were not rejected for exceeding the active connection limit.
-        ///
-        /// For every call to this method there will be at most one matching call to ConnectionClosedFor()
-        /// with the same subscriptionId.
+        /// The number of active TCP connections for this subscriptionId immediately after this connection
+        /// was accepted (i.e. including this one).
         /// </summary>
-        public void ConnectionAcceptedFor(Uri subscriptionId);
+        public void ConnectionAcceptedFor(Uri subscriptionId, int currentCount);
 
         /// <summary>
-        /// A previously accepted polling subscriber connection has been closed.
+        /// The number of active TCP connections for this subscriptionId immediately after this connection
+        /// was closed (i.e. excluding this one).
         /// </summary>
-        public void ConnectionClosedFor(Uri subscriptionId);
+        public void ConnectionClosedFor(Uri subscriptionId, int currentCount);
     }
 }
