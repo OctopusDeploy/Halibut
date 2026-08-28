@@ -43,7 +43,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             var data = SomeBytes();
             var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            await File.WriteAllBytesAsync(path, data, CancellationToken);
+            File.WriteAllBytes(path, data);
 
             var sut = new TemporaryFileStream(path, HalibutLog);
 
@@ -59,7 +59,7 @@ namespace Halibut.Tests.Transport.Protocol
         {
             var data = SomeBytes();
             var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-            await File.WriteAllBytesAsync(path, data, CancellationToken);
+            File.WriteAllBytes(path, data);
 
             var sut = new TemporaryFileStream(path, HalibutLog);
 
