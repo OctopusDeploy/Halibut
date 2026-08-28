@@ -1,12 +1,29 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Halibut.Transport.Protocol;
 using NUnit.Framework;
 
 namespace Halibut.Tests
 {
     public class LocalDataStreamFixture : BaseTest
     {
+        [Test]
+        public void ShouldUseInMemoryReceiverForDataStreamsUnder128MB()
+        {
+            var dataStream = new DataStream(128 * 1024 * 1024 - 1, (stream, ct) => Task.CompletedTask);
+
+            dataStream.Receiver().Should().BeOfType<InMemoryDataStreamReceiver>();
+        }
+
+        [Test]
+        public void ShouldUseTemporaryFileReceiverForDataStreamsOf128MBOrOver()
+        {
+            var dataStream = new DataStream(128 * 1024 * 1024, (stream, ct) => Task.CompletedTask);
+
+            dataStream.Receiver().Should().BeOfType<TemporaryFileDataStreamReceiver>();
+        }
+
         [Test]
         public async Task ShouldUseInMemoryReceiverLocallyToRead()
         {

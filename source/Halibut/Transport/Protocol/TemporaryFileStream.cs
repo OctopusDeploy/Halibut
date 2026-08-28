@@ -62,6 +62,23 @@ namespace Halibut.Transport.Protocol
             }
         }
         
+        public async Task SaveToStreamAsync(Stream destinationStream, CancellationToken cancellationToken)
+        {
+            if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");
+
+            using (var file = new FileStream(path, FileMode.Open, FileAccess.Read))
+            {
+#if NET8_0_OR_GREATER
+                await file.CopyToAsync(destinationStream, cancellationToken);
+#else
+                await file.CopyToAsync(destinationStream);
+#endif
+            }
+            await AttemptToDeleteAsync(path);
+            moved = true;
+            GC.SuppressFinalize(this);
+        }
+
         public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
         {
             if (moved) throw new InvalidOperationException("This stream has already been received once, and it cannot be read again.");

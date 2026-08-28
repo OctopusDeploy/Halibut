@@ -65,19 +65,24 @@ namespace Halibut.Queue.Redis.MessageStorage
 
         public async Task SaveToAsync(string filePath, CancellationToken cancellationToken)
         {
-            await using var dataStreamRehydrationData = DataStreamRehydrationDataSupplier();
-            
 #if !NETFRAMEWORK
             await
 #endif
                 using (var file = new FileStream(filePath, FileMode.Create))
             {
-#if NET8_0_OR_GREATER
-                await dataStreamRehydrationData.Data.CopyToAsync(file, cancellationToken);
-#else
-                await dataStreamRehydrationData.Data.CopyToAsync(file);
-#endif
+                await SaveToStreamAsync(file, cancellationToken);
             }
+        }
+
+        public async Task SaveToStreamAsync(Stream destinationStream, CancellationToken cancellationToken)
+        {
+            await using var dataStreamRehydrationData = DataStreamRehydrationDataSupplier();
+
+#if NET8_0_OR_GREATER
+            await dataStreamRehydrationData.Data.CopyToAsync(destinationStream, cancellationToken);
+#else
+            await dataStreamRehydrationData.Data.CopyToAsync(destinationStream);
+#endif
         }
 
         public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
