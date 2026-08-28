@@ -123,3 +123,5 @@ UpgradeLog*.XML
 tools/
 built-packages/**
 artifacts/
+
+docs/superpowers/

@@ -11,6 +11,6 @@ namespace Halibut
         
         Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken);
 
-        public Task SaveToStreamAsync(Stream destinationStream, CancellationToken cancellationToken);
+        Task SaveToStreamAsync(Stream destinationStream, CancellationToken cancellationToken);
     }
 }
