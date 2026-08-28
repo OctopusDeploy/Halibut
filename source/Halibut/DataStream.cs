@@ -41,9 +41,9 @@ namespace Halibut
                 return receiver;
             }
 
-            // Use a FileStream for packages over 2GB, or you risk running into OutOfMemory
+            // Use a FileStream for packages over 128MB, or you risk running into OutOfMemory
             // exceptions with MemoryStream.
-            var maxMemoryStreamLength = int.MaxValue;
+            const long maxMemoryStreamLength = 128 * 1024 * 1024;
             if (Length >= maxMemoryStreamLength)
             {
                 return new TemporaryFileDataStreamReceiver(writerAsync);

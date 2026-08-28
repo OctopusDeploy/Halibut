@@ -21,10 +21,15 @@ namespace Halibut.Transport.Protocol
 #endif
             using (var file = new FileStream(filePath, FileMode.Create))
             {
-                await writerAsync(file, cancellationToken);
+                await SaveToStreamAsync(file, cancellationToken);
             }
         }
-        
+
+        public async Task SaveToStreamAsync(Stream destinationStream, CancellationToken cancellationToken)
+        {
+            await writerAsync(destinationStream, cancellationToken);
+        }
+
         public async Task ReadAsync(Func<Stream, CancellationToken, Task> readerAsync, CancellationToken cancellationToken)
         {
             var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
