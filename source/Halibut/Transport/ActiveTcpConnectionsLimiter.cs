@@ -54,12 +54,22 @@ namespace Halibut.Transport
                 this.activeConnectionCountPerSubscriptionId = activeConnectionCountPerSubscriptionId;
                 this.connectionsObserver = connectionsObserver;
 
-                lock (this.activeConnectionCountPerSubscriptionId)
+                var (previousCount, currentCount) = IncrementCount( maximumAcceptedTcpConnectionsPerThumbprint);
+
+                // Calling observer outside the lock might lead to surprising short term values but it will reduce the impact of a slow observer on the connection acceptance.
+                // E.g. (1, 2) might be processed before (0, 1) which will result in (-1, 1) -> (0, 1) values in the bucket.
+                // (-1, 1) should not really last for long as the connections are rather long-lived.
+                connectionsObserver.ConnectionsCountChangedFor(subscriptionId, previousCount, currentCount);
+            }
+
+            (int previousCount, int currentCount) IncrementCount(int maximumAcceptedTcpConnectionsPerThumbprint)
+            {
+                lock (activeConnectionCountPerSubscriptionId)
                 {
-                    if (!this.activeConnectionCountPerSubscriptionId.TryGetValue(subscriptionId, out var count))
+                    if (!activeConnectionCountPerSubscriptionId.TryGetValue(subscriptionId, out var count))
                     {
                         count = new StrongBox<int>(0);
-                        this.activeConnectionCountPerSubscriptionId.Add(subscriptionId, count);
+                        activeConnectionCountPerSubscriptionId.Add(subscriptionId, count);
                     }
 
                     var previousCount = count.Value;
@@ -68,12 +78,12 @@ namespace Halibut.Transport
                     if (count.Value + 1 > maximumAcceptedTcpConnectionsPerThumbprint)
                     {
                         //throw an exception, bailing on the connection
-                        throw new ActiveTcpConnectionsExceededException(this.subscriptionId, $"Exceeded the maximum number ({maximumAcceptedTcpConnectionsPerThumbprint}) of active TCP connections for subscription {subscriptionId}");
+                        throw new ActiveTcpConnectionsExceededException(subscriptionId, $"Exceeded the maximum number ({maximumAcceptedTcpConnectionsPerThumbprint}) of active TCP connections for subscription {subscriptionId}");
                     }
 
                     count.Value++;
 
-                    connectionsObserver.ConnectionsCountChangedFor(subscriptionId, previousCount, count.Value);
+                    return (previousCount, count.Value);
                 }
             }
 
