@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -7,7 +8,6 @@ using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
-using Halibut.Tests.TestServices.SyncClientWithOptions;
 using Halibut.TestUtils.Contracts;
 using NUnit.Framework;
 
@@ -49,6 +49,69 @@ namespace Halibut.Tests.Transport.Observability
 
             connectionsObserver.ConnectionAcceptedAuthorized.Should().AllSatisfy(a => a.Should().BeTrue());
             connectionsObserver.ConnectionClosedAuthorized.Should().AllSatisfy(a => a.Should().BeTrue());
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testListening: false)]
+        public async Task ConnectionsCountForAPollingSubscriptionChangesOneConnectionAtATime(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var connectionsObserver = new TestConnectionsObserver();
+            await using (var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                             .WithStandardServices()
+                             .AsLatestClientAndLatestServiceBuilder()
+                             .WithConnectionObserverOnTcpServer(connectionsObserver)
+                             .WithPortForwarding(out var portForwarderRef)
+                             .Build(CancellationToken))
+            {
+                var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+                await echo.SayHelloAsync("hello");
+
+                var openFirstConnection = connectionsObserver.ConnectionsCountChangedForSubscription.First();
+                openFirstConnection.PreviousCount.Should().Be(0);
+                openFirstConnection.CurrentCount.Should().Be(1);
+                openFirstConnection.SubscriptionId.Should().Be(clientAndService.ServiceUri);
+
+
+                portForwarderRef.Value.CloseExistingConnections();
+
+                await Try.CatchingError(() => echo.SayHelloAsync("hello"));
+
+                var closeFirstConnection = connectionsObserver.ConnectionsCountChangedForSubscription.Skip(1).First();
+                closeFirstConnection.PreviousCount.Should().Be(1);
+                closeFirstConnection.CurrentCount.Should().Be(0);
+                closeFirstConnection.SubscriptionId.Should().Be(clientAndService.ServiceUri);
+
+                await echo.SayHelloAsync("hello");
+
+                var openSecondConnection = connectionsObserver.ConnectionsCountChangedForSubscription.Skip(2).First();
+                openSecondConnection.PreviousCount.Should().Be(0);
+                openSecondConnection.CurrentCount.Should().Be(1);
+                openSecondConnection.SubscriptionId.Should().Be(clientAndService.ServiceUri);
+            }
+
+            Wait.UntilActionSucceeds(() =>
+            {
+                var closeSecondConnection = connectionsObserver.ConnectionsCountChangedForSubscription.Skip(3).First();
+                closeSecondConnection.PreviousCount.Should().Be(1);
+                closeSecondConnection.CurrentCount.Should().Be(0);
+            }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
+        }
+
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testNetworkConditions: false, testWebSocket: false, testPolling: false)]
+        public async Task ConnectionsCountIsNotChangedForListeningConnections(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var connectionsObserver = new TestConnectionsObserver();
+            await using var clientAndService = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                .WithStandardServices()
+                .AsLatestClientAndLatestServiceBuilder()
+                .WithConnectionObserverOnTcpServer(connectionsObserver)
+                .Build(CancellationToken);
+
+            var echo = clientAndService.CreateAsyncClient<IEchoService, IAsyncClientEchoService>();
+            await echo.SayHelloAsync("hello");
+
+            connectionsObserver.ConnectionsCountChangedForSubscription.Should().BeEmpty("only polling subscriptions lease a counted connection");
         }
 
         [Test]

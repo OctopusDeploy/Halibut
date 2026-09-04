@@ -89,6 +89,15 @@ namespace Halibut.Transport
 
             public void Dispose()
             {
+                var counts = DecrementCount();
+                if (counts == null) return;
+
+                var (previousCount, currentCount) = counts.Value;
+                connectionsObserver.ConnectionsCountChangedFor(subscriptionId, previousCount, currentCount);
+            }
+
+            (int previousCount, int currentCount)? DecrementCount()
+            {
                 lock (activeConnectionCountPerSubscriptionId)
                 {
                     if (activeConnectionCountPerSubscriptionId.TryGetValue(subscriptionId, out var count))
@@ -103,9 +112,10 @@ namespace Halibut.Transport
                             activeConnectionCountPerSubscriptionId.Remove(subscriptionId);
                         }
 
-                        connectionsObserver.ConnectionsCountChangedFor(subscriptionId, previousCount, count.Value);
+                        return (previousCount, count.Value);
                     }
                 }
+                return null;
             }
         }
     }
