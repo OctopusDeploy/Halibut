@@ -82,7 +82,7 @@ namespace Halibut
 
             connectionManager = new ConnectionManagerAsync();
             tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory, secureConnectionObserver);
-            activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits);
+            activeTcpConnectionsLimiter = new ActiveTcpConnectionsLimiter(TimeoutsAndLimits, connectionsObserver);
         }
 
         public ILogFactory Logs => logs;

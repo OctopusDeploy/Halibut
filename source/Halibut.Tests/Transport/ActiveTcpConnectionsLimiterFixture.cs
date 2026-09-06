@@ -6,6 +6,7 @@ using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Exceptions;
 using Halibut.Transport;
+using Halibut.Transport.Observability;
 using NUnit.Framework;
 
 namespace Halibut.Tests.Transport
@@ -22,7 +23,7 @@ namespace Halibut.Tests.Transport
             var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
                 MaximumActiveTcpConnectionsPerPollingSubscription = limit
-            });
+            }, NoOpConnectionsObserver.Instance);
 
             // Act
             //we create a new URI each time to make sure we aren't doing object reference checks
@@ -46,7 +47,7 @@ namespace Halibut.Tests.Transport
             var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
                 MaximumActiveTcpConnectionsPerPollingSubscription = limit
-            });
+            }, NoOpConnectionsObserver.Instance);
 
             // Act
             limiter.LeaseActiveTcpConnection(subscription);
@@ -76,7 +77,7 @@ namespace Halibut.Tests.Transport
             var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
                 MaximumActiveTcpConnectionsPerPollingSubscription = limit
-            });
+            }, NoOpConnectionsObserver.Instance);
 
             // Act
             limiter.LeaseActiveTcpConnection(subscription1);
@@ -99,7 +100,7 @@ namespace Halibut.Tests.Transport
             var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
                 MaximumActiveTcpConnectionsPerPollingSubscription = limit
-            });
+            }, NoOpConnectionsObserver.Instance);
 
             // Capture how many claims fail with the exception
             var failures = 0;
@@ -140,7 +141,7 @@ namespace Halibut.Tests.Transport
             var limiter = new ActiveTcpConnectionsLimiter(new HalibutTimeoutsAndLimits
             {
                 MaximumActiveTcpConnectionsPerPollingSubscription = limit
-            });
+            }, NoOpConnectionsObserver.Instance);
 
             // Capture how many claims fail with the exception
             var failures = 0;

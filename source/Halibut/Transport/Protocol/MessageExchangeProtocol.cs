@@ -106,32 +106,23 @@ namespace Halibut.Transport.Protocol
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
 
-            //We might need to limit the connection, so by default, we create an unlimited connection lease
-            var limitedConnectionLease = activeTcpConnectionsLimiter.CreateUnlimitedLease();
-            
-            //if the remote identity is a subscriber, we might need to limit their active TCP connections
-            if (identity.IdentityType == RemoteIdentityType.Subscriber)
+            switch (identity.IdentityType)
             {
-                limitedConnectionLease = activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId);
-            }
-
-            using (limitedConnectionLease)
-            {
-                await IdentifyAsServerAsync(identity, cancellationToken);
-
-                switch (identity.IdentityType)
-                {
-                    case RemoteIdentityType.Client:
-                        await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
-                        break;
-                    case RemoteIdentityType.Subscriber:
+                case RemoteIdentityType.Client:
+                    await IdentifyAsServerAsync(identity, cancellationToken);
+                    await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
+                    break;
+                case RemoteIdentityType.Subscriber:
+                    using (activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId))
+                    {
+                        await IdentifyAsServerAsync(identity, cancellationToken);
                         var pendingRequestQueue = pendingRequests(identity);
                         await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
                         break;
-                    default:
-                        log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
-                        throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
-                }
+                    }
+                default:
+                    log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
+                    throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
             }
         }
 

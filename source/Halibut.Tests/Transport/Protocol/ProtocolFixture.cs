@@ -26,7 +26,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream = new DumpStream();
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Server));
             var limits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
-            var activeConnectionsLimiter = new ActiveTcpConnectionsLimiter(limits);
+            var activeConnectionsLimiter = new ActiveTcpConnectionsLimiter(limits, NoOpConnectionsObserver.Instance);
             protocol = new MessageExchangeProtocol(stream, new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), activeConnectionsLimiter, Substitute.For<ILog>());
         }
 
