@@ -17,7 +17,7 @@ using NUnit.Framework;
 namespace Halibut.Tests.Transport
 {
     [NonParallelizable]
-    public class SecureListenerFixture
+    public class SecureListenerFixture : BaseTest
     {
         PerformanceCounter GetCounterForCurrentProcess(string categoryName, string counterName)
         {
@@ -205,6 +205,43 @@ namespace Halibut.Tests.Transport
                 client.Client.DualMode = true;
             }
             return client;
+        }
+
+        [Test]
+        public async Task ClientDisconnectingBeforeCompletingTheTlsHandshakeIsLoggedQuietly()
+        {
+            var timeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
+
+            await using (var octopus = new HalibutRuntimeBuilder()
+                             .WithServerCertificate(Certificates.Octopus)
+                             .WithHalibutTimeoutsAndLimits(timeoutsAndLimits)
+                             .Build())
+            {
+                var port = octopus.Listen();
+
+                using (var tcpClient = CreateTcpClientAsync(timeoutsAndLimits))
+                {
+                    await tcpClient.ConnectAsync(IPAddress.Loopback, port);
+                    // Disconnect without ever starting the TLS handshake, causing the server to see an
+                    // unexpected EOF while performing the handshake, e.g. a client giving up mid-connect.
+                    tcpClient.Client.Shutdown(SocketShutdown.Both);
+                }
+
+                IList<LogEvent> logs = null!;
+
+                Wait.UntilActionSucceeds(() =>
+                    {
+                        var listenerEndpoint = ((LogFactory)octopus.Logs).GetEndpoints().Single(e => e.Scheme == "listen");
+                        logs = octopus.Logs.ForEndpoint(listenerEndpoint).GetLogs();
+                        logs.Should().Contain(e => e.Type == EventType.Diagnostic && e.FormattedMessage.Contains("did not complete"));
+                    },
+                    TimeSpan.FromSeconds(10),
+                    Logger,
+                    CancellationToken);
+
+                logs.Should().NotContain(e => e.Type == EventType.Error || e.Type == EventType.ErrorInInitialisation,
+                    "A client disconnecting before completing the TLS handshake is a normal occurrence and should not be logged loudly");
+            }
         }
     }
 }
