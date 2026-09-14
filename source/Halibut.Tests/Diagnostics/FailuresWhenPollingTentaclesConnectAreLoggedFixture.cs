@@ -34,27 +34,27 @@ namespace Halibut.Tests.Diagnostics
                 // If this task completes and then we likely didn't kill the connect as we intended to.  
                 var checkPollingTentacleDidNotConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
 
-                Func<LogEvent, bool> isInitialisationFailure = l =>
-                    l.Type == EventType.ErrorInInitialisation
-                    || (l.Type == EventType.Diagnostic && l.FormattedMessage.Contains("did not complete the TLS handshake"));
 
                 await Wait.For(async () =>
                 {
                     await Task.CompletedTask;
                     var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                    if (logs.Any(isInitialisationFailure)) return true;
+                    if (logs.Any(IsListeningIntialisationFailureLogMessage)) return true;
                     return checkPollingTentacleDidNotConnect.IsCompleted;
                 }, CancellationToken);
 
                 checkPollingTentacleDidNotConnect.IsCompleted.Should().BeFalse("We should have killed the connection before the request");
-
-                // Killing the connection this early on means the listener sees the TCP connection drop
-                // out from underneath it before, or during, the TLS handshake. This is indistinguishable
-                // from some random client (e.g. a health check or port scanner) connecting and hanging up,
-                // so it is now logged quietly rather than as an ErrorInInitialisation. See LEV-1837.
+                
                 var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                logs.Should().Match(logs => logs.Any(isInitialisationFailure));
+                logs.Should().Match(logs => logs.Any(IsListeningIntialisationFailureLogMessage));
             }
+        }
+
+        static bool IsListeningIntialisationFailureLogMessage(LogEvent l)
+        {
+            return l.Type == EventType.ErrorInInitialisation
+                   // Also check for cases where it looks like the client just walked away, maybe nmap scanned us?
+                   || (l.Type == EventType.Diagnostic && l.FormattedMessage.Contains("did not complete the TLS handshake"));
         }
 
         [Test]
@@ -84,26 +84,18 @@ namespace Halibut.Tests.Diagnostics
                 // If this task completes and then we likely didn't kill the connect as we intended to.  
                 var checkPollingTentacleDidNotConnect = Task.Run(async () => await echo.SayHelloAsync("Deploy package A"));
 
-                Func<LogEvent, bool> isInitialisationFailure = l =>
-                    l.Type == EventType.ErrorInInitialisation
-                    || (l.Type == EventType.Diagnostic && l.FormattedMessage.Contains("did not complete the TLS handshake"));
-
                 await Wait.For(async () =>
                 {
                     await Task.CompletedTask;
                     var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                    if (logs.Any(isInitialisationFailure)) return true;
+                    if (logs.Any(IsListeningIntialisationFailureLogMessage)) return true;
                     return checkPollingTentacleDidNotConnect.IsCompleted;
                 }, CancellationToken);
 
                 checkPollingTentacleDidNotConnect.IsCompleted.Should().BeFalse("We should have killed the connection before the request");
-
-                // Killing the connection this early on means the listener sees the TCP connection drop
-                // out from underneath it before, or during, the TLS handshake. This is indistinguishable
-                // from some random client (e.g. a health check or port scanner) connecting and hanging up,
-                // so it is now logged quietly rather than as an ErrorInInitialisation. See LEV-1837.
+                
                 var logs = clientLogs.Values.SelectMany(log => log.GetLogs()).ToList();
-                logs.Should().Match(logs => logs.Any(isInitialisationFailure));
+                logs.Should().Match(logs => logs.Any(IsListeningIntialisationFailureLogMessage));
             }
         }
     }
