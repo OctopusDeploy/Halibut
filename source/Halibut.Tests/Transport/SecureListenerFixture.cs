@@ -208,7 +208,7 @@ namespace Halibut.Tests.Transport
         }
 
         [Test]
-        public async Task ClientDisconnectingBeforeCompletingTheTlsHandshakeIsLoggedQuietly()
+        public async Task SomeRandomClientConnectingAndThenHangingUpDuringTheTlsHandshakeIsLoggedQuietly()
         {
             var timeoutsAndLimits = new HalibutTimeoutsAndLimitsForTestsBuilder().Build();
 
@@ -222,8 +222,10 @@ namespace Halibut.Tests.Transport
                 using (var tcpClient = CreateTcpClientAsync(timeoutsAndLimits))
                 {
                     await tcpClient.ConnectAsync(IPAddress.Loopback, port);
-                    // Disconnect without ever starting the TLS handshake, causing the server to see an
-                    // unexpected EOF while performing the handshake, e.g. a client giving up mid-connect.
+                    // Simulates something like nmap or a health check probe connecting to the port and
+                    // hanging up without ever starting the TLS handshake, causing the server to see an
+                    // unexpected EOF while performing the handshake. This is not a real Halibut client
+                    // and should not be logged loudly.
                     tcpClient.Client.Shutdown(SocketShutdown.Both);
                 }
 
