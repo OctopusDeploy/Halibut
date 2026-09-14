@@ -305,13 +305,24 @@ namespace Halibut.Transport
                 {
                     log.Write(EventType.SecurityNegotiation, "Performing TLS server handshake");
 
-                    await ssl
-                        .AuthenticateAsServerAsync(
-                            serverCertificate,
-                            true,
-                            SslConfiguration.SupportedProtocols,
-                            false)
-                        .ConfigureAwait(false);
+                    try
+                    {
+                        await ssl
+                            .AuthenticateAsServerAsync(
+                                serverCertificate,
+                                true,
+                                SslConfiguration.SupportedProtocols,
+                                false)
+                            .ConfigureAwait(false);
+                    }
+                    catch (IOException ex)
+                    {
+                        // A remote party can disconnect, be reset, or otherwise bail out at any point
+                        // before, or during, the TLS handshake. This is a normal occurrence, not an
+                        // error in Halibut, so it is reported as a distinct exception which is logged
+                        // quietly rather than falling through to the generic unhandled-error handling.
+                        throw new RemoteFailedToCompleteTlsHandshakeException($"The client at {clientName} did not complete the TLS handshake", ex);
+                    }
 
                     log.Write(EventType.SecurityNegotiation, "Secure connection established, client is not yet authenticated, client connected with {0}", ssl.SslProtocol.ToString());
 
@@ -350,6 +361,10 @@ namespace Halibut.Transport
             catch (AuthenticationException ex)
             {
                 log.WriteException(EventType.ClientDenied, "Client failed authentication: {0}", ex, clientName);
+            }
+            catch (RemoteFailedToCompleteTlsHandshakeException ex)
+            {
+                log.WriteException(EventType.Diagnostic, "{0}", ex, ex.Message);
             }
             catch (ActiveTcpConnectionsExceededException ex)
             {
