@@ -13,13 +13,17 @@ so send it to the Service.
 
 ## How to run Redis for this queue.
 
-Redis can be started by running the following command in the root of the directory:
+The tests start a Redis container for you. To reuse a Redis between test runs, start one that matches Octopus Cloud by running the following command in the root of the directory:
 
 ```
-docker run -v `pwd`/redis-conf:/usr/local/etc/redis -p 6379:6379 --name redis -d redis redis-server /usr/local/etc/redis/redis.conf
+docker run -d --rm --name halibut-redis -p 6379:6379 --user 1001:1001 --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /data --tmpfs /tmp -v `pwd`/redis-conf:/etc/redis:ro --entrypoint redis-server redis:8.0.3 /etc/redis/redis.conf --requirepass halibut-local-redis
 ```
+
+The tests use a Redis on `localhost:6379` if it accepts the password `halibut-local-redis`. Set `HALIBUT_REDIS_HOST`, `HALIBUT_REDIS_PORT` and `HALIBUT_REDIS_PASSWORD` to use a different Redis. A Redis that does not require a password is ignored, since Octopus Cloud always requires one.
 
 Note that Redis is configured to have no backup, everything must be in memory. The queue makes this assumption to function.
+
+`redis-conf/redis.conf` is the same configuration Octopus Cloud uses. Octopus Cloud runs the Docker Hardened Image of Redis (`octopusdeploy/dhi-redis`), which needs registry credentials, so the tests use the public image of the same Redis version.
 
 # Design
 

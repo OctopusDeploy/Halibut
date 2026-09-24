@@ -1,6 +1,7 @@
 #if NET8_0_OR_GREATER
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Queue.Redis.RedisHelpers;
@@ -81,11 +82,12 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
 
             // Verify that the observer was called with retry exceptions
             testObserver.ExecuteWithRetryExceptions.Should().NotBeEmpty("Observer should have been called for retry exceptions during connection issues");
-            testObserver.ExecuteWithRetryExceptions.Should().AllSatisfy(ex => 
+            testObserver.ExecuteWithRetryExceptions.Should().AllSatisfy(ex =>
             {
                 ex.Exception.Should().NotBeNull("Exception should not be null");
-                ex.WillRetry.Should().BeFalse();
             });
+            // Earlier attempts may fail within MaxDurationToRetryFor and so be retried, but the operation must eventually give up.
+            testObserver.ExecuteWithRetryExceptions.Last().WillRetry.Should().BeFalse();
 
             testObserver.ConnectionRestorations.Count.Should().Be(0);
             testObserver.ConnectionFailures.Count.Should().BeGreaterThanOrEqualTo(1);

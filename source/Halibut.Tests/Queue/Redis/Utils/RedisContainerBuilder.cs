@@ -1,22 +1,32 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using Halibut.Tests.Support;
+using Halibut.Tests.TestSetup.Redis;
 using NUnit.Framework;
 using Try = Halibut.Util.Try;
 
 namespace Halibut.Tests.Queue.Redis.Utils
 {
+    /// <summary>
+    /// Builds a Redis container that is as close as practical to the Redis Octopus Cloud runs for Octopus Server.
+    /// See HostedScripts: source/HostedInstance/redis/redis-cache-deployment.yml
+    /// </summary>
     public class RedisContainerBuilder
     {
-        private string _image = "redis:7-alpine";
+        // Octopus Cloud runs octopusdeploy/dhi-redis (a Docker Hardened Image), which needs registry credentials to pull.
+        // This is the public image of the same Redis version.
+        private string _image = "redis:8.0.3";
         private string? _customConfigPath;
         private int? _hostPort;
+        private string? _password;
 
         /// <summary>
-        /// Sets the Redis Docker image to use. Defaults to "redis:7-alpine".
+        /// Sets the Redis Docker image to use. Defaults to "redis:8.0.3".
         /// </summary>
         /// <param name="image">The Redis Docker image tag</param>
         /// <returns>The builder instance for method chaining</returns>
@@ -50,6 +60,17 @@ namespace Halibut.Tests.Queue.Redis.Utils
         }
 
         /// <summary>
+        /// Sets the password Redis requires. If not specified, a random password is generated.
+        /// </summary>
+        /// <param name="password">The password clients must authenticate with</param>
+        /// <returns>The builder instance for method chaining</returns>
+        public RedisContainerBuilder WithPassword(string password)
+        {
+            _password = password;
+            return this;
+        }
+
+        /// <summary>
         /// Builds and returns a configured Redis container with the specified settings.
         /// The container is not started - call StartAsync() on the returned container to start it.
         /// </summary>
@@ -57,19 +78,34 @@ namespace Halibut.Tests.Queue.Redis.Utils
         public RedisContainer Build()
         {
             var hostPort = _hostPort ?? TcpPortHelper.FindFreeTcpPort();
-            var redisConfigPath = _customConfigPath ?? 
+            var password = _password ?? Guid.NewGuid().ToString("N");
+            var redisConfigPath = _customConfigPath ??
                 Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "../../../../../redis-conf"));
 
             var container = new ContainerBuilder()
                 .WithImage(_image)
                 .WithPortBinding(hostPort, 6379)
-                .WithBindMount(redisConfigPath, "/usr/local/etc/redis")
-                .WithCommand("redis-server", "/usr/local/etc/redis/redis.conf")
+                // Octopus Cloud mounts its redis.conf config map here.
+                .WithBindMount(redisConfigPath, "/etc/redis", AccessMode.ReadOnly)
+                // Start redis-server directly, the official image's entrypoint loads the Redis 8 modules (JSON, search etc.) which Octopus Cloud's image does not.
+                .WithEntrypoint("redis-server")
+                .WithCommand("/etc/redis/redis.conf", "--requirepass", password)
+                // Octopus Cloud runs Redis as a non-root user, with a read-only root filesystem, no capabilities and in-memory /data and /tmp.
+                .WithTmpfsMount("/data")
+                .WithTmpfsMount("/tmp")
+                .WithCreateParameterModifier(parameters =>
+                {
+                    parameters.User = "1001:1001";
+                    parameters.HostConfig.ReadonlyRootfs = true;
+                    parameters.HostConfig.CapDrop = new List<string> { "ALL" };
+                    parameters.HostConfig.SecurityOpt = new List<string> { "no-new-privileges" };
+                })
+                // The same check as the readiness probe in Octopus Cloud.
                 .WithWaitStrategy(DotNet.Testcontainers.Builders.Wait.ForUnixContainer()
-                    .UntilPortIsAvailable(6379))
+                    .UntilCommandIsCompleted("bash", "-ec", $"[ \"$(REDISCLI_AUTH={password} redis-cli -h localhost ping)\" = PONG ]"))
                 .Build();
 
-            return new RedisContainer(container, hostPort);
+            return new RedisContainer(container, hostPort, password);
         }
     }
 
@@ -80,10 +116,11 @@ namespace Halibut.Tests.Queue.Redis.Utils
     {
         private readonly IContainer _container;
 
-        public RedisContainer(IContainer container, int redisPort)
+        public RedisContainer(IContainer container, int redisPort, string password)
         {
             _container = container;
             RedisPort = redisPort;
+            Password = password;
         }
 
         /// <summary>
@@ -92,9 +129,14 @@ namespace Halibut.Tests.Queue.Redis.Utils
         public int RedisPort { get; }
 
         /// <summary>
+        /// The password Redis requires
+        /// </summary>
+        public string Password { get; }
+
+        /// <summary>
         /// The connection string to connect to this Redis instance
         /// </summary>
-        public string ConnectionString => $"localhost:{RedisPort}";
+        public string ConnectionString => RedisTestHost.ConnectionString("localhost", RedisPort, Password);
 
         /// <summary>
         /// Starts the Redis container
