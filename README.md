@@ -78,6 +78,8 @@ See the [SimpleLocalExecutionExample](source/Halibut.Tests/LocalExecutionModeFix
 
 For more detailed information about the Redis queue implementation, refer to the [Redis Queue documentation](docs/RedisQueue.md).
 
+To run Redis locally, e.g. for the tests, see [Running Redis locally](docs/RunningRedisLocally.md).
+
 ## Failure modes
 
 One area we've put a lot of thought into with Halibut is failure modes. Below is a list of possible failure reasons, and how Halibut will handle them. 

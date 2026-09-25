@@ -18,7 +18,7 @@ namespace Halibut.Tests.TestSetup.Redis
 
         static readonly int RedisPortToTry = EnvironmentVariableReaderHelper.TryReadIntFromEnvironmentVariable("HALIBUT_REDIS_PORT") ?? 6379;
         static readonly string RedisHost = Environment.GetEnvironmentVariable("HALIBUT_REDIS_HOST") ?? "localhost";
-        // Matches the password in the docker run command in docs/RedisQueue.md
+        // Matches the password in the docker run command in docs/RunningRedisLocally.md
         static readonly string RedisPassword = Environment.GetEnvironmentVariable("HALIBUT_REDIS_PASSWORD") ?? "halibut-local-redis";
         CreateRedisDockerContainerForTests? redisContainer = null;
         public void OneTimeSetUp(ILogger logger)
@@ -50,7 +50,7 @@ namespace Halibut.Tests.TestSetup.Redis
             // We should be testing with a production-like setup, so don't test against a Redis that doesn't have a password.
             if (AcceptsConnectionsWithoutAPassword())
             {
-                logger.Warning("Redis on {Host}:{Port} does not require a password, unlike Octopus Cloud, so a Redis container will be used instead. See docs/RedisQueue.md for how to run a local Redis that matches Octopus Cloud", RedisHost, RedisPortToTry);
+                logger.Warning("Redis on {Host}:{Port} does not require a password, unlike Octopus Cloud, so a Redis container will be used instead. See docs/RunningRedisLocally.md for how to run a local Redis that matches Octopus Cloud", RedisHost, RedisPortToTry);
                 return false;
             }
 
