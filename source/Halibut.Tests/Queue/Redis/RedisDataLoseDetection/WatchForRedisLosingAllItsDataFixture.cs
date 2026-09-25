@@ -74,10 +74,10 @@ namespace Halibut.Tests.Queue.Redis.RedisDataLoseDetection
             
             Logger.Information("Starting Redis container");
             await container.StartAsync();
-            Logger.Information("Redis container started successfully with connection string: {ConnectionString}", container.ConnectionString);
+            Logger.Information("Redis container started successfully on port {RedisPort}", container.RedisPort);
 
             // Create RedisFacade connected to the containerized Redis
-            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(host: "localhost", container.RedisPort);
+            await using var redisFacade = RedisFacadeBuilder.CreateRedisFacade(host: "localhost", container.RedisPort, password: container.Password);
             
             await using var watcher = new WatchForRedisLosingAllItsData(redisFacade, HalibutLog, watchInterval: TimeSpan.FromSeconds(1));
             

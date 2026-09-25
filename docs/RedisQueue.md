@@ -13,13 +13,7 @@ so send it to the Service.
 
 ## How to run Redis for this queue.
 
-Redis can be started by running the following command in the root of the directory:
-
-```
-docker run -v `pwd`/redis-conf:/usr/local/etc/redis -p 6379:6379 --name redis -d redis redis-server /usr/local/etc/redis/redis.conf
-```
-
-Note that Redis is configured to have no backup, everything must be in memory. The queue makes this assumption to function.
+See [Running Redis locally](RunningRedisLocally.md).
 
 # Design
 

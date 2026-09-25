@@ -22,7 +22,7 @@ namespace Halibut.Tests.TestSetup
             
             logger.Information("Starting Redis container");
             await container.StartAsync();
-            logger.Information("Redis container started successfully with connection string: {ConnectionString}", container.ConnectionString);
+            logger.Information("Redis container started successfully on port {RedisPort}", container.RedisPort);
 
         }
         public async ValueTask DisposeAsync()
