@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using Halibut.Tests.Support;
 using Halibut.Tests.TestSetup.Redis;
@@ -37,10 +37,10 @@ namespace Halibut.Tests.Queue.Redis.Utils
         }
 
         /// <summary>
-        /// Sets a custom Redis configuration path to mount into the container.
+        /// Sets a custom directory containing the redis.conf to start Redis with.
         /// If not specified, uses the default redis-conf directory from the project root.
         /// </summary>
-        /// <param name="configPath">The path to the Redis configuration directory</param>
+        /// <param name="configPath">The path to the directory containing redis.conf</param>
         /// <returns>The builder instance for method chaining</returns>
         public RedisContainerBuilder WithCustomConfigPath(string configPath)
         {
@@ -82,14 +82,16 @@ namespace Halibut.Tests.Queue.Redis.Utils
             var redisConfigPath = _customConfigPath ??
                 Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "../../../../../redis-conf"));
 
+            // Octopus Cloud mounts redis.conf as a file, we pass its settings as arguments instead. A bind mount keeps the host's
+            // permissions, so Redis (running as 1001) would fail to start if the checkout is not readable by other users.
+            var redisConfigArguments = RedisConfigFileToArguments(Path.Combine(redisConfigPath, "redis.conf"));
+
             var container = new ContainerBuilder()
                 .WithImage(_image)
                 .WithPortBinding(hostPort, 6379)
-                // Octopus Cloud mounts its redis.conf config map here.
-                .WithBindMount(redisConfigPath, "/etc/redis", AccessMode.ReadOnly)
                 // Start redis-server directly, the official image's entrypoint loads the Redis 8 modules (JSON, search etc.) which Octopus Cloud's image does not.
                 .WithEntrypoint("redis-server")
-                .WithCommand("/etc/redis/redis.conf", "--requirepass", password)
+                .WithCommand(redisConfigArguments.Concat(new[] { "--requirepass", password }).ToArray())
                 // Octopus Cloud runs Redis as a non-root user, with a read-only root filesystem, no capabilities and in-memory /data and /tmp.
                 .WithTmpfsMount("/data")
                 .WithTmpfsMount("/tmp")
@@ -106,6 +108,22 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 .Build();
 
             return new RedisContainer(container, hostPort, password);
+        }
+
+        /// <summary>
+        /// Converts each directive in a redis.conf file into redis-server arguments, e.g. `save ""` becomes `--save` and ``.
+        /// </summary>
+        static string[] RedisConfigFileToArguments(string redisConfigFile)
+        {
+            return File.ReadAllLines(redisConfigFile)
+                .Select(line => line.Trim())
+                .Where(line => line.Length > 0 && !line.StartsWith("#"))
+                .SelectMany(line =>
+                {
+                    var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                    return new[] { "--" + parts[0] }.Concat(parts.Skip(1).Select(value => value.Trim('"')));
+                })
+                .ToArray();
         }
     }
 

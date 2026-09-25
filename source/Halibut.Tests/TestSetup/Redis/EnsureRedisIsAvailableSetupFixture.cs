@@ -47,7 +47,7 @@ namespace Halibut.Tests.TestSetup.Redis
                 return false;
             }
 
-            // Octopus Cloud always requires a password, so don't test against a Redis that doesn't.
+            // We should be testing with a production-like setup, so don't test against a Redis that doesn't have a password.
             if (AcceptsConnectionsWithoutAPassword())
             {
                 logger.Warning("Redis on {Host}:{Port} does not require a password, unlike Octopus Cloud, so a Redis container will be used instead. See docs/RedisQueue.md for how to run a local Redis that matches Octopus Cloud", RedisHost, RedisPortToTry);

@@ -4,9 +4,6 @@ namespace Halibut.Tests.TestSetup.Redis
 {
     public static class RedisTestHost
     {
-        /// <summary>
-        /// Octopus Server uses database 1 in Octopus Cloud (Connection Relay shares the same Redis on database 0).
-        /// </summary>
         public const int DefaultDatabase = 1;
 
         static int redisPort = 0;
