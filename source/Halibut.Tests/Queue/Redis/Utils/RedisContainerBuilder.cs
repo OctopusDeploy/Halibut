@@ -20,13 +20,13 @@ namespace Halibut.Tests.Queue.Redis.Utils
     {
         // Octopus Cloud runs octopusdeploy/dhi-redis (a Docker Hardened Image), which needs registry credentials to pull.
         // This is the public image of the same Redis version.
-        private string _image = "redis:8.0.3";
+        private string _image = "redis:8.10.1";
         private string? _customConfigPath;
         private int? _hostPort;
         private string? _password;
 
         /// <summary>
-        /// Sets the Redis Docker image to use. Defaults to "redis:8.0.3".
+        /// Sets the Redis Docker image to use. Defaults to "redis:8.10.1".
         /// </summary>
         /// <param name="image">The Redis Docker image tag</param>
         /// <returns>The builder instance for method chaining</returns>
