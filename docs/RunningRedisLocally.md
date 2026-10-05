@@ -16,7 +16,7 @@ docker run -d --rm --name halibut-redis \
   --tmpfs /data \
   --tmpfs /tmp \
   -v `pwd`/redis-conf:/etc/redis:ro \
-  redis:8.0.3 \
+  redis:8.10.1 \
   /etc/redis/redis.conf --requirepass halibut-local-redis
 ```
 
@@ -33,7 +33,7 @@ This is how we recommend running Redis for the queue. Only the config file and t
 | `--tmpfs /data` | `/data` is Redis's working directory (`dir /data` in `redis.conf`). With `--read-only` it needs a writable directory, and tmpfs keeps it in memory so nothing is ever written to disk. That way Redis never stores any data (see above). | Yes if you use `--read-only`. |
 | `--tmpfs /tmp` | Gives Redis writable scratch space in memory, since the root filesystem is read-only. | Yes if you use `--read-only`. |
 | ``-v `pwd`/redis-conf:/etc/redis:ro`` | Mounts `redis-conf/redis.conf` read-only. This is where persistence is turned off. The user Redis runs as (see `--user`) must be able to read this file, otherwise Redis fails to start. | Yes. |
-| `redis:8.0.3` | The Redis version the queue is tested against. | No, but recommended. |
+| `redis:8.10.1` | The Redis version the queue is tested against. | No, but recommended. |
 | `/etc/redis/redis.conf` | Tells Redis to use the mounted config file. | Yes. |
 | `--requirepass halibut-local-redis` | Requires clients to authenticate. `halibut-local-redis` is the password the tests look for by default. | No, but recommended. |
 
