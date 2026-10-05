@@ -1,4 +1,4 @@
-# Redis Pending Request Queue Beta
+# Redis Pending Request Queue
 
 Halibut provides a Redis backed pending request queue for multi node setups. This solves the problem where 
 a cluster of multiple clients need to send commands to polling services which connect to only one of the
