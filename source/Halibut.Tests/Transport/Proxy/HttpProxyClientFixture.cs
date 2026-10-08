@@ -18,7 +18,7 @@ namespace Halibut.Tests.Transport.Proxy
     {
         [TestCase("")]
         [TestCase("HTTP/1.1 200 Connection established\r\n")]
-        public async Task CreateConnection_WhenProxyHangsUpBeforeCompletingConnectResponse_Throws(string partialResponse)
+        public async Task WhenConnectingToAProxy_AndTheProxyClosesTheConnection_AnExceptionIsThrown(string partialResponse)
         {
             await using var proxy = FakeProxyThatHangsUpAfterReceivingConnectRequest.Start(partialResponse);
 
@@ -75,7 +75,7 @@ namespace Halibut.Tests.Transport.Proxy
                 // Let the client start reading the response before hanging up.
                 await Task.Delay(TimeSpan.FromSeconds(1));
 
-                // Shutdown rather than Dispose: the client then reads EOF (0 bytes) forever, which is what triggered the spin.
+                // Shutdown rather than Dispose: so th client then reads EOF (0 bytes)
                 accepted.Client.Shutdown(SocketShutdown.Both);
             }
 
