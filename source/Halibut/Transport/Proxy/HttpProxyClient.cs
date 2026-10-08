@@ -242,6 +242,10 @@ namespace Halibut.Transport.Proxy
                 while (!sbuilder.ToString().EndsWith("\r\n\r\n"))
                 {
                     var bytes = await stream.ReadAsync(response, 0, response.Length, cancellationToken);
+                    if (bytes == 0)
+                    {
+                        throw new ProxyException($"The proxy at {ProxyHost}:{ProxyPort} closed the connection before completing the response to the CONNECT command. Response received so far: {sbuilder}", true);
+                    }
                     sbuilder.Append(Encoding.UTF8.GetString(response, 0, bytes));
                 }
             }
