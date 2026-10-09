@@ -86,8 +86,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
             // permissions, so Redis (running as 1001) would fail to start if the checkout is not readable by other users.
             var redisConfigArguments = RedisConfigFileToArguments(Path.Combine(redisConfigPath, "redis.conf"));
 
-            var container = new ContainerBuilder()
-                .WithImage(_image)
+            var container = new ContainerBuilder(_image)
                 .WithPortBinding(hostPort, 6379)
                 // Start redis-server directly, the official image's entrypoint loads the Redis 8 modules (JSON, search etc.) which Octopus Cloud's image does not.
                 .WithEntrypoint("redis-server")
@@ -98,7 +97,7 @@ namespace Halibut.Tests.Queue.Redis.Utils
                 .WithCreateParameterModifier(parameters =>
                 {
                     parameters.User = "1001:1001";
-                    parameters.HostConfig.ReadonlyRootfs = true;
+                    parameters.HostConfig!.ReadonlyRootfs = true;
                     parameters.HostConfig.CapDrop = new List<string> { "ALL" };
                     parameters.HostConfig.SecurityOpt = new List<string> { "no-new-privileges" };
                 })
