@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.Tests.Support;
 using Halibut.Tests.Util;
 using Halibut.TestUtils.Contracts;
 
@@ -28,13 +29,13 @@ namespace Halibut.Tests.TestServices
                 {
                     ChildPayload1 = await ReadIntoNewDataStream(request.Child1!.ChildPayload1, cancellationToken),
                     ChildPayload2 = await ReadIntoNewDataStream(request.Child1!.ChildPayload2, cancellationToken),
-                    ListOfStreams = await request.Child1.ListOfStreams!.ToAsyncEnumerable().SelectAwait(async ds => await ReadIntoNewDataStream(ds, cancellationToken)).ToListAsync(cancellationToken),
+                    ListOfStreams = await request.Child1.ListOfStreams!.ToAsyncEnumerableCompat().SelectAwaitCompat(async ds => await ReadIntoNewDataStream(ds, cancellationToken)).ToListAsync(cancellationToken),
                     DictionaryPayload = request.Child1.DictionaryPayload!.ToDictionary(pair => pair.Key, pair => pair.Value),
                 },
                 Child2 = new ComplexChild2
                 {
                     EnumPayload = request.Child2!.EnumPayload,
-                    ComplexPayloadSet = await request.Child2.ComplexPayloadSet!.ToAsyncEnumerable().SelectAwait(async x => new ComplexPair<DataStream>(x.EnumValue, await ReadIntoNewDataStream(x.Payload, cancellationToken))).ToHashSetAsync(cancellationToken)
+                    ComplexPayloadSet = await request.Child2.ComplexPayloadSet!.ToAsyncEnumerableCompat().SelectAwaitCompat(async x => new ComplexPair<DataStream>(x.EnumValue, await ReadIntoNewDataStream(x.Payload, cancellationToken))).ToHashSetAsync(cancellationToken: cancellationToken)
                 }
             };
         }

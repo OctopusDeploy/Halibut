@@ -7,15 +7,15 @@
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <LangVersion>9.0</LangVersion>
-    <NoWarn>VSTHRD002,VSTHRD003;VSTHRD103</NoWarn>
+    <NoWarn>VSTHRD002,VSTHRD003;VSTHRD103;CA2022</NoWarn>
     <Nullable>enable</Nullable>
 	  <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <PropertyGroup Condition="!$([MSBuild]::IsOSUnixLike())">
-    <TargetFrameworks>net48;net8.0</TargetFrameworks>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="$([MSBuild]::IsOSUnixLike())">
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <None Update="Certificates/WrongCert.pfx;Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
@@ -46,18 +46,19 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
     <PackageReference Include="Serilog.Sinks.NUnit" Version="1.0.3" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="6.0.1" />
-    <PackageReference Include="System.Interactive.Async" Version="6.0.1" />
+    <PackageReference Include="System.Interactive.Async" Version="6.0.1" Condition=" '$(TargetFramework)' == 'net48' " />
     <PackageReference Include="TeamCity.VSTest.TestAdapter" Version="1.0.41" />
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="Serilog.Sinks.ColoredConsole" Version="3.0.1" />
     <PackageReference Include="Testcontainers" Version="4.0.0" />
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
     <DefineConstants>$(DefineConstants);SUPPORTS_WEB_SOCKET_CLIENT;DOES_NOT_SUPPORT_CANCELLATION_ON_SOCKETS</DefineConstants>
   </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+    <PropertyGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
         <DefineConstants>$(DefineConstants);HAS_TCP_KEEP_ALIVE_SOCKET_OPTIONS</DefineConstants>
     </PropertyGroup>
 

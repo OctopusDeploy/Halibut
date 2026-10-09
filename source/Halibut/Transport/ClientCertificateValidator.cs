@@ -15,7 +15,9 @@ namespace Halibut.Transport
 
         public bool Validate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors sslpolicyerrors)
         {
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             var providedCert = new X509Certificate2(certificate!.Export(X509ContentType.Cert), (string)null!); // Copy the cert so that we can reference it later
+#pragma warning restore SYSLIB0057
             var providedThumbprint = providedCert.Thumbprint;
 
             if (providedThumbprint == endPoint.RemoteThumbprint)

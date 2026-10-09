@@ -10,7 +10,6 @@ using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities;
 using Nuke.Common.Utilities.Collections;
-using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotMemoryUnit.DotMemoryUnitTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
@@ -81,7 +80,7 @@ class Build : NukeBuild
 
     Target CompileNet48 => _ => CompileDefinition(_, "net48");
 
-    Target CompileNet80 => _ => CompileDefinition(_, "net8.0");
+    Target CompileNet80 => _ => CompileDefinition(_, "net10.0");
 
     ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
     {
@@ -109,7 +108,7 @@ class Build : NukeBuild
     Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
+    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net10.0", runDotMemoryTests: false);
 
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {
@@ -166,7 +165,7 @@ class Build : NukeBuild
         {
             LocalPackagesDirectory.CreateDirectory();
             ArtifactsDirectory.GlobFiles("*.nupkg")
-                .ForEach(package => CopyFileToDirectory(package, LocalPackagesDirectory, FileExistsPolicy.Overwrite));
+                .ForEach(package => package.CopyToDirectory(LocalPackagesDirectory, ExistsPolicy.FileOverwrite));
         });
 
     [PublicAPI]

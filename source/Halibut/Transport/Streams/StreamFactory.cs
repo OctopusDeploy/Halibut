@@ -15,7 +15,7 @@ namespace Halibut.Transport.Streams
 
         public Stream CreateStream(WebSocket webSocket)
         {
-            var webSocketStream = new WebSocketStream(webSocket);
+            var webSocketStream = new Halibut.Transport.Protocol.WebSocketStream(webSocket);
             var networkStream = new NetworkTimeoutStream(webSocketStream);
 
             // When synchronous serialization is performed, it will call the synchronous versions of Read/Write.

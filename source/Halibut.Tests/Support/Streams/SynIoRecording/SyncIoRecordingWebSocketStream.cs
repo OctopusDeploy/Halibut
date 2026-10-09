@@ -5,7 +5,7 @@ using Halibut.Transport.Protocol;
 
 namespace Halibut.Tests.Support.Streams.SynIoRecording
 {
-    public class SyncIoRecordingWebSocketStream : WebSocketStream, IRecordSyncIo
+    public class SyncIoRecordingWebSocketStream : Halibut.Transport.Protocol.WebSocketStream, IRecordSyncIo
     {
         readonly List<StackTrace> syncCalls = new();
         
