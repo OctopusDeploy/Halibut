@@ -352,10 +352,8 @@ namespace Halibut.Queue.Redis.RedisHelpers
             await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
-                await database.StringSetAsync(stringKey, value);
+                await database.StringSetAsync(stringKey, value, ttl);
             }, cancellationToken);
-
-            await SetTtlForKeyRaw(stringKey, ttl, cancellationToken);
         }
 
         public async Task SetTtlForString(string key, TimeSpan ttl, CancellationToken cancellationToken)
