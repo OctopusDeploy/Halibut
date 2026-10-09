@@ -82,16 +82,27 @@ class Build : NukeBuild
 
     // Halibut itself targets net8.0 (minimum supported), so only build the test project for net10.0;
     // its project references are built for their own compatible target framework.
-    Target CompileDotNet => _ => CompileDefinition(_, "net10.0", Solution.Halibut_Tests);
+    Target CompileDotNet => _ => _
+        .DependsOn(Restore)
+        .Executes(() =>
+        {
+            DotNetBuild(s => s
+                .SetProjectFile(Solution.Halibut_Tests)
+                .SetConfiguration(Configuration)
+                .SetFramework("net10.0")
+                .SetVersion(FullSemVer)
+                .SetInformationalVersion(OctoVersionInfo.InformationalVersion)
+                .EnableNoRestore());
+        });
 
-    ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework, [CanBeNull] Project project = null)
+    ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
     {
         return targetDefinition
             .DependsOn(Restore)
             .Executes(() =>
             {
                 DotNetBuild(s => s
-                    .SetProjectFile(project?.Path ?? Solution.Path)
+                    .SetProjectFile(Solution)
                     .SetConfiguration(Configuration)
                     .SetFramework(framework)
                     .SetVersion(FullSemVer)
