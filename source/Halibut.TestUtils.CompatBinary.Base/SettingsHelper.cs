@@ -76,7 +76,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
         {
             var octopusCertPath = GetSetting("octopuscertpath");
             //Console.WriteLine($"Using octopus cert path: {octopusCertPath}");
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             var clientCert = new X509Certificate2(octopusCertPath);
+#pragma warning restore SYSLIB0057
             //Console.WriteLine("Octopus/Client cert details " + clientCert);
 
             return clientCert;
@@ -94,7 +96,9 @@ namespace Halibut.TestUtils.SampleProgram.Base
         {
             var tentacleCertPath = GetSetting("tentaclecertpath");
             //Console.WriteLine($"Using tentacle cert path: {tentacleCertPath}");
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             var serviceCert = new X509Certificate2(tentacleCertPath);
+#pragma warning restore SYSLIB0057
             //Console.WriteLine("Tentacle/service cert details " + serviceCert);
 
             return serviceCert;

@@ -121,11 +121,15 @@ namespace Halibut.Tests
                 using (var client = new HttpClient(httpClientHandler))
                 {
                     var headers = new List<KeyValuePair<string, string>>();
+#pragma warning disable SYSLIB0014
                     var existingServerCertificateValidationCallback = ServicePointManager.ServerCertificateValidationCallback;
+#pragma warning restore SYSLIB0014
                     try
                     {
                         // We need to ignore server certificate validation errors - the server certificate is self-signed
+#pragma warning disable SYSLIB0014
                         ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true;
+#pragma warning restore SYSLIB0014
                         var response = await client.GetAsync(uri);
                         foreach (var key in response.Headers)
                         {
@@ -135,7 +139,9 @@ namespace Halibut.Tests
                     finally
                     {
                         // And restore it back to default behaviour
+#pragma warning disable SYSLIB0014
                         ServicePointManager.ServerCertificateValidationCallback = existingServerCertificateValidationCallback;
+#pragma warning restore SYSLIB0014
                     }
 
                     return headers;

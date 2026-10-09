@@ -38,7 +38,9 @@ namespace Halibut.Transport
                     {
                         if (certificates.ContainsKey(clientId))
                         {
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
                             var providedCert = new X509Certificate2(certificate.Export(X509ContentType.Cert), (string)null!); // Copy the cert so that we can reference it later
+#pragma warning restore SYSLIB0057
                             certificates[clientId] = providedCert;
                             return true;
                         }

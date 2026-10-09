@@ -49,7 +49,9 @@ namespace Halibut.Tests.Support
             var bytes = certificate.Export(X509ContentType.Pfx);
             var filePath = Path.Combine(tempDir.DirectoryPath, $"{name}.pfx");
             File.WriteAllBytes(filePath, bytes);
+#pragma warning disable SYSLIB0057
             var disposableCert = new TempDisposableCertAndThumbprint(tempDir, filePath, new X509Certificate2(bytes));
+#pragma warning restore SYSLIB0057
             disposedBy.Add(disposableCert);
             return disposableCert;
         }

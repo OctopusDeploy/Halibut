@@ -16,6 +16,13 @@ namespace Halibut.Tests.Transport.Protocol
 {
     public class MessageSerializerFixture : BaseTest
     {
+#if NETFRAMEWORK
+        const long ExpectedCompressedBytes = 55;
+#else
+        // .NET 9+ uses zlib-ng for DeflateStream, which produces slightly different output.
+        const long ExpectedCompressedBytes = 57;
+#endif
+
         [Test]
         [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
         public async Task SendReceiveMessageShouldRoundTrip(MessageSerializerTestCase testCase)
@@ -52,8 +59,8 @@ namespace Halibut.Tests.Transport.Protocol
             }
 
             var writtenMessage = messageSerializerObserver.MessagesWritten.Should().ContainSingle().Subject;
-            writtenMessage.CompressedBytesWritten.Should().Be(55);
-            var expectedCompressedBytesWrittenIntoMemory = testCase.AsyncMemoryLimit > 55 ? 55 : 0;
+            writtenMessage.CompressedBytesWritten.Should().Be(ExpectedCompressedBytes);
+            var expectedCompressedBytesWrittenIntoMemory = testCase.AsyncMemoryLimit > ExpectedCompressedBytes ? ExpectedCompressedBytes : 0;
             writtenMessage.CompressedBytesWrittenIntoMemory.Should().Be(expectedCompressedBytesWrittenIntoMemory);
             messageSerializerObserver.MessagesRead.Should().BeEmpty();
         }
@@ -83,7 +90,7 @@ namespace Halibut.Tests.Transport.Protocol
             }
 
             var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
-            readMessage.CompressedBytesRead.Should().Be(55);
+            readMessage.CompressedBytesRead.Should().Be(ExpectedCompressedBytes);
             readMessage.DecompressedBytesRead.Should().Be(120);
             var expectedDecompressedBytesReadIntoMemory = Math.Min(testCase.AsyncMemoryLimit, 120);
             readMessage.DecompressedBytesReadIntoMemory.Should().Be(expectedDecompressedBytesReadIntoMemory);
@@ -210,7 +217,7 @@ namespace Halibut.Tests.Transport.Protocol
             }
 
             var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
-            readMessage.CompressedBytesRead.Should().Be(55);
+            readMessage.CompressedBytesRead.Should().Be(ExpectedCompressedBytes);
             readMessage.DecompressedBytesRead.Should().Be(120);
             var expectedDecompressedBytesReadIntoMemory = Math.Min(testCase.AsyncMemoryLimit, 120);
             readMessage.DecompressedBytesReadIntoMemory.Should().Be(expectedDecompressedBytesReadIntoMemory);
@@ -272,7 +279,7 @@ namespace Halibut.Tests.Transport.Protocol
             }
 
             var readMessage = messageSerializerObserver.MessagesRead.Should().ContainSingle().Subject;
-            readMessage.CompressedBytesRead.Should().Be(55);
+            readMessage.CompressedBytesRead.Should().Be(ExpectedCompressedBytes);
             readMessage.DecompressedBytesRead.Should().Be(120);
             var expectedDecompressedBytesReadIntoMemory = Math.Min(testCase.AsyncMemoryLimit, 120);
             readMessage.DecompressedBytesReadIntoMemory.Should().Be(expectedDecompressedBytesReadIntoMemory);

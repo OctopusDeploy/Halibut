@@ -457,7 +457,9 @@ namespace Halibut.Transport
                 return null;
             }
 
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             var thumbprint = new X509Certificate2(stream.RemoteCertificate.Export(X509ContentType.Cert), (string)null!).Thumbprint;
+#pragma warning restore SYSLIB0057
             return thumbprint;
         }
 

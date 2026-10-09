@@ -26,17 +26,25 @@ namespace Halibut.Tests.DotMemory
             //jump through hoops to find certs because the nunit test runner is messing with directories
             var directory = Path.Combine(Path.GetDirectoryName(new Uri(typeof(Certificates).Assembly.Location).LocalPath)!, "Certificates");
             TentacleListeningPfxPath = Path.Combine(directory, "TentacleListening.pfx");
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             TentacleListening = new X509Certificate2(TentacleListeningPfxPath);
+#pragma warning restore SYSLIB0057
             TentacleListeningPublicThumbprint = TentacleListening.Thumbprint;
 
             OctopusPfxPath = Path.Combine(directory, "Octopus.pfx");
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             Octopus = new X509Certificate2(OctopusPfxPath);
+#pragma warning restore SYSLIB0057
             OctopusPublicThumbprint = Octopus.Thumbprint;
             
             TentaclePollingPfxPath = Path.Combine(directory, "TentaclePolling.pfx");
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             TentaclePolling = new X509Certificate2(TentaclePollingPfxPath);
+#pragma warning restore SYSLIB0057
             TentaclePollingPublicThumbprint = TentaclePolling.Thumbprint;
+#pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
             Ssl = new X509Certificate2(Path.Combine(directory, "Ssl.pfx"), "password");
+#pragma warning restore SYSLIB0057
             SslThumbprint = Ssl.Thumbprint;
         }
     }

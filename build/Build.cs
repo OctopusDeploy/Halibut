@@ -10,7 +10,6 @@ using Nuke.Common.Tools.DotNet;
 using Nuke.Common.Tools.OctoVersion;
 using Nuke.Common.Utilities;
 using Nuke.Common.Utilities.Collections;
-using static Nuke.Common.IO.FileSystemTasks;
 using static Nuke.Common.Tools.DotMemoryUnit.DotMemoryUnitTasks;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 
@@ -35,7 +34,7 @@ class Build : NukeBuild
     [Parameter("Branch name for OctoVersion to use to calculate the version number. Can be set via the environment variable OCTOVERSION_CurrentBranch.", Name = "OCTOVERSION_CurrentBranch")]
     readonly string BranchName;
 
-    [OctoVersion(UpdateBuildNumber = true, BranchMember = nameof(BranchName), AutoDetectBranchMember = nameof(AutoDetectBranch), Framework = "net8.0")]
+    [OctoVersion(UpdateBuildNumber = true, BranchMember = nameof(BranchName), AutoDetectBranchMember = nameof(AutoDetectBranch), Framework = "net10.0")]
     readonly OctoVersionInfo OctoVersionInfo;
 
     [Parameter("The test Filter passed to dotnet test e.g. TestCategory=Async")]
@@ -79,9 +78,9 @@ class Build : NukeBuild
 
     Target Compile => _ => CompileDefinition(_, null);
 
-    Target CompileNet48 => _ => CompileDefinition(_, "net48");
+    Target CompileNetFramework => _ => CompileDefinition(_, "net48");
 
-    Target CompileNet80 => _ => CompileDefinition(_, "net8.0");
+    Target CompileDotNet => _ => CompileDefinition(_, "net10.0");
 
     ITargetDefinition CompileDefinition(ITargetDefinition targetDefinition, [CanBeNull] string framework)
     {
@@ -106,10 +105,10 @@ class Build : NukeBuild
     Target TestLinux => _ => TestDefinition(_, Compile, null, runDotMemoryTests: false);
 
     [PublicAPI]
-    Target TestWindowsNet48 => _ => TestDefinition(_, CompileNet48, "net48", runDotMemoryTests: true);
+    Target TestWindowsNetFramework => _ => TestDefinition(_, CompileNetFramework, "net48", runDotMemoryTests: true);
 
     [PublicAPI]
-    Target TestWindowsNet80 => _ => TestDefinition(_, CompileNet80, "net8.0", runDotMemoryTests: false);
+    Target TestWindowsDotNet => _ => TestDefinition(_, CompileDotNet, "net10.0", runDotMemoryTests: false);
 
     ITargetDefinition TestDefinition(ITargetDefinition targetDefinition, Target dependsOn, [CanBeNull] string framework, bool runDotMemoryTests)
     {
@@ -166,7 +165,7 @@ class Build : NukeBuild
         {
             LocalPackagesDirectory.CreateDirectory();
             ArtifactsDirectory.GlobFiles("*.nupkg")
-                .ForEach(package => CopyFileToDirectory(package, LocalPackagesDirectory, FileExistsPolicy.Overwrite));
+                .ForEach(package => package.CopyToDirectory(LocalPackagesDirectory, ExistsPolicy.FileOverwrite));
         });
 
     [PublicAPI]

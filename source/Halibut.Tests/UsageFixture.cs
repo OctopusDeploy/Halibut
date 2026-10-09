@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Exceptions;
+using Halibut.Tests.Support;
 using Halibut.Tests.Support.TestAttributes;
 using Halibut.Tests.Support.TestCases;
 using Halibut.Tests.TestServices.Async;
@@ -256,8 +257,8 @@ namespace Halibut.Tests
                 response.Child1.ChildPayload2.Should().NotBeSameAs(request.Child1.ChildPayload2);
                 (await response.Child1.ChildPayload2!.ReadAsString(CancellationToken)).Should().Be(childPayload2);
                 response.Child1.ListOfStreams.Should().NotBeSameAs(request.Child1.ListOfStreams);
-                (await response.Child1.ListOfStreams!.ToAsyncEnumerable()
-                    .SelectAwait(async x => await x.ReadAsString(CancellationToken))
+                (await response.Child1.ListOfStreams!.ToAsyncEnumerableCompat()
+                    .SelectAwaitCompat(async x => await x.ReadAsString(CancellationToken))
                     .ToListAsync(CancellationToken))
                     .Should().BeEquivalentTo(list);
                 response.Child1.DictionaryPayload.Should().NotBeSameAs(request.Child1.DictionaryPayload);
@@ -266,8 +267,8 @@ namespace Halibut.Tests
                 response.Child2.Should().NotBeSameAs(request.Child2);
                 response.Child2!.EnumPayload.Should().Be(enumValue);
                 response.Child2.ComplexPayloadSet.Should().NotBeSameAs(request.Child2.ComplexPayloadSet);
-                (await response.Child2.ComplexPayloadSet!.ToAsyncEnumerable()
-                    .SelectAwait(async x => new ComplexPair<string>(x.EnumValue, await x.Payload.ReadAsString(CancellationToken)))
+                (await response.Child2.ComplexPayloadSet!.ToAsyncEnumerableCompat()
+                    .SelectAwaitCompat(async x => new ComplexPair<string>(x.EnumValue, await x.Payload.ReadAsString(CancellationToken)))
                     .ToArrayAsync())
                     .ToHashSet()
                     .Should()
