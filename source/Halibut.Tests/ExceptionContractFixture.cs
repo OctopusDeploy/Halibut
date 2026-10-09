@@ -151,7 +151,9 @@ namespace Halibut.Tests
                 .And.Message.Should().ContainAny(
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Unable to read data from the transport connection",
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Unable to write data to the transport connection",
+                    // .NET Framework's SslStream message has a leading space; modern .NET's does not
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin:  Received an unexpected EOF or 0 bytes from the transport stream",
+                    $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Received an unexpected EOF or 0 bytes from the transport stream",
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Transport endpoint is not connected");
         }
         

@@ -17,7 +17,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
-    <PackageReference Include="System.IO.Pipelines" Version="6.0.3" Condition=" '$(TargetFramework)' == 'net48' " />
+    <PackageReference Include="System.IO.Pipelines" Version="10.0.12" Condition=" '$(TargetFramework)' == 'net48' " />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net48' ">
