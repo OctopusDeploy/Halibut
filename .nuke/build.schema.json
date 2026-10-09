@@ -86,8 +86,8 @@
             "enum": [
               "Clean",
               "Compile",
-              "CompileNet48",
-              "CompileNet80",
+              "CompileDotNet",
+              "CompileNetFramework",
               "CopyToLocalPackages",
               "Default",
               "Pack",
@@ -95,8 +95,8 @@
               "Restore",
               "TestLinux",
               "TestWindows",
-              "TestWindowsNet48",
-              "TestWindowsNet80"
+              "TestWindowsDotNet",
+              "TestWindowsNetFramework"
             ]
           }
         },
@@ -112,8 +112,8 @@
             "enum": [
               "Clean",
               "Compile",
-              "CompileNet48",
-              "CompileNet80",
+              "CompileDotNet",
+              "CompileNetFramework",
               "CopyToLocalPackages",
               "Default",
               "Pack",
@@ -121,8 +121,8 @@
               "Restore",
               "TestLinux",
               "TestWindows",
-              "TestWindowsNet48",
-              "TestWindowsNet80"
+              "TestWindowsDotNet",
+              "TestWindowsNetFramework"
             ]
           }
         },
