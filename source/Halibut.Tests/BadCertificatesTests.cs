@@ -57,7 +57,7 @@ namespace Halibut.Tests
                 serviceThumbprint = clientAndBuilder.ServiceThumbprint;
 
                 // Act
-                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>(point => new ServiceEndPoint(point.BaseUri, serviceThumbprint, point.Proxy, clientAndBuilder.Client.TimeoutsAndLimits));
                 await clientCountingService.IncrementAsync();
 
                 await unauthorizedClientHasConnected.Task;

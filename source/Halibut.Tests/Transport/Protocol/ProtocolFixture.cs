@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.ServiceModel;
+using Halibut.Tests.Support;
 using Halibut.Transport;
 using Halibut.Transport.Observability;
 using Halibut.Transport.Protocol;
@@ -51,7 +52,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(new RequestMessage());
             stream.SetNumberOfReads(1);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), Certificates.TentaclePollingPublicThumbprint, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -94,7 +95,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), Certificates.TentaclePollingPublicThumbprint, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -164,7 +165,7 @@ namespace Halibut.Tests.Transport.Protocol
             requestQueue.DequeueAsync(CancellationToken.None).Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, Certificates.TentaclePollingPublicThumbprint, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -176,6 +177,24 @@ namespace Halibut.Tests.Transport.Protocol
 --> RequestMessage
 <-- ResponseMessage
 <-- END");
+        }
+
+        [Test]
+        public async Task ShouldNotSendRequestsForAnotherThumbprintToSubscriberAsync()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, new Uri("poll://12831")));
+            var requestQueue = Substitute.For<IPendingRequestQueue>();
+            var queue = new Queue<RequestMessageWithCancellationToken>();
+            var request = new RequestMessage { Destination = new ServiceEndPoint("poll://12831", Certificates.TentacleListeningPublicThumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build()) };
+            queue.Enqueue(new(request, CancellationToken.None));
+            requestQueue.DequeueAsync(CancellationToken.None).Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
+
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, Certificates.TentaclePollingPublicThumbprint, CancellationToken.None);
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER");
+            await requestQueue.Received(1).ApplyResponse(Arg.Is<ResponseMessage>(r => r.Error != null), request.ActivityId);
         }
 
         [Test]
@@ -250,13 +269,13 @@ namespace Halibut.Tests.Transport.Protocol
             queue.Enqueue(new(new RequestMessage(), CancellationToken.None));
             stream.SetNumberOfReads(2);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, Certificates.TentaclePollingPublicThumbprint, CancellationToken.None);
 
             queue.Enqueue(new(new RequestMessage(), CancellationToken.None));
 
             stream.SetNumberOfReads(1);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, Certificates.TentaclePollingPublicThumbprint, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId

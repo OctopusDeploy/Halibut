@@ -104,7 +104,7 @@ namespace Halibut.Tests
                 }
 
                 var clients = pollEndpoints.Select(pollEndpoint => 
-                    octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint(pollEndpoint, Certificates.Octopus.Thumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build())))
+                    octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint(pollEndpoint, Certificates.TentacleListening.Thumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build())))
                     .ToList();
 
                 var tasks = new List<Task>();

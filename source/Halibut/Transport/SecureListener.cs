@@ -44,7 +44,7 @@ namespace Halibut.Transport
         readonly CancellationTokenSource cts;
         readonly CancellationToken cancellationToken;
         readonly TcpClientManager tcpClientManager = new();
-        readonly ExchangeActionAsync exchangeAction;
+        readonly ServerExchangeActionAsync exchangeAction;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
@@ -60,7 +60,7 @@ namespace Halibut.Transport
             IPEndPoint endPoint,
             X509Certificate2 serverCertificate,
             ExchangeProtocolBuilder exchangeProtocolBuilder,
-            ExchangeActionAsync exchangeAction,
+            ServerExchangeActionAsync exchangeAction,
             Predicate<string> verifyClientThumbprint,
             ILogFactory logFactory,
             Func<string> getFriendlyHtmlPageContent,
@@ -354,7 +354,7 @@ namespace Halibut.Transport
                         secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateIncoming(ssl.SslProtocol, thumbprint));
                         tcpClientManager.AddActiveClient(thumbprint, client);
                         errorEventType = EventType.Error;
-                        await ExchangeMessages(ssl).ConfigureAwait(false);
+                        await ExchangeMessages(ssl, thumbprint).ConfigureAwait(false);
                     }
                 }
             }
@@ -481,11 +481,11 @@ namespace Halibut.Transport
             return true;
         }
 
-        Task ExchangeMessages(SslStream stream)
+        Task ExchangeMessages(SslStream stream, string clientThumbprint)
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
-            return exchangeAction(exchangeProtocolBuilder(stream, log), cancellationToken);
+            return exchangeAction(exchangeProtocolBuilder(stream, log), clientThumbprint, cancellationToken);
         }
 
         static bool AcceptAnySslCertificate(object sender, X509Certificate? clientCertificate, X509Chain? chain, SslPolicyErrors sslpolicyerrors)
