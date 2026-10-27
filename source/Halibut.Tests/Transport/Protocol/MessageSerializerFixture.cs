@@ -1,12 +1,14 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Halibut.Diagnostics;
 using Halibut.Tests.Support;
+using Halibut.Tests.Support.Streams;
 using Halibut.Tests.Util;
 using Halibut.Transport.Protocol;
 using Halibut.Transport.Streams;
@@ -285,6 +287,54 @@ namespace Halibut.Tests.Transport.Protocol
             readMessage.DecompressedBytesReadIntoMemory.Should().Be(expectedDecompressedBytesReadIntoMemory);
         }
         
+        [Test]
+        [TestCaseSource(typeof(MessageSerializerTestCaseSource))]
+        public async Task ReadMessage_Rewindable_WhenTheEndOfTheCompressedMessageArrivesInALaterRead_ShouldNotLeaveCompressedBytesBeforeTrailingData(MessageSerializerTestCase testCase)
+        {
+            // The BSON document can be fully decoded before the DeflateStream has read the final byte(s) of the
+            // compressed stream (which only hold the end-of-block code). If those bytes arrive in a later read, e.g.
+            // because the sender wrote them separately, they must still be consumed as part of the message, and must
+            // not be seen as the start of the next control message (e.g. "\u001fPROCEED").
+            const string trailingData = "PROCEED\r\n";
+
+            var sut = new MessageSerializerBuilder(new LogFactory())
+                .WithAsyncMemoryLimits(testCase.AsyncMemoryLimit, testCase.AsyncMemoryLimit)
+                .Build();
+
+            var message = RandomAsciiString(new Random(2142), 100_000);
+            var compressedMessage = await CreateBytesFromMessage(message);
+            var trailingBytes = Encoding.UTF8.GetBytes(trailingData);
+
+            for (var bytesInLaterRead = 1; bytesInLaterRead <= 2; bytesInLaterRead++)
+            {
+                var firstSegment = compressedMessage.Take(compressedMessage.Length - bytesInLaterRead).ToArray();
+                var laterSegment = compressedMessage.Skip(compressedMessage.Length - bytesInLaterRead).Concat(trailingBytes).ToArray();
+
+                await using (var stream = new RewindableBufferStream(new SegmentedReadStream(firstSegment, laterSegment)))
+                {
+                    var readMessage = await ReadMessage<string>(sut, stream);
+                    readMessage.Should().Be(message);
+
+                    using (var reader = new StreamReader(stream, new UTF8Encoding(false)))
+                    {
+                        var trailingResult = await reader.ReadToEndAsync();
+                        trailingResult.Should().Be(trailingData, $"the final {bytesInLaterRead} byte(s) of the compressed message arrived in a later read");
+                    }
+                }
+            }
+        }
+
+        static string RandomAsciiString(Random random, int length)
+        {
+            var chars = new char[length];
+            for (var i = 0; i < length; i++)
+            {
+                chars[i] = (char)random.Next(32, 127);
+            }
+
+            return new string(chars);
+        }
+
         static async Task<byte[]> CreateBytesFromMessage(object message)
         {
             var writingSerializer = new MessageSerializerBuilder(new LogFactory()).Build();

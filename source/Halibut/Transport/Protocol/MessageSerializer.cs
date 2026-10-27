@@ -129,6 +129,8 @@ namespace Halibut.Transport.Protocol
                 {
                     var (messageEnvelope, dataStreams) = DeserializeMessageAndDataStreams<T>(bson);
 
+                    await ConsumeEndOfCompressedStreamAsync(zip, cancellationToken);
+
                     // Find the unused bytes in the DeflateStream input buffer
                     if (deflateReflector.TryGetAvailableInputBufferSize(zip, out var unusedBytesCount))
                     {
@@ -147,6 +149,31 @@ namespace Halibut.Transport.Protocol
             {
                 rewindableBuffer.CancelBuffer();
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Ensures the DeflateStream has consumed the whole compressed message from the underlying stream.
+        /// </summary>
+        /// <remarks>
+        /// The BSON reader can finish before the DeflateStream has read the end of the compressed stream, as the last
+        /// byte or two may only hold the end-of-block code. If those bytes had not been received when the BSON reader
+        /// finished, they would be left on the underlying stream and read as part of the next control message
+        /// (e.g. "\u001fPROCEED").
+        ///
+        /// The DeflateStream can only report the end of the decompressed data (a read returning 0) once it has decoded
+        /// the end-of-block code. So this read pulls any remaining compressed bytes from the underlying stream, waiting
+        /// for them if needed, even though it produces no decompressed bytes. If the compressed stream has already been
+        /// fully consumed, it returns 0 without reading from the underlying stream.
+        ///
+        /// Decompressed bytes after the BSON document are not part of the protocol, so they are treated as an error.
+        /// </remarks>
+        static async Task ConsumeEndOfCompressedStreamAsync(DeflateStream zip, CancellationToken cancellationToken)
+        {
+            var buffer = new byte[1];
+            if (await zip.ReadAsync(buffer, 0, buffer.Length, cancellationToken) != 0)
+            {
+                throw new ProtocolException("Unexpected data found in the compressed message after the end of the message.");
             }
         }
 
