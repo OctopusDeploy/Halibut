@@ -17,7 +17,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             });
 
             var mode = SettingsHelper.GetSetting("mode") ?? string.Empty;
-            Console.WriteLine($"Mode is: {mode}");
+            NonBlockingConsole.WriteLine($"Mode is: {mode}");
 
             if (mode.Equals("serviceonly"))
             {
@@ -29,7 +29,8 @@ namespace Halibut.TestUtils.SampleProgram.Base
             }
             else
             {
-                Console.WriteLine($"Unknown mode: {mode}");
+                NonBlockingConsole.WriteLine($"Unknown mode: {mode}");
+                NonBlockingConsole.FlushBeforeExit();
                 throw new Exception($"Unknown mode: {mode}");
             }
 
@@ -47,7 +48,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
             if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
                 addressToPoll = SettingsHelper.GetSetting("octopusservercommsport");
-                Console.WriteLine($"Will poll: {addressToPoll}");
+                NonBlockingConsole.WriteLine($"Will poll: {addressToPoll}");
             }
 
             var proxyDetails = SettingsHelper.GetProxyDetails();
@@ -67,22 +68,22 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     case ServiceConnectionType.PollingOverWebSocket:
                         FixHungWebSocketsHack.EnableHack();
                         var sslThubprint = SettingsHelper.GetSetting("sslthubprint");
-                        Console.WriteLine($"Using SSL thumbprint: {sslThubprint}");
+                        NonBlockingConsole.WriteLine($"Using SSL thumbprint: {sslThubprint}");
 
                         tentaclePolling.Poll(new Uri("poll://SQ-TENTAPOLL"), new ServiceEndPoint(new Uri(addressToPoll), sslThubprint, proxyDetails));
                         break;
                     case ServiceConnectionType.Listening:
                         var port = tentaclePolling.Listen();
-                        Console.WriteLine($"Listening on port: {port}");
+                        NonBlockingConsole.WriteLine($"Listening on port: {port}");
                         tentaclePolling.Trust(octopusThumbprint);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
 
-                Console.WriteLine("RunningAndReady");
-                Console.WriteLine("Will Now sleep");
-                await Console.Out.FlushAsync();
+                NonBlockingConsole.WriteLine("RunningAndReady");
+                NonBlockingConsole.WriteLine("Will Now sleep");
+                await NonBlockingConsole.FlushAsync();
 
                 // Run until the Program is terminated
                 await StayAliveUntilHelper.WaitUntilSignaledToDie();

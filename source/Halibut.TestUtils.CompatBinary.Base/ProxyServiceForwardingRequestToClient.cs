@@ -29,14 +29,14 @@ namespace Halibut.TestUtils.SampleProgram.Base
             if (serviceConnectionType is ServiceConnectionType.Polling or ServiceConnectionType.PollingOverWebSocket)
             {
                 proxyClientAddressToPoll = SettingsHelper.GetSetting("octopusservercommsport");
-                Console.WriteLine($"Proxy Service will Poll: {proxyClientAddressToPoll}");
+                NonBlockingConsole.WriteLine($"Proxy Service will Poll: {proxyClientAddressToPoll}");
             }
 
             var serviceAddressToConnectTo = string.Empty;
             if (serviceConnectionType == ServiceConnectionType.Listening)
             {
                 serviceAddressToConnectTo = SettingsHelper.GetSetting("realServiceListenAddress");
-                Console.WriteLine($"Proxy Service will forward request to: {serviceAddressToConnectTo}");
+                NonBlockingConsole.WriteLine($"Proxy Service will forward request to: {serviceAddressToConnectTo}");
             }
 
             // A Halibut Runtime Client which is the previous version of Halibut the Test is trying to test.
@@ -46,7 +46,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                        .WithLogFactory(new TestContextLogFactory("PreviousVersionOfClient", SettingsHelper.GetHalibutLogLevel()))
                        .Build())
             {
-                Console.WriteLine("Client will trust: " + serviceCert.Thumbprint);
+                NonBlockingConsole.WriteLine("Client will trust: " + serviceCert.Thumbprint);
                 client.Trust(serviceCert.Thumbprint);
 
                 ServiceEndPoint realServiceEndpoint;
@@ -55,16 +55,16 @@ namespace Halibut.TestUtils.SampleProgram.Base
                     case ServiceConnectionType.Polling:
                         var clientPollingListeningPort = client.Listen();
                         // Do not change the log message as it is used by the HalibutTestBinaryRunners
-                        Console.WriteLine("Polling listener is listening on port: " + clientPollingListeningPort);
+                        NonBlockingConsole.WriteLine("Polling listener is listening on port: " + clientPollingListeningPort);
                         realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
                         break;
                     case ServiceConnectionType.PollingOverWebSocket:
                         using (await TcpPortHelper.WaitForLock(cancellationToken))
                         {
                             var webSocketListeningPort = WebSocketListeningPort(client, out var webSocketListeningUrl, cancellationToken);
-                            Console.WriteLine($"WebSocket Polling listener is listening on: {webSocketListeningUrl}");
+                            NonBlockingConsole.WriteLine($"WebSocket Polling listener is listening on: {webSocketListeningUrl}");
                             // Do not change the log message as it is used by the HalibutTestBinaryRunners
-                            Console.WriteLine("Polling listener is listening on port: " + webSocketListeningPort);
+                            NonBlockingConsole.WriteLine("Polling listener is listening on port: " + webSocketListeningPort);
                             realServiceEndpoint = new ServiceEndPoint(new Uri("poll://SQ-TENTAPOLL"), serviceCert.Thumbprint, proxyDetails);
                         }
                         break;
@@ -95,17 +95,17 @@ namespace Halibut.TestUtils.SampleProgram.Base
                         case ServiceConnectionType.Listening:
                             var proxyServiceListeningPort = proxyService.Listen();
                             // Do not change the log message as it is used by the HalibutTestBinaryRunners
-                            Console.WriteLine($"Listening on port: {proxyServiceListeningPort}");
+                            NonBlockingConsole.WriteLine($"Listening on port: {proxyServiceListeningPort}");
                             proxyService.Trust(clientCert.Thumbprint);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
 
-                    Console.WriteLine("RunningAndReady");
-                    Console.WriteLine("Will Now sleep");
+                    NonBlockingConsole.WriteLine("RunningAndReady");
+                    NonBlockingConsole.WriteLine("Will Now sleep");
 
-                    await Console.Out.FlushAsync();
+                    await NonBlockingConsole.FlushAsync();
 
                     // Run until the Program is terminated
                     await StayAliveUntilHelper.WaitUntilSignaledToDie();
@@ -125,7 +125,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 }
                 catch (HttpListenerException e)
                 {
-                    Console.WriteLine($"Failed to listen for websocket, trying again. {e}");
+                    NonBlockingConsole.WriteLine($"Failed to listen for websocket, trying again. {e}");
                 }
             }
 
