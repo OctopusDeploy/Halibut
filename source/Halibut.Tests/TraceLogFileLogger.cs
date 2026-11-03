@@ -18,11 +18,12 @@ namespace Halibut.Tests
         readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
         readonly Task writeDataToDiskTask;
 
-        public TraceLogFileLogger(string testHash)
+        /// <param name="appendToExisting">True when a test is being retried (see RetryOnTransportTimeoutAttribute), so the earlier attempt's log is kept.</param>
+        public TraceLogFileLogger(string testHash, bool appendToExisting = false)
         {
             this.testHash = testHash;
             this.logFilePath = LogFilePath(testHash);
-            File.Delete(logFilePath);
+            if (!appendToExisting) File.Delete(logFilePath);
 
             writeDataToDiskTask = WriteDataToFile();
         }
