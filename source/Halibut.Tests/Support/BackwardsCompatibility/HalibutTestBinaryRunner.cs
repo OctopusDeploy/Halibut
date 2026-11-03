@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CliWrap;
 using Halibut.Logging;
 using Halibut.Tests.Support.ExtensionMethods;
+using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 using Nito.AsyncEx;
 using NUnit.Framework;
 using Serilog;
@@ -153,12 +154,15 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                         {
                             await Task.CompletedTask;
                             logger.Information(s);
-                            if (s.StartsWith("Listening on port: "))
+
+                            // Log the line with the compat binary's own timestamp, but parse it without.
+                            var line = CompatBinaryLogLine.WithoutTimestamp(s);
+                            if (line.StartsWith("Listening on port: "))
                             {
-                                serviceListenPort = int.Parse(Regex.Match(s, @"\d+").Value);
+                                serviceListenPort = int.Parse(Regex.Match(line, @"\d+").Value);
                             }
 
-                            if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
+                            if (line.Contains("RunningAndReady")) hasTentacleStarted.Set();
                         }
 
                         await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version!))

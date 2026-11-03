@@ -24,13 +24,22 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
         readonly TextWriter target;
         readonly BlockingCollection<string> lines;
         readonly Thread writerThread;
+        readonly Func<DateTime>? utcNow;
         long droppedLines;
         long pendingLines;
 
-        public NonBlockingLineWriter(TextWriter target, int capacity = DefaultCapacity, string threadName = nameof(NonBlockingLineWriter))
+        /// <param name="target">Where lines are written.</param>
+        /// <param name="capacity">How many lines can be queued before new lines are dropped.</param>
+        /// <param name="threadName">The name of the background writer thread.</param>
+        /// <param name="utcNow">
+        /// If set, each line is prefixed with this clock's time when <see cref="WriteLine"/> is called
+        /// (see <see cref="CompatBinaryLogLine"/>), so readers can tell when a line was written rather than read.
+        /// </param>
+        public NonBlockingLineWriter(TextWriter target, int capacity = DefaultCapacity, string threadName = nameof(NonBlockingLineWriter), Func<DateTime>? utcNow = null)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity), capacity, "Capacity must be greater than zero.");
 
+            this.utcNow = utcNow;
             this.target = target ?? throw new ArgumentNullException(nameof(target));
             lines = new BlockingCollection<string>(new ConcurrentQueue<string>(), capacity);
             writerThread = new Thread(WriteLoop)
@@ -57,7 +66,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
             bool added;
             try
             {
-                added = lines.TryAdd(line);
+                added = lines.TryAdd(Timestamped(line));
             }
             catch (InvalidOperationException)
             {
@@ -113,7 +122,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
                     var dropped = Interlocked.Exchange(ref droppedLines, 0);
                     if (dropped > 0)
                     {
-                        target.WriteLine($"[{nameof(NonBlockingLineWriter)}] {dropped} log line(s) were dropped because the output was not being read.");
+                        target.WriteLine(Timestamped($"[{nameof(NonBlockingLineWriter)}] {dropped} log line(s) were dropped because the output was not being read."));
                     }
 
                     target.WriteLine(line);
@@ -130,6 +139,8 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
                 }
             }
         }
+
+        string Timestamped(string line) => utcNow is null ? line : CompatBinaryLogLine.WithTimestamp(utcNow(), line);
 
         public void Dispose()
         {

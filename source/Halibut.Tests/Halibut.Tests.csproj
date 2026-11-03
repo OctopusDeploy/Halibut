@@ -20,6 +20,8 @@
   <ItemGroup>
     <!-- Linked so the compat binary console writer can be unit tested without referencing a compat binary (which pulls in an old Halibut). -->
     <Compile Include="..\Halibut.TestUtils.CompatBinary.Base\LogUtils\NonBlockingLineWriter.cs" Link="Support\BackwardsCompatibility\NonBlockingLineWriter.cs" />
+    <!-- Linked so the test harness strips the compat binary's timestamp prefix in exactly the way the compat binary writes it. -->
+    <Compile Include="..\Halibut.TestUtils.CompatBinary.Base\LogUtils\CompatBinaryLogLine.cs" Link="Support\BackwardsCompatibility\CompatBinaryLogLine.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Certificates/WrongCert.pfx;Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
