@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
 using Halibut.Logging;
+using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 using Halibut.Transport.Proxy;
 
 namespace Halibut.TestUtils.SampleProgram.Base
@@ -18,7 +19,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 var port = GetSetting("proxydetails_port");
                 var type = GetSetting("proxydetails_type");
 
-                Console.WriteLine($"Using Proxy Details Hot:{host} Port:{port} Type:{type} Username:{userName} Password:{password}");
+                NonBlockingConsole.WriteLine($"Using Proxy Details Hot:{host} Port:{port} Type:{type} Username:{userName} Password:{password}");
 
                 return new ProxyDetails(host, AsInt(port), AsPortType(type), userName, password);
 
@@ -33,7 +34,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 }
             }
 
-            Console.WriteLine("Not using an Http Proxy");
+            NonBlockingConsole.WriteLine("Not using an Http Proxy");
             return null;
         }
 
@@ -122,7 +123,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
                 throw new Exception("Env var CompatBinaryStayAliveFilePath must be set");
             }
             
-            Console.WriteLine($"Will die when the following file can be locked or is deleted '{stayAliveFilePath}'.");
+            NonBlockingConsole.WriteLine($"Will die when the following file can be locked or is deleted '{stayAliveFilePath}'.");
             return stayAliveFilePath;
         }
 

@@ -25,6 +25,9 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
                 {
                     Thread.Sleep(10000);
                     // Print anything to console.
+                    // This deliberately writes to the console directly rather than through NonBlockingConsole,
+                    // since it is the write itself (on this thread) that appears to unstick the CLR. It is on its
+                    // own background thread, so blocking here cannot freeze the Halibut protocol.
                     Console.WriteLine("Compat binary is still running");
                 }
             });

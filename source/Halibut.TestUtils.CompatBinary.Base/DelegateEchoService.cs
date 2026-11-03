@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Halibut.TestUtils.Contracts;
+using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 using Halibut.TestUtils.SampleProgram.Base.Utils;
 
 namespace Halibut.TestUtils.SampleProgram.Base
@@ -16,19 +17,19 @@ namespace Halibut.TestUtils.SampleProgram.Base
 
         public int LongRunningOperation()
         {
-            Console.WriteLine("Forwarding LongRunningOperation() call to delegate");
+            NonBlockingConsole.WriteLine("Forwarding LongRunningOperation() call to delegate");
             return echoService.LongRunningOperation();
         }
 
         public string SayHello(string name)
         {
-            Console.WriteLine("Forwarding SayHello() call to delegate");
+            NonBlockingConsole.WriteLine("Forwarding SayHello() call to delegate");
             return echoService.SayHello(name);
         }
 
         public bool Crash()
         {
-            Console.WriteLine("Forwarding Crash() call to delegate");
+            NonBlockingConsole.WriteLine("Forwarding Crash() call to delegate");
             try
             {
                 return echoService.Crash();
@@ -44,7 +45,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
         public int CountBytes(DataStream dataStream)
         {
             dataStream = dataStream.ConfigureWriterOnReceivedDataStream();
-            Console.WriteLine("Forwarding CountBytes() call to delegate");
+            NonBlockingConsole.WriteLine("Forwarding CountBytes() call to delegate");
             return echoService.CountBytes(dataStream);
         }
     }

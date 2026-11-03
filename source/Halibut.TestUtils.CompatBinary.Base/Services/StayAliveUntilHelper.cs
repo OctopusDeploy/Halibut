@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Halibut.TestUtils.SampleProgram.Base.LogUtils;
 
 namespace Halibut.TestUtils.SampleProgram.Base.Services
 {
@@ -19,7 +20,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
 #endif
                     using (var fileStreamLock = new FileStream(stayAliveFile, FileMode.Open, FileAccess.Read, FileShare.None))
                     {
-                        Console.WriteLine("Got a lock, going to die now");
+                        NonBlockingConsole.WriteLine("Got a lock, going to die now");
                         fileStreamLock.Dispose();    
                     }
 
@@ -29,6 +30,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.Services
                     }
                     finally
                     {
+                        NonBlockingConsole.FlushBeforeExit();
                         Environment.Exit(0);
                     }
                 }
