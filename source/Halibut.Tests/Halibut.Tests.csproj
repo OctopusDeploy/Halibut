@@ -18,6 +18,10 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Linked so the compat binary console writer can be unit tested without referencing a compat binary (which pulls in an old Halibut). -->
+    <Compile Include="..\Halibut.TestUtils.CompatBinary.Base\LogUtils\NonBlockingLineWriter.cs" Link="Support\BackwardsCompatibility\NonBlockingLineWriter.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="Certificates/WrongCert.pfx;Certificates\Octopus.pfx;Certificates\Ssl.pfx;Certificates\TentacleListening.pfx;Certificates\TentaclePolling.pfx;appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
