@@ -24,7 +24,8 @@ namespace Halibut.Tests
         [SetUp]
         public void SetUp()
         {
-            traceLogFileLogger = new TraceLogFileLogger(SerilogLoggerBuilder.CurrentTestHash());
+            var isRetry = TestContext.CurrentContext.CurrentRepeatCount > 0;
+            traceLogFileLogger = new TraceLogFileLogger(SerilogLoggerBuilder.CurrentTestHash(), appendToExisting: isRetry);
             Logger = new SerilogLoggerBuilder()
                 .SetTraceLogFileLogger(traceLogFileLogger)
                 .Build()
@@ -34,7 +35,7 @@ namespace Halibut.Tests
             
             Logger.Information("Trace log file {LogFile}", traceLogFileLogger.logFilePath);
 
-            Logger.Information("Test started");
+            Logger.Information(isRetry ? $"Test started (retry {TestContext.CurrentContext.CurrentRepeatCount})" : "Test started");
             cancellationTokenSource = new CancellationTokenSource();
             CancellationToken = cancellationTokenSource.Token;
         }

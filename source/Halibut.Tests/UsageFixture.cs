@@ -18,6 +18,7 @@ namespace Halibut.Tests
     public class UsageFixture : BaseTest
     {
         [Test]
+        [RetryOnTransportTimeout]
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task OctopusCanSendMessagesToTentacle_WithEchoService(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -36,6 +37,7 @@ namespace Halibut.Tests
         }
 
         [Test]
+        [RetryOnTransportTimeout]
         [LatestAndPreviousClientAndServiceVersionsTestCases(testNetworkConditions: false)]
         public async Task LargeMessages(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -58,6 +60,7 @@ namespace Halibut.Tests
         }
 
         [Test]
+        [RetryOnTransportTimeout]
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task OctopusCanSendMessagesToTentacle_WithSupportedServices(ClientAndServiceTestCase clientAndServiceTestCase)
         {
@@ -77,6 +80,7 @@ namespace Halibut.Tests
         }
 
         [Test]
+        [RetryOnTransportTimeout]
         [LatestAndPreviousClientAndServiceVersionsTestCases()]
         public async Task StreamsCanBeSent(ClientAndServiceTestCase clientAndServiceTestCase)
         {
