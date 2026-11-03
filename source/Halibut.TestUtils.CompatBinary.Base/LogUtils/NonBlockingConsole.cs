@@ -11,7 +11,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
     {
         static readonly TimeSpan DefaultFlushTimeout = TimeSpan.FromSeconds(10);
 
-        static readonly NonBlockingLineWriter Writer = new(Console.Out, threadName: "CompatBinaryConsoleWriter");
+        static readonly NonBlockingLineWriter Writer = new(Console.Out, threadName: "CompatBinaryConsoleWriter", utcNow: () => DateTime.UtcNow);
 
         public static void WriteLine(string line) => Writer.WriteLine(line);
 
