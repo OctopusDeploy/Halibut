@@ -41,7 +41,7 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
             if (logEventLogLevel >= logLevel)
             {
                 var logMessage = string.Format("{5, 16}: {0}:{1} {2}  {3} {4}", logEvent.Type, logEvent.Error, endpoint, Thread.CurrentThread.ManagedThreadId, logEvent.FormattedMessage, name);
-                Console.WriteLine(logMessage);
+                NonBlockingConsole.WriteLine(logMessage);
             }
         }
 
