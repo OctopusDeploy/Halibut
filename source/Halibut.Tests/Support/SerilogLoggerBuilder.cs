@@ -65,7 +65,10 @@ namespace Halibut.Tests.Support
 
             if (traceFileLogger != null)
             {
-                TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
+                // A retried test (see RetryOnTransportTimeoutAttribute) legitimately replaces the logger from its previous attempt.
+                TraceLoggers.AddOrUpdate(testName, traceFileLogger, (_, _) => TestContext.CurrentContext.CurrentRepeatCount > 0
+                    ? traceFileLogger
+                    : throw new Exception("This should never be updated. If it is, it means that a test is being run multiple times in a single test run"));
             }
 
             return logger;
