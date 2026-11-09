@@ -76,10 +76,14 @@ namespace Halibut.Tests.Transport.Observability
 
                 await Try.CatchingError(() => echo.SayHelloAsync("hello"));
 
-                var closeFirstConnection = connectionsObserver.ConnectionsCountChangedForSubscription.Skip(1).First();
-                closeFirstConnection.PreviousCount.Should().Be(1);
-                closeFirstConnection.CurrentCount.Should().Be(0);
-                closeFirstConnection.SubscriptionId.Should().Be(clientAndService.ServiceUri);
+                // The failed request is completed before the server releases the connection lease, so the close may not be observed yet.
+                Wait.UntilActionSucceeds(() =>
+                {
+                    var closeFirstConnection = connectionsObserver.ConnectionsCountChangedForSubscription.Skip(1).First();
+                    closeFirstConnection.PreviousCount.Should().Be(1);
+                    closeFirstConnection.CurrentCount.Should().Be(0);
+                    closeFirstConnection.SubscriptionId.Should().Be(clientAndService.ServiceUri);
+                }, TimeSpan.FromSeconds(30), Logger, CancellationToken);
 
                 await echo.SayHelloAsync("hello");
 
