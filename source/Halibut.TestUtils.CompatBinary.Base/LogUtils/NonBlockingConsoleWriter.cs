@@ -30,7 +30,6 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
         {
             Console.SetOut(new NonBlockingConsoleWriter(OpenStandardStream(1, Console.OpenStandardOutput)));
             Console.SetError(new NonBlockingConsoleWriter(OpenStandardStream(2, Console.OpenStandardError)));
-            Trace("installed " + Console.Out.GetType().FullName);
         }
 
         // On Unix the console stream locks Console.Out while writing, so a stalled pipe would
@@ -52,22 +51,9 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
 
         public override void WriteLine(string? value) => Enqueue(value + new string(CoreNewLine));
 
-        static readonly string? TraceFile = Environment.GetEnvironmentVariable("HALIBUT_REPRO_COMPAT_TRACE_DIR") is { } dir
-            ? Path.Combine(dir, $"compat-trace-{System.Diagnostics.Process.GetCurrentProcess().Id}.txt")
-            : null;
-        static readonly object TraceLock = new();
-
-        static void Trace(string what)
-        {
-            if (TraceFile is null) return;
-            lock (TraceLock) File.AppendAllText(TraceFile, $"{DateTime.Now:HH:mm:ss.fff} t{Thread.CurrentThread.ManagedThreadId} {what}\n");
-        }
-
         void Enqueue(string value)
         {
-            Trace("enqueue-start " + value.Substring(0, Math.Min(60, value.Length)).Replace("\n", " "));
             if (!queue.TryAdd(value)) Interlocked.Increment(ref droppedWrites);
-            Trace("enqueue-done");
         }
 
         void Drain()
@@ -77,7 +63,6 @@ namespace Halibut.TestUtils.SampleProgram.Base.LogUtils
                 var dropped = Interlocked.Exchange(ref droppedWrites, 0);
                 if (dropped > 0) destination.WriteLine($"[NonBlockingConsoleWriter dropped {dropped} writes]");
 
-                Trace("drain-write-start");
                 destination.Write(value);
                 if (queue.Count == 0) destination.Flush();
             }

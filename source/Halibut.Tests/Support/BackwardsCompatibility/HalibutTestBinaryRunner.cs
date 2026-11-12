@@ -158,15 +158,7 @@ namespace Halibut.Tests.Support.BackwardsCompatibility
                                 serviceListenPort = int.Parse(Regex.Match(s, @"\d+").Value);
                             }
 
-                            if (s.Contains("RunningAndReady"))
-                            {
-                                hasTentacleStarted.Set();
-                                if (Environment.GetEnvironmentVariable("HALIBUT_REPRO_STALL_COMPAT_STDOUT") == "1")
-                                {
-                                    logger.Information("REPRO: compat stdout pump stalled; no further compat output will be read");
-                                    await Task.Delay(Timeout.Infinite, ct);
-                                }
-                            }
+                            if (s.Contains("RunningAndReady")) hasTentacleStarted.Set();
                         }
 
                         await Cli.Wrap(new HalibutTestBinaryPath().BinPath(version!))
