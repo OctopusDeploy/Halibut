@@ -10,6 +10,7 @@ namespace Halibut.TestUtils.SampleProgram.Base
     {
         public static async Task<int> Main()
         {
+            NonBlockingConsoleWriter.Install();
             using var cancellationTokenSource = new CancellationTokenSource(SettingsHelper.GetTestTimeout());
             using var registration = cancellationTokenSource.Token.Register(() =>
             {
