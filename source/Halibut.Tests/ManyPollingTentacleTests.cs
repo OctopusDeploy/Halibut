@@ -95,12 +95,12 @@ namespace Halibut.Tests
                 
                 foreach (var pollEndpoint in pollEndpoints)
                 {
-                    var tentacleListening = new HalibutRuntimeBuilder()
+                    var tentaclePolling = new HalibutRuntimeBuilder()
                         .WithServerCertificate(Certificates.TentaclePolling)
                         .WithServiceFactory(services)
                         .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
                         .Build();
-                    tentacleListening.Poll(pollEndpoint, serviceEndpoint, CancellationToken);
+                    tentaclePolling.Poll(pollEndpoint, serviceEndpoint, CancellationToken);
                 }
 
                 var clients = pollEndpoints.Select(pollEndpoint => 

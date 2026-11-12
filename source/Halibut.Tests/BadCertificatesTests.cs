@@ -313,7 +313,7 @@ namespace Halibut.Tests
         
         [Test]
         [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
-        public async Task FailWhenPollingServiceCollectsARequestAddressedToAnotherCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
+        public async Task FailWhenPollingServicePresentsTrustedCertificate_ButRequestIsForAnotherCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
         {
             var countingService = new AsyncCountingService();
             await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
