@@ -12,6 +12,8 @@ namespace Halibut.Transport.Protocol
 
     public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken);
 
+    public delegate Task ServerExchangeActionAsync(MessageExchangeProtocol protocol, string clientThumbprint, CancellationToken cancellationToken);
+
     /// <summary>
     /// Implements the core message exchange protocol for both the client and server.
     /// </summary>
@@ -102,7 +104,7 @@ namespace Halibut.Transport.Protocol
             await stream.ExpectProceedAsync(cancellationToken);
         }
 
-        public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
+        public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, string clientThumbprint, CancellationToken cancellationToken)
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
 
@@ -117,7 +119,7 @@ namespace Halibut.Transport.Protocol
                     {
                         await IdentifyAsServerAsync(identity, cancellationToken);
                         var pendingRequestQueue = pendingRequests(identity);
-                        await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
+                        await ProcessSubscriberAsync(pendingRequestQueue, clientThumbprint, cancellationToken);
                         break;
                     }
                 default:
@@ -198,13 +200,13 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task ProcessSubscriberAsync(IPendingRequestQueue pendingRequests, CancellationToken cancellationToken)
+        async Task ProcessSubscriberAsync(IPendingRequestQueue pendingRequests, string clientThumbprint, CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 var nextRequest = await pendingRequests.DequeueAsync(cancellationToken);
 
-                var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest, cancellationToken);
+                var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest, clientThumbprint, cancellationToken);
 
                 if (!success)
                 {
@@ -213,12 +215,14 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessageWithCancellationToken? nextRequest, CancellationToken cancellationToken)
+        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessageWithCancellationToken? nextRequest, string clientThumbprint, CancellationToken cancellationToken)
         {
             try
             {
                 if (nextRequest != null)
                 {
+                    ValidateClientThumbprint(nextRequest.RequestMessage, clientThumbprint);
+
                     using var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(nextRequest.CancellationToken, cancellationToken);
                     var linkedCancellationToken = linkedTokenSource.Token;
 
@@ -276,6 +280,19 @@ namespace Halibut.Transport.Protocol
 
             await stream.SendProceedAsync(cancellationToken);
             return true;
+        }
+
+        void ValidateClientThumbprint(RequestMessage request, string clientThumbprint)
+        {
+            var destination = request.Destination;
+            var expectedThumbprint = destination?.RemoteThumbprint;
+            if (destination is null || expectedThumbprint is null || string.Equals(expectedThumbprint, clientThumbprint, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            log.Write(EventType.ClientDenied, "A polling client for {0} attempted to collect a request, but it presented a client certificate with the thumbprint '{1}' which does not match the expected thumbprint '{2}'", destination.BaseUri, clientThumbprint, expectedThumbprint);
+            throw new HalibutClientException($"The request to {destination.BaseUri} was not sent, because the polling client presented a client certificate with the thumbprint '{clientThumbprint}' but we expected '{expectedThumbprint}'.");
         }
 
         async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)

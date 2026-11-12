@@ -77,7 +77,7 @@ namespace Halibut.Tests
                              .Build())
             {
                 var listenPort = octopus.Listen();
-                octopus.Trust(Certificates.TentacleListening.Thumbprint);
+                octopus.Trust(Certificates.TentaclePolling.Thumbprint);
 
                 var watchSubscriberCountCts = new CancelOnDisposeCancellationToken(CancellationToken);
                 watchSubscriberCountCts.AwaitTasksBeforeCTSDispose(Task.Run(async () =>
@@ -96,7 +96,7 @@ namespace Halibut.Tests
                 foreach (var pollEndpoint in pollEndpoints)
                 {
                     var tentacleListening = new HalibutRuntimeBuilder()
-                        .WithServerCertificate(Certificates.TentacleListening)
+                        .WithServerCertificate(Certificates.TentaclePolling)
                         .WithServiceFactory(services)
                         .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
                         .Build();
@@ -104,7 +104,7 @@ namespace Halibut.Tests
                 }
 
                 var clients = pollEndpoints.Select(pollEndpoint => 
-                    octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint(pollEndpoint, Certificates.Octopus.Thumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build())))
+                    octopus.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint(pollEndpoint, Certificates.TentaclePolling.Thumbprint, new HalibutTimeoutsAndLimitsForTestsBuilder().Build())))
                     .ToList();
 
                 var tasks = new List<Task>();

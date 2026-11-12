@@ -57,7 +57,7 @@ namespace Halibut.Tests
                 serviceThumbprint = clientAndBuilder.ServiceThumbprint;
 
                 // Act
-                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>(point => new ServiceEndPoint(point.BaseUri, serviceThumbprint, point.Proxy, clientAndBuilder.Client.TimeoutsAndLimits));
                 await clientCountingService.IncrementAsync();
 
                 await unauthorizedClientHasConnected.Task;
@@ -311,6 +311,27 @@ namespace Halibut.Tests
             }
         }
         
+        [Test]
+        [LatestClientAndLatestServiceTestCases(testListening: false, testNetworkConditions: false)]
+        public async Task FailWhenPollingServiceCollectsARequestAddressedToAnotherCertificate(ClientAndServiceTestCase clientAndServiceTestCase)
+        {
+            var countingService = new AsyncCountingService();
+            await using (var clientAndBuilder = await clientAndServiceTestCase.CreateTestCaseBuilder()
+                       .AsLatestClientAndLatestServiceBuilder()
+                       .WithCountingService(countingService)
+                       .Build(CancellationToken))
+            {
+                // The polling service is trusted, but the request is addressed to a different certificate
+                var anotherThumbprint = new string('0', 40);
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>(point => new ServiceEndPoint(point.BaseUri, anotherThumbprint, point.Proxy, clientAndBuilder.Client.TimeoutsAndLimits));
+
+                var exception = (await AssertException.Throws<HalibutClientException>(clientCountingService.IncrementAsync())).And;
+
+                exception.Message.Should().Contain(clientAndBuilder.ServiceThumbprint);
+                countingService.CurrentValue().Should().Be(0, "the request should never have been sent to a polling service presenting another certificate");
+            }
+        }
+
         /// <summary>
         /// Test is redundant but kept around since we really want the security part to work. 
         /// </summary>
