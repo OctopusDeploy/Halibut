@@ -154,7 +154,9 @@ namespace Halibut.Tests
                     // .NET Framework's SslStream message has a leading space; modern .NET's does not
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin:  Received an unexpected EOF or 0 bytes from the transport stream",
                     $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Received an unexpected EOF or 0 bytes from the transport stream",
-                    $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Transport endpoint is not connected");
+                    $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Transport endpoint is not connected",
+                    // On Linux, writing to a socket the peer has already reset can surface as EPIPE
+                    $"An error occurred when sending a request to '{clientAndService.ServiceUri}', before the request could begin: Broken pipe");
         }
         
         [Test]
