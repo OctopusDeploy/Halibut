@@ -90,7 +90,7 @@ namespace Halibut.Tests.DotMemory
                 for (var i = 0; i < NumberOfClients; i++)
                 {
                     expectedTcpClientCount++; // each time the server polls, it keeps a tcpclient (as we dont have support to say StopPolling)
-                    RunPollingClient(pollingServer, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint).GetAwaiter().GetResult();
+                    RunPollingClient(pollingServer, Certificates.TentaclePolling, Certificates.TentacleListeningPublicThumbprint).GetAwaiter().GetResult();
                 }
 
 #if SUPPORTS_WEB_SOCKET_CLIENT
@@ -98,7 +98,7 @@ namespace Halibut.Tests.DotMemory
                 AddSslCertToLocalStoreAndRegisterFor("0.0.0.0:8434");
                 for (var i = 0; i < NumberOfClients; i++)
                 {
-                    RunWebSocketPollingClient(pollingServer, Certificates.TentaclePolling, Certificates.TentaclePollingPublicThumbprint, Certificates.TentacleListeningPublicThumbprint).GetAwaiter().GetResult();
+                    RunWebSocketPollingClient(pollingServer, Certificates.TentaclePolling, Certificates.TentacleListeningPublicThumbprint, Certificates.TentacleListeningPublicThumbprint).GetAwaiter().GetResult();
                 }
 #endif
 
@@ -187,6 +187,7 @@ namespace Halibut.Tests.DotMemory
             }
         }
 
+        /// <param name="remoteThumbprint">The thumbprint of the polling service's certificate, which the polling endpoint expects.</param>
         static async Task RunPollingClient(HalibutRuntime server, X509Certificate2 clientCertificate, string remoteThumbprint, bool expectSuccess = true)
         {
             await using (var runtime = new HalibutRuntimeBuilder()
