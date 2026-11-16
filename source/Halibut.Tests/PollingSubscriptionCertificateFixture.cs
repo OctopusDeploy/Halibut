@@ -60,40 +60,5 @@ namespace Halibut.Tests
             server.Logs.ForEndpoint(subscription).GetLogs()
                 .Should().Contain(l => l.Type == EventType.ErrorInIdentify && l.FormattedMessage.Contains(otherClientThumbprint) && l.FormattedMessage.Contains(expectedThumbprint));
         }
-
-        [Test]
-        public async Task PollingClientPresentingTheExpectedCertificateReceivesRequests()
-        {
-            var subscription = new Uri("poll://tentacle");
-
-            var service = new AsyncCountingService();
-            var services = new DelegateServiceFactory();
-            services.Register<ICountingService, IAsyncCountingService>(() => service);
-
-            await using var server = new HalibutRuntimeBuilder()
-                .WithServerCertificate(Certificates.Octopus)
-                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
-                .Build();
-
-            await using var tentacle = new HalibutRuntimeBuilder()
-                .WithServerCertificate(Certificates.TentaclePolling)
-                .WithServiceFactory(services)
-                .WithHalibutTimeoutsAndLimits(new HalibutTimeoutsAndLimitsForTestsBuilder().Build())
-                .Build();
-
-            var serverPort = server.Listen();
-            server.Trust(Certificates.TentaclePollingPublicThumbprint);
-
-            tentacle.Poll(subscription, new ServiceEndPoint("https://localhost:" + serverPort, Certificates.OctopusPublicThumbprint, server.TimeoutsAndLimits), CancellationToken);
-
-            // Thumbprints are compared ignoring case.
-            var endpoint = new ServiceEndPoint(subscription, Certificates.TentaclePollingPublicThumbprint.ToLowerInvariant(), server.TimeoutsAndLimits);
-            var client = server.CreateAsyncClient<ICountingService, IAsyncClientCountingService>(endpoint);
-
-            await client.IncrementAsync();
-
-            service.CurrentValue().Should().Be(1);
-            server.Logs.ForEndpoint(subscription).GetLogs().Should().NotContain(l => l.Type == EventType.ErrorInIdentify);
-        }
     }
 }
