@@ -13,6 +13,14 @@ namespace Halibut.Transport.Protocol
     public delegate Task ExchangeActionAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The action a listener runs once a client has connected and been authorized.
+    /// </summary>
+    /// <param name="protocol">The protocol to exchange messages over.</param>
+    /// <param name="authenticatedClientThumbprint">The thumbprint of the certificate the client presented during the TLS handshake.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public delegate Task ServerExchangeActionAsync(MessageExchangeProtocol protocol, string authenticatedClientThumbprint, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Implements the core message exchange protocol for both the client and server.
     /// </summary>
     public class MessageExchangeProtocol
@@ -102,7 +110,12 @@ namespace Halibut.Transport.Protocol
             await stream.ExpectProceedAsync(cancellationToken);
         }
 
-        public async Task ExchangeAsServerAsync(Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor, Func<RemoteIdentity, IPendingRequestQueue> pendingRequests, CancellationToken cancellationToken)
+        public async Task ExchangeAsServerAsync(
+            Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor,
+            Func<RemoteIdentity, IPendingRequestQueue> pendingRequests,
+            string authenticatedClientThumbprint,
+            Func<RemoteIdentity, ILog> subscriberLog,
+            CancellationToken cancellationToken)
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
 
@@ -117,7 +130,8 @@ namespace Halibut.Transport.Protocol
                     {
                         await IdentifyAsServerAsync(identity, cancellationToken);
                         var pendingRequestQueue = pendingRequests(identity);
-                        await ProcessSubscriberAsync(pendingRequestQueue, cancellationToken);
+                        var subscriber = new AuthenticatedSubscriber(identity.SubscriptionId, authenticatedClientThumbprint, subscriberLog(identity));
+                        await ProcessSubscriberAsync(pendingRequestQueue, subscriber, cancellationToken);
                         break;
                     }
                 default:
@@ -198,13 +212,13 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task ProcessSubscriberAsync(IPendingRequestQueue pendingRequests, CancellationToken cancellationToken)
+        async Task ProcessSubscriberAsync(IPendingRequestQueue pendingRequests, AuthenticatedSubscriber subscriber, CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 var nextRequest = await pendingRequests.DequeueAsync(cancellationToken);
 
-                var success = await ProcessReceiverInternalAsync(pendingRequests, nextRequest, cancellationToken);
+                var success = await ProcessReceiverInternalAsync(pendingRequests, subscriber, nextRequest, cancellationToken);
 
                 if (!success)
                 {
@@ -213,8 +227,20 @@ namespace Halibut.Transport.Protocol
             }
         }
 
-        async Task<bool> ProcessReceiverInternalAsync(IPendingRequestQueue pendingRequests, RequestMessageWithCancellationToken? nextRequest, CancellationToken cancellationToken)
+        async Task<bool> ProcessReceiverInternalAsync(
+            IPendingRequestQueue pendingRequests,
+            AuthenticatedSubscriber subscriber, 
+            RequestMessageWithCancellationToken? nextRequest,
+            CancellationToken cancellationToken)
         {
+            if (nextRequest != null && !subscriber.IsExpectedBy(nextRequest.RequestMessage.Destination))
+            {
+                await RejectRequestForDifferentCertificateAsync(pendingRequests, subscriber, nextRequest.RequestMessage);
+
+                // Close the connection so this client cannot collect any more requests for this subscription.
+                return false;
+            }
+
             try
             {
                 if (nextRequest != null)
@@ -278,10 +304,48 @@ namespace Halibut.Transport.Protocol
             return true;
         }
 
+        static async Task RejectRequestForDifferentCertificateAsync(IPendingRequestQueue pendingRequests, AuthenticatedSubscriber subscriber, RequestMessage request)
+        {
+            var expectedThumbprint = string.IsNullOrWhiteSpace(request.Destination.RemoteThumbprint) ? "(none)" : request.Destination.RemoteThumbprint;
+
+            var message = $"The request {request.ServiceName}.{request.MethodName} was not sent to {request.Destination.BaseUri}. " +
+                $"A polling client connected for subscription {subscriber.SubscriptionId} with the certificate thumbprint {subscriber.Thumbprint}, " +
+                $"but the endpoint expects the certificate thumbprint {expectedThumbprint}. " +
+                "The connection was closed. Check that only the expected machine uses this subscription ID.";
+
+            // ErrorInIdentify is recorded against the subscription, so it appears in that endpoint's communication log,
+            // and is an event type consumers (such as Octopus Server) already forward to their application logs.
+            subscriber.Log.Write(EventType.ErrorInIdentify, message);
+
+            var response = ResponseMessage.FromException(request, new PollingClientCertificateMismatchHalibutClientException(message));
+            await pendingRequests.ApplyResponse(response, request.ActivityId);
+        }
+
         async Task<ResponseMessage> SendAndReceiveRequest(RequestMessage nextRequest, CancellationToken cancellationToken)
         {
             await stream.SendAsync(nextRequest, cancellationToken);
             return (await stream.ReceiveResponseAsync(cancellationToken))!;
+        }
+
+        class AuthenticatedSubscriber
+        {
+            public AuthenticatedSubscriber(Uri subscriptionId, string thumbprint, ILog log)
+            {
+                SubscriptionId = subscriptionId;
+                Thumbprint = thumbprint;
+                Log = log;
+            }
+
+            public Uri SubscriptionId { get; }
+            public string Thumbprint { get; }
+            public ILog Log { get; }
+
+            public bool IsExpectedBy(ServiceEndPoint destination)
+            {
+                // Fail closed: a destination that does not say which certificate it expects is never sent to a polling client.
+                return !string.IsNullOrWhiteSpace(destination.RemoteThumbprint)
+                    && string.Equals(destination.RemoteThumbprint, Thumbprint, StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         static async Task<ResponseMessage> InvokeAndWrapAnyExceptionsAsync(RequestMessage request, Func<RequestMessage, Task<ResponseMessage>> incomingRequestProcessor)

@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Net.Sockets;
 using Halibut.Exceptions;
-using Halibut.Queue.Redis;
 using Halibut.Queue.Redis.Exceptions;
 using Halibut.Transport;
 using Halibut.Transport.Protocol;
@@ -72,6 +71,11 @@ namespace Halibut.Diagnostics
             }
 
             if (exception is ServiceInvocationHalibutClientException)
+            {
+                return HalibutNetworkExceptionType.NotANetworkError;
+            }
+
+            if (exception is PollingClientCertificateMismatchHalibutClientException)
             {
                 return HalibutNetworkExceptionType.NotANetworkError;
             }
