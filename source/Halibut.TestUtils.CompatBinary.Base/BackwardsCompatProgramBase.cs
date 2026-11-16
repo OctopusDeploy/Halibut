@@ -10,7 +10,13 @@ namespace Halibut.TestUtils.SampleProgram.Base
     {
         public static async Task<int> Main()
         {
-            NonBlockingConsoleWriter.Install();
+            // LEV-2306 repro: HALIBUT_REPRO_BLOCKING_CONSOLE=1 keeps the pre-#736 blocking console,
+            // which is what the failing builds ran with.
+            if (Environment.GetEnvironmentVariable("HALIBUT_REPRO_BLOCKING_CONSOLE") != "1")
+            {
+                NonBlockingConsoleWriter.Install();
+            }
+            ReproTracingConsoleWriter.InstallIfRequested();
             using var cancellationTokenSource = new CancellationTokenSource(SettingsHelper.GetTestTimeout());
             using var registration = cancellationTokenSource.Token.Register(() =>
             {
