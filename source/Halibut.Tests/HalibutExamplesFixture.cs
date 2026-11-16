@@ -30,7 +30,7 @@ namespace Halibut.Tests
                 
                 pollingService.Poll(new Uri("poll://alice"), new ServiceEndPoint("https://localhost:" + octopusPort, Certificates.OctopusPublicThumbprint, client.TimeoutsAndLimits), CancellationToken);
 
-                var echo = client.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("poll://alice", null, client.TimeoutsAndLimits));
+                var echo = client.CreateAsyncClient<IEchoService, IAsyncClientEchoService>(new ServiceEndPoint("poll://alice", Certificates.TentaclePollingPublicThumbprint, client.TimeoutsAndLimits));
 
                 await echo.SayHelloAsync("World");
             }

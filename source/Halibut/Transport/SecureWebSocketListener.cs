@@ -23,20 +23,20 @@ namespace Halibut.Transport
         readonly Func<string> getFriendlyHtmlPageContent;
         readonly Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders;
         readonly CancellationTokenSource cts = new();
-        readonly ExchangeActionAsync exchangeAction;
+        readonly ServerExchangeActionAsync exchangeAction;
         readonly HalibutTimeoutsAndLimits halibutTimeoutsAndLimits;
         readonly IStreamFactory streamFactory;
         readonly IConnectionsObserver connectionsObserver;
         ILog log;
         HttpListener listener;
 
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ServerExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
             : this(endPoint, serverCertificate, exchangeProtocolBuilder, exchangeAction, verifyClientThumbprint, logFactory, getFriendlyHtmlPageContent, getFriendlyHtmlPageHeaders, (clientName, thumbprint) => UnauthorizedClientConnectResponse.BlockConnection, halibutTimeoutsAndLimits, streamFactory, connectionsObserver)
         {
         }
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
+        public SecureWebSocketListener(string endPoint, X509Certificate2 serverCertificate, ExchangeProtocolBuilder exchangeProtocolBuilder, ServerExchangeActionAsync exchangeAction, Predicate<string> verifyClientThumbprint, ILogFactory logFactory, Func<string> getFriendlyHtmlPageContent, Func<Dictionary<string, string>> getFriendlyHtmlPageHeaders, Func<string, string, UnauthorizedClientConnectResponse> unauthorizedClientConnect, HalibutTimeoutsAndLimits halibutTimeoutsAndLimits, IStreamFactory streamFactory, IConnectionsObserver connectionsObserver)
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             if (!endPoint.EndsWith("/"))
@@ -159,9 +159,9 @@ namespace Halibut.Transport
                     return;
                 }
 
-                var authorized = await Authorize(listenerContext, clientName).ConfigureAwait(false);
+                var authenticatedClientThumbprint = await Authorize(listenerContext, clientName).ConfigureAwait(false);
 
-                if (authorized)
+                if (authenticatedClientThumbprint != null)
                 {
                     connectionAuthorizedAndObserved = true;
                     connectionsObserver.ConnectionAccepted(true);
@@ -169,7 +169,7 @@ namespace Halibut.Transport
                     errorEventType = EventType.Error;
 
                     // Delegate the open stream to the protocol handler - we no longer own the stream lifetime
-                    await ExchangeMessages(stream).ConfigureAwait(false);
+                    await ExchangeMessages(stream, authenticatedClientThumbprint).ConfigureAwait(false);
                 }
             }
             catch (TaskCanceledException)
@@ -223,14 +223,15 @@ namespace Halibut.Transport
             }
         }
 
-        async Task<bool> Authorize(HttpListenerContext context, string clientName)
+        /// <returns>The thumbprint of the authenticated client certificate, or null if the client is not authorized.</returns>
+        async Task<string?> Authorize(HttpListenerContext context, string clientName)
         {
             log.Write(EventType.Diagnostic, "Begin authorization");
             var certificate = await context.Request.GetClientCertificateAsync().ConfigureAwait(false);
             if (certificate == null)
             {
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but did not present a client certificate", clientName);
-                return false;
+                return null;
             }
 
 #pragma warning disable SYSLIB0057 // obsolete ctor; kept for identical behaviour on net48 and net10
@@ -243,18 +244,18 @@ namespace Halibut.Transport
                 log.Write(EventType.ClientDenied, "A client at {0} connected, and attempted a message exchange, but it presented a client certificate with the thumbprint '{1}' which is not in the list of thumbprints that we trust", clientName, thumbprint);
                 var response = unauthorizedClientConnect(clientName, thumbprint);
                 if (response == UnauthorizedClientConnectResponse.BlockConnection)
-                    return false;
+                    return null;
             }
 
             log.Write(EventType.Security, "Client at {0} authenticated as {1}", clientName, thumbprint);
-            return true;
+            return thumbprint;
         }
 
-        Task ExchangeMessages(Stream stream)
+        Task ExchangeMessages(Stream stream, string authenticatedClientThumbprint)
         {
             log.Write(EventType.Diagnostic, "Begin message exchange");
 
-            return exchangeAction(exchangeProtocolBuilder(stream, log), cts.Token);
+            return exchangeAction(exchangeProtocolBuilder(stream, log), authenticatedClientThumbprint, cts.Token);
         }
 
         // ReSharper disable once UnusedParameter.Local

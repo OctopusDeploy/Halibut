@@ -56,8 +56,12 @@ namespace Halibut.Tests
             {
                 serviceThumbprint = clientAndBuilder.ServiceThumbprint;
 
+                // The client does not trust the service's certificate up front, but the endpoint still expects it:
+                // requests are only sent to a polling service presenting the certificate the endpoint expects.
+                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>(
+                    point => new ServiceEndPoint(point.BaseUri, serviceThumbprint, point.Proxy, clientAndBuilder.Client.TimeoutsAndLimits));
+
                 // Act
-                var clientCountingService = clientAndBuilder.CreateAsyncClient<ICountingService, IAsyncClientCountingService>();
                 await clientCountingService.IncrementAsync();
 
                 await unauthorizedClientHasConnected.Task;

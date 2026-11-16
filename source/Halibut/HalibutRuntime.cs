@@ -171,9 +171,14 @@ namespace Halibut
             listener.Start();
         }
 
-        Task HandleMessageAsync(MessageExchangeProtocol protocol, CancellationToken cancellationToken)
+        Task HandleMessageAsync(MessageExchangeProtocol protocol, string authenticatedClientThumbprint, CancellationToken cancellationToken)
         {
-            return protocol.ExchangeAsServerAsync(HandleIncomingRequestAsync, id => GetQueue(id.SubscriptionId), cancellationToken);
+            return protocol.ExchangeAsServerAsync(
+                HandleIncomingRequestAsync,
+                id => GetQueue(id.SubscriptionId),
+                authenticatedClientThumbprint,
+                id => logs.ForEndpoint(id.SubscriptionId),
+                cancellationToken);
         }
 
         public void Poll(Uri subscription, ServiceEndPoint endPoint, CancellationToken cancellationToken)
