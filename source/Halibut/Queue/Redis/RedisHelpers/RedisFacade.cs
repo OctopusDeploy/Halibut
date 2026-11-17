@@ -80,7 +80,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             observer.OnRedisConnectionRestored(e.EndPoint?.ToString());
         }
 
-        async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken)
+        async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, CancellationToken cancellationToken, bool stopWaitingOnCancellation = true)
         {
             await using var linkedTokenSource = new CancelOnDisposeCancellationToken(cancellationToken, objectLifeTimeCancellationToken);
             var combinedToken = linkedTokenSource.Token;
@@ -94,7 +94,9 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 
                 try
                 {
-                    return await WaitForOperation(operation(), combinedToken);
+                    return stopWaitingOnCancellation
+                        ? await WaitForOperation(operation(), combinedToken)
+                        : await operation();
                 }
                 catch (Exception ex) when (!combinedToken.IsCancellationRequested)
                 {
@@ -138,7 +140,9 @@ namespace Halibut.Queue.Redis.RedisHelpers
         /// <summary>
         /// StackExchange.Redis does not accept a CancellationToken; commands only end when redis responds
         /// or the AsyncTimeout (default 5s, checked once per heartbeat) expires. This lets callers stop
-        /// waiting as soon as they are cancelled. The redis command itself is abandoned, not cancelled.
+        /// waiting as soon as they are cancelled. The redis command itself is abandoned, not cancelled,
+        /// so it may still take effect on the server. Destructive reads (e.g. pops) should not use this,
+        /// as their result would be lost.
         /// </summary>
         static async Task<T> WaitForOperation<T>(Task<T> operationTask, CancellationToken cancellationToken)
         {
@@ -146,8 +150,10 @@ namespace Halibut.Queue.Redis.RedisHelpers
             {
                 return await operationTask.WaitAsync(cancellationToken);
             }
-            catch (OperationCanceledException) when (!operationTask.IsCompleted)
+            catch (OperationCanceledException)
             {
+                // Deliberately unconditional (no "when (!operationTask.IsCompleted)" filter): the operation can
+                // complete between WaitAsync cancelling and this catch running, and its exception must still be observed.
                 operationTask.IgnoreUnobservedExceptions();
                 throw;
             }
@@ -159,8 +165,10 @@ namespace Halibut.Queue.Redis.RedisHelpers
             {
                 await operationTask.WaitAsync(cancellationToken);
             }
-            catch (OperationCanceledException) when (!operationTask.IsCompleted)
+            catch (OperationCanceledException)
             {
+                // Deliberately unconditional (no "when (!operationTask.IsCompleted)" filter): the operation can
+                // complete between WaitAsync cancelling and this catch running, and its exception must still be observed.
                 operationTask.IgnoreUnobservedExceptions();
                 throw;
             }
@@ -207,13 +215,14 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     {
                         channel = await subscribeTask.WaitAsync(cancellationToken);
                     }
-                    catch (OperationCanceledException) when (!subscribeTask.IsCompleted)
+                    catch (OperationCanceledException)
                     {
-                        // We stopped waiting, but the subscription may still be established later; undo it if so.
+                        // We stopped waiting, but the subscription may still be (or have just been) established; undo it if so.
+                        // Deliberately unconditional: subscribeTask can complete between WaitAsync cancelling and this catch running.
                         _ = subscribeTask.ContinueWith(
                             t => Try.IgnoringError(async () => await t.Result.UnsubscribeAsync()),
                             CancellationToken.None,
-                            TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously,
+                            TaskContinuationOptions.OnlyOnRanToCompletion,
                             TaskScheduler.Default);
                         subscribeTask.IgnoreUnobservedExceptions();
                         throw;
@@ -304,11 +313,12 @@ namespace Halibut.Queue.Redis.RedisHelpers
             // it is already deleted.
             // In the Redis Queue this can result in no-body picking up the Request, and the
             // request eventually timing out.
+            // Wait for the delete even if cancelled: if it succeeds on the server we must return the values, or they are lost.
             var res = await ExecuteWithRetry(async () =>
             {
                 var database = Connection.GetDatabase();
                 return await database.KeyDeleteAsync(hashKey);
-            }, cancellationToken);
+            }, cancellationToken, stopWaitingOnCancellation: false);
             
             if (!res)
             {
@@ -377,6 +387,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         public async Task<string?> ListLeftPopAsync(string key, CancellationToken cancellationToken)
         {
             var listKey = ToListKey(key);
+            // Wait for the pop even if cancelled: if it succeeds on the server, abandoning it would lose the item.
             return await ExecuteWithRetry<string?>(async () =>
             {
                 var database = Connection.GetDatabase();
@@ -387,7 +398,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 }
 
                 return value;
-            }, cancellationToken);
+            }, cancellationToken, stopWaitingOnCancellation: false);
         }
 
         RedisKey ToStringKey(string key)
