@@ -94,7 +94,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 
                 try
                 {
-                    return await operation();
+                    return await WaitForOperation(operation(), combinedToken);
                 }
                 catch (Exception ex) when (!combinedToken.IsCancellationRequested)
                 {
@@ -121,7 +121,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 
                 try
                 {
-                    await operation();
+                    await WaitForOperation(operation(), combinedToken);
                     return;
                 }
                 catch (Exception ex) when (!combinedToken.IsCancellationRequested)
@@ -132,6 +132,37 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
                     await timeProvider.Delay(retryDelay, combinedToken);
                 }
+            }
+        }
+
+        /// <summary>
+        /// StackExchange.Redis does not accept a CancellationToken; commands only end when redis responds
+        /// or the AsyncTimeout (default 5s, checked once per heartbeat) expires. This lets callers stop
+        /// waiting as soon as they are cancelled. The redis command itself is abandoned, not cancelled.
+        /// </summary>
+        static async Task<T> WaitForOperation<T>(Task<T> operationTask, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await operationTask.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (!operationTask.IsCompleted)
+            {
+                operationTask.IgnoreUnobservedExceptions();
+                throw;
+            }
+        }
+
+        static async Task WaitForOperation(Task operationTask, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await operationTask.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (!operationTask.IsCompleted)
+            {
+                operationTask.IgnoreUnobservedExceptions();
+                throw;
             }
         }
 
@@ -169,8 +200,24 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 try
                 {
                     // This can throw if we are unable to connect to redis.
-                    var channel = await Connection.GetSubscriber()
+                    var subscribeTask = Connection.GetSubscriber()
                         .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
+                    ChannelMessageQueue channel;
+                    try
+                    {
+                        channel = await subscribeTask.WaitAsync(cancellationToken);
+                    }
+                    catch (OperationCanceledException) when (!subscribeTask.IsCompleted)
+                    {
+                        // We stopped waiting, but the subscription may still be established later; undo it if so.
+                        _ = subscribeTask.ContinueWith(
+                            t => Try.IgnoringError(async () => await t.Result.UnsubscribeAsync()),
+                            CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously,
+                            TaskScheduler.Default);
+                        subscribeTask.IgnoreUnobservedExceptions();
+                        throw;
+                    }
 
                     var disposable = new FuncAsyncDisposable(async () =>
                     {
@@ -193,7 +240,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
                     return disposable;
                 }
-                catch (Exception ex)
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     log?.WriteException(EventType.Diagnostic, "Failed to subscribe to Redis channel {0}, retrying in 2 seconds", ex, channelName);
                     await DelayWithoutException.Delay(TimeSpan.FromSeconds(2), timeProvider, cancellationToken);
