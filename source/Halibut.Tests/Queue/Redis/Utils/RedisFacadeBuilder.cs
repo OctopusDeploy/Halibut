@@ -5,7 +5,6 @@ using Halibut.Queue.Redis.RedisHelpers;
 using Halibut.Tests.Support.Logging;
 using Halibut.Tests.TestSetup.Redis;
 using Octopus.TestPortForwarder;
-using Org.BouncyCastle.Asn1.Cms;
 
 namespace Halibut.Tests.Queue.Redis.Utils
 {

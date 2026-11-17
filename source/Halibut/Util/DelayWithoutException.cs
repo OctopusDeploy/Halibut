@@ -8,7 +8,7 @@ namespace Halibut.Util
     {
         public static Task Delay(TimeSpan timeSpan, TimeProvider timeProvider, CancellationToken cancellationToken)
         {
-            return Task.Delay(timeSpan, timeProvider, cancellationToken).ContinueWith(t => { }, TaskContinuationOptions.ExecuteSynchronously);
+            return timeProvider.Delay(timeSpan, cancellationToken).ContinueWith(t => { }, TaskContinuationOptions.ExecuteSynchronously);
         }
         
         public static Task Delay(TimeSpan timeSpan, CancellationToken cancellationToken)

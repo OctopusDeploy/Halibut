@@ -102,7 +102,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     observer.OnRedisOperationFailed(ex, willRetry);
                     if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
-                    await Task.Delay(retryDelay, timeProvider, combinedToken);
+                    await timeProvider.Delay(retryDelay, combinedToken);
                 }
             }
         }
@@ -130,7 +130,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                     observer.OnRedisOperationFailed(ex, willRetry);
                     if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
-                    await Task.Delay(retryDelay, timeProvider, combinedToken);
+                    await timeProvider.Delay(retryDelay, combinedToken);
                 }
             }
         }
