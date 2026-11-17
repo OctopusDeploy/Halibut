@@ -29,17 +29,19 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
         readonly CancelOnDisposeCancellationToken objectLifetimeCts;
         readonly CancellationToken objectLifeTimeCancellationToken;
+        readonly TimeProvider timeProvider;
 
-        public RedisFacade(string configuration, string keyPrefix, ILog log, IRedisFacadeObserver? redisFacadeObserver = null) : 
-            this(ConfigurationOptions.Parse(configuration), keyPrefix, log, redisFacadeObserver)
+        public RedisFacade(string configuration, string keyPrefix, ILog log, TimeProvider timeProvider, IRedisFacadeObserver? redisFacadeObserver = null) : 
+            this(ConfigurationOptions.Parse(configuration), keyPrefix, log, timeProvider, redisFacadeObserver)
         {
             
         }
         
-        public RedisFacade(ConfigurationOptions redisOptions, string keyPrefix, ILog log, IRedisFacadeObserver? observer = null)
+        public RedisFacade(ConfigurationOptions redisOptions, string keyPrefix, ILog log, TimeProvider timeProvider, IRedisFacadeObserver? observer = null)
         {
             this.keyPrefix = keyPrefix + ":HalibutRedis";
             this.log = log.ForContext<RedisFacade>();
+            this.timeProvider = timeProvider;
             this.observer = observer ?? NoOpRedisFacadeObserver.Instance;
             objectLifetimeCts = new CancelOnDisposeCancellationToken();
             objectLifeTimeCancellationToken = objectLifetimeCts.Token;
@@ -84,7 +86,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var combinedToken = linkedTokenSource.Token;
             
             var retryDelay = TimeSpan.FromSeconds(1);
-            var stopwatch = Stopwatch.StartNew();
+            var startTimestamp = timeProvider.GetTimestamp();
             
             while (true)
             {
@@ -96,11 +98,11 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 }
                 catch (Exception ex) when (!combinedToken.IsCancellationRequested)
                 {
-                    bool willRetry = stopwatch.Elapsed < MaxDurationToRetryFor;
+                    bool willRetry = timeProvider.GetElapsedTime(startTimestamp) < MaxDurationToRetryFor;
                     observer.OnRedisOperationFailed(ex, willRetry);
                     if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
-                    await Task.Delay(retryDelay, combinedToken);
+                    await Task.Delay(retryDelay, timeProvider, combinedToken);
                 }
             }
         }
@@ -111,7 +113,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var combinedToken = linkedTokenSource.Token;
             
             var retryDelay = TimeSpan.FromSeconds(1);
-            var stopwatch = Stopwatch.StartNew();
+            var startTimestamp = timeProvider.GetTimestamp();
             
             while (true)
             {
@@ -124,11 +126,11 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 }
                 catch (Exception ex) when (!combinedToken.IsCancellationRequested)
                 {
-                    bool willRetry = stopwatch.Elapsed < MaxDurationToRetryFor;
+                    bool willRetry = timeProvider.GetElapsedTime(startTimestamp) < MaxDurationToRetryFor;
                     observer.OnRedisOperationFailed(ex, willRetry);
                     if (!willRetry) throw;
                     log?.Write(EventType.Diagnostic, $"Redis operation failed, retrying in {retryDelay.TotalSeconds}s: {ex.Message}");
-                    await Task.Delay(retryDelay, combinedToken);
+                    await Task.Delay(retryDelay, timeProvider, combinedToken);
                 }
             }
         }
@@ -194,7 +196,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 catch (Exception ex)
                 {
                     log?.WriteException(EventType.Diagnostic, "Failed to subscribe to Redis channel {0}, retrying in 2 seconds", ex, channelName);
-                    await DelayWithoutException.Delay(TimeSpan.FromSeconds(2), cancellationToken);
+                    await DelayWithoutException.Delay(TimeSpan.FromSeconds(2), timeProvider, cancellationToken);
                 }
             }
         }
