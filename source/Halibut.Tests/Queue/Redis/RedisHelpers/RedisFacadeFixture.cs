@@ -16,6 +16,8 @@ using NUnit.Framework;
 
 namespace Halibut.Tests.Queue.Redis.RedisHelpers
 {
+    // Note: While RedisFacade supports injection of a fake TimeProvider, these are integration tests, they run against a live Redis instance
+    // and using the real TimeProvider is correct
     [RedisTest]
     public class RedisFacadeFixture : BaseTest
     {
@@ -488,7 +490,7 @@ namespace Halibut.Tests.Queue.Redis.RedisHelpers
         public void IsConnected_WhenNotInitialized_ShouldReturnFalse()
         {
             // Arrange
-            var redisFacade = new RedisFacade("localhost", "test-prefix", new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""));
+            var redisFacade = new RedisFacade("localhost", "test-prefix", new TestContextLogCreator("Redis", LogLevel.Trace).CreateNewForPrefix(""), TimeProvider.System);
 
             // Act & Assert
             redisFacade.IsConnected.Should().BeFalse();
