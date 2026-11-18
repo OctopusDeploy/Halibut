@@ -56,48 +56,24 @@ namespace Halibut.Queue.Redis.RedisHelpers
             // equivalent here.
             lock (this)
             {
-                if (connectionSource != null) return connectionSource;
-                connectionSource = GetConnectionImpl(cancellationToken).ContinueWith(t =>
+                if (connectionSource is null || connectionSource.IsFaulted || connectionSource.IsCanceled)
                 {
-                    // Note: if multiple threads call GetConnection before it is established, then they will be given the task 
-                    // created by the first caller. If the first call fails, they will all fail, but we at least don't want to cache
-                    // the failure forever and poison future other things.
-                    lock (this)
-                    {
-                        if(t.IsFaulted || t.IsCanceled) connectionSource = null;
-                    }
-                    return t.Result;
-                }, cancellationToken, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-                return connectionSource;
+                    connectionSource = GetConnectionImpl();
+                }
+                return connectionSource.WaitAsync(cancellationToken);
             }
             
-            async Task<ConnectionMultiplexer> GetConnectionImpl(CancellationToken ct)
+            // Deliberately no CancellationToken as the redis ConnectAsync method doesn't have one
+            async Task<ConnectionMultiplexer> GetConnectionImpl()
             {
-                ConnectionMultiplexer? multiplexer = null;
-                try
-                {
-                    multiplexer = await ConnectionMultiplexer.ConnectAsync(redisOptions).WaitAsync(ct);
+                var multiplexer = await ConnectionMultiplexer.ConnectAsync(redisOptions);
 
-                    // Subscribe to connection events
-                    multiplexer.ConnectionFailed += OnConnectionFailed;
-                    multiplexer.ConnectionRestored += OnConnectionRestored;
-                    multiplexer.ErrorMessage += OnErrorMessage;
+                // Subscribe to connection events
+                multiplexer.ConnectionFailed += OnConnectionFailed;
+                multiplexer.ConnectionRestored += OnConnectionRestored;
+                multiplexer.ErrorMessage += OnErrorMessage;
 
-                    return multiplexer;
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    // Redis.StackExchange doesn't respect cancellation so we might be left with a dangling multiplexer we need to close
-                    if (multiplexer != null)
-                    {
-                        multiplexer.ConnectionFailed -= OnConnectionFailed;
-                        multiplexer.ConnectionRestored -= OnConnectionRestored;
-                        multiplexer.ErrorMessage -= OnErrorMessage;
-                        await multiplexer.DisposeAsync();
-                    }
-
-                    throw;
-                }
+                return multiplexer;
             }
         }
 
