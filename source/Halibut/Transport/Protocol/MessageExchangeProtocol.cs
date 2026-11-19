@@ -115,6 +115,7 @@ namespace Halibut.Transport.Protocol
             Func<RemoteIdentity, IPendingRequestQueue> pendingRequests,
             string authenticatedClientThumbprint,
             Func<RemoteIdentity, ILog> subscriberLog,
+            IPollingSubscriptionVerifier? pollingSubscriptionVerifier,
             CancellationToken cancellationToken)
         {
             var identity = await GetRemoteIdentityAsync(cancellationToken);
@@ -126,6 +127,13 @@ namespace Halibut.Transport.Protocol
                     await ProcessClientRequestsAsync(incomingRequestProcessor, cancellationToken);
                     break;
                 case RemoteIdentityType.Subscriber:
+                    // Checked before taking a connection lease, so a rejected client cannot use up the subscription's connection limit.
+                    if (!await IsExpectedSubscriberAsync(identity, authenticatedClientThumbprint, subscriberLog, pollingSubscriptionVerifier, cancellationToken))
+                    {
+                        // Close the connection without identifying as the server.
+                        return;
+                    }
+
                     using (activeTcpConnectionsLimiter.LeaseActiveTcpConnection(identity.SubscriptionId))
                     {
                         await IdentifyAsServerAsync(identity, cancellationToken);
@@ -137,6 +145,50 @@ namespace Halibut.Transport.Protocol
                 default:
                     log.Write(EventType.ErrorInIdentify, $"Remote with identify {identity.SubscriptionId} identified itself with an unknown identity type {identity.IdentityType}");
                     throw new ProtocolException("Unexpected remote identity: " + identity.IdentityType);
+            }
+        }
+
+        async Task<bool> IsExpectedSubscriberAsync(
+            RemoteIdentity identity,
+            string authenticatedClientThumbprint,
+            Func<RemoteIdentity, ILog> subscriberLog,
+            IPollingSubscriptionVerifier? pollingSubscriptionVerifier,
+            CancellationToken cancellationToken)
+        {
+            if (pollingSubscriptionVerifier == null)
+            {
+                return true;
+            }
+
+            // The subscription ID is chosen by the client, so it is only ever passed as a format argument.
+            const string rejectedMessage = "A polling client connected for subscription {0} with the certificate thumbprint {1}, " +
+                "but that certificate is not expected for this subscription. The connection was closed. " +
+                "Check that only the expected machine uses this subscription ID.";
+            const string failedMessage = "Could not verify the polling client that connected for subscription {0} with the certificate thumbprint {1}. The connection was closed.";
+
+            try
+            {
+                var isExpected = await pollingSubscriptionVerifier.IsExpectedClientAsync(identity.SubscriptionId, authenticatedClientThumbprint, cancellationToken);
+                if (!isExpected)
+                {
+                    // ErrorInIdentify is recorded against the subscription, so it appears in that endpoint's communication log,
+                    // and is an event type consumers (such as Octopus Server) already forward to their application logs.
+                    subscriberLog(identity).Write(EventType.ErrorInIdentify, rejectedMessage, identity.SubscriptionId, authenticatedClientThumbprint);
+                    log.Write(EventType.ErrorInIdentify, rejectedMessage, identity.SubscriptionId, authenticatedClientThumbprint);
+                }
+
+                return isExpected;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                // Fail closed: if we cannot tell whether the client is expected, do not let it poll.
+                subscriberLog(identity).WriteException(EventType.ErrorInIdentify, failedMessage, e, identity.SubscriptionId, authenticatedClientThumbprint);
+                log.WriteException(EventType.ErrorInIdentify, failedMessage, e, identity.SubscriptionId, authenticatedClientThumbprint);
+                return false;
             }
         }
 
