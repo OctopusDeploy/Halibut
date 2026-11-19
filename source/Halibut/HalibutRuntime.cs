@@ -47,6 +47,7 @@ namespace Halibut
         readonly ISecureConnectionObserver secureConnectionObserver;
         readonly IActiveTcpConnectionsLimiter activeTcpConnectionsLimiter;
         readonly IControlMessageObserver controlMessageObserver;
+        readonly IPollingSubscriptionVerifier? pollingSubscriptionVerifier;
 
         internal HalibutRuntime(
             IServiceFactory serviceFactory,
@@ -62,7 +63,8 @@ namespace Halibut
             IRpcObserver rpcObserver,
             IConnectionsObserver connectionsObserver, 
             IControlMessageObserver controlMessageObserver,
-            ISecureConnectionObserver secureConnectionObserver
+            ISecureConnectionObserver secureConnectionObserver,
+            IPollingSubscriptionVerifier? pollingSubscriptionVerifier
         )
         {
             this.serverCertificate = serverCertificate;
@@ -79,6 +81,7 @@ namespace Halibut
             this.connectionsObserver = connectionsObserver;
             this.secureConnectionObserver = secureConnectionObserver;
             this.controlMessageObserver = controlMessageObserver;
+            this.pollingSubscriptionVerifier = pollingSubscriptionVerifier;
 
             connectionManager = new ConnectionManagerAsync();
             tcpConnectionFactory = new TcpConnectionFactory(serverCertificate, TimeoutsAndLimits, streamFactory, secureConnectionObserver);
@@ -178,6 +181,7 @@ namespace Halibut
                 id => GetQueue(id.SubscriptionId),
                 authenticatedClientThumbprint,
                 id => logs.ForEndpoint(id.SubscriptionId),
+                pollingSubscriptionVerifier,
                 cancellationToken);
         }
 
