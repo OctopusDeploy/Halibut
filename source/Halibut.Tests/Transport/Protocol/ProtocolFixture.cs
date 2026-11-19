@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -56,7 +57,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(new RequestMessage());
             stream.SetNumberOfReads(1);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), ClientThumbprint, ri => Substitute.For<ILog>(), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), ClientThumbprint, ri => Substitute.For<ILog>(), null, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -99,7 +100,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(new RequestMessage());
             stream.NextReadReturns(new RequestMessage());
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), ClientThumbprint, ri => Substitute.For<ILog>(), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => new PendingRequestQueueAsync(new HalibutTimeoutsAndLimitsForTestsBuilder().Build(), new InMemoryConnectionLog("x")), ClientThumbprint, ri => Substitute.For<ILog>(), null, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -169,7 +170,7 @@ namespace Halibut.Tests.Transport.Protocol
             requestQueue.DequeueAsync(CancellationToken.None).Returns(ci => queue.Count > 0 ? queue.Dequeue() : null);
             stream.SetNumberOfReads(2);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), null, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -255,13 +256,13 @@ namespace Halibut.Tests.Transport.Protocol
             queue.Enqueue(new(RequestForSubscriber(), CancellationToken.None));
             stream.SetNumberOfReads(2);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), null, CancellationToken.None);
 
             queue.Enqueue(new(RequestForSubscriber(), CancellationToken.None));
 
             stream.SetNumberOfReads(1);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), null, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -288,7 +289,7 @@ namespace Halibut.Tests.Transport.Protocol
             var (requestQueue, appliedResponses) = QueueReturning(request, RequestForSubscriber());
             var subscriberLog = Substitute.For<ILog>();
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => subscriberLog, CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => subscriberLog, null, CancellationToken.None);
 
             // The request is never sent, and the connection is closed before any other request is collected.
             AssertOutput(@"
@@ -311,7 +312,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, SubscriptionId));
             var (requestQueue, appliedResponses) = QueueReturning(RequestForSubscriber(thumbprint: null));
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), null, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -329,7 +330,7 @@ namespace Halibut.Tests.Transport.Protocol
             stream.NextReadReturns(ResponseMessage.FromResult(request, "Hello"));
             stream.SetNumberOfReads(1);
 
-            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), CancellationToken.None);
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), null, CancellationToken.None);
 
             AssertOutput(@"
 <-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
@@ -338,6 +339,80 @@ namespace Halibut.Tests.Transport.Protocol
 <-- ResponseMessage
 <-- END");
             appliedResponses.Should().ContainSingle().Which.Result.Should().Be("Hello");
+        }
+
+        [Test]
+        public async Task ShouldCloseConnectionWithoutIdentifyingWhenTheVerifierRejectsTheSubscriber()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, SubscriptionId));
+            var (requestQueue, appliedResponses) = QueueReturning(RequestForSubscriber());
+            var subscriberLog = Substitute.For<ILog>();
+            var verifier = Substitute.For<IPollingSubscriptionVerifier>();
+            verifier.IsExpectedClientAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => subscriberLog, verifier, CancellationToken.None);
+
+            // The client is never identified to, and never collects a request from the subscription's queue.
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId");
+            await verifier.Received(1).IsExpectedClientAsync(SubscriptionId, ClientThumbprint, Arg.Any<CancellationToken>());
+            await requestQueue.DidNotReceive().DequeueAsync(Arg.Any<CancellationToken>());
+            appliedResponses.Should().BeEmpty();
+
+            subscriberLog.Received(1).Write(EventType.ErrorInIdentify, Arg.Any<string>(), Arg.Is<object?[]>(args => args.Contains(SubscriptionId) && args.Contains(ClientThumbprint)));
+        }
+
+        [Test]
+        public async Task ShouldCloseConnectionWithoutIdentifyingWhenTheVerifierThrows()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, SubscriptionId));
+            var (requestQueue, _) = QueueReturning(RequestForSubscriber());
+            var subscriberLog = Substitute.For<ILog>();
+            var verifierError = new InvalidOperationException("Lookup failed");
+            var verifier = Substitute.For<IPollingSubscriptionVerifier>();
+            verifier.IsExpectedClientAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns<Task<bool>>(_ => throw verifierError);
+
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => subscriberLog, verifier, CancellationToken.None);
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId");
+            await requestQueue.DidNotReceive().DequeueAsync(Arg.Any<CancellationToken>());
+            subscriberLog.Received(1).WriteException(EventType.ErrorInIdentify, Arg.Any<string>(), verifierError, Arg.Any<object?[]>());
+        }
+
+        [Test]
+        public async Task ShouldExchangeAsServerOfSubscriberWhenTheVerifierAcceptsTheSubscriber()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Subscriber, SubscriptionId));
+            var request = RequestForSubscriber();
+            var (requestQueue, appliedResponses) = QueueReturning(request);
+            stream.NextReadReturns(ResponseMessage.FromResult(request, "Hello"));
+            stream.SetNumberOfReads(1);
+            var verifier = Substitute.For<IPollingSubscriptionVerifier>();
+            verifier.IsExpectedClientAsync(SubscriptionId, ClientThumbprint, Arg.Any<CancellationToken>()).Returns(true);
+
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => requestQueue, ClientThumbprint, ri => Substitute.For<ILog>(), verifier, CancellationToken.None);
+
+            AssertOutput(@"
+<-- MX-CLIENT || MX-SUBSCRIBE subscriptionId
+--> MX-SERVER
+--> RequestMessage
+<-- ResponseMessage
+<-- END");
+            appliedResponses.Should().ContainSingle().Which.Result.Should().Be("Hello");
+        }
+
+        [Test]
+        public async Task ShouldNotAskTheVerifierAboutNonPollingClients()
+        {
+            stream.SetRemoteIdentity(new RemoteIdentity(RemoteIdentityType.Client));
+            stream.NextReadReturns(new RequestMessage());
+            stream.SetNumberOfReads(1);
+            var verifier = Substitute.For<IPollingSubscriptionVerifier>();
+
+            await protocol.ExchangeAsServerAsync(req => Task.FromResult(ResponseMessage.FromException(req, new Exception("Divide by zero"))), ri => throw new InvalidOperationException("Not a subscriber"), ClientThumbprint, ri => Substitute.For<ILog>(), verifier, CancellationToken.None);
+
+            await verifier.DidNotReceive().IsExpectedClientAsync(Arg.Any<Uri>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
         }
 
         static RequestMessage RequestForSubscriber(string? thumbprint = ClientThumbprint)

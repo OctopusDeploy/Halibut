@@ -32,6 +32,7 @@ namespace Halibut
         ISecureConnectionObserver? secureConnectionObserver;
         IControlMessageObserver? controlMessageObserver;
         MessageStreamWrappers queueMessageStreamWrappers = new();
+        IPollingSubscriptionVerifier? pollingSubscriptionVerifier;
 
         public HalibutRuntimeBuilder WithQueueMessageStreamWrappers(MessageStreamWrappers queueMessageStreamWrappers)
         {
@@ -142,6 +143,12 @@ namespace Halibut
             return this;
         }
 
+        public HalibutRuntimeBuilder WithPollingSubscriptionVerifier(IPollingSubscriptionVerifier pollingSubscriptionVerifier)
+        {
+            this.pollingSubscriptionVerifier = pollingSubscriptionVerifier;
+            return this;
+        }
+
         public HalibutRuntimeBuilder WithRpcObserver(IRpcObserver rpcObserver)
         {
             this.rpcObserver = rpcObserver;
@@ -201,7 +208,8 @@ namespace Halibut
                 rpcObserver,
                 connectionsObserver,
                 controlMessageObserver,
-                secureConnectionObserver
+                secureConnectionObserver,
+                pollingSubscriptionVerifier
             );
 
             if (onUnauthorizedClientConnect is not null)
