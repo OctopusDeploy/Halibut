@@ -5,15 +5,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Halibut.Diagnostics;
 using Halibut.Util;
+using Halibut.Util.AsyncEx;
 using StackExchange.Redis;
 
 namespace Halibut.Queue.Redis.RedisHelpers
 {
     public class RedisFacade : IAsyncDisposable
     {
-        // Use GetConnection to access safely
-        Task<ConnectionMultiplexer>? connectionSource;
-        
         readonly ILog log;
         readonly IRedisFacadeObserver observer;
         // We can survive redis being unavailable for this amount of time.
@@ -29,7 +27,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         readonly CancelOnDisposeCancellationToken objectLifetimeCts;
         readonly CancellationToken objectLifeTimeCancellationToken;
         readonly TimeProvider timeProvider;
-        readonly ConfigurationOptions redisOptions;
+        readonly AsyncLazy<ConnectionMultiplexer> connectionMultiplexer;
 
         public RedisFacade(string configuration, string keyPrefix, ILog log, TimeProvider timeProvider, IRedisFacadeObserver? redisFacadeObserver = null) : 
             this(ConfigurationOptions.Parse(configuration), keyPrefix, log, timeProvider, redisFacadeObserver)
@@ -47,25 +45,10 @@ namespace Halibut.Queue.Redis.RedisHelpers
 
             // Tells the client to make multiple attempts to create the TCP connection to redis.
             redisOptions.AbortOnConnectFail = false;
-            this.redisOptions = redisOptions;
-        }
 
-        Task<ConnectionMultiplexer> GetConnection(CancellationToken cancellationToken)
-        {
-            // NitoEx.AsyncLazy doesn't allow us to pass a CancellationToken to the GetValue method; we build our own
-            // equivalent here.
-            lock (this)
+            connectionMultiplexer = new AsyncLazy<ConnectionMultiplexer>(async ct =>
             {
-                if (connectionSource is null || connectionSource.IsFaulted || connectionSource.IsCanceled)
-                {
-                    connectionSource = GetConnectionImpl();
-                }
-                return connectionSource.WaitAsync(cancellationToken);
-            }
-            
-            // Deliberately no CancellationToken as the redis ConnectAsync method doesn't have one
-            async Task<ConnectionMultiplexer> GetConnectionImpl()
-            {
+                ct.ThrowIfCancellationRequested();
                 var multiplexer = await ConnectionMultiplexer.ConnectAsync(redisOptions);
 
                 // Subscribe to connection events
@@ -74,7 +57,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 multiplexer.ErrorMessage += OnErrorMessage;
 
                 return multiplexer;
-            }
+            });
         }
 
         void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
@@ -187,17 +170,17 @@ namespace Halibut.Queue.Redis.RedisHelpers
             }
         }
 
-        public bool IsConnected => connectionSource is { Status: TaskStatus.RanToCompletion } && connectionSource.GetAwaiter().GetResult().IsConnected;
+        public bool IsConnected => connectionMultiplexer.HasValue && connectionMultiplexer.Value(CancellationToken.None).GetAwaiter().GetResult().IsConnected;
 
         public async ValueTask DisposeAsync()
         {
             await Try.IgnoringError(async () => await objectLifetimeCts.DisposeAsync());
             
-            if (connectionSource is not null) // the task could be failed, but we don't know until we observe it
+            if (connectionMultiplexer.HasValue)
             {
                 await Try.IgnoringError(async () =>
                 {
-                    var conn = await connectionSource;
+                    var conn = await connectionMultiplexer.Value(CancellationToken.None);
 
                     // Unsubscribe from events before disposing
                     conn.ConnectionFailed -= OnConnectionFailed;
@@ -221,7 +204,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
                 try
                 {
                     // This can throw if we are unable to connect to redis.
-                    var connection = await GetConnection(cancellationToken);
+                    var connection = await this.connectionMultiplexer.Value(cancellationToken);
                     var subscribeTask = connection.GetSubscriber()
                         .SubscribeAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal));
                     ChannelMessageQueue channel;
@@ -281,7 +264,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             channelName = ToPrefixedChannelName(channelName);
             await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var subscriber = connection.GetSubscriber();
                 await subscriber.PublishAsync(new RedisChannel(channelName, RedisChannel.PatternMode.Literal), payload);
             }, cancellationToken);
@@ -295,7 +278,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             
             await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 await database.HashSetAsync(hashKey, hashEntries);
             }, cancellationToken);
@@ -313,7 +296,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var hashKey = ToHashKey(key);
             return await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 return await database.HashExistsAsync(hashKey, new RedisValue(field));
             }, cancellationToken);
@@ -332,7 +315,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             // request eventually timing out.
             var res = await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 return await database.KeyDeleteAsync(hashKey);
             }, cancellationToken);
@@ -359,7 +342,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             
             await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 return await database.KeyDeleteAsync(hashKey);
             }, cancellationToken);
@@ -371,7 +354,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             
             var values = await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 return await database.HashGetAsync(hashKey, fields.Select(f => new RedisValue(f)).ToArray());
             }, cancellationToken);
@@ -396,7 +379,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var listKey = ToListKey(key);
             await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 await database.ListRightPushAsync(listKey, payload);
             }, cancellationToken);
@@ -410,7 +393,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             // Wait for the pop even if cancelled: if it succeeds on the server, abandoning it would lose the item.
             return await ExecuteWithRetry<string?>(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 var value = await database.ListLeftPopAsync(listKey);
                 if (value.IsNull)
@@ -432,7 +415,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var stringKey = ToStringKey(key);
             await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 await database.StringSetAsync(stringKey, value, ttl);
             }, cancellationToken);
@@ -448,7 +431,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var stringKey = ToStringKey(key);
             return await ExecuteWithRetry<string?>(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 return await database.StringGetAsync(stringKey);
             }, cancellationToken);
@@ -459,7 +442,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
             var stringKey = ToStringKey(key);
             return await ExecuteWithRetry<bool>(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 return await database.KeyDeleteAsync(stringKey);
             }, cancellationToken);
@@ -469,7 +452,7 @@ namespace Halibut.Queue.Redis.RedisHelpers
         {
             await ExecuteWithRetry(async ct =>
             {
-                var connection = await GetConnection(ct);
+                var connection = await connectionMultiplexer.Value(ct);
                 var database = connection.GetDatabase();
                 await database.KeyExpireAsync(key, ttl);
             }, cancellationToken);
