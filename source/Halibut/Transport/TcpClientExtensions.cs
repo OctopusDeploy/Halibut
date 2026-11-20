@@ -65,6 +65,18 @@ namespace Halibut.Transport
             Try.CatchingError(client.Close, onError);
         }
 
+        public static string GetLocalEndpointString(this TcpClient client)
+        {
+            try
+            {
+                return client?.Client.LocalEndPoint?.ToString() ?? "<none>";
+            }
+            catch
+            {
+                return "<error>";
+            }
+        }
+
         public static string GetRemoteEndpointString(this TcpClient client)
         {
             try
