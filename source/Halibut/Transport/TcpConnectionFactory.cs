@@ -42,7 +42,7 @@ namespace Halibut.Transport
 
             var certificateValidator = new ClientCertificateValidator(serviceEndpoint);
             var client = await CreateConnectedTcpClientAsync(serviceEndpoint, halibutTimeoutsAndLimits, streamFactory, log, cancellationToken);
-            log.Write(EventType.Diagnostic, $"Connection established to {client.Client.RemoteEndPoint} for {serviceEndpoint.BaseUri}");
+            log.Write(EventType.Diagnostic, $"Connection established to {client.GetRemoteEndpointString()} from {client.GetLocalEndpointString()} for {serviceEndpoint.BaseUri}");
             
             var networkTimeoutStream = streamFactory.CreateStream(client);
 
@@ -67,7 +67,7 @@ namespace Halibut.Transport
             await ssl.WriteAsync(MxLine, 0, MxLine.Length, cancellationToken);
             await ssl.FlushAsync(cancellationToken);
 
-            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}", client.Client.RemoteEndPoint, serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString());
+            log.Write(EventType.Security, "Secure connection established. Server at {0} identified by thumbprint: {1}, using protocol {2}, from local endpoint {3}", client.GetRemoteEndpointString(), serviceEndpoint.RemoteThumbprint, ssl.SslProtocol.ToString(), client.GetLocalEndpointString());
             secureConnectionObserver.SecureConnectionEstablished(SecureConnectionInfo.CreateOutgoing(ssl.SslProtocol, serviceEndpoint.RemoteThumbprint ?? "Unknown"));
 
             return new SecureConnection(client, ssl, exchangeProtocolBuilder, halibutTimeoutsAndLimits, log);
