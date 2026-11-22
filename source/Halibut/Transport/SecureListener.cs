@@ -276,7 +276,7 @@ namespace Halibut.Transport
                 client.SendTimeout = (int)halibutTimeoutsAndLimits.TcpClientTimeout.SendTimeout.TotalMilliseconds;
                 client.ReceiveTimeout = (int)halibutTimeoutsAndLimits.TcpClientTimeout.ReceiveTimeout.TotalMilliseconds;
 
-                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0}", client.GetRemoteEndpointString());
+                log.Write(EventType.ListenerAcceptedClient, "Accepted TCP client: {0} on local endpoint {1}", client.GetRemoteEndpointString(), client.GetLocalEndpointString());
                 await ExecuteRequest(client).ConfigureAwait(false);
             }
             catch (ObjectDisposedException)

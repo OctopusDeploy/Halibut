@@ -121,7 +121,7 @@ namespace Halibut.Transport
         {
             try
             {
-                log.Write(EventType.ListenerAcceptedClient, "Accepted Web Socket client: {0}", context.Request.RemoteEndPoint);
+                log.Write(EventType.ListenerAcceptedClient, "Accepted Web Socket client: {0} on local endpoint {1}", context.Request.RemoteEndPoint, context.Request.LocalEndPoint);
                 await ExecuteRequest(context).ConfigureAwait(false);
             }
             catch (ObjectDisposedException)
